@@ -1,0 +1,90 @@
+[gd_scene format=3 uid="uid://bxxigvi8pkjhx"]
+
+[ext_resource type="Script" uid="uid://brimntix1fje2" path="res://Scripts/MainMenuScript.gd" id="1_47sjk"]
+[ext_resource type="FontFile" uid="uid://cehfffj4gcgyb" path="res://fonts/I-pixel-u.ttf" id="1_sb72h"]
+
+[sub_resource type="FontVariation" id="FontVariation_47sjk"]
+base_font = ExtResource("1_sb72h")
+
+[sub_resource type="LabelSettings" id="LabelSettings_mxhvt"]
+font = SubResource("FontVariation_47sjk")
+font_size = 100
+
+[sub_resource type="FontVariation" id="FontVariation_gmxq7"]
+base_font = ExtResource("1_sb72h")
+
+[sub_resource type="FontVariation" id="FontVariation_x260n"]
+base_font = ExtResource("1_sb72h")
+
+[node name="Control" type="Control" unique_id=497181348 node_paths=PackedStringArray("start_game_button", "volume_slider", "music_player")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = -6.760369e-05
+script = ExtResource("1_47sjk")
+start_game_button = NodePath("VBoxContainer/StartGameButton")
+volume_slider = NodePath("VBoxContainer/VolumeSlider")
+music_player = NodePath("MusicPlayer")
+
+[node name="Panel" type="Panel" parent="." unique_id=2005836401]
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+
+[node name="Label" type="Label" parent="." unique_id=655676238]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 170.0
+offset_bottom = 413.0
+grow_horizontal = 2
+text = "ENTER THE DISCORD"
+label_settings = SubResource("LabelSettings_mxhvt")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=986868607]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -196.0
+offset_top = -131.0
+offset_right = 204.0
+offset_bottom = 423.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="StartGameButton" type="Button" parent="VBoxContainer" unique_id=527684256]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/font = SubResource("FontVariation_gmxq7")
+theme_override_font_sizes/font_size = 40
+text = "NEW GAME"
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=1838901522]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+
+[node name="VolumeLabel" type="Label" parent="VBoxContainer" unique_id=1877363678]
+layout_mode = 2
+theme_override_fonts/font = SubResource("FontVariation_x260n")
+theme_override_font_sizes/font_size = 28
+text = "VOLUME"
+horizontal_alignment = 1
+
+[node name="VolumeSlider" type="HSlider" parent="VBoxContainer" unique_id=1877363679]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+value = 1.0
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="."]

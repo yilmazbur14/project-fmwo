@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://b4ko583hikhxt"]
+
+[ext_resource type="PackedScene" uid="uid://4pqund3nukl7" path="res://Scenes/Core/ArenaScene.tscn" id="1_hjs1c"]
+[ext_resource type="PackedScene" uid="uid://jcx0ll34f3je" path="res://Scenes/Bosses/BossTwoScene.tscn" id="2_o248v"]
+
+[node name="GreysonBossFightScene" type="Node2D" unique_id=1520311214]
+
+[node name="Arena" parent="." unique_id=991001701 instance=ExtResource("1_hjs1c")]
+
+[node name="BossTwoScene" parent="Arena" unique_id=1932473095 instance=ExtResource("2_o248v")]
+position = Vector2(965, 183)

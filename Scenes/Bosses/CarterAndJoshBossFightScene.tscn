@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" uid="uid://4pqund3nukl7" path="res://Scenes/Core/ArenaScene.tscn" id="1_arena"]
+[ext_resource type="PackedScene" path="res://Scenes/Bosses/CarterAndJoshScene.tscn" id="2_cnj"]
+
+[node name="CarterAndJoshBossFightScene" type="Node2D"]
+
+[node name="Arena" parent="." instance=ExtResource("1_arena")]
+
+[node name="CarterAndJoshScene" parent="Arena" instance=ExtResource("2_cnj")]
+position = Vector2(965, 183)

@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://cqe2px84rk50m"]
+
+[ext_resource type="Script" uid="uid://uo1adg8exesj" path="res://Scenes/Player/PlayerHealthUIScript.gd" id="1_k6g5u"]
+[ext_resource type="Texture2D" uid="uid://dwrprpeogiian" path="res://Assets/UI/hearttest.png" id="1_ouu2d"]
+[ext_resource type="Texture2D" uid="uid://o616rsc0ddb2" path="res://Assets/UI/hearthalftest.png" id="3_uuw8f"]
+[ext_resource type="Texture2D" uid="uid://xptgqk1714ru" path="res://Assets/UI/emptyhearttest.png" id="4_g7f51"]
+
+[node name="PlayerHealth" type="Control" unique_id=1519141297 node_paths=PackedStringArray("heart_containers_ui")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_k6g5u")
+heart_containers_ui = [NodePath("HBoxContainer/TextureRect"), NodePath("HBoxContainer/TextureRect2"), NodePath("HBoxContainer/TextureRect3")]
+full_heart = ExtResource("1_ouu2d")
+half_heart = ExtResource("3_uuw8f")
+empty_heart = ExtResource("4_g7f51")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1133299934]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -92.0
+offset_right = 212.0
+grow_vertical = 0
+pivot_offset = Vector2(100, -100)
+
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer" unique_id=351258470]
+layout_mode = 2
+texture = ExtResource("1_ouu2d")
+expand_mode = 2
+
+[node name="TextureRect2" type="TextureRect" parent="HBoxContainer" unique_id=361053381]
+layout_mode = 2
+texture = ExtResource("1_ouu2d")
+expand_mode = 2
+
+[node name="TextureRect3" type="TextureRect" parent="HBoxContainer" unique_id=1018569254]
+layout_mode = 2
+texture = ExtResource("1_ouu2d")
+expand_mode = 2

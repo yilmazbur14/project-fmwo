@@ -1,0 +1,12 @@
+~ start
+Eric: Hi there! My name's Eric. I'm the first guy you'll have to fight in order to get into our friendly little discord. But don't think of them as fights. These are more like getting to know each other little fun sessions!
+Nathan: [[Hi|Hello|Howdy]], this is some dialogue.
+Nathan: Here are some choices.
+- First one
+	Nathan: You picked the first one.
+- Second one
+	Nathan: You picked the second one.
+- Start again => start
+- End the conversation => END
+Nathan: For more information see the online documentation.
+=> END

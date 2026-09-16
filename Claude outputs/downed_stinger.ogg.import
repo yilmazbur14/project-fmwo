@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://x3aa5jpfvhgd"
+path="res://.godot/imported/downed_stinger.ogg-e33c8ccff5e0e26b7d133758136e7262.oggvorbisstr"
+
+[deps]
+
+source_file="res://Claude outputs/downed_stinger.ogg"
+dest_files=["res://.godot/imported/downed_stinger.ogg-e33c8ccff5e0e26b7d133758136e7262.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://dlcp3uwi0sjd8"
+path="res://.godot/imported/DannyIntro.dialogue-ad8b9e49bfd2c2ed8feae2ccc3c81437.tres"
+
+[deps]
+
+source_file="res://Dialogue/DannyIntro.dialogue"
+dest_files=["res://.godot/imported/DannyIntro.dialogue-ad8b9e49bfd2c2ed8feae2ccc3c81437.tres"]
+
+[params]
+
+defaults=true

@@ -1,0 +1,234 @@
+[gd_scene format=3 uid="uid://bva0fygw12gyi"]
+
+[ext_resource type="Script" uid="uid://vblgehdc11x3" path="res://Scripts/BossOneScript.gd" id="1_whhg3"]
+[ext_resource type="Texture2D" uid="uid://dqmg3pxvgob7y" path="res://Assets/Characters/Eric/EricTopDownRevised.png" id="2_whhg3"]
+[ext_resource type="Script" uid="uid://bldqmv7dmlu3s" path="res://Scripts/States/Eric/EricStateMachine.gd" id="3_vkshu"]
+[ext_resource type="Script" uid="uid://ta0tpjmvlotr" path="res://Scripts/States/Eric/EricEarthquake.gd" id="4_yo8tt"]
+[ext_resource type="Script" uid="uid://x54kyd1jdp16" path="res://Scripts/States/Eric/EricWhirlwind.gd" id="5_0q7xt"]
+[ext_resource type="Script" uid="uid://35f7go02daxw" path="res://Scripts/States/Eric/EricIdle.gd" id="6_difkq"]
+[ext_resource type="Script" uid="uid://b8j1w6wdugn8b" path="res://Scripts/States/Eric/EricDowned.gd" id="6_yo8tt"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_whhg3"]
+size = Vector2(25, 46)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_6b76w"]
+size = Vector2(25.000004, 45.800007)
+
+[sub_resource type="Animation" id="Animation_whhg3"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Animation_0q7xt"]
+resource_name = "downed"
+loop_mode = 1
+step = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2, 0.4, 0.6, 0.8),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 1,
+"values": [27, 28, 29, 30, 31]
+}
+
+[sub_resource type="Animation" id="Animation_6b76w"]
+resource_name = "earthquake"
+step = 0.083333336
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.16666667, 0.25, 0.33333334, 0.4166667, 0.5, 0.5833334, 0.6666667, 0.75, 0.8333334, 0.9166667),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 1,
+"values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+}
+tracks/1/type = "method"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("StateManager/Earthquake")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.5833333),
+"transitions": PackedFloat32Array(1),
+"values": [{
+"args": [],
+"method": &"enable_hitbox"
+}]
+}
+
+[sub_resource type="Animation" id="Animation_jgw10"]
+resource_name = "idle"
+loop_mode = 1
+step = 0.25
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5, 0.75),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [21, 22, 23, 24]
+}
+
+[sub_resource type="Animation" id="Animation_uw3ha"]
+resource_name = "whirlwind"
+length = 0.875
+loop_mode = 1
+step = 0.125
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.083333336, 0.22222222, 0.33333334, 0.44444445, 0.5555556, 0.6666667, 0.7777778),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1),
+"update": 1,
+"values": [13, 14, 15, 16, 17, 18, 19, 20]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_2bqtl"]
+_data = {
+&"RESET": SubResource("Animation_whhg3"),
+&"downed": SubResource("Animation_0q7xt"),
+&"earthquake": SubResource("Animation_6b76w"),
+&"idle": SubResource("Animation_jgw10"),
+&"whirlwind": SubResource("Animation_uw3ha")
+}
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_vkshu"]
+
+[node name="EricBossScene" type="Node2D" unique_id=307067125]
+position = Vector2(12.03, -116)
+
+[node name="CharacterBody2D" type="CharacterBody2D" parent="." unique_id=1106112174 node_paths=PackedStringArray("post_dialogue_pre_fight_timer")]
+scale = Vector2(3.5, 3.5)
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_whhg3")
+post_dialogue_pre_fight_timer = NodePath("StateManager/PostDialoguePreFightTimer")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D" unique_id=1875469164]
+position = Vector2(-3.1428566, 33.714283)
+shape = SubResource("RectangleShape2D_whhg3")
+
+[node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D" unique_id=1257626594]
+texture = ExtResource("2_whhg3")
+hframes = 32
+
+[node name="Hurtbox" type="Area2D" parent="CharacterBody2D" unique_id=1189620406 groups=["enemy"]]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D/Hurtbox" unique_id=1754040289]
+position = Vector2(-2.5714288, 34.000004)
+scale = Vector2(0.99999976, 0.99999976)
+shape = SubResource("RectangleShape2D_6b76w")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="CharacterBody2D" unique_id=1206927486]
+unique_name_in_owner = true
+libraries/ = SubResource("AnimationLibrary_2bqtl")
+
+[node name="WhirlwindArea2D" type="Area2D" parent="CharacterBody2D" unique_id=2132278598 groups=["whirlwind"]]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D/WhirlwindArea2D" unique_id=1043973066]
+position = Vector2(-5.722857, 24)
+scale = Vector2(6.5, 4.7)
+shape = SubResource("CircleShape2D_vkshu")
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+volume_db = -4.0
+
+[node name="HitSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="EarthquakeSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="WhirlwindSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="DownedSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="VictorySfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="StateManager" type="Node" parent="CharacterBody2D" unique_id=452676717 node_paths=PackedStringArray("initial_state", "post_dialogue_pre_fight_timer", "pause_between_earthquakes_timer", "downed_state_timer", "recovery_timer", "whirlwind_duration_timer", "whirlwind_hitbox")]
+script = ExtResource("3_vkshu")
+initial_state = NodePath("Idle")
+post_dialogue_pre_fight_timer = NodePath("PostDialoguePreFightTimer")
+pause_between_earthquakes_timer = NodePath("PauseBetweenEarthquakesTimer")
+downed_state_timer = NodePath("DownedTimer")
+recovery_timer = NodePath("RecoveryTimer")
+whirlwind_duration_timer = NodePath("WhirlwindDuration")
+whirlwind_hitbox = NodePath("../WhirlwindArea2D")
+
+[node name="Earthquake" type="Node" parent="CharacterBody2D/StateManager" unique_id=1588104194 node_paths=PackedStringArray("animation_player")]
+script = ExtResource("4_yo8tt")
+animation_player = NodePath("../../AnimationPlayer")
+
+[node name="Whirlwind" type="Node" parent="CharacterBody2D/StateManager" unique_id=1778735779 node_paths=PackedStringArray("animation_player", "character_body", "hurtbox", "boss_collision_shape", "eric_state_machine")]
+script = ExtResource("5_0q7xt")
+animation_player = NodePath("../../AnimationPlayer")
+character_body = NodePath("../..")
+hurtbox = NodePath("../../Hurtbox")
+boss_collision_shape = NodePath("../../CollisionShape2D")
+eric_state_machine = NodePath("..")
+
+[node name="Downed" type="Node" parent="CharacterBody2D/StateManager" unique_id=2070143133 node_paths=PackedStringArray("animation_player", "hurtbox")]
+script = ExtResource("6_yo8tt")
+animation_player = NodePath("../../AnimationPlayer")
+hurtbox = NodePath("../../Hurtbox")
+
+[node name="Idle" type="Node" parent="CharacterBody2D/StateManager" unique_id=658631749 node_paths=PackedStringArray("animation_player", "post_dialogue_pre_fight_timer", "pause_between_earthquakes_timer", "EricStateMachine", "hurtbox")]
+script = ExtResource("6_difkq")
+animation_player = NodePath("../../AnimationPlayer")
+post_dialogue_pre_fight_timer = NodePath("../PostDialoguePreFightTimer")
+pause_between_earthquakes_timer = NodePath("../PauseBetweenEarthquakesTimer")
+EricStateMachine = NodePath("..")
+hurtbox = NodePath("../../Hurtbox")
+
+[node name="PostDialoguePreFightTimer" type="Timer" parent="CharacterBody2D/StateManager" unique_id=130356422]
+wait_time = 2.0
+one_shot = true
+
+[node name="PauseBetweenEarthquakesTimer" type="Timer" parent="CharacterBody2D/StateManager" unique_id=1885742526]
+unique_name_in_owner = true
+wait_time = 2.0
+
+[node name="DownedTimer" type="Timer" parent="CharacterBody2D/StateManager" unique_id=2568033]
+wait_time = 4.0
+
+[node name="RecoveryTimer" type="Timer" parent="CharacterBody2D/StateManager" unique_id=78686068]
+
+[node name="WhirlwindDuration" type="Timer" parent="CharacterBody2D/StateManager" unique_id=856768118]
+wait_time = 4.0
+
+[connection signal="animation_finished" from="CharacterBody2D/AnimationPlayer" to="CharacterBody2D/StateManager" method="_on_animation_player_animation_finished"]
+[connection signal="area_entered" from="CharacterBody2D/WhirlwindArea2D" to="CharacterBody2D/StateManager" method="_on_whirlwind_area_2d_area_entered"]
+[connection signal="timeout" from="CharacterBody2D/StateManager/PostDialoguePreFightTimer" to="CharacterBody2D/StateManager" method="_on_post_dialogue_pre_fight_timer_timeout"]
+[connection signal="timeout" from="CharacterBody2D/StateManager/PauseBetweenEarthquakesTimer" to="CharacterBody2D/StateManager" method="_on_pause_between_earthquakes_timer_timeout"]
+[connection signal="timeout" from="CharacterBody2D/StateManager/DownedTimer" to="CharacterBody2D/StateManager" method="_on_downed_timer_timeout"]
+[connection signal="timeout" from="CharacterBody2D/StateManager/RecoveryTimer" to="CharacterBody2D/StateManager" method="_on_recovery_timer_timeout"]
+[connection signal="timeout" from="CharacterBody2D/StateManager/WhirlwindDuration" to="CharacterBody2D/StateManager" method="_on_whirlwind_duration_timeout"]
+[connection signal="timeout" from="CharacterBody2D/StateManager/WhirlwindDuration" to="CharacterBody2D/StateManager/Whirlwind" method="_on_whirlwind_duration_timeout"]

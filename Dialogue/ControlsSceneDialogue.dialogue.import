@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://bmbugq84b1dur"
+path="res://.godot/imported/ControlsSceneDialogue.dialogue-97cde978c960cec4ba471bcb78da3934.tres"
+
+[deps]
+
+source_file="res://Dialogue/ControlsSceneDialogue.dialogue"
+dest_files=["res://.godot/imported/ControlsSceneDialogue.dialogue-97cde978c960cec4ba471bcb78da3934.tres"]
+
+[params]
+
+defaults=true

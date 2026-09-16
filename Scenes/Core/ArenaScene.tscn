@@ -1,0 +1,152 @@
+[gd_scene format=3 uid="uid://4pqund3nukl7"]
+
+[ext_resource type="Texture2D" uid="uid://dx2gp28pyiwmn" path="res://Assets/Environment/crowd.png" id="1_wtggk"]
+[ext_resource type="PackedScene" uid="uid://c7l5sbpwdkp6y" path="res://Scenes/Player/MainPlayer.tscn" id="2_fovy7"]
+[ext_resource type="Texture2D" uid="uid://dkdgje27jlnib" path="res://Assets/Environment/boundaries.png" id="3_fnbqh"]
+[ext_resource type="Texture2D" uid="uid://bb3exdvr8s5mp" path="res://Assets/Environment/pole.png" id="4_2uq8x"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_d8iqj"]
+bg_color = Color(1, 0.19607843, 0.105882354, 0.47058824)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_y32ns"]
+size = Vector2(1720, 10)
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_1pi56"]
+load_path = "res://.godot/imported/pole.png-af1bfdde19ce67a749afc68a60c61ebf.ctex"
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wtcfe"]
+size = Vector2(10, 880)
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_o7u4c"]
+load_path = "res://.godot/imported/boundaries.png-af4b834f67b7086416b38f5260e6e398.ctex"
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_0e48y"]
+size = Vector2(10, 880)
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_8o1qv"]
+load_path = "res://.godot/imported/boundaries.png-af4b834f67b7086416b38f5260e6e398.ctex"
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_epypp"]
+size = Vector2(1720, 10)
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_dulu2"]
+load_path = "res://.godot/imported/boundaries.png-af4b834f67b7086416b38f5260e6e398.ctex"
+
+[node name="Arena" type="Node2D" unique_id=991001701]
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=317890913]
+offset_right = 1921.0
+offset_bottom = 1077.0
+color = Color(0, 0, 0, 1)
+
+[node name="ColorRect2" type="ColorRect" parent="." unique_id=760899020]
+offset_left = 84.0
+offset_top = 105.0
+offset_right = 99.0
+offset_bottom = 987.0
+color = Color(0.4420115, 0.59622294, 0.3102822, 1)
+
+[node name="ColorRect3" type="ColorRect" parent="." unique_id=91144969]
+offset_left = 1819.0
+offset_top = 99.0
+offset_right = 1834.0
+offset_bottom = 987.0
+color = Color(0.4420115, 0.59622294, 0.3102822, 1)
+
+[node name="ColorRect4" type="ColorRect" parent="." unique_id=1013960869]
+offset_left = 83.0
+offset_top = 987.0
+offset_right = 1833.0
+offset_bottom = 1010.0
+color = Color(0.4420115, 0.59622294, 0.3102822, 1)
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1288694375]
+position = Vector2(959, 65)
+scale = Vector2(4.615942, 1.7816901)
+texture = ExtResource("1_wtggk")
+
+[node name="Panel" type="Panel" parent="." unique_id=106748164]
+custom_minimum_size = Vector2(1720, 880)
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 1820.0
+offset_bottom = 980.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_d8iqj")
+
+[node name="ColorRect" type="ColorRect" parent="Panel" unique_id=459883172]
+layout_mode = 0
+offset_right = 1711.0
+offset_bottom = 876.0
+color = Color(0.5348749, 0.7046306, 0.38997492, 1)
+
+[node name="MainPlayer" parent="." unique_id=2109948936 instance=ExtResource("2_fovy7")]
+position = Vector2(959, 900)
+
+[node name="wallBoundaries" type="StaticBody2D" parent="." unique_id=1640835297]
+collision_mask = 6
+
+[node name="topWall" type="CollisionShape2D" parent="wallBoundaries" unique_id=1119921576]
+position = Vector2(960, 100)
+shape = SubResource("RectangleShape2D_y32ns")
+debug_color = Color(0.89769113, 0.31609207, 0, 0.41960785)
+
+[node name="wall" type="Sprite2D" parent="wallBoundaries/topWall" unique_id=1757215083]
+position = Vector2(59.500137, 14)
+scale = Vector2(7.783335, 6.9375)
+texture = ExtResource("3_fnbqh")
+
+[node name="topLeftPole" type="Sprite2D" parent="wallBoundaries/topWall" unique_id=412246558]
+position = Vector2(-855.00006, 7.000004)
+scale = Vector2(1.5859377, 2.03125)
+texture = ExtResource("4_2uq8x")
+
+[node name="topRightPole" type="Sprite2D" parent="wallBoundaries/topWall" unique_id=1229754495]
+position = Vector2(846.99994, 9.000004)
+scale = Vector2(1.5859377, 2.03125)
+texture = SubResource("CompressedTexture2D_1pi56")
+flip_h = true
+
+[node name="leftWall" type="CollisionShape2D" parent="wallBoundaries" unique_id=2013955483]
+position = Vector2(100, 540)
+shape = SubResource("RectangleShape2D_wtcfe")
+debug_color = Color(0.94097954, 0.23209533, 0.2029345, 0.41960785)
+
+[node name="wall" type="Sprite2D" parent="wallBoundaries/leftWall" unique_id=197251094]
+position = Vector2(-7.999981, 31.41027)
+rotation = 1.5707964
+scale = Vector2(3.9833364, 6.9375)
+texture = SubResource("CompressedTexture2D_o7u4c")
+
+[node name="rightWall" type="CollisionShape2D" parent="wallBoundaries" unique_id=2014825227]
+position = Vector2(1820, 540)
+shape = SubResource("RectangleShape2D_0e48y")
+debug_color = Color(0.8305962, 0.39350197, 0, 0.41960785)
+
+[node name="wall" type="Sprite2D" parent="wallBoundaries/rightWall" unique_id=1461308548]
+position = Vector2(-14.99998, 27.50096)
+rotation = 1.5707964
+scale = Vector2(3.9273026, 6.9375)
+texture = SubResource("CompressedTexture2D_8o1qv")
+
+[node name="bottomWall" type="CollisionShape2D" parent="wallBoundaries" unique_id=354189786]
+position = Vector2(960, 980)
+shape = SubResource("RectangleShape2D_epypp")
+debug_color = Color(0.9514479, 0.21990731, 0.08271069, 0.41960785)
+
+[node name="wall" type="Sprite2D" parent="wallBoundaries/bottomWall" unique_id=1173701576]
+position = Vector2(57, 8)
+scale = Vector2(7.783335, 6.9375)
+texture = SubResource("CompressedTexture2D_dulu2")
+
+[node name="topLeftPole2" type="Sprite2D" parent="wallBoundaries/bottomWall" unique_id=1137104301]
+position = Vector2(-847, -16.000021)
+scale = Vector2(1.5859377, 1.1875007)
+texture = ExtResource("4_2uq8x")
+flip_v = true
+
+[node name="topLeftPole3" type="Sprite2D" parent="wallBoundaries/bottomWall" unique_id=1801204958]
+position = Vector2(846.00006, -15.000021)
+scale = Vector2(1.5859377, 1.1875007)
+texture = ExtResource("4_2uq8x")
+flip_h = true
+flip_v = true

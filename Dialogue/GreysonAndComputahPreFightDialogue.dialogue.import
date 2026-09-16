@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://cqpgf1o4ljgap"
+path="res://.godot/imported/GreysonAndComputahPreFightDialogue.dialogue-156fbcf20923fec83b1e5436c6754252.tres"
+
+[deps]
+
+source_file="res://Dialogue/GreysonAndComputahPreFightDialogue.dialogue"
+dest_files=["res://.godot/imported/GreysonAndComputahPreFightDialogue.dialogue-156fbcf20923fec83b1e5436c6754252.tres"]
+
+[params]
+
+defaults=true

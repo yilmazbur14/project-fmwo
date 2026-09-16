@@ -1,0 +1,199 @@
+[gd_scene format=3 uid="uid://c7l5sbpwdkp6y"]
+
+[ext_resource type="Script" uid="uid://6nkihaekysc6" path="res://Scripts/PlayerScript.gd" id="1_0sgo8"]
+[ext_resource type="Texture2D" uid="uid://bbc8d1p6vbuy3" path="res://Assets/Characters/MainPlayer/Sprite-0004-sheet.png" id="2_ts1ug"]
+[ext_resource type="Script" uid="uid://b7n7q842lsbq2" path="res://Scripts/StateMachine.gd" id="3_6rt1g"]
+[ext_resource type="Script" uid="uid://x6skx7vbfkma" path="res://Scripts/States/MainPlayer/PlayerIdle.gd" id="4_pt56f"]
+[ext_resource type="Script" uid="uid://dwk0ayp2kefoh" path="res://Scripts/States/MainPlayer/PlayerWalking.gd" id="5_pt56f"]
+[ext_resource type="Script" uid="uid://c6ek3euw3gb8l" path="res://Scripts/States/MainPlayer/PlayerPunching.gd" id="6_wotmp"]
+[ext_resource type="Script" uid="uid://eme7e8edw0ge" path="res://Scripts/States/MainPlayer/PlayerBlocking.gd" id="7_jsrhp"]
+[ext_resource type="PackedScene" uid="uid://cqe2px84rk50m" path="res://Scenes/Player/PlayerHealthScene.tscn" id="8_jsrhp"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_h87yu"]
+size = Vector2(12, 27)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_0sgo8"]
+size = Vector2(36, 81)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wotmp"]
+size = Vector2(4.3333335, 7.666666)
+
+[sub_resource type="Animation" id="Animation_0sgo8"]
+length = 0.20000334
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Animation_4ui42"]
+resource_name = "blocking"
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [9]
+}
+
+[sub_resource type="Animation" id="Animation_6rt1g"]
+resource_name = "idle_down"
+length = 0.16668333
+loop_mode = 1
+step = 0.16666667
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Animation_pt56f"]
+resource_name = "punch"
+length = 0.6666834
+step = 0.25
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.16666667, 0.33333334, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [5, 6, 7, 8]
+}
+tracks/1/type = "method"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("StateMachine/Punching")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.5),
+"transitions": PackedFloat32Array(1),
+"values": [{
+"args": [],
+"method": &"enable_hitbox"
+}]
+}
+
+[sub_resource type="Animation" id="Animation_ov71u"]
+resource_name = "walking"
+length = 0.83335
+loop_mode = 1
+step = 0.16666667
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.16666667, 0.33333334, 0.5, 0.6666667),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 1,
+"values": [0, 1, 2, 3, 4]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_wotmp"]
+_data = {
+&"RESET": SubResource("Animation_0sgo8"),
+&"blocking": SubResource("Animation_4ui42"),
+&"idle_down": SubResource("Animation_6rt1g"),
+&"punch": SubResource("Animation_pt56f"),
+&"walking": SubResource("Animation_ov71u")
+}
+
+[node name="MainPlayer" type="Node2D" unique_id=2109948936]
+
+[node name="CharacterBody2D" type="CharacterBody2D" parent="." unique_id=478092288 node_paths=PackedStringArray("invincibility_timer", "healthUI", "hurtBox", "hitBox")]
+scale = Vector2(2, 2)
+collision_layer = 2
+collision_mask = 13
+script = ExtResource("1_0sgo8")
+invincibility_timer = NodePath("InvincibilityTimer")
+healthUI = NodePath("../CanvasLayer/Control")
+hurtBox = NodePath("Hurtbox")
+hitBox = NodePath("Hitbox")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D" unique_id=778407643]
+position = Vector2(0, 0.5)
+shape = SubResource("RectangleShape2D_h87yu")
+debug_color = Color(0.9763635, 0, 0.41600993, 0.41960785)
+
+[node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D" unique_id=1375516330]
+texture = ExtResource("2_ts1ug")
+hframes = 10
+
+[node name="Hurtbox" type="Area2D" parent="CharacterBody2D" unique_id=1164196373]
+scale = Vector2(0.33333334, 0.33333334)
+collision_layer = 2
+collision_mask = 13
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D/Hurtbox" unique_id=61079665]
+position = Vector2(0, 1.5)
+shape = SubResource("RectangleShape2D_0sgo8")
+
+[node name="Hitbox" type="Area2D" parent="CharacterBody2D" unique_id=876172385 groups=["player attack"]]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D/Hitbox" unique_id=289895406]
+position = Vector2(3.1666667, -14.166667)
+shape = SubResource("RectangleShape2D_wotmp")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="CharacterBody2D" unique_id=863442886]
+libraries/ = SubResource("AnimationLibrary_wotmp")
+
+[node name="StateMachine" type="Node" parent="CharacterBody2D" unique_id=293770371 node_paths=PackedStringArray("initial_state")]
+script = ExtResource("3_6rt1g")
+initial_state = NodePath("Idle")
+
+[node name="Idle" type="Node" parent="CharacterBody2D/StateMachine" unique_id=2068842771 node_paths=PackedStringArray("animation_player")]
+script = ExtResource("4_pt56f")
+animation_player = NodePath("../../AnimationPlayer")
+
+[node name="Walking" type="Node" parent="CharacterBody2D/StateMachine" unique_id=48719040 node_paths=PackedStringArray("animation_player")]
+script = ExtResource("5_pt56f")
+animation_player = NodePath("../../AnimationPlayer")
+
+[node name="Punching" type="Node" parent="CharacterBody2D/StateMachine" unique_id=1703723686 node_paths=PackedStringArray("animation_player", "hitBox", "player")]
+script = ExtResource("6_wotmp")
+animation_player = NodePath("../../AnimationPlayer")
+hitBox = NodePath("../../Hitbox")
+player = NodePath("../..")
+
+[node name="Blocking" type="Node" parent="CharacterBody2D/StateMachine" unique_id=803491085 node_paths=PackedStringArray("animation_player")]
+script = ExtResource("7_jsrhp")
+animation_player = NodePath("../../AnimationPlayer")
+
+[node name="HurtSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="InvincibilityTimer" type="Timer" parent="CharacterBody2D" unique_id=633345939]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=547045528]
+
+[node name="Control" parent="CanvasLayer" unique_id=1519141297 instance=ExtResource("8_jsrhp")]
+
+[connection signal="timeout" from="CharacterBody2D/InvincibilityTimer" to="CharacterBody2D" method="_on_invincibility_timer_timeout"]

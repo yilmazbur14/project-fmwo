@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://co5nj6ksu0jt1"
+path="res://.godot/imported/defeat_theme.ogg-8557d6e87cb95c5f074133591e9c095d.oggvorbisstr"
+
+[deps]
+
+source_file="res://Claude outputs/defeat_theme.ogg"
+dest_files=["res://.godot/imported/defeat_theme.ogg-8557d6e87cb95c5f074133591e9c095d.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

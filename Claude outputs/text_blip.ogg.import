@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://if5ss04gev45"
+path="res://.godot/imported/text_blip.ogg-ad808de38f04e80ff84298023cd43a8f.oggvorbisstr"
+
+[deps]
+
+source_file="res://Claude outputs/text_blip.ogg"
+dest_files=["res://.godot/imported/text_blip.ogg-ad808de38f04e80ff84298023cd43a8f.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://du55f4iu26tjk"
+path="res://.godot/imported/player_hurt.ogg-fa733e2d0706308085e30d559445672f.oggvorbisstr"
+
+[deps]
+
+source_file="res://Claude outputs/player_hurt.ogg"
+dest_files=["res://.godot/imported/player_hurt.ogg-fa733e2d0706308085e30d559445672f.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://wps0t3wi2p87"]
+
+[ext_resource type="PackedScene" uid="uid://4pqund3nukl7" path="res://Scenes/Core/ArenaScene.tscn" id="1_dhpif"]
+[ext_resource type="PackedScene" uid="uid://cqe2px84rk50m" path="res://Scenes/Player/PlayerHealthScene.tscn" id="2_h7jyq"]
+
+[node name="Main" type="Node2D" unique_id=1116996839]
+
+[node name="Arena" parent="." unique_id=991001701 instance=ExtResource("1_dhpif")]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=265061121]
+
+[node name="Control" parent="CanvasLayer" unique_id=1519141297 instance=ExtResource("2_h7jyq")]

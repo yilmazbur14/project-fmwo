@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://cl6i0rv7l4tbc"
+path="res://.godot/imported/EricPreFight.dialogue-e05526ecbeaeb4c2cc8113abe6d26d52.tres"
+
+[deps]
+
+source_file="res://Dialogue/EricPreFight.dialogue"
+dest_files=["res://.godot/imported/EricPreFight.dialogue-e05526ecbeaeb4c2cc8113abe6d26d52.tres"]
+
+[params]
+
+defaults=true

@@ -1,0 +1,192 @@
+[gd_scene format=3 uid="uid://wv482advna66"]
+
+[ext_resource type="Script" uid="uid://c6twvc3axgj2x" path="res://Scripts/ControlsSceneScript.gd" id="1_3qffu"]
+[ext_resource type="FontFile" uid="uid://cehfffj4gcgyb" path="res://fonts/I-pixel-u.ttf" id="2_3qffu"]
+[ext_resource type="Texture2D" uid="uid://dbjupf5bfcl18" path="res://Assets/Characters/Danny/DannyDialogue.png" id="2_5h6n0"]
+[ext_resource type="Texture2D" uid="uid://bf4186kxg441o" path="res://Assets/UI/ArrowKeys.png" id="4_rouek"]
+[ext_resource type="Texture2D" uid="uid://bpe2op7h48b5d" path="res://Assets/UI/qKey.png" id="5_11o7n"]
+[ext_resource type="Texture2D" uid="uid://dg37kd4575d4w" path="res://Assets/UI/wKey.png" id="6_kewlb"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5h6n0"]
+bg_color = Color(0.12999275, 0.0041608913, 0.24937415, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0u41g"]
+bg_color = Color(0.29875475, 0.69462293, 0.4163347, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rouek"]
+bg_color = Color(0.33705017, 0.44891667, 0.1419825, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_11o7n"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 1, 1, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_kewlb"]
+font = ExtResource("2_3qffu")
+font_size = 60
+
+[sub_resource type="LabelSettings" id="LabelSettings_e2cce"]
+font = ExtResource("2_3qffu")
+font_size = 80
+
+[sub_resource type="FontVariation" id="FontVariation_3qffu"]
+base_font = ExtResource("2_3qffu")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kewlb"]
+bg_color = Color(0.6838172, 0, 0.19190958, 1)
+border_width_left = 6
+border_width_top = 6
+border_width_right = 6
+border_width_bottom = 6
+border_color = Color(0.8431838, 0.8431839, 0.84318364, 1)
+
+[node name="Controls" type="Control" unique_id=1151838191]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_3qffu")
+
+[node name="Panel" type="Panel" parent="." unique_id=1460423295]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_5h6n0")
+
+[node name="TextureRect" type="TextureRect" parent="Panel" unique_id=1611071279]
+custom_minimum_size = Vector2(300, 300)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -40.0
+offset_top = -40.0
+grow_horizontal = 0
+grow_vertical = 0
+texture = ExtResource("2_5h6n0")
+
+[node name="Panel" type="Panel" parent="Panel" unique_id=1497001834]
+custom_minimum_size = Vector2(1500, 0)
+layout_mode = 1
+offset_left = 150.0
+offset_top = 50.0
+offset_right = 1650.0
+offset_bottom = 850.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_0u41g")
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel/Panel" unique_id=1073060027]
+layout_mode = 0
+offset_right = 1480.0
+offset_bottom = 780.0
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+
+[node name="Panel" type="Panel" parent="Panel/Panel/MarginContainer" unique_id=1082067609]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_rouek")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel/Panel/MarginContainer/Panel" unique_id=177939738]
+layout_mode = 0
+offset_right = 1460.0
+offset_bottom = 760.0
+
+[node name="Panel" type="Panel" parent="Panel/Panel/MarginContainer/Panel/HBoxContainer" unique_id=1730149436]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_11o7n")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/Panel/MarginContainer/Panel/HBoxContainer/Panel" unique_id=1979209322]
+layout_mode = 0
+offset_right = 486.0
+offset_bottom = 760.0
+
+[node name="Label" type="Label" parent="Panel/Panel/MarginContainer/Panel/HBoxContainer/Panel/VBoxContainer" unique_id=185123292]
+custom_minimum_size = Vector2(486, 0)
+layout_mode = 2
+size_flags_vertical = 6
+text = "Classic arrow key movement"
+label_settings = SubResource("LabelSettings_kewlb")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="Panel/Panel/MarginContainer/Panel/HBoxContainer/Panel/VBoxContainer" unique_id=1655308067]
+layout_mode = 2
+size_flags_vertical = 3
+texture = ExtResource("4_rouek")
+
+[node name="Panel2" type="Panel" parent="Panel/Panel/MarginContainer/Panel/HBoxContainer" unique_id=712047834]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_11o7n")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/Panel/MarginContainer/Panel/HBoxContainer/Panel2" unique_id=1712070247]
+layout_mode = 0
+offset_right = 486.0
+offset_bottom = 760.0
+
+[node name="Label" type="Label" parent="Panel/Panel/MarginContainer/Panel/HBoxContainer/Panel2/VBoxContainer" unique_id=164485373]
+custom_minimum_size = Vector2(486, 0)
+layout_mode = 2
+size_flags_vertical = 6
+text = "Attack"
+label_settings = SubResource("LabelSettings_e2cce")
+horizontal_alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="Panel/Panel/MarginContainer/Panel/HBoxContainer/Panel2/VBoxContainer" unique_id=1965011749]
+layout_mode = 2
+size_flags_vertical = 3
+texture = ExtResource("5_11o7n")
+
+[node name="Panel4" type="Panel" parent="Panel/Panel/MarginContainer/Panel/HBoxContainer" unique_id=965169894]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_11o7n")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/Panel/MarginContainer/Panel/HBoxContainer/Panel4" unique_id=640929565]
+layout_mode = 0
+offset_right = 486.0
+offset_bottom = 760.0
+
+[node name="Label" type="Label" parent="Panel/Panel/MarginContainer/Panel/HBoxContainer/Panel4/VBoxContainer" unique_id=1281222223]
+custom_minimum_size = Vector2(486, 0)
+layout_mode = 2
+size_flags_vertical = 6
+text = "Dash"
+label_settings = SubResource("LabelSettings_e2cce")
+horizontal_alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="Panel/Panel/MarginContainer/Panel/HBoxContainer/Panel4/VBoxContainer" unique_id=120625822]
+layout_mode = 2
+size_flags_vertical = 3
+texture = ExtResource("6_kewlb")
+
+[node name="ReadyButton" type="Button" parent="Panel" unique_id=1717265982]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = -152.0
+offset_right = 452.0
+offset_bottom = -40.0
+grow_vertical = 0
+theme_override_fonts/font = SubResource("FontVariation_3qffu")
+theme_override_font_sizes/font_size = 80
+theme_override_styles/normal = SubResource("StyleBoxFlat_kewlb")
+text = "I'm ready!"

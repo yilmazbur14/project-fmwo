@@ -1,0 +1,146 @@
+[gd_scene format=3 uid="uid://cdv0lapujf2rg"]
+
+[ext_resource type="Script" uid="uid://dy4sh4osvs0ei" path="res://Scripts/EarthquakeProjectilesScript.gd" id="1_rhpmh"]
+[ext_resource type="Texture2D" uid="uid://ck7oes7uhnm57" path="res://Assets/Effects/earthquake_projectiles.png" id="2_c03qb"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_rhpmh"]
+size = Vector2(70, 3)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_c03qb"]
+size = Vector2(70, 3)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_qkcrr"]
+size = Vector2(70, 3)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_guhj0"]
+size = Vector2(70, 3)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_rkdfk"]
+size = Vector2(70, 3)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_spa8d"]
+size = Vector2(70, 3)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_chhi0"]
+size = Vector2(70, 3)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_qh621"]
+size = Vector2(70, 3)
+
+[node name="EarthquakeAreas" type="Node2D" unique_id=1314804853 node_paths=PackedStringArray("earthquake_collision_2", "earthquake_collision_4", "earthquake_collision_1", "earthquake_collision_3", "earthquake_collision_6", "earthquake_collision_7", "earthquake_collision_8", "earthquake_collision_9", "collision_shapes")]
+position = Vector2(-5, 0)
+script = ExtResource("1_rhpmh")
+earthquake_collision_2 = NodePath("Area2D(2)")
+earthquake_collision_4 = NodePath("Area2D(4)")
+earthquake_collision_1 = NodePath("Area2D(1)")
+earthquake_collision_3 = NodePath("Area2D(3)")
+earthquake_collision_6 = NodePath("Area2D(6)")
+earthquake_collision_7 = NodePath("Area2D(7)")
+earthquake_collision_8 = NodePath("Area2D(8)")
+earthquake_collision_9 = NodePath("Area2D(9)")
+collision_shapes = [NodePath("Area2D(2)/CollisionShape2D"), NodePath("Area2D(3)/CollisionShape2D"), NodePath("Area2D(6)/CollisionShape2D"), NodePath("Area2D(9)/CollisionShape2D"), NodePath("Area2D(8)/CollisionShape2D"), NodePath("Area2D(7)/CollisionShape2D"), NodePath("Area2D(4)/CollisionShape2D"), NodePath("Area2D(1)/CollisionShape2D")]
+
+[node name="Area2D(2)" type="Area2D" parent="." unique_id=1131174453 groups=["enemy projectile"]]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D(2)" unique_id=1917153709]
+position = Vector2(0, 80)
+shape = SubResource("RectangleShape2D_rhpmh")
+
+[node name="Sprite2D" type="Sprite2D" parent="Area2D(2)/CollisionShape2D" unique_id=23727571]
+position = Vector2(0.99999523, 0)
+scale = Vector2(1.6249999, 1)
+texture = ExtResource("2_c03qb")
+
+[node name="Area2D(3)" type="Area2D" parent="." unique_id=1654024842 groups=["enemy projectile"]]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D(3)" unique_id=843689224]
+position = Vector2(45.000004, 64.00001)
+rotation = -0.7853982
+shape = SubResource("RectangleShape2D_c03qb")
+
+[node name="Sprite2D2" type="Sprite2D" parent="Area2D(3)/CollisionShape2D" unique_id=211672559]
+position = Vector2(-3.8146973e-06, -1.1444092e-05)
+scale = Vector2(1.6250001, 1)
+texture = ExtResource("2_c03qb")
+
+[node name="Area2D(6)" type="Area2D" parent="." unique_id=1862651612 groups=["enemy projectile"]]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D(6)" unique_id=1095770746]
+position = Vector2(49, 0)
+rotation = 1.5707964
+shape = SubResource("RectangleShape2D_qkcrr")
+
+[node name="Sprite2D2" type="Sprite2D" parent="Area2D(6)/CollisionShape2D" unique_id=1613906569]
+position = Vector2(-9.536743e-07, -4.000004)
+rotation = -3.1415927
+scale = Vector2(1.6249999, 1)
+texture = ExtResource("2_c03qb")
+
+[node name="Area2D(9)" type="Area2D" parent="." unique_id=1272819895 groups=["enemy projectile"]]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D(9)" unique_id=1630942469]
+position = Vector2(45.000004, -40.000004)
+rotation = -2.3561945
+shape = SubResource("RectangleShape2D_guhj0")
+
+[node name="Sprite2D2" type="Sprite2D" parent="Area2D(9)/CollisionShape2D" unique_id=1890896764]
+position = Vector2(4.7683716e-07, -6.198883e-06)
+rotation = 3.1415927
+scale = Vector2(1.6250001, 1)
+texture = ExtResource("2_c03qb")
+
+[node name="Area2D(8)" type="Area2D" parent="." unique_id=1345622466 groups=["enemy projectile"]]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D(8)" unique_id=409052116]
+position = Vector2(0, -56)
+rotation = -3.1415927
+shape = SubResource("RectangleShape2D_rkdfk")
+
+[node name="Sprite2D2" type="Sprite2D" parent="Area2D(8)/CollisionShape2D" unique_id=117246050]
+position = Vector2(0, -1.5258789e-05)
+rotation = -3.1415925
+scale = Vector2(1.6249999, 1)
+texture = ExtResource("2_c03qb")
+
+[node name="Area2D(7)" type="Area2D" parent="." unique_id=310195916 groups=["enemy projectile"]]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D(7)" unique_id=1121966786]
+position = Vector2(-35, -40)
+rotation = -3.9269907
+shape = SubResource("RectangleShape2D_spa8d")
+
+[node name="Sprite2D2" type="Sprite2D" parent="Area2D(7)/CollisionShape2D" unique_id=490010937]
+position = Vector2(1.5258789e-05, 0)
+rotation = -3.1415927
+scale = Vector2(1.6249999, 1)
+texture = ExtResource("2_c03qb")
+
+[node name="Area2D(4)" type="Area2D" parent="." unique_id=2058192820 groups=["enemy projectile"]]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D(4)" unique_id=700645802]
+position = Vector2(-39, 0)
+rotation = -4.712389
+shape = SubResource("RectangleShape2D_chhi0")
+
+[node name="Sprite2D2" type="Sprite2D" parent="Area2D(4)/CollisionShape2D" unique_id=1325672662]
+position = Vector2(-4.769845e-08, 4)
+scale = Vector2(1.6249999, 1)
+texture = ExtResource("2_c03qb")
+
+[node name="Area2D(1)" type="Area2D" parent="." unique_id=1840151031 groups=["enemy projectile"]]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D(1)" unique_id=1106974044]
+position = Vector2(-43, 64)
+rotation = -5.497787
+shape = SubResource("RectangleShape2D_qh621")
+
+[node name="Sprite2D2" type="Sprite2D" parent="Area2D(1)/CollisionShape2D" unique_id=29658974]
+position = Vector2(0, -3.8146973e-06)
+scale = Vector2(1.6249999, 1)
+texture = ExtResource("2_c03qb")
+
+[node name="DespawnEarthquakesTimer" type="Timer" parent="." unique_id=1949313823]
+unique_name_in_owner = true
+wait_time = 2.0
+
+[connection signal="timeout" from="DespawnEarthquakesTimer" to="." method="_on_despawn_earthquakes_timeout"]

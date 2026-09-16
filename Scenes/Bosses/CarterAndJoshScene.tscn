@@ -1,0 +1,135 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://Assets/Characters/CarterAndJosh/carter.png" id="1_carter_tex"]
+[ext_resource type="Texture2D" path="res://Assets/Characters/CarterAndJosh/josh.png" id="2_josh_tex"]
+[ext_resource type="Script" path="res://Scripts/BossThreeScript.gd" id="3_coord"]
+[ext_resource type="Script" path="res://Scripts/CarterScript.gd" id="4_carter_script"]
+[ext_resource type="Script" path="res://Scripts/JoshScript.gd" id="5_josh_script"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(26, 44)
+
+[sub_resource type="Animation" id="Animation_reset"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Animation_idle"]
+resource_name = "idle"
+loop_mode = 1
+step = 0.4
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_shared"]
+_data = {
+&"RESET": SubResource("Animation_reset"),
+&"idle": SubResource("Animation_idle")
+}
+
+[node name="CarterAndJoshScene" type="Node2D" node_paths=PackedStringArray("josh", "carter", "cycle_timer")]
+script = ExtResource("3_coord")
+josh = NodePath("Josh")
+carter = NodePath("Carter")
+cycle_timer = NodePath("CycleTimer")
+
+[node name="Josh" type="CharacterBody2D" parent="." node_paths=PackedStringArray("sprite", "animation_player", "telegraph_line", "body_hitbox")]
+collision_layer = 4
+collision_mask = 3
+scale = Vector2(3, 3)
+script = ExtResource("5_josh_script")
+sprite = NodePath("Sprite2D")
+animation_player = NodePath("AnimationPlayer")
+telegraph_line = NodePath("TelegraphLine")
+body_hitbox = NodePath("BodyHitbox")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Josh"]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="Sprite2D" type="Sprite2D" parent="Josh"]
+texture = ExtResource("2_josh_tex")
+hframes = 1
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Josh"]
+libraries/ = SubResource("AnimationLibrary_shared")
+
+[node name="TelegraphLine" type="Line2D" parent="Josh"]
+points = PackedVector2Array(-450, 0, 450, 0)
+width = 2.0
+default_color = Color(1, 0.55, 0.1, 0.55)
+visible = false
+
+[node name="BodyHitbox" type="Area2D" parent="Josh" groups=["josh_body"]]
+monitoring = true
+monitorable = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Josh/BodyHitbox"]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="Carter" type="CharacterBody2D" parent="." node_paths=PackedStringArray("sprite", "animation_player", "telegraph_line", "body_hitbox")]
+collision_layer = 4
+collision_mask = 3
+scale = Vector2(3, 3)
+position = Vector2(120, 0)
+script = ExtResource("4_carter_script")
+sprite = NodePath("Sprite2D")
+animation_player = NodePath("AnimationPlayer")
+telegraph_line = NodePath("TelegraphLine")
+body_hitbox = NodePath("BodyHitbox")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Carter"]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="Sprite2D" type="Sprite2D" parent="Carter"]
+texture = ExtResource("1_carter_tex")
+hframes = 1
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Carter"]
+libraries/ = SubResource("AnimationLibrary_shared")
+
+[node name="TelegraphLine" type="Line2D" parent="Carter"]
+points = PackedVector2Array(0, -450, 0, 450)
+width = 2.0
+default_color = Color(0.2, 0.45, 1, 0.55)
+visible = false
+
+[node name="BodyHitbox" type="Area2D" parent="Carter" groups=["carter_body"]]
+monitoring = true
+monitorable = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Carter/BodyHitbox"]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="CycleTimer" type="Timer" parent="."]
+wait_time = 3.2
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="."]
+volume_db = -4.0
+
+[node name="ChargeSfxPlayer" type="AudioStreamPlayer" parent="."]
+
+[node name="CollisionSfxPlayer" type="AudioStreamPlayer" parent="."]
+
+[node name="VictorySfxPlayer" type="AudioStreamPlayer" parent="."]
+
+[connection signal="timeout" from="CycleTimer" to="." method="_on_cycle_timer_timeout"]

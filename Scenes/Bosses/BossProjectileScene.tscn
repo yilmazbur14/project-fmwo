@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://dpv740quidgj1"]
+
+[ext_resource type="Script" uid="uid://1acfcwkcdecm" path="res://Scripts/BossProjectileScript.gd" id="1_bhxlw"]
+[ext_resource type="Texture2D" uid="uid://dutfurus5x4ow" path="res://Assets/_Unused/bullettest.png" id="1_pvsm2"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_bhxlw"]
+
+[node name="Area2D" type="Area2D" unique_id=177642414 groups=["enemy projectile"]]
+collision_layer = 8
+collision_mask = 2
+script = ExtResource("1_bhxlw")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1182364177]
+shape = SubResource("CapsuleShape2D_bhxlw")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1135686017]
+position = Vector2(0, -2.500002)
+scale = Vector2(1, 1.4062499)
+texture = ExtResource("1_pvsm2")
+
+[node name="DespawnTimer" type="Timer" parent="." unique_id=2034760373]
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]
+[connection signal="timeout" from="DespawnTimer" to="." method="_on_despawn_timer_timeout"]

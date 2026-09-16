@@ -1,0 +1,31 @@
+[gd_scene format=3 uid="uid://bm1jw8o8tc0ha"]
+
+[ext_resource type="Script" path="res://Scripts/VictoryScript.gd" id="1_vicsc"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_uvenb"]
+font_size = 100
+
+[node name="VictoryUI" type="Control" unique_id=380473964 node_paths=PackedStringArray("next_boss_button")]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 1923.0
+offset_bottom = 1085.0
+script = ExtResource("1_vicsc")
+next_boss_button = NodePath("NextBossButton")
+
+[node name="VictoryText" type="Label" parent="." unique_id=916567778]
+layout_mode = 0
+offset_right = 1921.0
+offset_bottom = 1079.0
+text = "Victory!"
+label_settings = SubResource("LabelSettings_uvenb")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="NextBossButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 760.0
+offset_top = 760.0
+offset_right = 1160.0
+offset_bottom = 830.0
+text = "NEXT BOSS"

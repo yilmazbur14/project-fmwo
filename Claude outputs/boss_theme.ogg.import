@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://db2u60juhqm1h"
+path="res://.godot/imported/boss_theme.ogg-17ee7ad388d5480972058a13dc03d1be.oggvorbisstr"
+
+[deps]
+
+source_file="res://Claude outputs/boss_theme.ogg"
+dest_files=["res://.godot/imported/boss_theme.ogg-17ee7ad388d5480972058a13dc03d1be.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
