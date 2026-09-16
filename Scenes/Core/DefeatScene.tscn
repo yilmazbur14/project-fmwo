@@ -1,9 +1,7 @@
 [gd_scene format=3 uid="uid://clap5g0cj3l1h"]
 
 [ext_resource type="Script" path="res://Scripts/DefeatScript.gd" id="1_defsc"]
-
-[sub_resource type="LabelSettings" id="LabelSettings_n85jx"]
-font_size = 100
+[ext_resource type="Theme" uid="uid://dnd78vy0t1wm3" path="res://Assets/UI/ui_theme.tres" id="2_theme"]
 
 [node name="DefeatScene" type="Control" unique_id=1866433866 node_paths=PackedStringArray("return_to_menu_button", "music_player")]
 layout_mode = 3
@@ -12,6 +10,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("2_theme")
 script = ExtResource("1_defsc")
 return_to_menu_button = NodePath("ReturnToMenuButton")
 music_player = NodePath("MusicPlayer")
@@ -20,8 +19,8 @@ music_player = NodePath("MusicPlayer")
 layout_mode = 0
 offset_right = 1925.0
 offset_bottom = 1076.0
+theme_type_variation = &"TitleLabel"
 text = "Defeat!"
-label_settings = SubResource("LabelSettings_n85jx")
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -31,7 +30,6 @@ offset_left = 760.0
 offset_top = 700.0
 offset_right = 1160.0
 offset_bottom = 780.0
-theme_override_font_sizes/font_size = 32
 text = "RETURN TO MAIN MENU"
 
 [node name="MusicPlayer" type="AudioStreamPlayer" parent="."]

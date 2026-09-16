@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://cig2nadownt1r"]
 
-[ext_resource type="Texture2D" uid="uid://rdd5fukhwdy8" path="res://Assets/Characters/Danny/DannyIntro.png" id="1_d30j0"]
+[ext_resource type="Texture2D" uid="uid://yecxybp7d27x" path="res://Assets/Characters/Danny/DannyIntro_pixel.png" id="1_d30j0"]
 [ext_resource type="Script" uid="uid://de3l5acmk3dac" path="res://Scripts/IntroScript.gd" id="1_qef2n"]
+[ext_resource type="Theme" uid="uid://dnd78vy0t1wm3" path="res://Assets/UI/ui_theme.tres" id="2_theme"]
 
 [node name="IntroScene" type="Control" unique_id=1891816055]
 layout_mode = 3
@@ -10,10 +11,15 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("2_theme")
 script = ExtResource("1_qef2n")
 
 [node name="TextureRect" type="TextureRect" parent="." unique_id=1460243540]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 texture = ExtResource("1_d30j0")
+expand_mode = 1

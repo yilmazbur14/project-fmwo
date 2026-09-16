@@ -1,15 +1,14 @@
 [gd_scene format=3 uid="uid://bm1jw8o8tc0ha"]
 
 [ext_resource type="Script" path="res://Scripts/VictoryScript.gd" id="1_vicsc"]
-
-[sub_resource type="LabelSettings" id="LabelSettings_uvenb"]
-font_size = 100
+[ext_resource type="Theme" uid="uid://dnd78vy0t1wm3" path="res://Assets/UI/ui_theme.tres" id="2_theme"]
 
 [node name="VictoryUI" type="Control" unique_id=380473964 node_paths=PackedStringArray("next_boss_button")]
 layout_mode = 3
 anchors_preset = 0
 offset_right = 1923.0
 offset_bottom = 1085.0
+theme = ExtResource("2_theme")
 script = ExtResource("1_vicsc")
 next_boss_button = NodePath("NextBossButton")
 
@@ -17,8 +16,8 @@ next_boss_button = NodePath("NextBossButton")
 layout_mode = 0
 offset_right = 1921.0
 offset_bottom = 1079.0
+theme_type_variation = &"TitleLabel"
 text = "Victory!"
-label_settings = SubResource("LabelSettings_uvenb")
 horizontal_alignment = 1
 vertical_alignment = 1
 

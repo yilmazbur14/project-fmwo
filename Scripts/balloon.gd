@@ -2,6 +2,12 @@ extends CanvasLayer
 ## A basic dialogue balloon for use with Dialogue Manager.
 
 
+## While a node in this group (the fight hearts HUD) is visible, the dialogue box moves to its right so the hearts stay on screen.
+const FIGHT_HUD_GROUP: StringName = &"player_health_hud"
+## Fixed rather than read from the HUD's rect: its container hasn't sized it yet when the first line appears. The hearts row is 284px wide.
+const FIGHT_PANEL_OFFSET_LEFT: float = 300.0
+const FIGHT_PANEL_OFFSET_RIGHT: float = -24.0
+
 ## The dialogue resource
 @export var dialogue_resource: DialogueResource
 
@@ -61,8 +67,14 @@ var mutation_cooldown: Timer = Timer.new()
 ## The base balloon anchor
 @onready var balloon: Control = %Balloon
 
+@onready var panel: PanelContainer = %PanelContainer
+
+@onready var centred_panel_offsets: Vector2 = Vector2(panel.offset_left, panel.offset_right)
+
 #The speaking characters portrait
 @onready var portrait: TextureRect = %Portrait
+
+@onready var portrait_frame: PanelContainer = %PortraitFrame
 
 ## The label showing the name of the currently speaking character
 @onready var character_label: RichTextLabel = %CharacterLabel
@@ -74,7 +86,7 @@ var mutation_cooldown: Timer = Timer.new()
 @onready var responses_menu: DialogueResponsesMenu = %ResponsesMenu
 
 ## Indicator to show that player can progress dialogue.
-@onready var progress: Polygon2D = %Progress
+@onready var progress: Sprite2D = %Progress
 
 
 func _ready() -> void:
@@ -148,12 +160,15 @@ func apply_dialogue_line() -> void:
 			portrait.texture = load(portriat_path)
 		else:
 			portrait.texture = null
+		portrait_frame.visible = portrait.texture != null
 
 	dialogue_label.hide()
 	dialogue_label.dialogue_line = dialogue_line
 
 	responses_menu.hide()
 	responses_menu.responses = dialogue_line.responses
+
+	_place_panel()
 
 	# Show our balloon
 	balloon.show()
@@ -186,6 +201,16 @@ func apply_dialogue_line() -> void:
 ## Go to the next line
 func next(next_id: String) -> void:
 	dialogue_line = await dialogue_resource.get_next_dialogue_line(next_id, temporary_game_states)
+
+
+func _place_panel() -> void:
+	var fight_hud := get_tree().get_first_node_in_group(FIGHT_HUD_GROUP) as CanvasItem
+	if is_instance_valid(fight_hud) and fight_hud.is_visible_in_tree():
+		panel.offset_left = FIGHT_PANEL_OFFSET_LEFT
+		panel.offset_right = FIGHT_PANEL_OFFSET_RIGHT
+	else:
+		panel.offset_left = centred_panel_offsets.x
+		panel.offset_right = centred_panel_offsets.y
 
 
 #region Signals

@@ -75,7 +75,7 @@ func _build_health_bar() -> void:
 	name_label = Label.new()
 	name_label.text = "ERIC"
 	name_label.position = Vector2(770, 36)
-	name_label.add_theme_font_size_override("font_size", 26)
+	name_label.theme = load("res://Assets/UI/ui_theme.tres")
 	name_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	name_label.add_theme_constant_override("outline_size", 6)

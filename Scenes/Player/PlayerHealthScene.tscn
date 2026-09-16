@@ -18,7 +18,7 @@ full_heart = ExtResource("1_ouu2d")
 half_heart = ExtResource("3_uuw8f")
 empty_heart = ExtResource("4_g7f51")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1133299934]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1133299934 groups=["player_health_hud"]]
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
