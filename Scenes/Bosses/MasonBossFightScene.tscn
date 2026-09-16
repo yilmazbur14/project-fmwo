@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" uid="uid://4pqund3nukl7" path="res://Scenes/Core/ArenaScene.tscn" id="1_arena"]
+[ext_resource type="PackedScene" path="res://Scenes/Bosses/MasonScene.tscn" id="2_mason"]
+
+[node name="MasonBossFightScene" type="Node2D"]
+
+[node name="Arena" parent="." instance=ExtResource("1_arena")]
+
+[node name="MasonScene" parent="Arena" instance=ExtResource("2_mason")]

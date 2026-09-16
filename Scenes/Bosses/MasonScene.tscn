@@ -1,0 +1,278 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/MasonScript.gd" id="1_mason_script"]
+[ext_resource type="Texture2D" uid="uid://dapsp0qkd1wc5" path="res://Assets/Characters/Mason/mason_sheet.png" id="2_mason_sheet"]
+[ext_resource type="Script" path="res://Scripts/States/Mason/MasonStateMachine.gd" id="3_state_machine"]
+[ext_resource type="Script" path="res://Scripts/States/Mason/MasonIdle.gd" id="4_idle"]
+[ext_resource type="Script" path="res://Scripts/States/Mason/MasonPooSquat.gd" id="5_poo_squat"]
+[ext_resource type="Script" path="res://Scripts/States/Mason/MasonWaddle.gd" id="6_waddle"]
+[ext_resource type="Script" path="res://Scripts/States/Mason/MasonCallCarter.gd" id="7_call_carter"]
+[ext_resource type="Script" path="res://Scripts/States/Mason/MasonAwaitDelivery.gd" id="8_await_delivery"]
+[ext_resource type="Script" path="res://Scripts/States/Mason/MasonEat.gd" id="9_eat"]
+[ext_resource type="Script" path="res://Scripts/States/Mason/MasonDefeated.gd" id="10_defeated"]
+
+[sub_resource type="Animation" id="Animation_mason_reset"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Animation_mason_idle"]
+resource_name = "idle"
+length = 0.8
+loop_mode = 1
+step = 0.4
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.4),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [0, 1]
+}
+
+[sub_resource type="Animation" id="Animation_mason_waddle"]
+resource_name = "waddle"
+length = 0.5
+loop_mode = 1
+step = 0.125
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.125, 0.25, 0.375),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [2, 3, 4, 5]
+}
+
+[sub_resource type="Animation" id="Animation_mason_poop"]
+resource_name = "poop"
+length = 0.75
+step = 0.25
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.5),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [6, 7]
+}
+
+[sub_resource type="Animation" id="Animation_mason_eat"]
+resource_name = "eat"
+length = 0.36
+loop_mode = 1
+step = 0.18
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.18),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [8, 9]
+}
+
+[sub_resource type="Animation" id="Animation_mason_phone"]
+resource_name = "phone"
+length = 0.5
+loop_mode = 1
+step = 0.25
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [10, 11]
+}
+
+[sub_resource type="Animation" id="Animation_mason_hit"]
+resource_name = "hit"
+length = 0.2
+step = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [12]
+}
+
+[sub_resource type="Animation" id="Animation_mason_defeated"]
+resource_name = "defeated"
+length = 0.7
+step = 0.35
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.35),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [13, 14]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_mason"]
+_data = {
+&"RESET": SubResource("Animation_mason_reset"),
+&"defeated": SubResource("Animation_mason_defeated"),
+&"eat": SubResource("Animation_mason_eat"),
+&"hit": SubResource("Animation_mason_hit"),
+&"idle": SubResource("Animation_mason_idle"),
+&"phone": SubResource("Animation_mason_phone"),
+&"poop": SubResource("Animation_mason_poop"),
+&"waddle": SubResource("Animation_mason_waddle")
+}
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_mason_hurtbox"]
+size = Vector2(130, 170)
+
+[node name="MasonScene" type="Node2D"]
+
+[node name="MasonCharacterBody" type="CharacterBody2D" parent="."]
+position = Vector2(960, 280)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_mason_script")
+
+[node name="Sprite2D" type="Sprite2D" parent="MasonCharacterBody"]
+scale = Vector2(3, 3)
+texture = ExtResource("2_mason_sheet")
+hframes = 15
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="MasonCharacterBody"]
+libraries/ = SubResource("AnimationLibrary_mason")
+
+[node name="Hurtbox" type="Area2D" parent="MasonCharacterBody" groups=["enemy"]]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="MasonCharacterBody/Hurtbox"]
+position = Vector2(0, 10)
+shape = SubResource("RectangleShape2D_mason_hurtbox")
+
+[node name="StateManager" type="Node" parent="MasonCharacterBody" node_paths=PackedStringArray("initial_state", "MasonCharacterBody", "post_dialogue_pre_fight_timer", "squat_timer", "release_timer", "phone_timer", "eat_timer")]
+script = ExtResource("3_state_machine")
+initial_state = NodePath("Idle")
+MasonCharacterBody = NodePath("..")
+post_dialogue_pre_fight_timer = NodePath("../PostDialoguePreFightTimer")
+squat_timer = NodePath("../SquatTimer")
+release_timer = NodePath("../ReleaseTimer")
+phone_timer = NodePath("../PhoneTimer")
+eat_timer = NodePath("../EatTimer")
+
+[node name="Idle" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player")]
+script = ExtResource("4_idle")
+animation_player = NodePath("../../AnimationPlayer")
+
+[node name="PooSquat" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "squat_sfx_player", "squat_timer", "release_timer")]
+script = ExtResource("5_poo_squat")
+animation_player = NodePath("../../AnimationPlayer")
+squat_sfx_player = NodePath("../../SquatSfxPlayer")
+squat_timer = NodePath("../../SquatTimer")
+release_timer = NodePath("../../ReleaseTimer")
+
+[node name="Waddle" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "body")]
+script = ExtResource("6_waddle")
+animation_player = NodePath("../../AnimationPlayer")
+body = NodePath("../..")
+
+[node name="CallCarter" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "phone_sfx_player", "phone_timer")]
+script = ExtResource("7_call_carter")
+animation_player = NodePath("../../AnimationPlayer")
+phone_sfx_player = NodePath("../../PhoneSfxPlayer")
+phone_timer = NodePath("../../PhoneTimer")
+
+[node name="AwaitDelivery" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "body")]
+script = ExtResource("8_await_delivery")
+animation_player = NodePath("../../AnimationPlayer")
+body = NodePath("../..")
+
+[node name="Eat" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "hurtbox", "downed_sfx_player", "eat_timer", "body")]
+script = ExtResource("9_eat")
+animation_player = NodePath("../../AnimationPlayer")
+hurtbox = NodePath("../../Hurtbox")
+downed_sfx_player = NodePath("../../DownedSfxPlayer")
+eat_timer = NodePath("../../EatTimer")
+body = NodePath("../..")
+
+[node name="Defeated" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player")]
+script = ExtResource("10_defeated")
+animation_player = NodePath("../../AnimationPlayer")
+
+[node name="PostDialoguePreFightTimer" type="Timer" parent="MasonCharacterBody"]
+wait_time = 2.0
+one_shot = true
+
+[node name="SquatTimer" type="Timer" parent="MasonCharacterBody"]
+one_shot = true
+
+[node name="ReleaseTimer" type="Timer" parent="MasonCharacterBody"]
+one_shot = true
+
+[node name="PhoneTimer" type="Timer" parent="MasonCharacterBody"]
+one_shot = true
+
+[node name="EatTimer" type="Timer" parent="MasonCharacterBody"]
+one_shot = true
+
+[node name="VictoryDelayTimer" type="Timer" parent="MasonCharacterBody"]
+wait_time = 2.2
+one_shot = true
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="MasonCharacterBody"]
+volume_db = -4.0
+
+[node name="HitSfxPlayer" type="AudioStreamPlayer" parent="MasonCharacterBody"]
+
+[node name="VictorySfxPlayer" type="AudioStreamPlayer" parent="MasonCharacterBody"]
+
+[node name="SquatSfxPlayer" type="AudioStreamPlayer" parent="MasonCharacterBody"]
+
+[node name="PhoneSfxPlayer" type="AudioStreamPlayer" parent="MasonCharacterBody"]
+
+[node name="DownedSfxPlayer" type="AudioStreamPlayer" parent="MasonCharacterBody"]
+
+[connection signal="timeout" from="MasonCharacterBody/PostDialoguePreFightTimer" to="MasonCharacterBody/StateManager" method="_on_post_dialogue_pre_fight_timer_timeout"]
+[connection signal="timeout" from="MasonCharacterBody/SquatTimer" to="MasonCharacterBody/StateManager/PooSquat" method="_on_squat_timer_timeout"]
+[connection signal="timeout" from="MasonCharacterBody/ReleaseTimer" to="MasonCharacterBody/StateManager/PooSquat" method="_on_release_timer_timeout"]
+[connection signal="timeout" from="MasonCharacterBody/PhoneTimer" to="MasonCharacterBody/StateManager/CallCarter" method="_on_phone_timer_timeout"]
+[connection signal="timeout" from="MasonCharacterBody/EatTimer" to="MasonCharacterBody/StateManager/Eat" method="_on_eat_timer_timeout"]
+[connection signal="timeout" from="MasonCharacterBody/VictoryDelayTimer" to="MasonCharacterBody" method="_on_victory_delay_timer_timeout"]

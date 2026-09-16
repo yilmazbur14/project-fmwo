@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://dgtp63wa6e4de"
+path="res://.godot/imported/MasonPreFight.dialogue-b73201d9787b71ee1be1c3d12405436d.tres"
+
+[deps]
+
+source_file="res://Dialogue/MasonPreFight.dialogue"
+dest_files=["res://.godot/imported/MasonPreFight.dialogue-b73201d9787b71ee1be1c3d12405436d.tres"]
+
+[params]
+
+defaults=true

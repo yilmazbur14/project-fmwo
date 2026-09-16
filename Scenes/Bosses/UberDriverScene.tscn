@@ -1,0 +1,85 @@
+[gd_scene format=3 uid="uid://vj5umtbuvsc"]
+
+[ext_resource type="Script" path="res://Scripts/UberDriverScript.gd" id="1_uberdriver"]
+[ext_resource type="Texture2D" uid="uid://cruocbe3kynk4" path="res://Assets/Characters/Mason/uber_driver.png" id="2_driver_tex"]
+[ext_resource type="AudioStream" uid="uid://ck7l4pwwsnqgk" path="res://Assets/Audio/SFX/text_blip.ogg" id="3_text_blip"]
+
+[sub_resource type="Animation" id="Animation_uber_reset"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Animation_uber_walk"]
+resource_name = "walk"
+length = 0.6
+loop_mode = 1
+step = 0.15
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.3, 0.45),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [0, 1, 2, 3]
+}
+
+[sub_resource type="Animation" id="Animation_uber_deliver"]
+resource_name = "deliver"
+length = 0.6
+loop_mode = 1
+step = 0.3
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.3),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [4, 5]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_uber"]
+_data = {
+&"RESET": SubResource("Animation_uber_reset"),
+&"deliver": SubResource("Animation_uber_deliver"),
+&"walk": SubResource("Animation_uber_walk")
+}
+
+[node name="UberDriver" type="Node2D" node_paths=PackedStringArray("sprite", "animation_player", "handoff_timer", "arrive_sfx") groups=["mason_hazard"]]
+script = ExtResource("1_uberdriver")
+sprite = NodePath("Sprite2D")
+animation_player = NodePath("AnimationPlayer")
+handoff_timer = NodePath("HandoffTimer")
+arrive_sfx = NodePath("ArriveSfx")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(3, 3)
+texture = ExtResource("2_driver_tex")
+hframes = 6
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries/ = SubResource("AnimationLibrary_uber")
+
+[node name="HandoffTimer" type="Timer" parent="."]
+wait_time = 0.8
+one_shot = true
+
+[node name="ArriveSfx" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_text_blip")
