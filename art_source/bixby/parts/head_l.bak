@@ -1,0 +1,23 @@
+# left head - 3/4 turned to viewer's left, barking. width 25
+00 |..........KKKKKK.........|
+01 |........KK111222KK.......|
+02 |.......K111w222233K......|
+03 |......K111wW2222233K.....|
+04 |.....K111wWw22222334K....|
+05 |....K1112wWw222222334K...|
+06 |...K11122wWw222223KKKKK..|
+07 |...K22222wWw222233KabbcK.|
+08 |...K222KKwWw2KKK23KabbcK.|
+09 |...K222fewWw2feeK3KabbcK.|
+10 |...K223eewWw3eee33KabccK.|
+11 |..KwwWwwwwWw444334KabccK.|
+12 |.KKKKwWwwwwv333344KbbccK.|
+13 |KnnKKKwwwwvv333444KbccdK.|
+14 |.KKKKwwwvvvu344444KbccdK.|
+15 |.KvvvvuuuuuK444444KbccdK.|
+16 |..KWmmmmmmmmK44444KbcdddK|
+17 |...KttttpmmK4444K.KccdddK|
+18 |....KWvvvuuK4K....KcddddK|
+19 |.....KKKKKKKK.....KcddddK|
+20 |...................KdddK.|
+21 |....................KKK..|

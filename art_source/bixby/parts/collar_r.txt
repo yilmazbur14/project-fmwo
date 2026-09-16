@@ -1,0 +1,10 @@
+# right collar = mirror of left (spike shading swapped). origin (42,33)
+00 |KKKKK............|
+01 |KRRRRKKK.........|
+02 |KrrrrRRRKKK......|
+03 |KssssrrrRRRKKK...|
+04 |KKxXysssrrrRRRKK.|
+05 |..KXKKKKsssrrrXyK|
+06 |...K....xXysssKK.|
+07 |........KXKKKKK..|
+08 |.........K.......|
