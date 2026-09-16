@@ -15,6 +15,7 @@ const TELEGRAPH_DURATION := 0.6
 const DEFAULT_ARRIVAL_TIME := 0.45
 const MAX_TRAVEL := 2600.0
 const RECOVER_DURATION := 1.0
+const TELEGRAPH_TINT := Color(1.35, 1.5, 1.9)
 
 var state := State.IDLE
 var origin_position: Vector2
@@ -22,6 +23,7 @@ var charge_speed := 0.0
 var charge_direction := 1.0
 var traveled := 0.0
 var main_player = null
+var is_defeated := false
 
 
 func _ready() -> void:
@@ -45,7 +47,7 @@ func _physics_process(delta: float) -> void:
 
 # Called by the coordinator with a snapshot of the player's position.
 func begin_charge(target: Vector2, arrival_time: float = DEFAULT_ARRIVAL_TIME) -> void:
-	if state != State.IDLE:
+	if state != State.IDLE or is_defeated:
 		return
 	state = State.TELEGRAPH
 	global_position.x = target.x
@@ -53,7 +55,9 @@ func begin_charge(target: Vector2, arrival_time: float = DEFAULT_ARRIVAL_TIME) -
 		telegraph_line.visible = true
 	_play_telegraph()
 	await get_tree().create_timer(TELEGRAPH_DURATION).timeout
-	if state != State.TELEGRAPH:
+	# play_defeated() flips is_defeated without touching state, so a wrestler
+	# killed during his own telegraph would otherwise resume the charge here.
+	if state != State.TELEGRAPH or is_defeated:
 		return
 	_start_charging(target, arrival_time)
 
@@ -88,6 +92,8 @@ func _finish_charge() -> void:
 		body_hitbox.remove_from_group("enemy projectile")
 	_play_recovering()
 	await get_tree().create_timer(RECOVER_DURATION).timeout
+	if is_defeated:
+		return
 	global_position = origin_position
 	state = State.IDLE
 	_play_idle()
@@ -97,8 +103,30 @@ func hit_feedback() -> void:
 	if not sprite:
 		return
 	sprite.modulate = Color(3, 3, 3)
+	# Getting hit mid-wind-up must not wipe the telegraph tell, so the flash
+	# fades back to whatever tint the current state is supposed to be showing.
+	var flash_target := TELEGRAPH_TINT if state == State.TELEGRAPH else Color(1, 1, 1)
 	var flash_tween = create_tween()
-	flash_tween.tween_property(sprite, "modulate", Color(1, 1, 1), 0.15)
+	flash_tween.tween_property(sprite, "modulate", flash_target, 0.15)
+	if animation_player and not is_defeated:
+		animation_player.play("hit")
+		# "hit" is one non-looping frame. Without something queued behind it
+		# the player stops and the sprite freezes on it for the rest of the
+		# recovery, so the recover pose would never be seen.
+		var resume := "idle"
+		if state == State.RECOVERING:
+			resume = "recover"
+		elif state == State.TELEGRAPH:
+			resume = "telegraph"
+		animation_player.queue(resume)
+
+
+func play_defeated() -> void:
+	is_defeated = true
+	if sprite:
+		sprite.modulate = Color(1, 1, 1)
+	if animation_player:
+		animation_player.play("defeated")
 
 
 func _on_body_hitbox_area_entered(area: Area2D) -> void:
@@ -118,27 +146,31 @@ func _on_body_hitbox_area_entered(area: Area2D) -> void:
 
 
 func _play_idle() -> void:
+	if sprite:
+		sprite.modulate = Color(1, 1, 1)
 	if animation_player:
 		animation_player.play("idle")
 
 
 func _play_telegraph() -> void:
 	if sprite:
-		sprite.modulate = Color(1.35, 1.5, 1.9)
+		sprite.modulate = TELEGRAPH_TINT
+	if animation_player:
+		animation_player.play("telegraph")
 
 
 func _play_charging() -> void:
 	if sprite:
 		sprite.modulate = Color(1, 1, 1)
 	if animation_player:
-		animation_player.stop()
-	if sprite:
-		sprite.frame = min(2, sprite.hframes * sprite.vframes - 1)
+		if charge_direction < 0:
+			animation_player.play("charge_up")
+		else:
+			animation_player.play("charge_down")
 
 
 func _play_recovering() -> void:
-	if animation_player:
-		animation_player.stop()
 	if sprite:
 		sprite.modulate = Color(1, 1, 1)
-		sprite.frame = min(3, sprite.hframes * sprite.vframes - 1)
+	if animation_player:
+		animation_player.play("recover")

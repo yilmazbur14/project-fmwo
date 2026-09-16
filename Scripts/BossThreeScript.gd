@@ -19,6 +19,7 @@ var damage_per_collision := 2
 @export var josh: CharacterBody2D
 @export var carter: CharacterBody2D
 @export var cycle_timer: Timer
+@export var post_dialogue_pre_fight_timer: Timer
 
 #UI (built at runtime - no new art needed)
 var health_bar: ProgressBar
@@ -50,13 +51,20 @@ func _ready() -> void:
 	collision_sfx_player.stream = load("res://Assets/Audio/SFX/wrestler_collision.ogg")
 	victory_sfx_player.stream = load("res://Assets/Audio/SFX/victory_fanfare.ogg")
 
+	DialogueManager.show_dialogue_balloon(load("res://Dialogue/CarterAndJoshPreFight.dialogue"), "start")
+	DialogueManager.dialogue_ended.connect(_on_dialogue_ended)
+
+
+func _on_dialogue_ended(dialogue: Object) -> void:
+	post_dialogue_pre_fight_timer.start()
+
+
+func _on_post_dialogue_pre_fight_timer_timeout() -> void:
+	if music_player and not music_player.playing:
+		music_player.play()
 	if cycle_timer:
 		cycle_timer.wait_time = BASE_CYCLE
 		cycle_timer.start()
-
-	await get_tree().create_timer(0.8).timeout
-	if music_player and not music_player.playing:
-		music_player.play()
 
 
 func get_health_ratio() -> float:
@@ -129,6 +137,12 @@ func _on_defeated() -> void:
 		music_player.stop()
 	victory_sfx_player.play()
 	GameProgress.next_boss_scene = ""
+
+	if josh and josh.has_method("play_defeated"):
+		josh.play_defeated()
+	if carter and carter.has_method("play_defeated"):
+		carter.play_defeated()
+
 	await get_tree().create_timer(2.2).timeout
 	get_tree().change_scene_to_file("res://Scenes/Core/VictoryScene.tscn")
 
