@@ -1,0 +1,22 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Laughing", &"LaserBeam", &"FireRockets", &"Downed"]
+Portrait path: res://Assets/Characters/Computah/portrait.png
+beam groups: [] layer=0 mask=2
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+ROCKET: tester dashing continuously, control standing still
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+5
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+5
+Invincibility ended
+Invincibility ended
+ROCKET result: dashing player health 6 -> 5, still player health 6 -> 5
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+   at: cleanup (core/object/object.cpp:2663)
+ERROR: 6 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:810)

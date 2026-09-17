@@ -1,0 +1,208 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Laughing", &"LaserBeam", &"FireRockets", &"Downed"]
+Portrait path: res://Assets/Characters/Computah/portrait.png
+beam groups: [] layer=0 mask=2
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+spawned 8 player instances
+LASER hp=1 telegraph=0.50 sweep=1.460 fade=0.20 timer=2.160 start_up=10.0 cross=20.0 total=120.0 deg beam_length=1102 local (2204 px) dash_immunity=0.18
+laser entered at movie frame 4
+5
+5
+5
+5
+5
+5
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+5
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+5
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+4
+4
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+=== DODGE contact hp=1 (sweep 1.460 s)
+  top_rope_far_left (130,131)          still -> HIT at t=0.683
+  top_rope_left (560,131)              still -> HIT at t=0.533
+  top_rope_near_left (860,131)         still -> HIT at t=0.533
+  pocket_left_of_body (921,131)        still -> HIT at t=0.533
+  pocket_right_of_body (1007,131)      still -> HIT at t=0.533
+  top_rope_near_right (1070,131)       still -> HIT at t=0.533
+  top_rope_right (1400,131)            still -> HIT at t=0.533
+  top_rope_far_right (1790,131)        still -> HIT at t=0.667
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+   at: cleanup (core/object/object.cpp:2663)
+ERROR: 4 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:810)

@@ -1,10 +1,42 @@
 [gd_scene format=3 uid="uid://cglk8pm5w4p1y"]
 
+[ext_resource type="Texture2D" uid="uid://deklxsqwkqjmp" path="res://Assets/Characters/Computah/computah_laser_aim.png" id="1_aim"]
+[ext_resource type="Texture2D" uid="uid://bdlxmkiftdiif" path="res://Assets/Characters/Computah/computah_laser_beam.png" id="2_beam"]
+[ext_resource type="Texture2D" uid="uid://dx2tpnj0mv5nf" path="res://Assets/Characters/Computah/computah_laser_fx.png" id="3_fx"]
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_k5p01"]
+resource_local_to_scene = true
+size = Vector2(1, 21)
 
-[node name="Node2D" type="Node2D" unique_id=1381282152]
+[node name="LaserBeam" type="Area2D" unique_id=1596246062]
+z_index = 1
+collision_layer = 0
+collision_mask = 2
+monitoring = false
+monitorable = false
 
-[node name="Laserbeam" type="Area2D" parent="." unique_id=1596246062]
+[node name="AimLine" type="Sprite2D" parent="."]
+visible = false
+texture_repeat = 2
+texture = ExtResource("1_aim")
+centered = false
+offset = Vector2(0, -2.5)
+region_enabled = true
+region_rect = Rect2(0, 0, 1, 5)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Laserbeam" unique_id=1462335275]
+[node name="Beam" type="Sprite2D" parent="."]
+visible = false
+texture_repeat = 2
+texture = ExtResource("2_beam")
+centered = false
+offset = Vector2(0, -11.5)
+region_enabled = true
+region_rect = Rect2(0, 0, 1, 23)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1462335275]
 shape = SubResource("RectangleShape2D_k5p01")
+
+[node name="EmitterFlare" type="Sprite2D" parent="."]
+visible = false
+texture = ExtResource("3_fx")
+hframes = 2

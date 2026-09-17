@@ -10,6 +10,9 @@ var is_dodging = false
 var dodge_timer = 0.0
 var dodge_time = 0.05
 var direction = Vector2.ZERO
+# Read by Computah's laser, which players are meant to dash through.
+var last_dodge_physics_frame := -1
+var previous_dodge_physics_frame := -1
 
 #PLAYER STATS
 var playerHealth = 6
@@ -108,6 +111,8 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("dodge"):
 		is_dodging = true
 		direction = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+		previous_dodge_physics_frame = last_dodge_physics_frame
+		last_dodge_physics_frame = Engine.get_physics_frames()
 
 	if event.is_action_pressed("punch"):
 		# print("Punch")

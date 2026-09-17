@@ -1,0 +1,36 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Earthquake", &"Whirlwind", &"Downed", &"Idle"]
+Portrait path: res://Assets/Characters/Eric/portrait.png
+post dialogue timer started: PostDialoguePreFightTimer:<Timer#46607107744>
+SMOKE: loaded res://Scenes/Bosses/EricBossFightScene.tscn and skipped dialogue
+post dialogue timer done
+Looping earthquake cycle. Loops done: 1 Total earthquake loops: 0
+Looping earthquake cycle. Loops done: 2 Total earthquake loops: 0
+Hurtbox entered by: Area2D(9)
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+check passed
+new state: Walking:<Node#45667583592>
+SMOKE: dash via input at t=3.03: last_dodge_physics_frame=181 moved (959.0, 900.0) -> (1042.333, 900.0)
+new state: Idle:<Node#45650806375>
+Hurtbox entered by: Area2D(3)
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Looping earthquake cycle. Loops done: 0 Total earthquake loops: 1
+Looping earthquake cycle. Loops done: 1 Total earthquake loops: 1
+Looping earthquake cycle. Loops done: 2 Total earthquake loops: 1
+Looping earthquake cycle. Loops done: 0 Total earthquake loops: 2
+Looping earthquake cycle. Loops done: 1 Total earthquake loops: 2
+Looping earthquake cycle. Loops done: 2 Total earthquake loops: 2
+Hurtbox entered by: Area2D(6)
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Looping earthquake cycle. Loops done: 0 Total earthquake loops: 3
+timer started: DownedTimer:<Timer#46640662178>
+SMOKE: ran 12 s, current scene res://Scenes/Bosses/EricBossFightScene.tscn
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+   at: cleanup (core/object/object.cpp:2663)
+ERROR: 6 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:810)

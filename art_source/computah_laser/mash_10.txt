@@ -1,0 +1,1188 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Laughing", &"LaserBeam", &"FireRockets", &"Downed"]
+Portrait path: res://Assets/Characters/Computah/portrait.png
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+MASH TEST hp=10 sweep=2.000 immunity=0.18 cooldown=0.60 testers=92
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+5
+5
+5
+5
+5
+5
+5
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+5
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+5
+5
+5
+5
+5
+5
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Invincibility ended
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Player is invincible, ignoring damage
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+Invincibility ended
+  near_computah (780,300)
+    still                                    hit 1 / safe 0
+    single timed dash -200ms                 hit 0 / safe 1
+    single timed dash -100ms                 hit 0 / safe 1
+    reposition dash, timed dash 0.8s later   hit 0 / safe 1
+    reposition dash, timed dash 0.4s later   hit 1 / safe 0
+    mash 0.18s in place                      hit 6 / safe 0
+    mash 0.18s toward beam                   hit 3 / safe 0
+    mash 0.30s in place                      hit 6 / safe 0
+    mash 0.30s toward beam                   hit 3 / safe 0
+  mid_arena_centre (960,540)
+    still                                    hit 1 / safe 0
+    single timed dash -200ms                 hit 0 / safe 1
+    single timed dash -100ms                 hit 0 / safe 1
+    reposition dash, timed dash 0.8s later   hit 0 / safe 1
+    reposition dash, timed dash 0.4s later   hit 1 / safe 0
+    mash 0.18s in place                      hit 6 / safe 0
+    mash 0.18s toward beam                   hit 3 / safe 0
+    mash 0.30s in place                      hit 6 / safe 0
+    mash 0.30s toward beam                   hit 3 / safe 0
+  far_lower_left_corner (150,930)
+    still                                    hit 1 / safe 0
+    single timed dash -200ms                 hit 0 / safe 1
+    single timed dash -100ms                 hit 0 / safe 1
+    reposition dash, timed dash 0.8s later   hit 0 / safe 1
+    reposition dash, timed dash 0.4s later   hit 1 / safe 0
+    mash 0.18s in place                      hit 6 / safe 0
+    mash 0.18s toward beam                   hit 3 / safe 0
+    mash 0.30s in place                      hit 6 / safe 0
+    mash 0.30s toward beam                   hit 3 / safe 0
+  bottom_middle (960,930)
+    still                                    hit 1 / safe 0
+    single timed dash -200ms                 hit 0 / safe 1
+    single timed dash -100ms                 hit 0 / safe 1
+    reposition dash, timed dash 0.8s later   hit 0 / safe 1
+    reposition dash, timed dash 0.4s later   hit 1 / safe 0
+    mash 0.18s in place                      hit 6 / safe 0
+    mash 0.18s toward beam                   hit 3 / safe 0
+    mash 0.30s in place                      hit 6 / safe 0
+    mash 0.30s toward beam                   hit 3 / safe 0
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+   at: cleanup (core/object/object.cpp:2663)
+ERROR: 2 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:810)

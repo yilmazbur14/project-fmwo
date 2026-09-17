@@ -1,0 +1,558 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+State Machine initialized with states: [&"Idle", &"Walking", &"Punching", &"Blocking"]
+State Machine initialized with states: [&"Idle", &"Laughing", &"LaserBeam", &"FireRockets", &"Downed"]
+Portrait path: res://Assets/Characters/Computah/portrait.png
+post dialogue timer started: PostDialoguePreFightTimer:<Timer#47160755863>
+LOOP: dialogue skipped at frame 4
+LOOP t=0.02:  -> Idle hp=10
+post dialogue timer done
+LOOP t=2.02: Idle -> FireRockets hp=10
+LOOP t=5.03: FireRockets -> LaserBeam hp=10 (laser timer wait=2.050, sweep=1.350, len=180.0)
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+LOOP t=7.10: LaserBeam -> Downed hp=10
+Boss health: 9
+Exploding on player!
+Boss health: 8
+Exploding on player!
+Boss health: 7
+Exploding on player!
+Boss health: 6
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+LOOP t=10.10: Downed -> Idle hp=6
+LOOP t=10.90: Idle -> Laughing hp=6
+LOOP t=12.30: Laughing -> FireRockets hp=6
+LOOP t=14.54: FireRockets -> LaserBeam hp=6 (laser timer wait=1.870, sweep=1.170, len=204.0)
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+LOOP t=16.42: LaserBeam -> Downed hp=6
+Boss health: 5
+Exploding on player!
+Exploding on player!
+Boss health: 4
+Exploding on player!
+Exploding on player!
+Boss health: 3
+Exploding on player!
+Exploding on player!
+Boss health: 2
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+LOOP t=19.42: Downed -> Idle hp=2
+LOOP t=20.22: Idle -> Laughing hp=2
+LOOP t=21.62: Laughing -> FireRockets hp=2
+LOOP t=23.09: FireRockets -> LaserBeam hp=2 (laser timer wait=1.690, sweep=0.990, len=228.0)
+LOOP t=24.79: LaserBeam -> Downed hp=2
+Boss health: 1
+Boss health: 0
+Boss health: 0
+Boss health: 0
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Hurtbox entered by: RocketHitbox
+Groups: [&"enemy projectile"]
+Player is invincible, ignoring damage
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+Exploding on player!
+LOOP: scene changed to null at t=27.01
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+   at: cleanup (core/object/object.cpp:2663)
+ERROR: 4 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:810)
