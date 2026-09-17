@@ -2,8 +2,72 @@
 
 [ext_resource type="Script" path="res://Scripts/DefeatScript.gd" id="1_defsc"]
 [ext_resource type="Theme" uid="uid://dnd78vy0t1wm3" path="res://Assets/UI/ui_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" uid="uid://d03dhcxynt8hn" path="res://Assets/UI/Screens/defeat_bg.png" id="3_bg"]
+[ext_resource type="Texture2D" uid="uid://6stk3ieiwu02" path="res://Assets/UI/Screens/defeat_stars.png" id="4_stars"]
+[ext_resource type="Texture2D" uid="uid://c5dmxp52yl77w" path="res://Assets/UI/Screens/defeat_banner_3x.png" id="5_banner"]
+[ext_resource type="Texture2D" uid="uid://clehl74kprl7h" path="res://Assets/UI/ui_button_3x.png" id="6_button"]
+[ext_resource type="Texture2D" uid="uid://buu7dkol6ncb6" path="res://Assets/UI/ui_button_hover_3x.png" id="7_button_hover"]
+[ext_resource type="Texture2D" uid="uid://dumy2xwfcof6i" path="res://Assets/UI/ui_button_pressed_3x.png" id="8_button_pressed"]
 
-[node name="DefeatScene" type="Control" unique_id=1866433866 node_paths=PackedStringArray("return_to_menu_button", "music_player")]
+[sub_resource type="Animation" id="Animation_stars_spin"]
+resource_name = "spin"
+length = 0.5
+loop_mode = 1
+step = 0.125
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.125, 0.25, 0.375),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [0, 1, 2, 3]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_stars"]
+_data = {
+&"spin": SubResource("Animation_stars_spin")
+}
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_focus"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button_hover"]
+content_margin_left = 24.0
+content_margin_top = 30.0
+content_margin_right = 24.0
+content_margin_bottom = 29.0
+texture = ExtResource("7_button_hover")
+texture_margin_left = 24.0
+texture_margin_top = 24.0
+texture_margin_right = 24.0
+texture_margin_bottom = 24.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button_pressed"]
+content_margin_left = 24.0
+content_margin_top = 33.0
+content_margin_right = 24.0
+content_margin_bottom = 26.0
+texture = ExtResource("8_button_pressed")
+texture_margin_left = 24.0
+texture_margin_top = 24.0
+texture_margin_right = 24.0
+texture_margin_bottom = 24.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button"]
+content_margin_left = 24.0
+content_margin_top = 30.0
+content_margin_right = 24.0
+content_margin_bottom = 29.0
+texture = ExtResource("6_button")
+texture_margin_left = 24.0
+texture_margin_top = 24.0
+texture_margin_right = 24.0
+texture_margin_bottom = 24.0
+
+[node name="DefeatScene" type="Control" unique_id=1866433866 node_paths=PackedStringArray("return_to_menu_button", "music_player", "timestamp_label", "message_label")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -14,22 +78,95 @@ theme = ExtResource("2_theme")
 script = ExtResource("1_defsc")
 return_to_menu_button = NodePath("ReturnToMenuButton")
 music_player = NodePath("MusicPlayer")
+timestamp_label = NodePath("SystemMessage/Timestamp")
+message_label = NodePath("SystemMessage/Message")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+texture = ExtResource("3_bg")
+expand_mode = 1
+
+[node name="Stars" type="Sprite2D" parent="."]
+position = Vector2(870, 369)
+scale = Vector2(3, 3)
+texture = ExtResource("4_stars")
+centered = false
+hframes = 4
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Stars"]
+libraries/ = SubResource("AnimationLibrary_stars")
+autoplay = &"spin"
 
 [node name="DefeatText" type="Label" parent="." unique_id=925021276]
 layout_mode = 0
-offset_right = 1925.0
-offset_bottom = 1076.0
+offset_top = 27.0
+offset_right = 1920.0
+offset_bottom = 146.0
 theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(0.8509804, 0.34117648, 0.3882353, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 27
 text = "Defeat!"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="SystemMessage" type="NinePatchRect" parent="."]
+layout_mode = 0
+offset_left = 360.0
+offset_top = 741.0
+offset_right = 1560.0
+offset_bottom = 879.0
+texture = ExtResource("5_banner")
+patch_margin_left = 102
+patch_margin_top = 96
+patch_margin_right = 12
+patch_margin_bottom = 12
+
+[node name="Author" type="Label" parent="SystemMessage"]
+layout_mode = 0
+offset_left = 117.0
+offset_top = 16.0
+offset_right = 317.0
+offset_bottom = 56.0
+theme_override_colors/font_color = Color(0.8509804, 0.34117648, 0.3882353, 1)
+text = "SYSTEM"
+
+[node name="Timestamp" type="Label" parent="SystemMessage"]
+layout_mode = 0
+offset_left = 258.0
+offset_top = 16.0
+offset_right = 658.0
+offset_bottom = 56.0
+theme_override_colors/font_color = Color(0.5176471, 0.49411765, 0.5294118, 1)
+text = "Today at 11:59 PM"
+
+[node name="Message" type="Label" parent="SystemMessage"]
+layout_mode = 0
+offset_left = 117.0
+offset_top = 67.0
+offset_right = 1177.0
+offset_bottom = 107.0
+theme_override_colors/font_color = Color(0.79607844, 0.85882354, 0.9882353, 1)
+text = "@newcomer was knocked out and kicked from #arena-1."
+
 [node name="ReturnToMenuButton" type="Button" parent="." unique_id=683291447]
 layout_mode = 0
-offset_left = 760.0
-offset_top = 700.0
-offset_right = 1160.0
-offset_bottom = 780.0
+offset_left = 636.0
+offset_top = 915.0
+offset_right = 1284.0
+offset_bottom = 1041.0
+theme_type_variation = &"LargeButton"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
+theme_override_styles/hover = SubResource("StyleBoxTexture_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_button_pressed")
+theme_override_styles/normal = SubResource("StyleBoxTexture_button")
 text = "RETURN TO MAIN MENU"
 
 [node name="MusicPlayer" type="AudioStreamPlayer" parent="."]

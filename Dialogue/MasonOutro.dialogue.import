@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://df0rnc0k2cq2f"
+path="res://.godot/imported/MasonOutro.dialogue-f7f63d8e2fc2906e1f2daa703c6717e9.tres"
+
+[deps]
+
+source_file="res://Dialogue/MasonOutro.dialogue"
+dest_files=["res://.godot/imported/MasonOutro.dialogue-f7f63d8e2fc2906e1f2daa703c6717e9.tres"]
+
+[params]
+
+defaults=true

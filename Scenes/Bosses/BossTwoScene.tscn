@@ -213,7 +213,7 @@ position = Vector2(32, -4)
 position = Vector2(-33, -4)
 rotation = 3.1415927
 
-[node name="Hurtbox" type="Area2D" parent="ComputahCharacterBody" groups=["enemy"]]
+[node name="Hurtbox" type="Area2D" parent="ComputahCharacterBody" groups=["enemy", "boss_target"]]
 monitoring = false
 monitorable = false
 

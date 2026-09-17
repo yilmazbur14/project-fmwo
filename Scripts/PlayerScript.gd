@@ -3,6 +3,8 @@ extends CharacterBody2D
 #CONSTANTS
 const SPEED = 600.0
 const DODGE_SPEED = 5000
+const GRAB_KNOCKBACK_SPEED = 4200.0
+const FightOutro := preload("res://Scripts/FightOutro.gd")
 # const JUMP_VELOCITY = -400.0
 
 #DODGING VARS
@@ -38,11 +40,40 @@ var sprite_base_position: Vector2
 @onready var combo: Node = $Combo
 var punch_buffered := false
 
+#FACING
+# Rows of player_4dir_sheet.png; the animations only step the column.
+enum Facing { DOWN, UP, LEFT, RIGHT }
+# Bosses add the hurtbox to face to this group; its shape has to be a child named CollisionShape2D.
+const BOSS_TARGET_GROUP := "boss_target"
+# The facing only turns to the other axis once the boss is this far past the 45° diagonal, so
+# walking along the diagonal can't flicker it.
+const FACING_HYSTERESIS_DEGREES := 10.0
+# Between Carter and Josh, the other one has to be this many px nearer to take over, so standing
+# midway can't flip the facing back and forth.
+const TARGET_SWITCH_MARGIN := 12.0
+# Punch hitbox per facing, in texels from the frame centre: 4.33 across the arm by 7.67 along it,
+# reaching 2 texels past the glove at full extension, the size and reach of the original up-only
+# punch. The down punch's glove is drawn over the body, so its box instead reaches 5 texels past the
+# collision box, as far as the up punch does: a boss with collision stops the player at that box.
+const PUNCH_HITBOXES := {
+	Facing.DOWN: Rect2(-1.665, 11.33, 4.33, 7.67),
+	Facing.UP: Rect2(-6.165, -18.0, 4.33, 7.67),
+	Facing.LEFT: Rect2(-13.0, -8.165, 7.67, 4.33),
+	Facing.RIGHT: Rect2(5.33, -8.165, 7.67, 4.33),
+}
+
+var facing := Facing.UP
+var facing_target: Area2D
+@onready var punch_hitbox: CollisionShape2D = $Hitbox/CollisionShape2D
+
 #AUDIO
 @onready var hurt_sfx_player: AudioStreamPlayer = $HurtSfxPlayer
 
 var is_talking = false
-var is_in_whirlwind = false
+# Set while Eric's bear hug holds the player.
+var is_grabbed := false
+# Set once the fight is decided, won or lost: from then on the player can't act or be hurt.
+var fight_over := false
 
 var state_machine : Node
 var current_state : State
@@ -50,7 +81,6 @@ func _ready():
 	# var hurtBox = get_node("Hurtbox")
 	# var hitBox = get_node("Hitbox")
 	hurtBox.area_entered.connect(_on_hurtbox_entered)
-	hurtBox.area_exited.connect(_on_hurtbox_area_exited)
 	# hitBox.area_entered.connect(_on_hitbox_entered)
 	hitBox.monitoring = false
 	hitBox.monitorable = false
@@ -62,6 +92,7 @@ func _ready():
 	is_talking = true
 
 	sprite_base_position = sprite.position
+	_apply_facing()
 	hurt_sfx_player.stream = load("res://Assets/Audio/SFX/player_hurt.ogg")
 
 	DialogueManager.dialogue_ended.connect(_on_dialogue_ended)
@@ -71,17 +102,15 @@ func _process(delta: float) -> void:
 		punch_buffered = false
 		state_machine.on_child_transition(state_machine.current_state, "Punching")
 	current_state = state_machine.current_state
-	if playerHealth <= 0:
-		get_tree().change_scene_to_file("res://Scenes/Core/DefeatScene.tscn")
-
-	if is_in_whirlwind:
-		# print("Player is in whirlwind, applying damage")
-		take_damage()
+	if playerHealth <= 0 and not fight_over:
+		# A step late, so a boss beaten on the same frame still wins the tie.
+		FightOutro.finish_fight.call_deferred(get_tree(), false)
 
 func _physics_process(delta: float) -> void:
+	_update_facing()
 
 	# Don't move during punch or block
-	if current_state.name == "Punching" || is_talking:
+	if current_state.name == "Punching" || is_talking || is_grabbed || fight_over:
 		return
 
 	if is_dodging:
@@ -109,7 +138,7 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("punch") and not is_talking:
+	if event.is_action_pressed("punch") and not is_talking and not is_grabbed and not fight_over:
 		combo.register_press()
 		# A press held back until the last punch's report is in, so its hit can't be lost.
 		if combo.report_pending():
@@ -117,7 +146,7 @@ func _input(event: InputEvent) -> void:
 			return
 
 	# Don't allow any input if currently punching or blocking
-	if current_state.name == "Punching" || is_talking:
+	if current_state.name == "Punching" || is_talking || is_grabbed || fight_over:
 		# print("Current state: ", current_state.name)
 		return
 
@@ -140,10 +169,6 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 	if area.is_in_group("enemy projectile"):
 		take_damage()
 
-	if area.is_in_group("whirlwind"):
-		print("Player entered whirlwind area")
-		is_in_whirlwind = true
-
 
 func _on_invincibility_timer_timeout() -> void:
 	is_invincible = false
@@ -154,6 +179,9 @@ func _on_dialogue_ended(dialogue: Object) -> void:
 	is_talking = false
 
 func take_damage() -> void:
+	# At 0 the loss is only reported at the end of the frame, and nothing may hurt them before that.
+	if fight_over or playerHealth <= 0:
+		return
 	if is_invincible:
 		print("Player is invincible, ignoring damage")
 		return
@@ -192,7 +220,113 @@ func _flicker_while_invincible(duration: float) -> void:
 		flicker_tween.tween_property(sprite, "modulate:a", 1.0, 0.05)
 
 
-func _on_hurtbox_area_exited(area: Area2D) -> void:
-	if area.is_in_group("whirlwind"):
-		print("Player exited whirlwind area")
-		is_in_whirlwind = false
+# Eric's bear hug draws the held player in his own frames.
+func grab() -> void:
+	is_grabbed = true
+	is_dodging = false
+	dodge_timer = 0.0
+	punch_buffered = false
+	velocity = Vector2.ZERO
+	sprite.visible = false
+	state_machine.on_child_transition(state_machine.current_state, "Idle")
+
+
+# A held player can't dodge, so every squeeze lands, even inside the last one's invincibility.
+func take_grab_damage() -> void:
+	is_invincible = false
+	take_damage()
+
+
+func release_grab(push_direction: Vector2) -> void:
+	is_grabbed = false
+	sprite.visible = true
+	# Slows to a stop through the normal movement deceleration: about 140 px on the diagonal toss.
+	velocity = push_direction.normalized() * GRAB_KNOCKBACK_SPEED
+	is_invincible = true
+	invincibility_timer.start()
+	_flicker_while_invincible(invincibility_timer.wait_time)
+
+
+# Called by FightOutro once the fight is decided.
+func end_fight() -> void:
+	fight_over = true
+	punch_buffered = false
+	is_dodging = false
+	dodge_timer = 0.0
+	# The fight can end inside a physics callback, where ending a punch can't switch its hitbox off.
+	_stand_still.call_deferred()
+
+
+# After the bosses have stopped, so a bear hug has already let go of the player.
+func _stand_still() -> void:
+	velocity = Vector2.ZERO
+	state_machine.on_child_transition(state_machine.current_state, "Idle")
+	# Idle would still start the walk animation while a direction key is held.
+	state_machine.set_process(false)
+	state_machine.set_physics_process(false)
+
+
+func _update_facing() -> void:
+	# Held from the press until the boss has reported the swing: a hurtbox reports a punch after
+	# the hitbox switches off, and moving the hitbox before then would lose the hit.
+	if state_machine.current_state.name == "Punching" or combo.report_pending():
+		return
+	var aim := _aim()
+	if aim == Vector2.ZERO:
+		return
+	var new_facing := _facing_toward(aim)
+	if new_facing != facing:
+		facing = new_facing
+		_apply_facing()
+
+
+# Toward the nearest point of the nearest target's hurtbox, so the player faces the side of the
+# boss they're on (its centre once they're inside it). With no target, as during boss 2's morph,
+# the facing follows movement.
+func _aim() -> Vector2:
+	var target := _nearest_target()
+	if target == null:
+		return velocity
+	var box := _hurtbox_rect(target)
+	if box.has_point(global_position):
+		return box.get_center() - global_position
+	return global_position.clamp(box.position, box.end) - global_position
+
+
+func _nearest_target() -> Area2D:
+	var nearest: Area2D = null
+	var nearest_distance := INF
+	for target in get_tree().get_nodes_in_group(BOSS_TARGET_GROUP):
+		var box := _hurtbox_rect(target)
+		var distance := global_position.distance_to(global_position.clamp(box.position, box.end))
+		if target == facing_target:
+			distance -= TARGET_SWITCH_MARGIN
+		if distance < nearest_distance:
+			nearest = target
+			nearest_distance = distance
+	facing_target = nearest
+	return nearest
+
+
+func _hurtbox_rect(target: Area2D) -> Rect2:
+	var shape: CollisionShape2D = target.get_node("CollisionShape2D")
+	return shape.global_transform * shape.shape.get_rect()
+
+
+func _facing_toward(aim: Vector2) -> Facing:
+	var switch_ratio := tan(deg_to_rad(45.0 + FACING_HYSTERESIS_DEGREES))
+	var horizontal := facing == Facing.LEFT or facing == Facing.RIGHT
+	if horizontal:
+		horizontal = absf(aim.y) < absf(aim.x) * switch_ratio
+	else:
+		horizontal = absf(aim.x) > absf(aim.y) * switch_ratio
+	if horizontal:
+		return Facing.RIGHT if aim.x > 0.0 else Facing.LEFT
+	return Facing.DOWN if aim.y > 0.0 else Facing.UP
+
+
+func _apply_facing() -> void:
+	sprite.frame_coords.y = facing
+	var box: Rect2 = PUNCH_HITBOXES[facing]
+	punch_hitbox.position = box.get_center()
+	(punch_hitbox.shape as RectangleShape2D).size = box.size

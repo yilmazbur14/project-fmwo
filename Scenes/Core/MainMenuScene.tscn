@@ -2,6 +2,91 @@
 
 [ext_resource type="Script" uid="uid://brimntix1fje2" path="res://Scripts/MainMenuScript.gd" id="1_47sjk"]
 [ext_resource type="Theme" uid="uid://dnd78vy0t1wm3" path="res://Assets/UI/ui_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" uid="uid://b4485jxh0l1iw" path="res://Assets/UI/Screens/main_menu_bg.png" id="3_bg"]
+[ext_resource type="Texture2D" uid="uid://bljch4ev3b7gh" path="res://Assets/UI/Screens/main_menu_bg_fx.png" id="4_bg_fx"]
+[ext_resource type="Texture2D" uid="uid://kics4oofqf4k" path="res://Assets/UI/Screens/main_menu_title.png" id="5_title"]
+[ext_resource type="Texture2D" uid="uid://clehl74kprl7h" path="res://Assets/UI/ui_button_3x.png" id="6_button"]
+[ext_resource type="Texture2D" uid="uid://buu7dkol6ncb6" path="res://Assets/UI/ui_button_hover_3x.png" id="7_button_hover"]
+[ext_resource type="Texture2D" uid="uid://dumy2xwfcof6i" path="res://Assets/UI/ui_button_pressed_3x.png" id="8_button_pressed"]
+[ext_resource type="Texture2D" uid="uid://danop3rskb5co" path="res://Assets/UI/Screens/menu_slider_track_3x.png" id="9_slider_track"]
+[ext_resource type="Texture2D" uid="uid://21lum0cpusvq" path="res://Assets/UI/Screens/menu_slider_fill_3x.png" id="10_slider_fill"]
+[ext_resource type="Texture2D" uid="uid://d12djyb40xu1q" path="res://Assets/UI/Screens/menu_slider_grabber_3x.png" id="11_slider_grabber"]
+
+[sub_resource type="Animation" id="Animation_bg_fx_loop"]
+resource_name = "loop"
+length = 2.1
+loop_mode = 1
+step = 0.175
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.175, 0.35, 0.525, 0.7, 0.875, 1.05, 1.225, 1.4, 1.575, 1.75, 1.925),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 1,
+"values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_bg_fx"]
+_data = {
+&"loop": SubResource("Animation_bg_fx_loop")
+}
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_focus"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button_hover"]
+content_margin_left = 24.0
+content_margin_top = 30.0
+content_margin_right = 24.0
+content_margin_bottom = 29.0
+texture = ExtResource("7_button_hover")
+texture_margin_left = 24.0
+texture_margin_top = 24.0
+texture_margin_right = 24.0
+texture_margin_bottom = 24.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button_pressed"]
+content_margin_left = 24.0
+content_margin_top = 33.0
+content_margin_right = 24.0
+content_margin_bottom = 26.0
+texture = ExtResource("8_button_pressed")
+texture_margin_left = 24.0
+texture_margin_top = 24.0
+texture_margin_right = 24.0
+texture_margin_bottom = 24.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button"]
+content_margin_left = 24.0
+content_margin_top = 30.0
+content_margin_right = 24.0
+content_margin_bottom = 29.0
+texture = ExtResource("6_button")
+texture_margin_left = 24.0
+texture_margin_top = 24.0
+texture_margin_right = 24.0
+texture_margin_bottom = 24.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_slider_track"]
+content_margin_top = 15.0
+content_margin_bottom = 15.0
+texture = ExtResource("9_slider_track")
+texture_margin_left = 9.0
+texture_margin_top = 12.0
+texture_margin_right = 9.0
+texture_margin_bottom = 9.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_slider_fill"]
+content_margin_top = 15.0
+content_margin_bottom = 15.0
+texture = ExtResource("10_slider_fill")
+texture_margin_left = 9.0
+texture_margin_top = 12.0
+texture_margin_right = 9.0
+texture_margin_bottom = 9.0
 
 [node name="Control" type="Control" unique_id=497181348 node_paths=PackedStringArray("start_game_button", "volume_slider", "music_player")]
 layout_mode = 3
@@ -10,63 +95,82 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-rotation = -6.760369e-05
 theme = ExtResource("2_theme")
 script = ExtResource("1_47sjk")
-start_game_button = NodePath("VBoxContainer/StartGameButton")
-volume_slider = NodePath("VBoxContainer/VolumeSlider")
+start_game_button = NodePath("StartGameButton")
+volume_slider = NodePath("VolumeSlider")
 music_player = NodePath("MusicPlayer")
 
-[node name="Panel" type="Panel" parent="." unique_id=2005836401]
+[node name="Background" type="TextureRect" parent="."]
 layout_mode = 0
 offset_right = 1920.0
 offset_bottom = 1080.0
+texture = ExtResource("3_bg")
+expand_mode = 1
 
-[node name="Label" type="Label" parent="." unique_id=655676238]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 170.0
-offset_bottom = 413.0
-grow_horizontal = 2
-theme_type_variation = &"TitleLabel"
-text = "ENTER THE DISCORD"
+[node name="BackgroundFx" type="Sprite2D" parent="."]
+scale = Vector2(3, 3)
+texture = ExtResource("4_bg_fx")
+centered = false
+hframes = 12
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="BackgroundFx"]
+libraries/ = SubResource("AnimationLibrary_bg_fx")
+autoplay = &"loop"
+
+[node name="TitleLogo" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 72.0
+offset_top = 84.0
+offset_right = 720.0
+offset_bottom = 288.0
+texture = ExtResource("5_title")
+expand_mode = 1
+
+[node name="StartGameButton" type="Button" parent="." unique_id=527684256]
+layout_mode = 0
+offset_left = 156.0
+offset_top = 420.0
+offset_right = 636.0
+offset_bottom = 546.0
+theme_type_variation = &"LargeButton"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
+theme_override_styles/hover = SubResource("StyleBoxTexture_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_button_pressed")
+theme_override_styles/normal = SubResource("StyleBoxTexture_button")
+text = "NEW GAME"
+
+[node name="VolumeLabel" type="Label" parent="." unique_id=1877363678]
+layout_mode = 0
+offset_left = 156.0
+offset_top = 580.0
+offset_right = 636.0
+offset_bottom = 620.0
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_offset_x = 3
+theme_override_constants/shadow_offset_y = 3
+theme_override_constants/shadow_outline_size = 0
+text = "VOLUME"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=986868607]
-custom_minimum_size = Vector2(500, 0)
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -196.0
-offset_top = -131.0
-offset_right = 204.0
-offset_bottom = 423.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="StartGameButton" type="Button" parent="VBoxContainer" unique_id=527684256]
-layout_mode = 2
-size_flags_vertical = 3
-theme_type_variation = &"LargeButton"
-text = "NEW GAME"
-
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=1838901522]
-custom_minimum_size = Vector2(0, 80)
-layout_mode = 2
-
-[node name="VolumeLabel" type="Label" parent="VBoxContainer" unique_id=1877363678]
-layout_mode = 2
-text = "VOLUME"
-horizontal_alignment = 1
-
-[node name="VolumeSlider" type="HSlider" parent="VBoxContainer" unique_id=1877363679]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
+[node name="VolumeSlider" type="HSlider" parent="." unique_id=1877363679]
+layout_mode = 0
+offset_left = 156.0
+offset_top = 648.0
+offset_right = 636.0
+offset_bottom = 702.0
+theme_override_styles/slider = SubResource("StyleBoxTexture_slider_track")
+theme_override_styles/grabber_area = SubResource("StyleBoxTexture_slider_fill")
+theme_override_styles/grabber_area_highlight = SubResource("StyleBoxTexture_slider_fill")
+theme_override_icons/grabber = ExtResource("11_slider_grabber")
+theme_override_icons/grabber_highlight = ExtResource("11_slider_grabber")
+theme_override_icons/grabber_disabled = ExtResource("11_slider_grabber")
 min_value = 0.0
 max_value = 1.0
 step = 0.01

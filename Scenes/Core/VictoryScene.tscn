@@ -2,29 +2,168 @@
 
 [ext_resource type="Script" path="res://Scripts/VictoryScript.gd" id="1_vicsc"]
 [ext_resource type="Theme" uid="uid://dnd78vy0t1wm3" path="res://Assets/UI/ui_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" uid="uid://cjoy2xcpwnqa1" path="res://Assets/UI/Screens/victory_bg.png" id="3_bg"]
+[ext_resource type="Texture2D" uid="uid://dvotdt3vbcyj3" path="res://Assets/UI/Screens/victory_confetti.png" id="4_confetti"]
+[ext_resource type="Texture2D" uid="uid://h5hffghks1b2" path="res://Assets/UI/Screens/victory_banner_3x.png" id="5_banner"]
+[ext_resource type="Texture2D" uid="uid://clehl74kprl7h" path="res://Assets/UI/ui_button_3x.png" id="6_button"]
+[ext_resource type="Texture2D" uid="uid://buu7dkol6ncb6" path="res://Assets/UI/ui_button_hover_3x.png" id="7_button_hover"]
+[ext_resource type="Texture2D" uid="uid://dumy2xwfcof6i" path="res://Assets/UI/ui_button_pressed_3x.png" id="8_button_pressed"]
 
-[node name="VictoryUI" type="Control" unique_id=380473964 node_paths=PackedStringArray("next_boss_button")]
+[sub_resource type="Animation" id="Animation_confetti_fall"]
+resource_name = "fall"
+length = 0.48
+loop_mode = 1
+step = 0.12
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.12, 0.24, 0.36),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [0, 1, 2, 3]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_confetti"]
+_data = {
+&"fall": SubResource("Animation_confetti_fall")
+}
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_focus"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button_hover"]
+content_margin_left = 24.0
+content_margin_top = 30.0
+content_margin_right = 24.0
+content_margin_bottom = 29.0
+texture = ExtResource("7_button_hover")
+texture_margin_left = 24.0
+texture_margin_top = 24.0
+texture_margin_right = 24.0
+texture_margin_bottom = 24.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button_pressed"]
+content_margin_left = 24.0
+content_margin_top = 33.0
+content_margin_right = 24.0
+content_margin_bottom = 26.0
+texture = ExtResource("8_button_pressed")
+texture_margin_left = 24.0
+texture_margin_top = 24.0
+texture_margin_right = 24.0
+texture_margin_bottom = 24.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button"]
+content_margin_left = 24.0
+content_margin_top = 30.0
+content_margin_right = 24.0
+content_margin_bottom = 29.0
+texture = ExtResource("6_button")
+texture_margin_left = 24.0
+texture_margin_top = 24.0
+texture_margin_right = 24.0
+texture_margin_bottom = 24.0
+
+[node name="VictoryUI" type="Control" unique_id=380473964 node_paths=PackedStringArray("next_boss_button", "timestamp_label", "message_label", "rank_ladder")]
 layout_mode = 3
-anchors_preset = 0
-offset_right = 1923.0
-offset_bottom = 1085.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme = ExtResource("2_theme")
 script = ExtResource("1_vicsc")
 next_boss_button = NodePath("NextBossButton")
+timestamp_label = NodePath("SystemMessage/Timestamp")
+message_label = NodePath("SystemMessage/Message")
+rank_ladder = NodePath("RankLadder")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+texture = ExtResource("3_bg")
+expand_mode = 1
+
+[node name="Confetti" type="Sprite2D" parent="."]
+scale = Vector2(3, 3)
+texture = ExtResource("4_confetti")
+centered = false
+hframes = 4
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Confetti"]
+libraries/ = SubResource("AnimationLibrary_confetti")
+autoplay = &"fall"
 
 [node name="VictoryText" type="Label" parent="." unique_id=916567778]
 layout_mode = 0
-offset_right = 1921.0
-offset_bottom = 1079.0
+offset_left = 560.0
+offset_top = 30.0
+offset_right = 1360.0
+offset_bottom = 150.0
 theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(0.9843137, 0.9490196, 0.21176471, 1)
 text = "Victory!"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="SystemMessage" type="NinePatchRect" parent="."]
+layout_mode = 0
+offset_left = 480.0
+offset_top = 150.0
+offset_right = 1440.0
+offset_bottom = 288.0
+texture = ExtResource("5_banner")
+patch_margin_left = 96
+patch_margin_top = 90
+patch_margin_right = 12
+patch_margin_bottom = 12
+
+[node name="Author" type="Label" parent="SystemMessage"]
+layout_mode = 0
+offset_left = 117.0
+offset_top = 22.0
+offset_right = 267.0
+offset_bottom = 62.0
+theme_override_colors/font_color = Color(0.9843137, 0.9490196, 0.21176471, 1)
+text = "SYSTEM"
+
+[node name="Timestamp" type="Label" parent="SystemMessage"]
+layout_mode = 0
+offset_left = 267.0
+offset_top = 22.0
+offset_right = 667.0
+offset_bottom = 62.0
+theme_override_colors/font_color = Color(0.60784316, 0.6784314, 0.7176471, 1)
+text = "Today at 11:59 PM"
+
+[node name="Message" type="Label" parent="SystemMessage"]
+layout_mode = 0
+offset_left = 117.0
+offset_top = 72.0
+offset_right = 937.0
+offset_bottom = 112.0
+text = "@newcomer ranked up to @member!"
+
+[node name="RankLadder" type="Node2D" parent="."]
+
 [node name="NextBossButton" type="Button" parent="."]
 layout_mode = 0
-offset_left = 760.0
-offset_top = 760.0
-offset_right = 1160.0
-offset_bottom = 830.0
+offset_left = 753.0
+offset_top = 840.0
+offset_right = 1167.0
+offset_bottom = 966.0
+theme_type_variation = &"LargeButton"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
+theme_override_styles/hover = SubResource("StyleBoxTexture_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_button_pressed")
+theme_override_styles/normal = SubResource("StyleBoxTexture_button")
 text = "NEXT BOSS"

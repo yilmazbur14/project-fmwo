@@ -326,7 +326,7 @@ width = 2.0
 default_color = Color(1, 0.55, 0.1, 0.55)
 visible = false
 
-[node name="BodyHitbox" type="Area2D" parent="Josh" groups=["josh_body"]]
+[node name="BodyHitbox" type="Area2D" parent="Josh" groups=["josh_body", "boss_target"]]
 monitoring = true
 monitorable = true
 
@@ -361,7 +361,7 @@ width = 2.0
 default_color = Color(0.2, 0.45, 1, 0.55)
 visible = false
 
-[node name="BodyHitbox" type="Area2D" parent="Carter" groups=["carter_body"]]
+[node name="BodyHitbox" type="Area2D" parent="Carter" groups=["carter_body", "boss_target"]]
 monitoring = true
 monitorable = true
 

@@ -3,9 +3,13 @@ extends Node2D
 #REFERENCES
 var Projectile = preload("res://Scenes/Bosses/BossProjectileScene.tscn")
 const HitStop := preload("res://Scripts/HitStop.gd")
+const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
+const FightOutro := preload("res://Scripts/FightOutro.gd")
+# What he says once the fight is over, under player_won and player_lost.
+const OUTRO_DIALOGUE := "res://Dialogue/EricOutro.dialogue"
 
 #CONSTANTS
-@export var max_health := 10
+@export var max_health := 24
 var boss_health := max_health
 
 #UI (built at runtime - no new art needed)
@@ -15,6 +19,7 @@ var fill_style: StyleBoxFlat
 
 @onready var animationPlayer = $AnimationPlayer
 @onready var sprite = $Sprite2D
+@onready var state_machine = $StateManager
 @export var post_dialogue_pre_fight_timer: Timer
 
 #AUDIO
@@ -27,8 +32,10 @@ var sprite_base_position: Vector2
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	add_to_group(FightOutro.BOSS_GROUP)
 	var hurtBox = get_node("Hurtbox")
 	hurtBox.area_entered.connect(_on_hurtbox_entered)
+	_apply_art_layout()
 
 	sprite_base_position = sprite.position
 	_build_health_bar()
@@ -48,16 +55,47 @@ func start_music() -> void:
 func _process(delta: float) -> void:
 	if boss_health <= 0 and not defeated:
 		defeated = true
+		state_machine.enter_defeated()
+		# Downed opens his hurtbox, but the fight is over: punches still on their way mustn't land.
+		$Hurtbox.monitoring = false
+		$Hurtbox.monitorable = false
 		if music_player.playing:
 			music_player.stop()
 		victory_sfx_player.play()
+		get_tree().call_group("arena_crowd", "cheer", 2.0)
 		GameProgress.next_boss_scene = "res://Scenes/Bosses/GreysonBossFightScene.tscn"
-		await get_tree().create_timer(2.2).timeout
-		get_tree().change_scene_to_file("res://Scenes/Core/VictoryScene.tscn")
+		FightOutro.finish_fight(get_tree(), true)
+
+
+# Called by FightOutro when the player loses.
+func on_player_defeated() -> void:
+	state_machine.enter_player_defeated()
 
 
 func get_health_ratio() -> float:
 	return float(boss_health) / float(max_health)
+
+
+# Global position of the centre of a pixel on Eric's sheet frames.
+func frame_point(pixel: Vector2) -> Vector2:
+	return to_global(EricArtLayout.frame_local(pixel + Vector2(0.5, 0.5)))
+
+
+func _apply_art_layout() -> void:
+	scale = Vector2(EricArtLayout.SCALE, EricArtLayout.SCALE)
+	sprite.hframes = EricArtLayout.SHEET_FRAMES
+	sprite.offset = EricArtLayout.SPRITE_OFFSET
+	_fit_box($CollisionShape2D, EricArtLayout.BODY_BOX)
+	_fit_box($Hurtbox/CollisionShape2D, EricArtLayout.BODY_BOX)
+	_fit_box($GrabArea2D/CollisionShape2D, EricArtLayout.GRAB_BOX)
+	var whirlwind: CollisionShape2D = $WhirlwindArea2D/CollisionShape2D
+	whirlwind.position = EricArtLayout.frame_local(EricArtLayout.WHIRLWIND_CENTRE)
+	whirlwind.scale = EricArtLayout.WHIRLWIND_RADII / whirlwind.shape.radius
+
+
+func _fit_box(shape_node: CollisionShape2D, box: Rect2) -> void:
+	shape_node.position = EricArtLayout.frame_local(box.get_center())
+	shape_node.shape.size = box.size
 
 
 func _on_hurtbox_entered(area: Area2D) -> void:

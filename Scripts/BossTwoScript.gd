@@ -3,6 +3,9 @@ extends Node2D
 signal phase_two_reached
 
 const HitStop := preload("res://Scripts/HitStop.gd")
+const FightOutro := preload("res://Scripts/FightOutro.gd")
+# What Computah and Greyson say once the fight is over, under player_won and player_lost.
+const OUTRO_DIALOGUE := "res://Dialogue/GreysonAndComputahOutro.dialogue"
 
 #CONSTANTS
 @export var max_health := 10
@@ -27,6 +30,7 @@ var sprite_base_position: Vector2
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	add_to_group(FightOutro.BOSS_GROUP)
 	var hurtBox = get_node("Hurtbox")
 	hurtBox.area_entered.connect(_on_hurtbox_entered)
 
@@ -53,8 +57,13 @@ func _process(_delta: float) -> void:
 			music_player.stop()
 		victory_sfx_player.play()
 		GameProgress.next_boss_scene = "res://Scenes/Bosses/CarterAndJoshBossFightScene.tscn"
-		await get_tree().create_timer(2.2).timeout
-		get_tree().change_scene_to_file("res://Scenes/Core/VictoryScene.tscn")
+		FightOutro.finish_fight(get_tree(), true)
+
+
+# Called by FightOutro when the player loses. From phase two on, the mech has the attacks to stop.
+func on_player_defeated() -> void:
+	if not phase_two:
+		$StateManager.end_phase_one()
 
 
 func get_health_ratio() -> float:
@@ -92,6 +101,8 @@ func take_hit(amount: int) -> int:
 
 
 func _start_phase_two() -> void:
+	# The player faces the mech once it has formed; until then there's nothing to face.
+	$Hurtbox.remove_from_group("boss_target")
 	$StateManager.end_phase_one()
 	phase_two_reached.emit()
 

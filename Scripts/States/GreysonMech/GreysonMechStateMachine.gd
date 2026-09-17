@@ -14,6 +14,7 @@ var cycle_pause := 1.0
 var attack_gap := 0.6
 
 var state_after_rest := ""
+var player_defeated := false
 
 
 func _ready() -> void:
@@ -40,8 +41,9 @@ func on_child_transition(state, new_state_name):
 	if state != current_state:
 		return
 
-	# Defeated is terminal: a late timer or animation signal must never restart the fight.
-	if current_state == states.get("Defeated"):
+	# Defeat, the mech's or the player's, is terminal: a late timer or animation signal must never
+	# restart the fight.
+	if current_state == states.get("Defeated") or player_defeated:
 		return
 
 	var new_state = states.get(new_state_name)
@@ -88,3 +90,12 @@ func _apply_rage_scaling() -> void:
 func enter_defeated() -> void:
 	rest_timer.stop()
 	on_child_transition(current_state, "Defeated")
+
+
+# The player lost: every attack stops and the mech stands idle. A morph under way still plays out,
+# though the fight it leads into never starts.
+func enter_player_defeated() -> void:
+	rest_timer.stop()
+	if current_state != states.get("Dormant") and current_state != states.get("Morph"):
+		on_child_transition(current_state, "Idle")
+	player_defeated = true

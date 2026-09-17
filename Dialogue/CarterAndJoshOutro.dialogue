@@ -1,0 +1,12 @@
+# Placeholder lines for the end of the Carter & Josh fight, said before the fade to the Victory or Defeat screen.
+# player_won: the player beat Carter and Josh. player_lost: Carter and Josh beat the player.
+
+~ player_won
+Carter: You ran into me. Like Tulsa. AGAIN.
+Josh: Okay... that's two times.
+=> END
+
+~ player_lost
+Josh: Now THAT'S the full show!
+Carter: Good match, kid. Come back with fresher legs.
+=> END

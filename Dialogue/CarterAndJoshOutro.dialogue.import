@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://ky7308sky011"
+path="res://.godot/imported/CarterAndJoshOutro.dialogue-aeadf7631e8eabc9020edad614d3769c.tres"
+
+[deps]
+
+source_file="res://Dialogue/CarterAndJoshOutro.dialogue"
+dest_files=["res://.godot/imported/CarterAndJoshOutro.dialogue-aeadf7631e8eabc9020edad614d3769c.tres"]
+
+[params]
+
+defaults=true

@@ -21,6 +21,8 @@ const LINE_X_RIGHT := 1660.0
 const WALK_Y_MIN := 206.0
 const WALK_Y_MAX := 810.0
 const BOMB_SPAWN_OFFSET := Vector2(0, 80)
+# Mason's drawn sprite around his origin.
+const MASON_SPRITE := Rect2(-93, -93, 186, 189)
 
 # Bombs land past his walk limits so their blasts still reach the wall columns and the strip
 # under the back rope, where his sprite can't go.
@@ -53,12 +55,32 @@ const FUSE_DELAY := [0.7, 0.5]
 const DETONATE_INTERVAL := [0.12, 0.09]
 const LINES_PER_CYCLE := [2, 1]
 const EAT_WINDOW := [3.5, 3.0]
+# The attacks run after a cycle's bomb lines, before the delivery. Each cycle takes the next entry of
+# its phase's list, wrapping around, so phase 1 takes turns between Carter and the nuggets.
+const FINISHERS := [
+	[["CallCarter"], ["NuggetShower"]],
+	[["NuggetShower", "CallCarter"]],
+]
+const ELBOW_DROPS := [3, 5]
+const ELBOW_TELEGRAPH := [0.4, 0.34]
+const ELBOW_DIVE := [0.25, 0.22]
+const ELBOW_SIT_UP := [0.1, 0.08]
+const ELBOW_LEAP_OUT := [0.3, 0.26]
+const ELBOW_GAP := [0.2, 0.16]
+# A nugget marker goes down every NUGGET_SHOWER_TIME / NUGGET_COUNT seconds, and its nugget lands
+# NUGGET_WARNING after that.
+const NUGGET_COUNT := [10, 16]
+const NUGGET_SHOWER_TIME := [3.0, 3.5]
+const NUGGET_WARNING := [0.75, 0.6]
 
 # Index of the line_points segment that crosses the arena; the other segments are vertical.
 const RUN_SEGMENT := 2
 
 var cycle_phase := 0
 var lines_done := 0
+var cycles_started := 0
+var finishers : Array = []
+var player_defeated := false
 
 # Bomb-space path of the current line: start, turn onto the player's height, far wall column,
 # and optionally the reveal step down. Mason walks it minus BOMB_SPAWN_OFFSET, clamped to his limits.
@@ -76,7 +98,8 @@ var spawned_bombs : Array = []
 
 func _ready() -> void:
 	DialogueManager.show_dialogue_balloon(load("res://Dialogue/MasonPreFight.dialogue"), "start")
-	DialogueManager.dialogue_ended.connect(_on_dialogue_ended)
+	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
+	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
 
 	for child in get_children():
 		if child is State:
@@ -103,8 +126,9 @@ func on_child_transition(state, new_state_name):
 	if state != current_state:
 		return
 
-	# Defeated is terminal: a late timer or hazard signal must never restart the fight.
-	if current_state == states.get("Defeated"):
+	# Defeat, Mason's or the player's, is terminal: a late timer or hazard signal must never restart
+	# the fight.
+	if current_state == states.get("Defeated") or player_defeated:
 		return
 
 	var new_state = states.get(new_state_name)
@@ -132,6 +156,9 @@ func _on_post_dialogue_pre_fight_timer_timeout() -> void:
 func start_cycle() -> void:
 	cycle_phase = 1 if MasonCharacterBody.phase_two else 0
 	lines_done = 0
+	var turns: Array = FINISHERS[cycle_phase]
+	finishers = turns[cycles_started % turns.size()].duplicate()
+	cycles_started += 1
 	on_child_transition(current_state, "PooSquat")
 
 
@@ -144,6 +171,11 @@ func spawn_hazard(scene_path: String, spawn_position: Vector2) -> Node2D:
 	get_tree().current_scene.add_child(hazard)
 	hazard.global_position = spawn_position
 	return hazard
+
+
+# The spots where something covering `footprint` around itself would overlap Mason's sprite.
+func keep_out_around_mason(footprint: Rect2) -> Rect2:
+	return Rect2(MasonCharacterBody.global_position + MASON_SPRITE.position - footprint.end, MASON_SPRITE.size + footprint.size)
 
 
 func begin_line() -> void:
@@ -242,13 +274,29 @@ func finish_line() -> void:
 	var waddle = states.get("Waddle")
 	if lines_done < LINES_PER_CYCLE[cycle_phase]:
 		on_child_transition(waddle, "PooSquat")
-	elif cycle_phase == 1:
-		on_child_transition(waddle, "CallCarter")
 	else:
-		on_child_transition(waddle, "AwaitDelivery")
+		next_attack(waddle)
+
+
+# Runs the cycle's next finisher, or the delivery once they're all done.
+func next_attack(state: State) -> void:
+	# Checked before popping, so a late call from an attack that's already over can't skip the next one.
+	if state != current_state:
+		return
+	on_child_transition(state, "AwaitDelivery" if finishers.is_empty() else finishers.pop_front())
 
 
 func enter_defeated() -> void:
+	_end_fight("Defeated")
+
+
+# The player lost: he stops where he is and stands idle.
+func enter_player_defeated() -> void:
+	_end_fight("Idle")
+	player_defeated = true
+
+
+func _end_fight(final_state_name: String) -> void:
 	for timer in [post_dialogue_pre_fight_timer, squat_timer, release_timer, phone_timer, eat_timer]:
 		timer.stop()
-	on_child_transition(current_state, "Defeated")
+	on_child_transition(current_state, final_state_name)

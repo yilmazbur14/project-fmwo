@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://djt5c63mndku7"
+path="res://.godot/imported/EricOutro.dialogue-ff4f294f150da63ad04156205c8501ba.tres"
+
+[deps]
+
+source_file="res://Dialogue/EricOutro.dialogue"
+dest_files=["res://.godot/imported/EricOutro.dialogue-ff4f294f150da63ad04156205c8501ba.tres"]
+
+[params]
+
+defaults=true

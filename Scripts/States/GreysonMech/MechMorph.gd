@@ -60,6 +60,11 @@ func Physics_Update(_delta: float) -> void:
 		state_machine.start_cycle()
 
 
+# The morph is only left for the first cycle, so the player starts facing the mech once it has formed.
+func Exit() -> void:
+	mech.hurtbox.add_to_group("boss_target")
+
+
 func _swap_to_morph() -> void:
 	mech.computah.get_node("Sprite2D").visible = false
 	mech.computah.get_node("CollisionShape2D").set_deferred("disabled", true)

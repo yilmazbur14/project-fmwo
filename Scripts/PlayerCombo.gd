@@ -141,6 +141,7 @@ func _charged_feedback(sprite: CanvasItem) -> void:
 	sprite.create_tween().tween_property(sprite, "self_modulate", Color(1, 1, 1), CHARGED_FLASH_TIME)
 
 	_shake_screen()
+	get_tree().call_group("arena_crowd", "cheer", 1.5)
 
 
 # Offsets the canvas instead of moving nodes, so physics bodies and the UI layers stay put.

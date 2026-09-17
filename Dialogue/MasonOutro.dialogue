@@ -1,0 +1,11 @@
+# Placeholder lines for the end of the Mason fight, said before the fade to the Victory or Defeat screen.
+# player_won: the player beat Mason. player_lost: Mason beat the player.
+
+~ player_won
+Mason: Okay, okay, you win. Just don't touch my fries.
+=> END
+
+~ player_lost
+Mason: Told you. Really bad time to show up.
+Mason: Now if you'll excuse me, my food's getting cold.
+=> END

@@ -92,7 +92,8 @@ func _finish_charge() -> void:
 		body_hitbox.remove_from_group("enemy projectile")
 	_play_recovering()
 	await get_tree().create_timer(RECOVER_DURATION).timeout
-	if is_defeated:
+	# A wrestler who stood down mid-recovery stays where he is.
+	if is_defeated or state != State.RECOVERING:
 		return
 	global_position = origin_position
 	state = State.IDLE
@@ -129,6 +130,17 @@ func play_defeated() -> void:
 		sprite.modulate = Color(1, 1, 1)
 	if animation_player:
 		animation_player.play("defeated")
+
+
+# Called by the coordinator when the player loses: whatever he's doing, he stops where he is and
+# stands idle. The coordinator's cycle is stopped too, so nothing starts another charge.
+func stand_down() -> void:
+	state = State.IDLE
+	if body_hitbox:
+		body_hitbox.remove_from_group("enemy projectile")
+	if telegraph_line:
+		telegraph_line.visible = false
+	_play_idle()
 
 
 func _on_body_hitbox_area_entered(area: Area2D) -> void:

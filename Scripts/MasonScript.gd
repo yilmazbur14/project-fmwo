@@ -1,6 +1,9 @@
 extends CharacterBody2D
 
 const HitStop := preload("res://Scripts/HitStop.gd")
+const FightOutro := preload("res://Scripts/FightOutro.gd")
+# What he says once the fight is over, under player_won and player_lost.
+const OUTRO_DIALOGUE := "res://Dialogue/MasonOutro.dialogue"
 
 #CONSTANTS
 @export var max_health := 10
@@ -18,7 +21,6 @@ var fill_style: StyleBoxFlat
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var hurtbox: Area2D = $Hurtbox
 @onready var state_machine = $StateManager
-@onready var victory_delay_timer: Timer = $VictoryDelayTimer
 
 #AUDIO
 @onready var music_player: AudioStreamPlayer = $MusicPlayer
@@ -27,6 +29,7 @@ var fill_style: StyleBoxFlat
 @onready var squat_sfx_player: AudioStreamPlayer = $SquatSfxPlayer
 @onready var phone_sfx_player: AudioStreamPlayer = $PhoneSfxPlayer
 @onready var downed_sfx_player: AudioStreamPlayer = $DownedSfxPlayer
+@onready var toss_sfx_player: AudioStreamPlayer = $TossSfxPlayer
 
 var phase_two := false
 var defeated := false
@@ -39,6 +42,7 @@ var sprite_base_position: Vector2
 
 
 func _ready() -> void:
+	add_to_group(FightOutro.BOSS_GROUP)
 	hurtbox.area_entered.connect(_on_hurtbox_entered)
 
 	sprite_base_position = sprite.position
@@ -53,6 +57,7 @@ func _ready() -> void:
 	squat_sfx_player.stream = load("res://Assets/Audio/SFX/wrestler_charge.ogg")
 	phone_sfx_player.stream = load("res://Assets/Audio/SFX/laser_charge.ogg")
 	downed_sfx_player.stream = load("res://Assets/Audio/SFX/downed_stinger.ogg")
+	toss_sfx_player.stream = load("res://Assets/Audio/SFX/whirlwind_whoosh.ogg")
 
 
 func start_music() -> void:
@@ -127,12 +132,17 @@ func _on_defeated() -> void:
 	if music_player.playing:
 		music_player.stop()
 	victory_sfx_player.play()
+	get_tree().call_group("arena_crowd", "cheer", 2.0)
 	GameProgress.next_boss_scene = ""
-	victory_delay_timer.start()
+	FightOutro.finish_fight(get_tree(), true)
 
 
-func _on_victory_delay_timer_timeout() -> void:
-	get_tree().change_scene_to_file("res://Scenes/Core/VictoryScene.tscn")
+# Called by FightOutro when the player loses.
+func on_player_defeated() -> void:
+	state_machine.enter_player_defeated()
+	# As after a win, nothing he's sent out may stay live.
+	for hazard in get_tree().get_nodes_in_group("mason_hazard"):
+		hazard.queue_free()
 
 
 func _build_health_bar() -> void:

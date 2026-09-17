@@ -1,14 +1,12 @@
 [gd_scene format=3 uid="uid://bo8b6jc51i7x6"]
 
 [ext_resource type="Script" path="res://Scripts/CarterElbowDropScript.gd" id="1_elbowdrop"]
-[ext_resource type="Texture2D" uid="uid://ctrn832fes0bu" path="res://Assets/Characters/Mason/elbow_target.png" id="2_target_tex"]
 [ext_resource type="Texture2D" uid="uid://cm51xpb1vy2eb" path="res://Assets/Characters/Mason/carter_elbowdrop.png" id="3_carter_tex"]
-[ext_resource type="Texture2D" uid="uid://b3y6oocg347ba" path="res://Assets/Characters/Mason/elbow_impact.png" id="4_impact_tex"]
 [ext_resource type="AudioStream" uid="uid://cvd2eh0p6ay8i" path="res://Assets/Audio/SFX/earthquake_slam.ogg" id="5_slam"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_elbow_hitbox"]
-radius = 34.0
-height = 120.0
+radius = 55.0
+height = 194.0
 
 [sub_resource type="Animation" id="Animation_elbow_reset"]
 length = 0.001
@@ -93,9 +91,7 @@ y_sort_enabled = true
 visible = false
 position = Vector2(0, -36)
 scale = Vector2(3, 3)
-texture = ExtResource("2_target_tex")
 offset = Vector2(0, 12)
-hframes = 2
 
 [node name="CarterSprite" type="Sprite2D" parent="."]
 visible = false
@@ -109,8 +105,6 @@ hframes = 5
 visible = false
 z_index = 2
 scale = Vector2(3, 3)
-texture = ExtResource("4_impact_tex")
-hframes = 4
 
 [node name="Hitbox" type="Area2D" parent="." groups=["enemy projectile"]]
 

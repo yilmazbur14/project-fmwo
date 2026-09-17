@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://Scripts/States/Mason/MasonAwaitDelivery.gd" id="8_await_delivery"]
 [ext_resource type="Script" path="res://Scripts/States/Mason/MasonEat.gd" id="9_eat"]
 [ext_resource type="Script" path="res://Scripts/States/Mason/MasonDefeated.gd" id="10_defeated"]
+[ext_resource type="Script" path="res://Scripts/States/Mason/MasonNuggetShower.gd" id="11_nugget_shower"]
 
 [sub_resource type="Animation" id="Animation_mason_reset"]
 length = 0.001
@@ -149,6 +150,40 @@ tracks/0/keys = {
 "values": [13, 14]
 }
 
+[sub_resource type="Animation" id="Animation_mason_nugget_toss"]
+resource_name = "nugget_toss"
+step = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.6),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [8, 12]
+}
+
+[sub_resource type="Animation" id="Animation_mason_nugget_hold"]
+resource_name = "nugget_hold"
+length = 0.4
+loop_mode = 1
+step = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [12]
+}
+
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_mason"]
 _data = {
 &"RESET": SubResource("Animation_mason_reset"),
@@ -156,6 +191,8 @@ _data = {
 &"eat": SubResource("Animation_mason_eat"),
 &"hit": SubResource("Animation_mason_hit"),
 &"idle": SubResource("Animation_mason_idle"),
+&"nugget_hold": SubResource("Animation_mason_nugget_hold"),
+&"nugget_toss": SubResource("Animation_mason_nugget_toss"),
 &"phone": SubResource("Animation_mason_phone"),
 &"poop": SubResource("Animation_mason_poop"),
 &"waddle": SubResource("Animation_mason_waddle")
@@ -184,7 +221,7 @@ hframes = 15
 [node name="AnimationPlayer" type="AnimationPlayer" parent="MasonCharacterBody"]
 libraries/ = SubResource("AnimationLibrary_mason")
 
-[node name="Hurtbox" type="Area2D" parent="MasonCharacterBody" groups=["enemy"]]
+[node name="Hurtbox" type="Area2D" parent="MasonCharacterBody" groups=["enemy", "boss_target"]]
 monitoring = false
 monitorable = false
 
@@ -218,12 +255,16 @@ script = ExtResource("6_waddle")
 animation_player = NodePath("../../AnimationPlayer")
 body = NodePath("../..")
 
-[node name="CallCarter" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "phone_sfx_player", "phone_timer", "body")]
+[node name="CallCarter" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "phone_sfx_player", "phone_timer")]
 script = ExtResource("7_call_carter")
 animation_player = NodePath("../../AnimationPlayer")
 phone_sfx_player = NodePath("../../PhoneSfxPlayer")
 phone_timer = NodePath("../../PhoneTimer")
-body = NodePath("../..")
+
+[node name="NuggetShower" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "toss_sfx_player")]
+script = ExtResource("11_nugget_shower")
+animation_player = NodePath("../../AnimationPlayer")
+toss_sfx_player = NodePath("../../TossSfxPlayer")
 
 [node name="AwaitDelivery" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "body")]
 script = ExtResource("8_await_delivery")
@@ -258,10 +299,6 @@ one_shot = true
 [node name="EatTimer" type="Timer" parent="MasonCharacterBody"]
 one_shot = true
 
-[node name="VictoryDelayTimer" type="Timer" parent="MasonCharacterBody"]
-wait_time = 2.2
-one_shot = true
-
 [node name="MusicPlayer" type="AudioStreamPlayer" parent="MasonCharacterBody"]
 volume_db = -4.0
 
@@ -275,9 +312,10 @@ volume_db = -4.0
 
 [node name="DownedSfxPlayer" type="AudioStreamPlayer" parent="MasonCharacterBody"]
 
+[node name="TossSfxPlayer" type="AudioStreamPlayer" parent="MasonCharacterBody"]
+
 [connection signal="timeout" from="MasonCharacterBody/PostDialoguePreFightTimer" to="MasonCharacterBody/StateManager" method="_on_post_dialogue_pre_fight_timer_timeout"]
 [connection signal="timeout" from="MasonCharacterBody/SquatTimer" to="MasonCharacterBody/StateManager/PooSquat" method="_on_squat_timer_timeout"]
 [connection signal="timeout" from="MasonCharacterBody/ReleaseTimer" to="MasonCharacterBody/StateManager/PooSquat" method="_on_release_timer_timeout"]
 [connection signal="timeout" from="MasonCharacterBody/PhoneTimer" to="MasonCharacterBody/StateManager/CallCarter" method="_on_phone_timer_timeout"]
 [connection signal="timeout" from="MasonCharacterBody/EatTimer" to="MasonCharacterBody/StateManager/Eat" method="_on_eat_timer_timeout"]
-[connection signal="timeout" from="MasonCharacterBody/VictoryDelayTimer" to="MasonCharacterBody" method="_on_victory_delay_timer_timeout"]

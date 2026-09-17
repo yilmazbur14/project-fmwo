@@ -1,0 +1,12 @@
+# Placeholder lines for the end of the Eric fight, said before the fade to the Victory or Defeat screen.
+# player_won: the player beat Eric. player_lost: Eric beat the player.
+
+~ player_won
+Eric: No... the White Knight, felled by a filthy conservative?
+Eric: This isn't over. The mods will hear about this!
+=> END
+
+~ player_lost
+Eric: Ha! The server stays pure for another day.
+Eric: Log off, and don't come back.
+=> END

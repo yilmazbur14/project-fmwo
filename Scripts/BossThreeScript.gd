@@ -11,6 +11,10 @@ extends Node2D
 # always collide with each other there unless one of them is stopped
 # first - the player's job is just to not be standing there anymore.
 
+const FightOutro := preload("res://Scripts/FightOutro.gd")
+# What Carter and Josh say once the fight is over, under player_won and player_lost.
+const OUTRO_DIALOGUE := "res://Dialogue/CarterAndJoshOutro.dialogue"
+
 #CONSTANTS
 @export var max_health := 10
 var boss_health := max_health
@@ -42,6 +46,7 @@ const MIN_ARRIVAL := 0.24
 
 
 func _ready() -> void:
+	add_to_group(FightOutro.BOSS_GROUP)
 	_build_health_bar()
 
 	music_player.stream = load("res://Assets/Audio/Music/boss3_theme.ogg")
@@ -52,7 +57,8 @@ func _ready() -> void:
 	victory_sfx_player.stream = load("res://Assets/Audio/SFX/victory_fanfare.ogg")
 
 	DialogueManager.show_dialogue_balloon(load("res://Dialogue/CarterAndJoshPreFight.dialogue"), "start")
-	DialogueManager.dialogue_ended.connect(_on_dialogue_ended)
+	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
+	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
 
 
 func _on_dialogue_ended(dialogue: Object) -> void:
@@ -136,6 +142,7 @@ func _on_defeated() -> void:
 	if music_player.playing:
 		music_player.stop()
 	victory_sfx_player.play()
+	get_tree().call_group("arena_crowd", "cheer", 2.0)
 	GameProgress.next_boss_scene = ""
 
 	if josh and josh.has_method("play_defeated"):
@@ -143,8 +150,17 @@ func _on_defeated() -> void:
 	if carter and carter.has_method("play_defeated"):
 		carter.play_defeated()
 
-	await get_tree().create_timer(2.2).timeout
-	get_tree().change_scene_to_file("res://Scenes/Core/VictoryScene.tscn")
+	FightOutro.finish_fight(get_tree(), true)
+
+
+# Called by FightOutro when the player loses.
+func on_player_defeated() -> void:
+	if cycle_timer:
+		cycle_timer.stop()
+	if josh and josh.has_method("stand_down"):
+		josh.stand_down()
+	if carter and carter.has_method("stand_down"):
+		carter.stand_down()
 
 
 func _build_health_bar() -> void:

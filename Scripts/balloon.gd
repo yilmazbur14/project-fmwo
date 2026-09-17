@@ -20,6 +20,9 @@ const FIGHT_PANEL_OFFSET_RIGHT: float = -24.0
 ## If all other input is blocked as long as dialogue is shown.
 @export var will_block_other_input: bool = true
 
+## Seconds after each line appears during which input can neither skip its typing nor advance it.
+@export var input_lock_time: float = 0.0
+
 ## The action to use for advancing the dialogue
 @export var next_action: StringName = &"ui_accept"
 
@@ -45,6 +48,9 @@ var will_hide_balloon: bool = false
 var locals: Dictionary = {}
 
 var _locale: String = TranslationServer.get_locale()
+
+## When the current line appeared, in engine milliseconds.
+var _line_shown_msec: int = 0
 
 ## The current line
 var dialogue_line: DialogueLine:
@@ -170,6 +176,10 @@ func apply_dialogue_line() -> void:
 
 	_place_panel()
 
+	# Real time, so a hit-stop can't stretch the input lock, and taken once the portrait has loaded,
+	# so a loading hitch can't use it up.
+	_line_shown_msec = Time.get_ticks_msec()
+
 	# Show our balloon
 	balloon.show()
 	will_hide_balloon = false
@@ -239,6 +249,10 @@ func _on_dialogue_label_spoke(letter: String, letter_index: int, speed: float) -
 
 
 func _on_balloon_gui_input(event: InputEvent) -> void:
+	if Time.get_ticks_msec() - _line_shown_msec < input_lock_time * 1000.0:
+		get_viewport().set_input_as_handled()
+		return
+
 	# See if we need to skip typing of the dialogue
 	if dialogue_label.is_typing:
 		var mouse_was_clicked: bool = event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed()

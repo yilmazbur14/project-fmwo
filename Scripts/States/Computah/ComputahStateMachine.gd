@@ -24,7 +24,8 @@ const MAX_ROCKETS := 5
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	DialogueManager.show_dialogue_balloon(load("res://Dialogue/GreysonAndComputahPreFightDialogue.dialogue"), "start")
-	DialogueManager.dialogue_ended.connect(_on_dialogue_ended)
+	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
+	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
 
 	for child in get_children():
 		if child is State:

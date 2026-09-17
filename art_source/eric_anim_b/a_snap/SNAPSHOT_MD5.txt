@@ -1,0 +1,5 @@
+afbcaae3ae08407047d03abc7e422609 *a_snap/approved_weapon.py
+0bcb041c25f3014f32fc74e417a85f02 *a_snap/fx.py
+bb448203ef95131098d38af635323398 *a_snap/rig.py
+60d21768ae0a2aef4b49d1e833552780 *a_snap/variants.py
+Thu Sep 17 06:06:13 EDT 2026

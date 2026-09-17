@@ -6,6 +6,7 @@ extends Node2D
 @export var greyson : Node2D
 
 const HitStop := preload("res://Scripts/HitStop.gd")
+const FightOutro := preload("res://Scripts/FightOutro.gd")
 
 const HAZARD_GROUP := "greyson_mech_hazard"
 # Room for a full punch combo in one window.
@@ -33,6 +34,8 @@ var last_contact_hit_time := -INF
 
 
 func _ready() -> void:
+	# Computah has the outro's lines; the mech only has its attacks to stop.
+	add_to_group(FightOutro.BOSS_GROUP)
 	hurtbox.area_entered.connect(_on_hurtbox_entered)
 	computah.phase_two_reached.connect(_on_phase_two_reached)
 
@@ -104,6 +107,15 @@ func _on_defeated() -> void:
 
 	# Computah's script runs the victory flow once its health hits zero; anything the mech
 	# fired that outlives it could still hurt the player after the win.
+	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
+		hazard.queue_free()
+
+	get_tree().call_group("arena_crowd", "cheer", 2.0)
+
+
+# Called by FightOutro when the player loses.
+func on_player_defeated() -> void:
+	state_machine.enter_player_defeated()
 	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
 		hazard.queue_free()
 

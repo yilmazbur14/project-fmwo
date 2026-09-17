@@ -1,10 +1,11 @@
 extends Control
 
 @export var arena_scene = "res://Scenes/Core/ArenaScene.tscn"
-var intro_scene = "res://Scenes/Core/IntroScene.tscn"
+var intro_scene = "res://Scenes/Core/IntroCutsceneScene.tscn"
 @export var start_game_button : Button
 @export var volume_slider : HSlider
 @export var music_player : AudioStreamPlayer
+@export var fade_in_time := 0.5
 
 var master_bus_index := 0
 
@@ -29,12 +30,15 @@ func _ready() -> void:
 			volume_slider.value = db_to_linear(AudioServer.get_bus_volume_db(master_bus_index))
 		volume_slider.value_changed.connect(_on_volume_slider_changed)
 
+	_fade_in()
+
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
 	pass
 
 func _on_start_game_button_pressed() -> void:
+	GameProgress.reset_progress()
 	get_tree().change_scene_to_file(intro_scene)
 
 
@@ -44,3 +48,14 @@ func _on_volume_slider_changed(value: float) -> void:
 	else:
 		AudioServer.set_bus_mute(master_bus_index, false)
 		AudioServer.set_bus_volume_db(master_bus_index, linear_to_db(value))
+
+
+func _fade_in() -> void:
+	var fade := ColorRect.new()
+	fade.color = Color.BLACK
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(fade)
+	var tween := create_tween()
+	tween.tween_property(fade, "color:a", 0.0, fade_in_time)
+	tween.tween_callback(fade.queue_free)
