@@ -23,6 +23,17 @@ PAL = {
     'H': (172, 210, 128, 255),   # grass highlight
     'G': (136, 180, 99, 255),    # grass = floor colour
     'h': (98, 140, 72, 255),     # grass shadow
+    # redesign greatsword (sampled from eric_redesign_sword.png)
+    'A': (163, 168, 174, 255),   # iron edge light
+    'B': (212, 216, 220, 255),   # iron bevel highlight
+    'C': (124, 129, 135, 255),   # iron body
+    'D': (92, 96, 103, 255),     # iron pit / shade
+    'E': (65, 68, 75, 255),      # iron thickness dark
+    'F': (43, 45, 51, 255),      # iron thickness darkest
+    'o': (156, 96, 56, 255),     # leather light
+    'r': (116, 67, 42, 255),     # leather
+    'm': (78, 44, 28, 255),      # leather dark
+    's': (51, 28, 18, 255),      # leather band
 }
 INV = {v: k for k, v in PAL.items()}
 
