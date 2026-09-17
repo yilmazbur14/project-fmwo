@@ -6,8 +6,9 @@
 [ext_resource type="Texture2D" uid="uid://b3y6oocg347ba" path="res://Assets/Characters/Mason/elbow_impact.png" id="4_impact_tex"]
 [ext_resource type="AudioStream" uid="uid://cvd2eh0p6ay8i" path="res://Assets/Audio/SFX/earthquake_slam.ogg" id="5_slam"]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_elbow_hitbox"]
-radius = 60.0
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_elbow_hitbox"]
+radius = 34.0
+height = 120.0
 
 [sub_resource type="Animation" id="Animation_elbow_reset"]
 length = 0.001
@@ -86,15 +87,19 @@ impact_sprite = NodePath("ImpactSprite")
 hitbox_shape = NodePath("Hitbox/CollisionShape2D")
 animation_player = NodePath("AnimationPlayer")
 slam_sfx = NodePath("SlamSfx")
+y_sort_enabled = true
 
 [node name="TargetSprite" type="Sprite2D" parent="."]
 visible = false
+position = Vector2(0, -36)
 scale = Vector2(3, 3)
 texture = ExtResource("2_target_tex")
+offset = Vector2(0, 12)
 hframes = 2
 
 [node name="CarterSprite" type="Sprite2D" parent="."]
 visible = false
+z_index = 2
 scale = Vector2(3, 3)
 texture = ExtResource("3_carter_tex")
 offset = Vector2(5.5, -29)
@@ -102,6 +107,7 @@ hframes = 5
 
 [node name="ImpactSprite" type="Sprite2D" parent="."]
 visible = false
+z_index = 2
 scale = Vector2(3, 3)
 texture = ExtResource("4_impact_tex")
 hframes = 4
@@ -109,7 +115,8 @@ hframes = 4
 [node name="Hitbox" type="Area2D" parent="." groups=["enemy projectile"]]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
-shape = SubResource("CircleShape2D_elbow_hitbox")
+rotation = 1.5707964
+shape = SubResource("CapsuleShape2D_elbow_hitbox")
 disabled = true
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]

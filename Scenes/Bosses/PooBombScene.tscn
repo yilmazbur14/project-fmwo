@@ -142,20 +142,25 @@ _data = {
 &"explode": SubResource("Animation_poobomb_explode")
 }
 
-[node name="PooBomb" type="Node2D" node_paths=PackedStringArray("animation_player", "detonate_timer", "explode_sfx", "explosion_hitbox_shape") groups=["mason_hazard"]]
+[node name="PooBomb" type="Node2D" node_paths=PackedStringArray("animation_player", "detonate_timer", "explode_sfx", "explosion_hitbox_shape", "bomb_sprite") groups=["mason_hazard"]]
+y_sort_enabled = true
 script = ExtResource("1_poobomb")
 animation_player = NodePath("AnimationPlayer")
 detonate_timer = NodePath("DetonateTimer")
 explode_sfx = NodePath("ExplodeSfx")
 explosion_hitbox_shape = NodePath("ExplosionHitbox/CollisionShape2D")
+bomb_sprite = NodePath("BombSprite")
 
 [node name="BombSprite" type="Sprite2D" parent="."]
+position = Vector2(0, 42)
 scale = Vector2(3, 3)
 texture = ExtResource("2_bomb_tex")
+offset = Vector2(0, -14)
 hframes = 2
 
 [node name="ExplosionSprite" type="Sprite2D" parent="."]
 visible = false
+z_index = 2
 scale = Vector2(3, 3)
 texture = ExtResource("3_explosion_tex")
 hframes = 5

@@ -63,6 +63,7 @@ _data = {
 }
 
 [node name="UberDriver" type="Node2D" node_paths=PackedStringArray("sprite", "animation_player", "handoff_timer", "arrive_sfx") groups=["mason_hazard"]]
+y_sort_enabled = true
 script = ExtResource("1_uberdriver")
 sprite = NodePath("Sprite2D")
 animation_player = NodePath("AnimationPlayer")
@@ -70,8 +71,10 @@ handoff_timer = NodePath("HandoffTimer")
 arrive_sfx = NodePath("ArriveSfx")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, 96)
 scale = Vector2(3, 3)
 texture = ExtResource("2_driver_tex")
+offset = Vector2(0, -32)
 hframes = 6
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]

@@ -27,15 +27,17 @@ const LEAP_OUT_FRAME := 4
 
 var target_player: Node2D
 var arena_bounds: Rect2
+var keep_out: Rect2
 
 
 func _ready() -> void:
 	animation_player.animation_finished.connect(_on_animation_player_animation_finished)
 
 
-func begin(drop_count: int, player: Node2D, bounds: Rect2) -> void:
+func begin(drop_count: int, player: Node2D, bounds: Rect2, avoid: Rect2) -> void:
 	target_player = player
 	arena_bounds = bounds
+	keep_out = avoid
 	# Every drop lives on one tween so the timings can't drift apart, and the
 	# whole attack dies with this node if Mason frees it mid-sequence.
 	var sequence := create_tween()
@@ -61,9 +63,29 @@ func begin(drop_count: int, player: Node2D, bounds: Rect2) -> void:
 
 func _mark_target() -> void:
 	if is_instance_valid(target_player):
-		global_position = target_player.global_position.clamp(arena_bounds.position, arena_bounds.end)
+		global_position = _landing_spot(target_player.global_position)
 	target_sprite.show()
 	animation_player.play("pulse")
+
+
+# Nearest spot inside the bounds that is outside keep_out, pushing straight out through one of its edges.
+func _landing_spot(target: Vector2) -> Vector2:
+	var spot := target.clamp(arena_bounds.position, arena_bounds.end)
+	if not keep_out.has_point(spot):
+		return spot
+	var best := spot
+	var best_distance := INF
+	for candidate in [
+		Vector2(keep_out.position.x - 1.0, spot.y),
+		Vector2(keep_out.end.x, spot.y),
+		Vector2(spot.x, keep_out.position.y - 1.0),
+		Vector2(spot.x, keep_out.end.y),
+	]:
+		var clamped: Vector2 = candidate.clamp(arena_bounds.position, arena_bounds.end)
+		if not keep_out.has_point(clamped) and clamped.distance_to(spot) < best_distance:
+			best = clamped
+			best_distance = clamped.distance_to(spot)
+	return best
 
 
 func _start_dive() -> void:

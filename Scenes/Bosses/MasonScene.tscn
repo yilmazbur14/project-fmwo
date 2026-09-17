@@ -165,16 +165,20 @@ _data = {
 size = Vector2(130, 170)
 
 [node name="MasonScene" type="Node2D"]
+y_sort_enabled = true
 
 [node name="MasonCharacterBody" type="CharacterBody2D" parent="."]
+y_sort_enabled = true
 position = Vector2(960, 280)
 collision_layer = 0
 collision_mask = 0
 script = ExtResource("1_mason_script")
 
 [node name="Sprite2D" type="Sprite2D" parent="MasonCharacterBody"]
+position = Vector2(0, 96)
 scale = Vector2(3, 3)
 texture = ExtResource("2_mason_sheet")
+offset = Vector2(0, -32)
 hframes = 15
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="MasonCharacterBody"]
@@ -214,11 +218,12 @@ script = ExtResource("6_waddle")
 animation_player = NodePath("../../AnimationPlayer")
 body = NodePath("../..")
 
-[node name="CallCarter" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "phone_sfx_player", "phone_timer")]
+[node name="CallCarter" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "phone_sfx_player", "phone_timer", "body")]
 script = ExtResource("7_call_carter")
 animation_player = NodePath("../../AnimationPlayer")
 phone_sfx_player = NodePath("../../PhoneSfxPlayer")
 phone_timer = NodePath("../../PhoneTimer")
+body = NodePath("../..")
 
 [node name="AwaitDelivery" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "body")]
 script = ExtResource("8_await_delivery")
