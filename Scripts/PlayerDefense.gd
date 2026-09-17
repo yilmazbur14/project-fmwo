@@ -33,6 +33,9 @@ signal blocked(hit: RefCounted, contact_point: Vector2)
 # `streak` counts this parry: 1 for the first, then up while they keep landing.
 signal parried(hit: RefCounted, contact_point: Vector2, staggered: bool, streak: int)
 signal parry_streak_changed(streak: int)
+# Every block press, with whether it was credited toward a parry: a fight watching for a parry that
+# has nothing to parry (Carter's feints) reads this.
+signal block_pressed(credited: bool)
 signal guard_broken
 signal guard_recovered
 signal perfect_dodged(hit: RefCounted)
@@ -145,7 +148,7 @@ func _physics_process(delta: float) -> void:
 	clock += delta
 	_regen(delta)
 	if parry_streak > 0 and clock - last_parry_time > parry_streak_timeout:
-		_end_parry_streak()
+		end_parry_streak()
 	if ghost_active and clock - dash_start_time > perfect_dodge_window:
 		clear_dodge_ghost()
 
@@ -249,6 +252,15 @@ func on_block_pressed() -> void:
 	press_credited = last_press_parried or clock - last_press_time >= parry_mash_lockout
 	last_press_time = clock
 	last_press_parried = false
+	block_pressed.emit(press_credited)
+
+
+# The next press counts toward a parry however recently the last one was made. A fight calls it as
+# each attack it wants read becomes readable (Carter's clones), so a whiff at the last one can't
+# carry over. Only that next press is excused: it still sets the mash lockout, so pressing again
+# inside the same window still whiffs.
+func rearm_parry() -> void:
+	last_press_time = -INF
 
 
 func clear_guard_break() -> void:
@@ -256,7 +268,7 @@ func clear_guard_break() -> void:
 
 
 func on_fight_over() -> void:
-	_end_parry_streak()
+	end_parry_streak()
 	clear_guard_break()
 	clear_dodge_ghost()
 	clear_dash_recovery()
@@ -349,7 +361,7 @@ func _streak_stagger_bonus() -> float:
 	return clampf((parry_streak - 2) * parry_stagger_streak_bonus, 0.0, parry_stagger_streak_bonus_max)
 
 
-func _end_parry_streak() -> void:
+func end_parry_streak() -> void:
 	if parry_streak == 0:
 		return
 	parry_streak = 0
@@ -381,7 +393,7 @@ func _try_award_perfect_dodge(hit: RefCounted) -> void:
 
 func _take_hit(hit: RefCounted) -> int:
 	hit_during_window = true
-	_end_parry_streak()
+	end_parry_streak()
 	hit_taken.emit(hit)
 	if is_guard_broken and guard_break_ends_on_hit:
 		_end_guard_break.call_deferred()
@@ -391,7 +403,7 @@ func _take_hit(hit: RefCounted) -> int:
 func _start_guard_break() -> void:
 	is_guard_broken = true
 	clear_dash_recovery()
-	_end_parry_streak()
+	end_parry_streak()
 	_set_stamina(0.0)
 	guard_break_timer.start(guard_break_time)
 	player.combo.reset()

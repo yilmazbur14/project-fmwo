@@ -22,7 +22,8 @@ func Update(delta: float) -> void:
 	var input_vector = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 	# print("input vector length: ", input_vector.length())
     
-	if input_vector.length() > speed_threshold:
+	# A parry-only sequence roots the player: holding a direction mustn't even start the walk.
+	if input_vector.length() > speed_threshold and not player.is_action_locked:
 		print("check passed")
 		# Transition to Run state
 		# print("Transitioning to Walking State")working

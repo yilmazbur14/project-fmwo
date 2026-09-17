@@ -299,6 +299,15 @@ const FINAL_PERFECT_DODGE_TRAIL := {
 	"scale": 2.0,
 }
 
+#LOCKED SEQUENCE
+# A fight holding the player for a parry-only sequence (Carter's clones). The blink that puts them in
+# place leaves the dash's own ghosts along the way, and a held player is tinted a shade so being
+# unable to move doesn't read as a bug. The tint is on the body, so the sprite's own block, parry and
+# hurt flashes still show through it.
+const WARP_GHOST_COUNT := 5
+const LOCKED_TINT := Color(0.78, 0.82, 1.0)
+const LOCKED_TINT_TIME := 0.15
+
 #PARRY STREAK COUNTER
 # A running count while a streak is alive, over the hype meter, fading out when it lapses.
 const STREAK_COUNTER_POSITION := Vector2(1371, 985)

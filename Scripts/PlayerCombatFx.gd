@@ -24,6 +24,7 @@ var parry_voices: Array[AudioStreamPlayer] = []
 var parry_voice := 0
 
 var flash: Tween
+var body_tint: Tween
 var stars: Sprite2D
 var stun_clock := 0.0
 # Only the newest zoom punch pulls the view back out.
@@ -37,6 +38,9 @@ func _ready() -> void:
 	defense.parried.connect(_on_parried)
 	defense.perfect_dodged.connect(_on_perfect_dodged)
 	defense.guard_broken.connect(_on_guard_broken)
+	player.warped.connect(_on_warped)
+	player.actions_locked.connect(_on_actions_locked)
+	player.actions_unlocked.connect(_on_actions_unlocked)
 	defense.guard_recovered.connect(_on_guard_recovered)
 	player.get_node("Hype").hype_full_changed.connect(_on_hype_full_changed)
 
@@ -149,10 +153,12 @@ func _on_perfect_dodged(_hit: RefCounted) -> void:
 
 
 func _spawn_dodge_trail() -> void:
+	_spawn_ghost_trail(defense.dash_start_position, player.global_position, DefenseHypeArtLayout.PERFECT_DODGE_GHOST_COUNT)
+
+
+# Copies of the player fading along a path, for a dash and for a fight's warp.
+func _spawn_ghost_trail(from: Vector2, to: Vector2, count: int) -> void:
 	var spec := DefenseHypeArtLayout.perfect_dodge_trail()
-	var count: int = DefenseHypeArtLayout.PERFECT_DODGE_GHOST_COUNT
-	var from: Vector2 = defense.dash_start_position
-	var to: Vector2 = player.global_position
 	var row: int = player.facing
 	for i in count:
 		var ghost := Sprite2D.new()
@@ -179,6 +185,29 @@ func _spawn_dodge_trail() -> void:
 		else:
 			play.tween_property(ghost, "modulate:a", 0.0, spec.fade_time)
 		play.tween_callback(ghost.queue_free)
+
+
+# A fight took the player somewhere (warp_to): the blink is the dash's own ghosts along the way they
+# were taken, so being moved reads like a dash rather than a bug.
+func _on_warped(from: Vector2, to: Vector2) -> void:
+	_spawn_ghost_trail(from, to, DefenseHypeArtLayout.WARP_GHOST_COUNT)
+
+
+# Held for a parry-only sequence: a shade off the body, so a player who can't move doesn't look
+# broken. It tints the body rather than the sprite, so every flash still reads through it.
+func _on_actions_locked() -> void:
+	_tint_body(DefenseHypeArtLayout.LOCKED_TINT)
+
+
+func _on_actions_unlocked() -> void:
+	_tint_body(Color.WHITE)
+
+
+func _tint_body(to: Color) -> void:
+	if body_tint:
+		body_tint.kill()
+	body_tint = player.create_tween()
+	body_tint.tween_property(player, "modulate", to, DefenseHypeArtLayout.LOCKED_TINT_TIME)
 
 
 func _on_guard_broken() -> void:

@@ -1,5 +1,12 @@
 extends CharacterBody2D
 
+# A fight can hold the player for a parry-only sequence, where only the guard answers
+# (lock_actions), point them at what is rushing them (face_point) and put them somewhere (warp_to).
+# PlayerCombatFx draws the lock and the warp from these signals.
+signal actions_locked
+signal actions_unlocked
+signal warped(from: Vector2, to: Vector2)
+
 #CONSTANTS
 const SPEED = 600.0
 const DODGE_SPEED = 5000
@@ -94,6 +101,12 @@ var fight_over := false
 # Set while the finisher plays, from the beat after the charged punch until the player lands: they
 # can't act, turn or be hurt.
 var is_finishing := false
+# Set while a fight holds the player for a parry-only sequence, like Carter's clones: they can't
+# move, dash or punch, and the guard and its parry are all that answer. It is its own flag on
+# purpose: is_grabbed and is_talking cut the block press off before it reaches the guard.
+var is_action_locked := false
+# Where a fight wants the player looking, or Vector2.INF for the usual rules.
+var facing_point := Vector2.INF
 
 var state_machine : Node
 var current_state : State
@@ -128,6 +141,11 @@ func _process(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_facing()
+
+	# A parry-only sequence roots the player where the fight put them: they still turn, but nothing
+	# here moves them, and the fight is free to write global_position itself.
+	if is_action_locked:
+		return
 
 	# Don't move during punch or block
 	if current_state.name == "Punching" || is_talking || is_grabbed || fight_over || is_finishing:
@@ -186,6 +204,10 @@ func _input(event: InputEvent) -> void:
 		return
 	# A dash's recovery frames: the guard may go up, and a parry ends them, but nothing else counts.
 	if defense.is_dash_recovering() and not event.is_action_pressed("block"):
+		return
+	# A parry-only sequence: the guard is the only answer the player has. Block presses go on through
+	# to on_block_pressed() and _raise_guard(), so parries read exactly as they always do.
+	if is_action_locked and not event.is_action_pressed("block"):
 		return
 	if event.is_action_pressed("punch") and not is_talking and not is_grabbed and not fight_over:
 		combo.register_press()
@@ -273,6 +295,7 @@ func _apply_damage(hit: RefCounted) -> void:
 	playerHealth = maxi(playerHealth - hit.damage, 0)
 	if playerHealth <= 0:
 		status.clear_all()
+		unlock_actions()
 	combo.reset()
 	healthUI.update_health(playerHealth)
 	invincibility_timer.start()
@@ -305,6 +328,56 @@ func _flicker_while_invincible(duration: float) -> void:
 	for i in cycles:
 		flicker_tween.tween_property(sprite, "modulate:a", 0.3, 0.05)
 		flicker_tween.tween_property(sprite, "modulate:a", 1.0, 0.05)
+
+
+# A fight holds the player for a reaction test: movement, the dash and punches are off, while the
+# guard, its parry window and the streak behind it are untouched. A dash in the air is cut and a
+# buffered punch dropped; a swing already in the air finishes, since its hitbox is already live. A
+# raised guard stays up. Locking twice does nothing, and neither does unlocking a free player.
+func lock_actions() -> void:
+	if is_action_locked or fight_over:
+		return
+	is_action_locked = true
+	velocity = Vector2.ZERO
+	is_dodging = false
+	dodge_timer = 0.0
+	punch_buffered = false
+	combo.reset()
+	defense.clear_dash_recovery()
+	defense.clear_dodge_ghost()
+	actions_locked.emit()
+
+
+func unlock_actions() -> void:
+	if not is_action_locked:
+		return
+	is_action_locked = false
+	facing_point = Vector2.INF
+	actions_unlocked.emit()
+
+
+# The fight points the player at whatever is rushing them, and the facing holds there until the fight
+# moves it or the lock ends. It turns at once: a reaction test can't wait on the usual hysteresis.
+func face_point(point: Vector2) -> void:
+	facing_point = point
+	var aim := point - global_position
+	if aim == Vector2.ZERO:
+		return
+	facing = _facing_toward(aim)
+	_apply_facing()
+
+
+func clear_face_point() -> void:
+	facing_point = Vector2.INF
+
+
+# A fight puts the player somewhere, like Carter yanking them to the middle of the ring. The move
+# itself is instant, so nothing the fight times depends on it; PlayerCombatFx draws the blink.
+func warp_to(point: Vector2) -> void:
+	var from := global_position
+	global_position = point
+	velocity = Vector2.ZERO
+	warped.emit(from, point)
 
 
 # A boss puts a temporary status effect on the player (PlayerStatus). A duration of 0 takes the
@@ -358,6 +431,7 @@ func begin_finisher() -> void:
 	punch_buffered = false
 	defense.clear_dash_recovery()
 	status.clear_all()
+	unlock_actions()
 	velocity = Vector2.ZERO
 
 
@@ -385,6 +459,7 @@ func end_fight() -> void:
 	defense.on_fight_over()
 	hype.on_fight_over()
 	status.clear_all()
+	unlock_actions()
 	# A finisher under way plays out to its landing first.
 	if is_finishing:
 		finisher.finished.connect(_stand_still, CONNECT_ONE_SHOT)
@@ -431,6 +506,8 @@ func _threat_turn_held() -> bool:
 # boss they're on (its centre once they're inside it). With no target, as during boss 2's morph,
 # the facing follows movement.
 func _aim() -> Vector2:
+	if facing_point != Vector2.INF:
+		return facing_point - global_position
 	var target := _nearest_target()
 	if target == null:
 		return velocity
