@@ -1,0 +1,11 @@
+# Lines for the end of the Carter fight, said before the fade to the Victory or Defeat screen.
+# player_won: the player beat Carter. player_lost: Carter beat the player.
+
+~ player_won
+Carter: Hm.
+Carter: You're awake now. Good.
+=> END
+
+~ player_lost
+Carter: That was the move.
+=> END

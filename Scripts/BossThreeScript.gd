@@ -11,6 +11,13 @@ extends Node2D
 # always collide with each other there unless one of them is stopped
 # first - the player's job is just to not be standing there anymore.
 
+const FightOutro := preload("res://Scripts/FightOutro.gd")
+# What Carter and Josh say once the fight is over, under player_won and player_lost.
+const OUTRO_DIALOGUE := "res://Dialogue/CarterAndJoshOutro.dialogue"
+# Carter and Josh are separate fights now, so this tag-team fight is no longer part of the
+# order: GameProgress finds nothing after it and the Victory screen offers the main menu.
+const FIGHT_SCENE := "res://Scenes/Bosses/CarterAndJoshBossFightScene.tscn"
+
 #CONSTANTS
 @export var max_health := 10
 var boss_health := max_health
@@ -19,6 +26,7 @@ var damage_per_collision := 2
 @export var josh: CharacterBody2D
 @export var carter: CharacterBody2D
 @export var cycle_timer: Timer
+@export var post_dialogue_pre_fight_timer: Timer
 
 #UI (built at runtime - no new art needed)
 var health_bar: ProgressBar
@@ -41,6 +49,7 @@ const MIN_ARRIVAL := 0.24
 
 
 func _ready() -> void:
+	add_to_group(FightOutro.BOSS_GROUP)
 	_build_health_bar()
 
 	music_player.stream = load("res://Assets/Audio/Music/boss3_theme.ogg")
@@ -50,13 +59,21 @@ func _ready() -> void:
 	collision_sfx_player.stream = load("res://Assets/Audio/SFX/wrestler_collision.ogg")
 	victory_sfx_player.stream = load("res://Assets/Audio/SFX/victory_fanfare.ogg")
 
+	DialogueManager.show_dialogue_balloon(load("res://Dialogue/CarterAndJoshPreFight.dialogue"), "start")
+	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
+	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
+
+
+func _on_dialogue_ended(dialogue: Object) -> void:
+	post_dialogue_pre_fight_timer.start()
+
+
+func _on_post_dialogue_pre_fight_timer_timeout() -> void:
+	if music_player and not music_player.playing:
+		music_player.play()
 	if cycle_timer:
 		cycle_timer.wait_time = BASE_CYCLE
 		cycle_timer.start()
-
-	await get_tree().create_timer(0.8).timeout
-	if music_player and not music_player.playing:
-		music_player.play()
 
 
 func get_health_ratio() -> float:
@@ -128,9 +145,25 @@ func _on_defeated() -> void:
 	if music_player.playing:
 		music_player.stop()
 	victory_sfx_player.play()
-	GameProgress.next_boss_scene = ""
-	await get_tree().create_timer(2.2).timeout
-	get_tree().change_scene_to_file("res://Scenes/Core/VictoryScene.tscn")
+	get_tree().call_group("arena_crowd", "cheer", 2.0)
+	GameProgress.next_boss_scene = GameProgress.next_fight_after(FIGHT_SCENE)
+
+	if josh and josh.has_method("play_defeated"):
+		josh.play_defeated()
+	if carter and carter.has_method("play_defeated"):
+		carter.play_defeated()
+
+	FightOutro.finish_fight(get_tree(), true)
+
+
+# Called by FightOutro when the player loses.
+func on_player_defeated() -> void:
+	if cycle_timer:
+		cycle_timer.stop()
+	if josh and josh.has_method("stand_down"):
+		josh.stand_down()
+	if carter and carter.has_method("stand_down"):
+		carter.stand_down()
 
 
 func _build_health_bar() -> void:
@@ -140,7 +173,7 @@ func _build_health_bar() -> void:
 	name_label = Label.new()
 	name_label.text = "CARTER & JOSH"
 	name_label.position = Vector2(700, 36)
-	name_label.add_theme_font_size_override("font_size", 26)
+	name_label.theme = load("res://Assets/UI/ui_theme.tres")
 	name_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	name_label.add_theme_constant_override("outline_size", 6)

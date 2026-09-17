@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/JoshGiantCardScript.gd" id="1_card"]
+[ext_resource type="AudioStream" uid="uid://bf05d1s2wxs2s" path="res://Assets/Audio/SFX/laser_charge.ogg" id="2_whistle"]
+[ext_resource type="AudioStream" uid="uid://cvd2eh0p6ay8i" path="res://Assets/Audio/SFX/earthquake_slam.ogg" id="3_slam"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_josh_giant_card"]
+resource_local_to_scene = true
+size = Vector2(564, 853)
+
+[node name="JoshGiantCard" type="Node2D" node_paths=PackedStringArray("shadow", "card", "hitbox", "hitbox_shape", "whistle_sfx", "slam_sfx")]
+script = ExtResource("1_card")
+shadow = NodePath("Shadow")
+card = NodePath("Card")
+hitbox = NodePath("Hitbox")
+hitbox_shape = NodePath("Hitbox/CollisionShape2D")
+whistle_sfx = NodePath("WhistleSfx")
+slam_sfx = NodePath("SlamSfx")
+
+[node name="Shadow" type="Node2D" parent="."]
+modulate = Color(1, 1, 1, 0)
+
+[node name="Card" type="Node2D" parent="."]
+
+[node name="Hitbox" type="Area2D" parent="." groups=["enemy projectile"]]
+collision_mask = 0
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("RectangleShape2D_josh_giant_card")
+disabled = true
+
+[node name="WhistleSfx" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2_whistle")
+volume_db = -6.0
+pitch_scale = 1.4
+
+[node name="SlamSfx" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_slam")

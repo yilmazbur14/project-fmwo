@@ -1,8 +1,18 @@
 extends Node2D
 
+signal phase_two_reached
+
+const HitStop := preload("res://Scripts/HitStop.gd")
+const FightOutro := preload("res://Scripts/FightOutro.gd")
+# What Computah and Greyson say once the fight is over, under player_won and player_lost.
+const OUTRO_DIALOGUE := "res://Dialogue/GreysonAndComputahOutro.dialogue"
+# This fight's place in the order; GameProgress decides what follows it.
+const FIGHT_SCENE := "res://Scenes/Bosses/GreysonBossFightScene.tscn"
+
 #CONSTANTS
 @export var max_health := 10
 var boss_health := max_health
+const PHASE_TWO_RATIO := 0.5
 
 #UI (built at runtime - no new art needed)
 var health_bar: ProgressBar
@@ -16,13 +26,28 @@ var fill_style: StyleBoxFlat
 @onready var hit_sfx_player: AudioStreamPlayer = $HitSfxPlayer
 @onready var victory_sfx_player: AudioStreamPlayer = $VictorySfxPlayer
 var defeated := false
+var phase_two := false
+
+# The finisher's daze stars circle here, from the sprite's centre: about 34 px over the antenna.
+const DAZE_ANCHOR_OFFSET := Vector2(0, -92)
+# One finisher daze per Downed window; Downed clears it.
+var daze_used := false
+# Runs the stagger after a landed finisher, straight into the next attack cycle.
+var finisher_stagger_timer: Timer
 
 var sprite_base_position: Vector2
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	add_to_group(FightOutro.BOSS_GROUP)
 	var hurtBox = get_node("Hurtbox")
 	hurtBox.area_entered.connect(_on_hurtbox_entered)
+
+	finisher_stagger_timer = Timer.new()
+	finisher_stagger_timer.name = "FinisherStaggerTimer"
+	finisher_stagger_timer.one_shot = true
+	finisher_stagger_timer.timeout.connect($StateManager.resume_attack_cycle)
+	add_child(finisher_stagger_timer)
 
 	sprite_base_position = sprite.position
 	_build_health_bar()
@@ -46,9 +71,15 @@ func _process(_delta: float) -> void:
 		if music_player.playing:
 			music_player.stop()
 		victory_sfx_player.play()
-		GameProgress.next_boss_scene = "res://Scenes/Bosses/CarterAndJoshBossFightScene.tscn"
-		await get_tree().create_timer(2.2).timeout
-		get_tree().change_scene_to_file("res://Scenes/Core/VictoryScene.tscn")
+		GameProgress.next_boss_scene = GameProgress.next_fight_after(FIGHT_SCENE)
+		FightOutro.finish_fight(get_tree(), true)
+
+
+# Called by FightOutro when the player loses. From phase two on, the mech has the attacks to stop.
+func on_player_defeated() -> void:
+	finisher_stagger_timer.stop()
+	if not phase_two:
+		$StateManager.end_phase_one()
 
 
 func get_health_ratio() -> float:
@@ -57,11 +88,85 @@ func get_health_ratio() -> float:
 
 func _on_hurtbox_entered(area: Area2D) -> void:
 	if area.is_in_group("player attack"):
-		boss_health = max(boss_health - 1, 0)
-		print("Boss health: ", boss_health)
-		_update_health_bar()
-		_hit_feedback()
-		hit_sfx_player.play()
+		area.get_parent().combo.resolve_punch(self)
+
+
+func take_punch(amount: int) -> int:
+	# Computah stops taking hits at the threshold, so a burst of hits can't skip the mech;
+	# from then on only the mech's overheat window deals damage, through take_hit().
+	# A charged punch that would carry past the threshold is cut down to reach it exactly.
+	if phase_two:
+		return 0
+	var phase_two_health := floori(max_health * PHASE_TWO_RATIO)
+	var dealt := take_hit(mini(amount, boss_health - phase_two_health))
+	_hit_feedback()
+	if get_health_ratio() <= PHASE_TWO_RATIO:
+		phase_two = true
+		# area_entered fires mid physics flush, and ending phase one toggles hurtbox monitoring.
+		call_deferred("_start_phase_two")
+	return dealt
+
+
+func take_hit(amount: int) -> int:
+	var dealt := mini(amount, boss_health)
+	boss_health -= dealt
+	print("Boss health: ", boss_health)
+	_update_health_bar()
+	hit_sfx_player.play()
+	return dealt
+
+
+# The player's finisher (PlayerFinisher). Only Downed can be dazed, and only while the finisher can
+# still take health before the phase-two threshold.
+func can_be_dazed() -> bool:
+	var state_machine = $StateManager
+	return not phase_two and not defeated and boss_health > floori(max_health * PHASE_TWO_RATIO) and not daze_used and state_machine.current_state == state_machine.states.get("Downed")
+
+
+func enter_daze() -> void:
+	daze_used = true
+
+
+func exit_daze(_finisher_landed: bool) -> void:
+	pass
+
+
+# A finisher that reaches the threshold starts the morph instead.
+func end_recovery(stagger_time: float) -> bool:
+	if phase_two or defeated:
+		return false
+	var state_machine = $StateManager
+	state_machine.downed_state_timer.stop()
+	state_machine.on_child_transition(state_machine.current_state, "Idle")
+	# He has no hit frames; staying dazed reads better than snapping back to idle.
+	$AnimationPlayer.play("downed")
+	finisher_stagger_timer.start(stagger_time)
+	return true
+
+
+# take_punch already cuts it down to the threshold and starts the morph there.
+func take_finisher(amount: int) -> int:
+	return take_punch(amount)
+
+
+func get_max_health() -> int:
+	return max_health
+
+
+func get_daze_anchor() -> Vector2:
+	return sprite.global_position + DAZE_ANCHOR_OFFSET
+
+
+func get_finisher_hurtbox() -> Area2D:
+	return $Hurtbox
+
+
+func _start_phase_two() -> void:
+	finisher_stagger_timer.stop()
+	# The player faces the mech once it has formed; until then there's nothing to face.
+	$Hurtbox.remove_from_group("boss_target")
+	$StateManager.end_phase_one()
+	phase_two_reached.emit()
 
 
 func _build_health_bar() -> void:
@@ -69,9 +174,9 @@ func _build_health_bar() -> void:
 	add_child(layer)
 
 	name_label = Label.new()
-	name_label.text = "COMPUTAH"
+	name_label.text = GameProgress.boss_name(FIGHT_SCENE)
 	name_label.position = Vector2(770, 36)
-	name_label.add_theme_font_size_override("font_size", 26)
+	name_label.theme = load("res://Assets/UI/ui_theme.tres")
 	name_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	name_label.add_theme_constant_override("outline_size", 6)
@@ -134,8 +239,5 @@ func _hit_feedback() -> void:
 		shake_tween.tween_property(sprite, "position", sprite_base_position + offset, 0.025)
 	shake_tween.tween_property(sprite, "position", sprite_base_position, 0.025)
 
-	# Brief hit-stop for weight (measured in real time, ignores the slowdown itself)
-	Engine.time_scale = 0.05
-	get_tree().create_timer(0.06, true, false, true).timeout.connect(
-		func(): Engine.time_scale = 1.0
-	)
+	# Brief hit-stop for weight
+	HitStop.freeze(get_tree(), 0.06)

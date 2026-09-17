@@ -24,7 +24,8 @@ const MAX_ROCKETS := 5
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	DialogueManager.show_dialogue_balloon(load("res://Dialogue/GreysonAndComputahPreFightDialogue.dialogue"), "start")
-	DialogueManager.dialogue_ended.connect(_on_dialogue_ended)
+	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
+	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
 
 	for child in get_children():
 		if child is State:
@@ -83,6 +84,11 @@ func _start_attack_cycle() -> void:
 	rocket_fire_interval_timer.start()
 
 
+# After a landed finisher's stagger, skipping the recovery rest and the laugh.
+func resume_attack_cycle() -> void:
+	_start_attack_cycle()
+
+
 func _apply_rage_scaling() -> void:
 	# Ramp up intensity as Computah's health drops - mirrors Eric's
 	# lerp-based rage scaling.
@@ -92,14 +98,14 @@ func _apply_rage_scaling() -> void:
 		ratio = boss.get_health_ratio()
 	var rage = clamp(1.0 - ratio, 0.0, 1.0)
 
-	# Fires rockets faster and grows the laser beam quicker/further
-	# the lower Computah's health gets.
+	# Fires rockets faster and sweeps the laser beams quicker the lower
+	# Computah's health gets.
 	rocket_fire_interval_timer.wait_time = lerp(0.5, 0.18, rage)
 
 	var laser_state = states.get("LaserBeam")
 	if laser_state:
-		laser_state.beam_growth_speed = lerp(1000.0, 2400.0, rage)
-		laser_state.max_beam_length = lerp(400.0, 600.0, rage)
+		laser_state.sweep_duration = lerp(2.0, 1.4, rage)
+		laser_beam_duration_timer.wait_time = laser_state.get_total_duration()
 
 
 func fire_rockets() -> void:
@@ -145,6 +151,17 @@ func _on_recovery_timer_timeout() -> void:
 func _on_laughing_timer_timeout() -> void:
 	laughing_timer.stop()
 	_start_attack_cycle()
+
+
+func end_phase_one() -> void:
+	for timer in [post_dialogue_pre_fight_timer, rocket_fire_interval_timer, laser_beam_duration_timer, downed_state_timer, recovery_timer, laughing_timer]:
+		timer.stop()
+	rocket_projectile_count = 0
+	# Idle's Enter shuts the hurtbox and the laser state's Exit hides and disarms the beams.
+	on_child_transition(current_state, "Idle")
+	for node in get_tree().current_scene.get_children():
+		if node.scene_file_path == Projectile.resource_path:
+			node.queue_free()
 
 
 func _play_downed_stinger() -> void:

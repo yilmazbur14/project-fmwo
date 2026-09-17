@@ -2,9 +2,19 @@ extends Node2D
 
 #REFERENCES
 var Projectile = preload("res://Scenes/Bosses/BossProjectileScene.tscn")
+const HitStop := preload("res://Scripts/HitStop.gd")
+const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
+const FightOutro := preload("res://Scripts/FightOutro.gd")
+# What he says once the fight is over, under player_won and player_lost.
+const OUTRO_DIALOGUE := "res://Dialogue/EricOutro.dialogue"
+# This fight's place in the order; GameProgress decides what follows it.
+const FIGHT_SCENE := "res://Scenes/Bosses/EricBossFightScene.tscn"
 
 #CONSTANTS
-@export var max_health := 10
+# Where an uppercut may leave him: his body box inside the ring's walls (ArenaScene's
+# wallBoundaries), with a margin so he never leans through a rope.
+const KNOCKBACK_AREA := Rect2(240, 200, 1440, 570)
+@export var max_health := 24
 var boss_health := max_health
 
 #UI (built at runtime - no new art needed)
@@ -14,6 +24,7 @@ var fill_style: StyleBoxFlat
 
 @onready var animationPlayer = $AnimationPlayer
 @onready var sprite = $Sprite2D
+@onready var state_machine = $StateManager
 @export var post_dialogue_pre_fight_timer: Timer
 
 #AUDIO
@@ -21,13 +32,20 @@ var fill_style: StyleBoxFlat
 @onready var hit_sfx_player: AudioStreamPlayer = $HitSfxPlayer
 @onready var victory_sfx_player: AudioStreamPlayer = $VictorySfxPlayer
 var defeated := false
+# One finisher daze per Downed window; Downed clears it.
+var daze_used := false
+# Punches that can land while a parry has him staggered.
+const PARRY_STAGGER_HIT_CAP := 2
+var parry_stagger_hits := 0
 
 var sprite_base_position: Vector2
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	add_to_group(FightOutro.BOSS_GROUP)
 	var hurtBox = get_node("Hurtbox")
 	hurtBox.area_entered.connect(_on_hurtbox_entered)
+	_apply_art_layout()
 
 	sprite_base_position = sprite.position
 	_build_health_bar()
@@ -47,25 +65,143 @@ func start_music() -> void:
 func _process(delta: float) -> void:
 	if boss_health <= 0 and not defeated:
 		defeated = true
+		state_machine.enter_defeated()
+		# Downed opens his hurtbox, but the fight is over: punches still on their way mustn't land.
+		$Hurtbox.monitoring = false
+		$Hurtbox.monitorable = false
 		if music_player.playing:
 			music_player.stop()
 		victory_sfx_player.play()
-		GameProgress.next_boss_scene = "res://Scenes/Bosses/GreysonBossFightScene.tscn"
-		await get_tree().create_timer(2.2).timeout
-		get_tree().change_scene_to_file("res://Scenes/Core/VictoryScene.tscn")
+		get_tree().call_group("arena_crowd", "cheer", 2.0)
+		GameProgress.next_boss_scene = GameProgress.next_fight_after(FIGHT_SCENE)
+		FightOutro.finish_fight(get_tree(), true)
+
+
+# Called by FightOutro when the player loses.
+func on_player_defeated() -> void:
+	state_machine.enter_player_defeated()
 
 
 func get_health_ratio() -> float:
 	return float(boss_health) / float(max_health)
 
 
+# Global position of the centre of a pixel on Eric's sheet frames.
+func frame_point(pixel: Vector2) -> Vector2:
+	return to_global(EricArtLayout.frame_local(pixel + Vector2(0.5, 0.5)))
+
+
+func _apply_art_layout() -> void:
+	scale = Vector2(EricArtLayout.SCALE, EricArtLayout.SCALE)
+	sprite.hframes = EricArtLayout.SHEET_FRAMES
+	sprite.offset = EricArtLayout.SPRITE_OFFSET
+	_fit_box($CollisionShape2D, EricArtLayout.BODY_BOX)
+	_fit_box($Hurtbox/CollisionShape2D, EricArtLayout.BODY_BOX)
+	_fit_box($GrabArea2D/CollisionShape2D, EricArtLayout.GRAB_BOX)
+	var whirlwind: CollisionShape2D = $WhirlwindArea2D/CollisionShape2D
+	whirlwind.position = EricArtLayout.frame_local(EricArtLayout.WHIRLWIND_CENTRE)
+	whirlwind.scale = EricArtLayout.WHIRLWIND_RADII / whirlwind.shape.radius
+
+
+func _fit_box(shape_node: CollisionShape2D, box: Rect2) -> void:
+	shape_node.position = EricArtLayout.frame_local(box.get_center())
+	shape_node.shape.size = box.size
+
+
 func _on_hurtbox_entered(area: Area2D) -> void:
 	if area.is_in_group("player attack"):
-		boss_health = max(boss_health - 1, 0)
-		print("Boss health: ", boss_health)
-		_update_health_bar()
-		_hit_feedback()
-		hit_sfx_player.play()
+		area.get_parent().combo.resolve_punch(self)
+
+
+func take_punch(amount: int) -> int:
+	if state_machine.current_state == state_machine.states.get("ParryStaggered"):
+		if parry_stagger_hits >= PARRY_STAGGER_HIT_CAP:
+			return 0
+		parry_stagger_hits += 1
+	var dealt := mini(amount, boss_health)
+	boss_health -= dealt
+	print("Boss health: ", boss_health)
+	_update_health_bar()
+	_hit_feedback()
+	hit_sfx_player.play()
+	return dealt
+
+
+# The attacks a parry (PlayerDefense) can stagger him out of, and the state each runs in.
+const PARRY_STAGGER_STATES := {
+	&"eric_whirlwind": "Whirlwind",
+	&"eric_bear_hug_grab": "BearHug",
+}
+
+
+func can_parry_stagger(hit: RefCounted) -> bool:
+	if defeated or boss_health <= 0 or state_machine.defeated:
+		return false
+	var state_name: String = PARRY_STAGGER_STATES.get(hit.attack_id, "")
+	return not state_name.is_empty() and state_machine.current_state == state_machine.states.get(state_name)
+
+
+# Deferred from the parry, so the conditions are checked again. He picks himself up where the
+# interrupted attack started from.
+func parry_stagger(duration: float) -> void:
+	if defeated or boss_health <= 0 or state_machine.defeated:
+		return
+	var state = state_machine.current_state
+	if state == state_machine.states.get("Whirlwind"):
+		state_machine.parry_stagger(duration, state.eric_original_position)
+	elif state == state_machine.states.get("BearHug"):
+		state_machine.parry_stagger(duration, state.plant_spot)
+
+
+# The player's finisher (PlayerFinisher). Only the Downed window can be dazed: the bear hug's stumble
+# is too short for a three-punch combo.
+func can_be_dazed() -> bool:
+	return not defeated and boss_health > 0 and not daze_used and state_machine.current_state == state_machine.states.get("Downed")
+
+
+func enter_daze() -> void:
+	daze_used = true
+
+
+func exit_daze(_finisher_landed: bool) -> void:
+	pass
+
+
+func end_recovery(stagger_time: float) -> bool:
+	if defeated or boss_health <= 0:
+		return false
+	state_machine.downed_state_timer.stop()
+	state_machine.start_chain(stagger_time)
+	# Idle raises his sword, as if he'd shrugged the uppercut off; he stays slumped through the stagger.
+	animationPlayer.play("downed")
+	return true
+
+
+func take_finisher(amount: int) -> int:
+	return take_punch(amount)
+
+
+func get_max_health() -> int:
+	return max_health
+
+
+# The uppercut shoves him back (PlayerFinisher). Each of his attacks takes its own starting spot as it
+# begins, and his hazards spawn where he is at the time, so he just fights on from where he lands.
+func knock_back(push: Vector2, time: float) -> void:
+	var target := (global_position + push).clamp(KNOCKBACK_AREA.position, KNOCKBACK_AREA.end)
+	var player := get_tree().current_scene.get_node_or_null(FightOutro.PLAYER_PATH)
+	# The ropes must never shove him back onto the player.
+	if player and target.distance_to(player.global_position) < global_position.distance_to(player.global_position):
+		return
+	create_tween().tween_property(self, "global_position", target, time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+func get_daze_anchor() -> Vector2:
+	return to_global(EricArtLayout.frame_local(EricArtLayout.DAZE_HEAD_PIXEL + Vector2(0.5, 0.5), sprite.flip_h))
+
+
+func get_finisher_hurtbox() -> Area2D:
+	return $Hurtbox
 
 
 func _build_health_bar() -> void:
@@ -73,9 +209,9 @@ func _build_health_bar() -> void:
 	add_child(layer)
 
 	name_label = Label.new()
-	name_label.text = "ERIC"
+	name_label.text = GameProgress.boss_name(FIGHT_SCENE)
 	name_label.position = Vector2(770, 36)
-	name_label.add_theme_font_size_override("font_size", 26)
+	name_label.theme = load("res://Assets/UI/ui_theme.tres")
 	name_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	name_label.add_theme_constant_override("outline_size", 6)
@@ -138,11 +274,8 @@ func _hit_feedback() -> void:
 		shake_tween.tween_property(sprite, "position", sprite_base_position + offset, 0.025)
 	shake_tween.tween_property(sprite, "position", sprite_base_position, 0.025)
 
-	# Brief hit-stop for weight (measured in real time, ignores the slowdown itself)
-	Engine.time_scale = 0.05
-	get_tree().create_timer(0.06, true, false, true).timeout.connect(
-		func(): Engine.time_scale = 1.0
-	)
+	# Brief hit-stop for weight
+	HitStop.freeze(get_tree(), 0.06)
 
 
 func _on_dialogue_ended(dialogue: Object) -> void:

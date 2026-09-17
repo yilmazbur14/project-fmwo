@@ -1,0 +1,12 @@
+# Placeholder lines for the end of the Jordan fight, said before the fade to the Victory or Defeat screen.
+# player_won: the player beat Jordan. player_lost: Jordan beat the player.
+
+~ player_won
+Jordan: My collection... at least they're still mint in box.
+Jordan: Fine. You've earned your invite, newcomer.
+=> END
+
+~ player_lost
+Jordan: Should've read the server rules.
+Jordan: Come back when you've got more than a starter role.
+=> END

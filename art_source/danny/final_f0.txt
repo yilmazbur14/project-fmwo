@@ -1,0 +1,66 @@
+    0000000000111111111122222222223333333333444444444455555555556666
+    0123456789012345678901234567890123456789012345678901234567890123
+  0                                                                 
+  1                                   KKKKKKKKKK                    
+  2                                 KKWGWWGGWWGWKK                  
+  3                                KGWWGWWGGWWGWWGK                 
+  4                               KWGWWGWWGGWWGWWGWK                
+  5                              KWWGWWGWWGGWWGWWGWWK               
+  6                             KGWWGWWGWWGGWWGWWGWWgK              
+  7                             KGWWGWWKKKKKKKKWWGWWgK              
+  8                             KGWWKKKGWWGGWWGKKKWWgK              
+  9                            KKKKKGWWGWWGGWWGWWGKKKKK             
+ 10                            KWGWWGWWGWWGGWWGWWGWWgCK             
+ 11                            KWGWWGWWGWWGGWWGWWGWWgCK             
+ 12                            KWGWWGWWKKKKKKKKWWGWWgCK             
+ 13                            KWGWKKKKssssssssKKKKCgCK             
+ 14                            KWGKssssSSSSSSSSssssKgGK             
+ 15                            KWGKSSSSSKSSSSKSSSssKgGK             
+ 16                            KWGKSKKKKSSSSSSKKKKsKgGK             
+ 17                            KKKKSSSSSSSSSSSSSSssKKKK             
+ 18                            KSSSKKKKKKSSSSKKKKKKssdK             
+ 19                            KSSSsKKKKsSSSSsKKKKsssdK             
+ 20                            KSSSSssssSSSsSSssssSssdK             
+ 21                            KSSSSSSSSSSSsSSSSSSSssdK             
+ 22                            KSSSSSSSSSdsdSSSSSSSssdK             
+ 23                             KSSSSSSSSKKKKSSSSSssdK              
+ 24  KKKK                       KSSSSSSSKSSSSKSSSSssdK              
+ 25 KSSSSKKKK                  KRKSSSSSKSSSSSSSSsssdKrK             
+ 26 KsssSSSSSK               KKKRRKKSSSSSSssssssddKKrrKKK           
+ 27  KKKSSSSSSK            KKKRKRRrrKKssssssddddKKDDDrKRKKK         
+ 28    KsSSSSSsKK       KKKRRRrKRRrrrrKKKKKKKKKKrDDrrrKRRRrK        
+ 29    KsKSSSSsSSK    KKRRRRrrrKRRRrrrYssssssssyDrrrrrKRrrrrK       
+ 30    KssSSSssSSSKKKKRRRrrrrrrKRRrrrrYSSSSSsssyrrrrrrKrrrrrrK      
+ 31    KsKsSSsdsSSSSKRRRrrrrrrDKRrrrrrrYSSSSssyrrrrrrrKrrrrrrK      
+ 32     KssssdKsSSSSSKRrrrrrrDDKrrrrrrrrYSSssyrrrrrrrrrKrrrrDK      
+ 33      KKKKK KSSsssKrrrrrrDMMKrrrrrrrrrYSsyrrrrrrrrrrKrrrrDDK     
+ 34             KssddKrrrrrDMMKrrDDDrrrrrrYyrrrrrrrDDDrKrrrDDMK     
+ 35              KKKKKrrDDDMMKRRRrrrDDDrrrrrrrrrDDDrrrDDKrDMMMK     
+ 36                   KKKKKKKRRRRRrrrrrDrrrrrrrDrrrrDDDDKDKKKKK     
+ 37                        KRRRRRrrrrrrrrrrrrrrrrrrDDDDDKKSSssK     
+ 38                        KRRRrrrrrrrrrrrrrrrrrrrDDDDDDKSSSssK     
+ 39                        KKKKrrrrrrrrrrrrrrrDDDDDDDDDKKKSSSsK     
+ 40                        KSSSKKKKrrrrrrrrDDDDDDDDKKKKsdKSSSsK     
+ 41                        KSSSssssKKKKKrrrDDDKKKKKssssddKSSssK     
+ 42                        KSSSSSSSsssssKKKKKKsssssssssddKSSssK     
+ 43                         KSSSSSSSSSSSsssssssssssssssddKSSsdK     
+ 44                          KSSSSSSSSSSSSDssssssssssssdKKSSsdK     
+ 45                           KKSSSSsssssssssssssdddddKKKSSSssdK    
+ 46                           KrKKKKssssddddddddddKKKKMKKSSsssdK    
+ 47                          KRrrrrDKKKKKKKKKKKKKKDDDDDMKsSsKsdK    
+ 48                          KRrrrrrDDDDDDKKDDDDDrrrrDDDKKssKddK    
+ 49                          KRrrrrrrrDDDK  KDDrrrrrrDDDK KK KK     
+ 50                          KRrrrrrrrDDK    KDrrrrrrDDDK           
+ 51                          KKKKKKKKKKK      KKKKKKKKKKK           
+ 52                              KSSssdK      KSSSsdK               
+ 53                              KSSssdK      KSSssdK               
+ 54                              KSSSssK      KSSSssK               
+ 55                             KKKKKKKK      KKKKKKKK              
+ 56                             KBBBbbbkK    KBBBBBbbK              
+ 57                             KBbbbbkkK    KBBbbbbkK              
+ 58                             KbbbkkkkK    KBbbbbkkK              
+ 59                            KBbbkkkkkK    KbbbkkkkkK             
+ 60                          KKBbbkkkkkkK    KbbkkkkkkkK            
+ 61                         KBBbbkkkkkkkK    KbkkkkkkkkkK           
+ 62                         KkkkkkkkkkkkK    KkkkkkkkkkkkK          
+ 63                          KKKKKKKKKKKK    KKKKKKKKKKKK           

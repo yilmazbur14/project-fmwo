@@ -1,0 +1,338 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/BixbyBeastScript.gd" id="1_body"]
+[ext_resource type="Texture2D" uid="uid://brare3cow7xuq" path="res://Assets/Characters/Bixby/bixby_beast.png" id="2_beast"]
+[ext_resource type="Texture2D" uid="uid://ddmklsktxjcys" path="res://Assets/Characters/Bixby/bixby_beast_shadow.png" id="3_shadow"]
+[ext_resource type="Texture2D" uid="uid://b12yg630yepp2" path="res://Assets/Characters/Bixby/bixby.png" id="4_bixby"]
+[ext_resource type="Texture2D" uid="uid://cc6tw6pdj7f20" path="res://Assets/Characters/Liam/liam.png" id="5_liam"]
+[ext_resource type="Texture2D" uid="uid://c8xmkxet23p8a" path="res://Assets/Characters/Liam/Entrance/liam_throne.png" id="6_throne"]
+[ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastStateMachine.gd" id="7_state_machine"]
+[ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastIntro.gd" id="8_intro"]
+[ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastHover.gd" id="9_hover"]
+[ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastFireBreath.gd" id="10_fire_breath"]
+[ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastCombined.gd" id="10b_combined"]
+[ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastLand.gd" id="11_land"]
+[ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastRecover.gd" id="12_recover"]
+[ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastTakeoff.gd" id="13_takeoff"]
+[ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastIdle.gd" id="14_idle"]
+[ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastDefeated.gd" id="15_defeated"]
+[ext_resource type="Texture2D" uid="uid://d3f1rlah14g7o" path="res://Assets/Characters/Liam/Entrance/liam_carriers.png" id="16_carriers"]
+[ext_resource type="Texture2D" uid="uid://cor4nb5lpd7u0" path="res://Assets/Characters/Liam/Entrance/liam_carrier_walk.png" id="17_carrier_walk"]
+[ext_resource type="Texture2D" uid="uid://bygxkir0f63ud" path="res://Assets/Characters/Liam/Entrance/liam_throne_seated.png" id="18_seated_liam"]
+[ext_resource type="Texture2D" uid="uid://dkkm0ejif7wws" path="res://Assets/Characters/Liam/Entrance/liam_slap_keys.png" id="19_slap_keys"]
+[ext_resource type="Texture2D" uid="uid://dvcusuf3345uh" path="res://Assets/Characters/Bixby/bixby_transform.png" id="20_transform"]
+[ext_resource type="Texture2D" uid="uid://bs5udwl04ildj" path="res://Assets/Characters/Bixby/bixby_transform_aura.png" id="21_transform_aura"]
+[ext_resource type="Texture2D" uid="uid://djqwkb4sybghu" path="res://Assets/Characters/Bixby/bixby_transform_shockwave.png" id="22_transform_shockwave"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_beast_hurtbox"]
+size = Vector2(534, 282)
+
+[node name="BixbyBeastScene" type="Node2D"]
+y_sort_enabled = true
+
+[node name="ShadowLayer" type="Node2D" parent="."]
+position = Vector2(0, 101)
+
+[node name="Shadow" type="Sprite2D" parent="ShadowLayer"]
+visible = false
+modulate = Color(1, 1, 1, 0.38)
+position = Vector2(882, 669)
+scale = Vector2(3, 3)
+texture = ExtResource("3_shadow")
+offset = Vector2(0, -1)
+hframes = 4
+
+[node name="Procession" type="Node2D" parent="."]
+visible = false
+position = Vector2(960, 470)
+
+[node name="SetDownShadows" type="Node2D" parent="Procession"]
+visible = false
+
+[node name="Marcher" type="Node2D" parent="Procession"]
+
+[node name="MarchShadows" type="Node2D" parent="Procession/Marcher"]
+
+[node name="RearPole" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(-288, -372)
+scale = Vector2(3, 3)
+texture = ExtResource("6_throne")
+centered = false
+hframes = 2
+frame = 1
+
+[node name="RearLeft" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(-252, -39)
+scale = Vector2(3, 3)
+texture = ExtResource("16_carriers")
+hframes = 4
+frame = 2
+
+[node name="RearRight" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(264, -39)
+scale = Vector2(3, 3)
+texture = ExtResource("16_carriers")
+hframes = 4
+frame = 3
+
+[node name="Throne" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(-288, -372)
+scale = Vector2(3, 3)
+texture = ExtResource("6_throne")
+centered = false
+hframes = 2
+
+[node name="ThroneBixby" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(126, -153)
+scale = Vector2(3, 3)
+texture = ExtResource("4_bixby")
+
+[node name="SeatedLiam" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(-102, -156)
+scale = Vector2(3, 3)
+texture = ExtResource("18_seated_liam")
+
+[node name="FrontLeft" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(-150, 3)
+scale = Vector2(3, 3)
+texture = ExtResource("17_carrier_walk")
+hframes = 4
+
+[node name="FrontRight" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(114, 3)
+scale = Vector2(3, 3)
+texture = ExtResource("16_carriers")
+hframes = 4
+frame = 1
+
+[node name="Downstage" type="Node2D" parent="."]
+visible = false
+position = Vector2(882, 770)
+
+[node name="HopBixby" type="Sprite2D" parent="Downstage"]
+scale = Vector2(3, 3)
+texture = ExtResource("4_bixby")
+offset = Vector2(0, -32)
+
+[node name="HopLiam" type="Sprite2D" parent="Downstage"]
+position = Vector2(162, 0)
+scale = Vector2(3, 3)
+texture = ExtResource("5_liam")
+offset = Vector2(0, -32)
+
+[node name="Storyboard" type="Sprite2D" parent="Downstage"]
+visible = false
+position = Vector2(84, -144)
+scale = Vector2(3, 3)
+texture = ExtResource("19_slap_keys")
+hframes = 3
+
+[node name="Transform" type="Node2D" parent="."]
+visible = false
+position = Vector2(882, 770)
+
+[node name="Shockwave" type="Sprite2D" parent="Transform"]
+visible = false
+scale = Vector2(3, 3)
+texture = ExtResource("22_transform_shockwave")
+hframes = 5
+
+[node name="Aura" type="Sprite2D" parent="Transform"]
+visible = false
+scale = Vector2(3, 3)
+texture = ExtResource("21_transform_aura")
+offset = Vector2(0, -123)
+hframes = 4
+
+[node name="Body" type="Sprite2D" parent="Transform"]
+scale = Vector2(3, 3)
+texture = ExtResource("20_transform")
+offset = Vector2(0, -123)
+hframes = 13
+vframes = 2
+
+[node name="BixbyBeastCharacterBody" type="CharacterBody2D" parent="." node_paths=PackedStringArray("shadow")]
+position = Vector2(882, 770)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_body")
+shadow = NodePath("../ShadowLayer/Shadow")
+
+[node name="Air" type="Node2D" parent="BixbyBeastCharacterBody"]
+visible = false
+
+[node name="Sprite2D" type="Sprite2D" parent="BixbyBeastCharacterBody/Air"]
+scale = Vector2(3, 3)
+texture = ExtResource("2_beast")
+offset = Vector2(0, -71)
+hframes = 4
+
+[node name="FireHitbox" type="Area2D" parent="BixbyBeastCharacterBody/Air"]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="Hurtbox" type="Area2D" parent="BixbyBeastCharacterBody/Air" groups=["enemy", "boss_target"]]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BixbyBeastCharacterBody/Air/Hurtbox"]
+position = Vector2(3, -120)
+shape = SubResource("RectangleShape2D_beast_hurtbox")
+
+[node name="StateManager" type="Node" parent="BixbyBeastCharacterBody" node_paths=PackedStringArray("initial_state", "BixbyBeastCharacterBody", "post_dialogue_pre_fight_timer", "recover_timer", "finisher_stagger_timer")]
+script = ExtResource("7_state_machine")
+initial_state = NodePath("Intro")
+BixbyBeastCharacterBody = NodePath("..")
+post_dialogue_pre_fight_timer = NodePath("../PostDialoguePreFightTimer")
+recover_timer = NodePath("../RecoverTimer")
+finisher_stagger_timer = NodePath("../FinisherStaggerTimer")
+
+[node name="Intro" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "procession", "marcher", "march_shadows", "set_down_shadows", "walking_carrier", "throne_bixby", "seated_liam", "downstage", "hop_bixby", "hop_liam", "storyboard", "transform_stage", "transform_body", "transform_aura", "transform_shockwave", "dim", "flash", "land_sfx_player", "slap_sfx_player", "growl_sfx_player", "gulp_sfx_player", "glow_sfx_player", "blast_sfx_player", "roar_sfx_player")]
+script = ExtResource("8_intro")
+body = NodePath("../..")
+procession = NodePath("../../../Procession")
+marcher = NodePath("../../../Procession/Marcher")
+march_shadows = NodePath("../../../Procession/Marcher/MarchShadows")
+set_down_shadows = NodePath("../../../Procession/SetDownShadows")
+walking_carrier = NodePath("../../../Procession/Marcher/FrontLeft")
+throne_bixby = NodePath("../../../Procession/Marcher/ThroneBixby")
+seated_liam = NodePath("../../../Procession/Marcher/SeatedLiam")
+downstage = NodePath("../../../Downstage")
+hop_bixby = NodePath("../../../Downstage/HopBixby")
+hop_liam = NodePath("../../../Downstage/HopLiam")
+storyboard = NodePath("../../../Downstage/Storyboard")
+transform_stage = NodePath("../../../Transform")
+transform_body = NodePath("../../../Transform/Body")
+transform_aura = NodePath("../../../Transform/Aura")
+transform_shockwave = NodePath("../../../Transform/Shockwave")
+dim = NodePath("../../../DimLayer/Dim")
+flash = NodePath("../../../FlashLayer/Flash")
+land_sfx_player = NodePath("../../LandSfxPlayer")
+slap_sfx_player = NodePath("../../SlapSfxPlayer")
+growl_sfx_player = NodePath("../../GrowlSfxPlayer")
+gulp_sfx_player = NodePath("../../GulpSfxPlayer")
+glow_sfx_player = NodePath("../../GlowSfxPlayer")
+blast_sfx_player = NodePath("../../BlastSfxPlayer")
+roar_sfx_player = NodePath("../../RoarSfxPlayer")
+
+[node name="Hover" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("9_hover")
+body = NodePath("../..")
+
+[node name="FireBreath" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "windup_sfx_player", "breath_sfx_player")]
+script = ExtResource("10_fire_breath")
+body = NodePath("../..")
+windup_sfx_player = NodePath("../../WindupSfxPlayer")
+breath_sfx_player = NodePath("../../BreathSfxPlayer")
+
+[node name="Combined" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "pound_sfx_player", "scream_sfx_player", "dizzy_sfx_player")]
+script = ExtResource("10b_combined")
+body = NodePath("../..")
+pound_sfx_player = NodePath("../../PoundSfxPlayer")
+scream_sfx_player = NodePath("../../ScreamSfxPlayer")
+dizzy_sfx_player = NodePath("../../RecoverSfxPlayer")
+
+[node name="Land" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "land_sfx_player")]
+script = ExtResource("11_land")
+body = NodePath("../..")
+land_sfx_player = NodePath("../../LandSfxPlayer")
+
+[node name="Recover" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "recover_timer", "recover_sfx_player")]
+script = ExtResource("12_recover")
+body = NodePath("../..")
+recover_timer = NodePath("../../RecoverTimer")
+recover_sfx_player = NodePath("../../RecoverSfxPlayer")
+
+[node name="Takeoff" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "wing_sfx_player")]
+script = ExtResource("13_takeoff")
+body = NodePath("../..")
+wing_sfx_player = NodePath("../../WingSfxPlayer")
+
+[node name="Idle" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("14_idle")
+body = NodePath("../..")
+
+[node name="Defeated" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("15_defeated")
+body = NodePath("../..")
+
+[node name="PostDialoguePreFightTimer" type="Timer" parent="BixbyBeastCharacterBody"]
+wait_time = 0.3
+one_shot = true
+
+[node name="RecoverTimer" type="Timer" parent="BixbyBeastCharacterBody"]
+one_shot = true
+
+[node name="FinisherStaggerTimer" type="Timer" parent="BixbyBeastCharacterBody"]
+one_shot = true
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+volume_db = -4.0
+
+[node name="HitSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+
+[node name="VictorySfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+
+[node name="WindupSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 0.8
+
+[node name="BreathSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 0.5
+
+[node name="LandSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+
+[node name="RecoverSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+
+[node name="WingSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 0.8
+
+[node name="SlapSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 1.3
+
+[node name="GrowlSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 0.55
+
+[node name="GulpSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 1.4
+
+[node name="GlowSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 0.7
+
+[node name="RoarSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+
+[node name="BlastSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+
+[node name="PoundSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 0.85
+
+[node name="ScreamSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 1.25
+
+[node name="DimLayer" type="CanvasLayer" parent="."]
+layer = 0
+
+[node name="Dim" type="ColorRect" parent="DimLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0, 0.04, 0)
+
+[node name="FlashLayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="Flash" type="ColorRect" parent="FlashLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.98, 0.84, 0)
+
+[connection signal="timeout" from="BixbyBeastCharacterBody/PostDialoguePreFightTimer" to="BixbyBeastCharacterBody/StateManager" method="_on_post_dialogue_pre_fight_timer_timeout"]
+[connection signal="timeout" from="BixbyBeastCharacterBody/RecoverTimer" to="BixbyBeastCharacterBody/StateManager/Recover" method="_on_recover_timer_timeout"]
+[connection signal="timeout" from="BixbyBeastCharacterBody/FinisherStaggerTimer" to="BixbyBeastCharacterBody/StateManager" method="_on_finisher_stagger_timer_timeout"]

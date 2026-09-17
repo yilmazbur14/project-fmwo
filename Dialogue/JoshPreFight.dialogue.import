@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://j72cgcfxvmf7"
+path="res://.godot/imported/JoshPreFight.dialogue-05cb603388c4f3c0a95063e61d3d79b7.tres"
+
+[deps]
+
+source_file="res://Dialogue/JoshPreFight.dialogue"
+dest_files=["res://.godot/imported/JoshPreFight.dialogue-05cb603388c4f3c0a95063e61d3d79b7.tres"]
+
+[params]
+
+defaults=true

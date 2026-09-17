@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wave"]
+resource_local_to_scene = true
+size = Vector2(96, 42)
+
+[node name="BixbyQuakeWave" type="Area2D" groups=["enemy projectile"]]
+collision_mask = 0
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_wave")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

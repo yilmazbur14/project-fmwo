@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://4pqund3nukl7"]
 
-[ext_resource type="Texture2D" uid="uid://dx2gp28pyiwmn" path="res://Assets/Environment/crowd.png" id="1_wtggk"]
+[ext_resource type="Texture2D" path="res://Assets/Environment/crowd_v2.png" id="1_wtggk"]
+[ext_resource type="Script" path="res://Scripts/ArenaCrowdScript.gd" id="5_crowd"]
 [ext_resource type="PackedScene" uid="uid://c7l5sbpwdkp6y" path="res://Scenes/Player/MainPlayer.tscn" id="2_fovy7"]
 [ext_resource type="Texture2D" uid="uid://dkdgje27jlnib" path="res://Assets/Environment/boundaries.png" id="3_fnbqh"]
 [ext_resource type="Texture2D" uid="uid://bb3exdvr8s5mp" path="res://Assets/Environment/pole.png" id="4_2uq8x"]
@@ -61,9 +62,11 @@ offset_bottom = 1010.0
 color = Color(0.4420115, 0.59622294, 0.3102822, 1)
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1288694375]
-position = Vector2(959, 65)
-scale = Vector2(4.615942, 1.7816901)
+position = Vector2(960, 60)
+scale = Vector2(3, 3)
 texture = ExtResource("1_wtggk")
+hframes = 5
+script = ExtResource("5_crowd")
 
 [node name="Panel" type="Panel" parent="." unique_id=106748164]
 custom_minimum_size = Vector2(1720, 880)

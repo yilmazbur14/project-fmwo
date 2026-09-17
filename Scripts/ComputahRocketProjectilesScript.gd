@@ -1,5 +1,7 @@
 extends Node2D
 
+const HitInfo := preload("res://Scripts/HitInfo.gd")
+
 var velocityUp : Vector2 = Vector2.UP * 800
 var velocityDown : Vector2 = Vector2.DOWN * 800
 var direction = "up"
@@ -16,6 +18,7 @@ var tracking_speed = 600.0
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 
+	rocket_hitbox.set_meta(HitInfo.META_ATTACK, &"computah_rocket")
 	animationPlayer.speed_scale = 2
 	animationPlayer.animation_finished.connect(_on_animation_player_animation_finished)
 	main_player = get_tree().current_scene.get_node("Arena/MainPlayer/CharacterBody2D")

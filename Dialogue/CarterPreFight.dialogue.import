@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://pbew6mfb0yx1"
+path="res://.godot/imported/CarterPreFight.dialogue-ceae23212136e90a68fb6bcf6c987c94.tres"
+
+[deps]
+
+source_file="res://Dialogue/CarterPreFight.dialogue"
+dest_files=["res://.godot/imported/CarterPreFight.dialogue-ceae23212136e90a68fb6bcf6c987c94.tres"]
+
+[params]
+
+defaults=true

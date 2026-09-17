@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://vyculc3t3mnw"
+path="res://.godot/imported/GreysonAndComputahOutro.dialogue-5c6fa02c28607160294a4840f95778a1.tres"
+
+[deps]
+
+source_file="res://Dialogue/GreysonAndComputahOutro.dialogue"
+dest_files=["res://.godot/imported/GreysonAndComputahOutro.dialogue-5c6fa02c28607160294a4840f95778a1.tres"]
+
+[params]
+
+defaults=true

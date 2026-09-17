@@ -7,6 +7,7 @@ func Enter() -> void:
 	animation_player.play("downed")
 	hurtbox.monitoring = true
 	hurtbox.monitorable = true
+	hurtbox.get_parent().daze_used = false
 
 func Exit() -> void:
 	pass

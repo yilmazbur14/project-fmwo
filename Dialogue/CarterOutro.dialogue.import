@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://bt4olqlwsojfa"
+path="res://.godot/imported/CarterOutro.dialogue-279c7195895a3f0626e7affd6437b277.tres"
+
+[deps]
+
+source_file="res://Dialogue/CarterOutro.dialogue"
+dest_files=["res://.godot/imported/CarterOutro.dialogue-279c7195895a3f0626e7affd6437b277.tres"]
+
+[params]
+
+defaults=true

@@ -2,6 +2,14 @@ extends CanvasLayer
 ## A basic dialogue balloon for use with Dialogue Manager.
 
 
+## While a node in this group (the fight hearts HUD) is visible, the dialogue box moves to its right so the hearts stay on screen.
+const FIGHT_HUD_GROUP: StringName = &"player_health_hud"
+## Fixed rather than read from the HUD's rect: its container hasn't sized it yet when the first line appears. The hearts row is 284px wide.
+const FIGHT_PANEL_OFFSET_LEFT: float = 300.0
+const FIGHT_PANEL_OFFSET_RIGHT: float = -24.0
+
+const DialogueVoices := preload("res://Scripts/DialogueVoices.gd")
+
 ## The dialogue resource
 @export var dialogue_resource: DialogueResource
 
@@ -14,6 +22,9 @@ extends CanvasLayer
 ## If all other input is blocked as long as dialogue is shown.
 @export var will_block_other_input: bool = true
 
+## Seconds after each line appears during which input can neither skip its typing nor advance it.
+@export var input_lock_time: float = 0.0
+
 ## The action to use for advancing the dialogue
 @export var next_action: StringName = &"ui_accept"
 
@@ -25,6 +36,9 @@ extends CanvasLayer
 
 ## A sound player for the Undertale-style per-character "talk" blip.
 @onready var blip_player: AudioStreamPlayer = $BlipPlayer
+
+## BlipPlayer and its twin, least recently started first. With two, a blip still sounding can play out instead of being cut off by the next.
+var blip_players: Array[AudioStreamPlayer] = []
 
 ## Temporary game states
 var temporary_game_states: Array = []
@@ -39,6 +53,26 @@ var will_hide_balloon: bool = false
 var locals: Dictionary = {}
 
 var _locale: String = TranslationServer.get_locale()
+
+## When the current line appeared, in engine milliseconds.
+var _line_shown_msec: int = 0
+
+## The current speaker's voice, from DialogueVoices.VOICES.
+var _voice: Dictionary = {}
+
+## Letters spoken since the last blip, counting the one that blipped.
+var _letters_since_blip: int = 0
+
+## When the last blip started, in engine milliseconds.
+var _last_blip_msec: int = 0
+
+## How far the current line is through its voice's melody.
+var _melody_step: int = 0
+
+var _last_blip_stream: AudioStream
+
+## Letters and digits: spaces and punctuation don't blip.
+var _voiced_letter: RegEx = RegEx.create_from_string("[\\p{L}\\p{N}]")
 
 ## The current line
 var dialogue_line: DialogueLine:
@@ -61,8 +95,14 @@ var mutation_cooldown: Timer = Timer.new()
 ## The base balloon anchor
 @onready var balloon: Control = %Balloon
 
+@onready var panel: PanelContainer = %PanelContainer
+
+@onready var centred_panel_offsets: Vector2 = Vector2(panel.offset_left, panel.offset_right)
+
 #The speaking characters portrait
 @onready var portrait: TextureRect = %Portrait
+
+@onready var portrait_frame: PanelContainer = %PortraitFrame
 
 ## The label showing the name of the currently speaking character
 @onready var character_label: RichTextLabel = %CharacterLabel
@@ -74,7 +114,7 @@ var mutation_cooldown: Timer = Timer.new()
 @onready var responses_menu: DialogueResponsesMenu = %ResponsesMenu
 
 ## Indicator to show that player can progress dialogue.
-@onready var progress: Polygon2D = %Progress
+@onready var progress: Sprite2D = %Progress
 
 
 func _ready() -> void:
@@ -85,7 +125,9 @@ func _ready() -> void:
 	if responses_menu.next_action.is_empty():
 		responses_menu.next_action = next_action
 
-	blip_player.stream = load("res://Assets/Audio/SFX/text_blip.ogg")
+	var blip_twin := blip_player.duplicate() as AudioStreamPlayer
+	add_child(blip_twin)
+	blip_players = [blip_player, blip_twin]
 	dialogue_label.spoke.connect(_on_dialogue_label_spoke)
 
 	mutation_cooldown.timeout.connect(_on_mutation_cooldown_timeout)
@@ -148,12 +190,24 @@ func apply_dialogue_line() -> void:
 			portrait.texture = load(portriat_path)
 		else:
 			portrait.texture = null
+		portrait_frame.visible = portrait.texture != null
+
+	_voice = DialogueVoices.for_character(dialogue_line.character)
+	# Starts full, so the line's first letter speaks.
+	_letters_since_blip = _voice.every
+	_melody_step = 0
 
 	dialogue_label.hide()
 	dialogue_label.dialogue_line = dialogue_line
 
 	responses_menu.hide()
 	responses_menu.responses = dialogue_line.responses
+
+	_place_panel()
+
+	# Real time, so a hit-stop can't stretch the input lock, and taken once the portrait has loaded,
+	# so a loading hitch can't use it up.
+	_line_shown_msec = Time.get_ticks_msec()
 
 	# Show our balloon
 	balloon.show()
@@ -188,6 +242,39 @@ func next(next_id: String) -> void:
 	dialogue_line = await dialogue_resource.get_next_dialogue_line(next_id, temporary_game_states)
 
 
+func _place_panel() -> void:
+	var fight_hud := get_tree().get_first_node_in_group(FIGHT_HUD_GROUP) as CanvasItem
+	if is_instance_valid(fight_hud) and fight_hud.is_visible_in_tree():
+		panel.offset_left = FIGHT_PANEL_OFFSET_LEFT
+		panel.offset_right = FIGHT_PANEL_OFFSET_RIGHT
+	else:
+		panel.offset_left = centred_panel_offsets.x
+		panel.offset_right = centred_panel_offsets.y
+
+
+func _play_blip() -> void:
+	var streams: Array = _voice.streams
+	var fresh_streams: Array = streams.filter(func(stream: AudioStream) -> bool: return stream != _last_blip_stream)
+	_last_blip_stream = (fresh_streams if not fresh_streams.is_empty() else streams).pick_random()
+
+	# A player that has finished, if there is one. Otherwise the one whose blip started first, so only the quiet end of
+	# a long blip gets cut. Godot fades out a sound it stops over one mix step (about 12 ms), so that can't click.
+	var player: AudioStreamPlayer = blip_players[0]
+	for candidate in blip_players:
+		if not candidate.playing:
+			player = candidate
+			break
+	blip_players.erase(player)
+	blip_players.append(player)
+
+	var melody: Array = _voice.melody
+	player.stream = _last_blip_stream
+	player.pitch_scale = randf_range(_voice.pitch_min, _voice.pitch_max) * melody[_melody_step % melody.size()]
+	player.volume_db = _voice.volume_db
+	player.play()
+	_melody_step += 1
+
+
 #region Signals
 
 
@@ -207,13 +294,23 @@ func _on_mutated(mutation: Dictionary) -> void:
 func _on_dialogue_label_spoke(letter: String, letter_index: int, speed: float) -> void:
 	# Skip blipping on whitespace/punctuation-only "letters" so it doesn't
 	# stutter oddly on spaces - classic Undertale-style talk sound.
-	if letter.strip_edges() == "":
+	if _voiced_letter.search(letter) == null:
 		return
-	blip_player.pitch_scale = randf_range(0.85, 1.2)
-	blip_player.play()
+	# The label types about 60 letters a second, sometimes two in one frame, so without a minimum gap in real time a
+	# voice that blips every letter or two would blur into a buzz.
+	var now: int = Time.get_ticks_msec()
+	if _letters_since_blip >= _voice.every and now - _last_blip_msec >= DialogueVoices.MIN_BLIP_GAP_MS:
+		_play_blip()
+		_letters_since_blip = 0
+		_last_blip_msec = now
+	_letters_since_blip += 1
 
 
 func _on_balloon_gui_input(event: InputEvent) -> void:
+	if Time.get_ticks_msec() - _line_shown_msec < input_lock_time * 1000.0:
+		get_viewport().set_input_as_handled()
+		return
+
 	# See if we need to skip typing of the dialogue
 	if dialogue_label.is_typing:
 		var mouse_was_clicked: bool = event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed()

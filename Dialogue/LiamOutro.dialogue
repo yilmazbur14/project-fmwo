@@ -1,0 +1,12 @@
+# Placeholder lines for the end of the Liam & Bixby fight, said before the fade to the Victory or Defeat screen.
+# player_won: the player beat beast Bixby, who coughed Liam back up. player_lost: beast Bixby beat the player, with Liam still inside him.
+
+~ player_won
+Liam: *cough* *hack*... Bixby, buddy... we talked about this.
+Liam: Fine. You win, newcomer. Jordan's waiting for you.
+=> END
+
+~ player_lost
+Liam: Good boy... GOOD boy! Now can you spit me out?
+Liam: ...Bixby? Buddy?
+=> END

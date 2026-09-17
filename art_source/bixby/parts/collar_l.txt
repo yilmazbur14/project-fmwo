@@ -1,0 +1,10 @@
+# left collar, tilted with the neck. origin (5,33). width 17
+00 |............KKKKK|
+01 |.........KKKRRRRK|
+02 |......KKKRRRrrrrK|
+03 |...KKKRRRrrrssssK|
+04 |.KKRRRrrrsssxXyKK|
+05 |KxXrrrsssKKKKXK..|
+06 |.KKsssxXy....K...|
+07 |..KKKKKXK........|
+08 |.......K.........|

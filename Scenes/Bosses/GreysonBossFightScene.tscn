@@ -2,6 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://4pqund3nukl7" path="res://Scenes/Core/ArenaScene.tscn" id="1_hjs1c"]
 [ext_resource type="PackedScene" uid="uid://jcx0ll34f3je" path="res://Scenes/Bosses/BossTwoScene.tscn" id="2_o248v"]
+[ext_resource type="PackedScene" path="res://Scenes/Bosses/GreysonMechScene.tscn" id="3_mech"]
 
 [node name="GreysonBossFightScene" type="Node2D" unique_id=1520311214]
 
@@ -9,3 +10,8 @@
 
 [node name="BossTwoScene" parent="Arena" unique_id=1932473095 instance=ExtResource("2_o248v")]
 position = Vector2(965, 183)
+
+[node name="GreysonMechScene" parent="Arena" node_paths=PackedStringArray("computah", "greyson") instance=ExtResource("3_mech")]
+position = Vector2(960, 406)
+computah = NodePath("../BossTwoScene/ComputahCharacterBody")
+greyson = NodePath("../BossTwoScene/Greyson")

@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://uiedq6l7mneu" path="res://Scenes/Bosses/GreysonCharacter.tscn" id="7_e5vby"]
 [ext_resource type="Script" path="res://Scripts/States/Computah/ComputahLaughing.gd" id="8_laugh"]
 [ext_resource type="Script" path="res://Scripts/States/Computah/ComputahDowned.gd" id="9_downed"]
+[ext_resource type="PackedScene" uid="uid://cglk8pm5w4p1y" path="res://Scenes/Bosses/LaserBeamProjectileScene.tscn" id="10_laser"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_gi5wc"]
 size = Vector2(30, 55)
@@ -47,8 +48,9 @@ tracks/0/keys = {
 
 [sub_resource type="Animation" id="Animation_uytwq"]
 resource_name = "laserBeam"
+length = 0.2
 loop_mode = 1
-step = 0.14285715
+step = 0.1
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
@@ -56,10 +58,27 @@ tracks/0/path = NodePath("Sprite2D:frame")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
-"times": PackedFloat32Array(0, 0.14285715, 0.2857143, 0.42857146, 0.5714286, 0.71428573, 0.8571429),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1),
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
 "update": 1,
-"values": [12, 13, 14, 15, 16, 17, 18]
+"values": [17, 18]
+}
+
+[sub_resource type="Animation" id="Animation_charge"]
+resource_name = "laserCharge"
+length = 0.5
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3, 0.4),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 1,
+"values": [12, 13, 14, 15, 16]
 }
 
 [sub_resource type="Animation" id="Animation_opdgj"]
@@ -102,12 +121,9 @@ _data = {
 &"downed": SubResource("Animation_downed"),
 &"idle": SubResource("Animation_6off3"),
 &"laserBeam": SubResource("Animation_uytwq"),
+&"laserCharge": SubResource("Animation_charge"),
 &"laughing": SubResource("Animation_opdgj")
 }
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_e5vby"]
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_uytwq"]
 
 [node name="BossTwoScene" type="Node2D" unique_id=1932473095]
 scale = Vector2(2, 2)
@@ -150,13 +166,11 @@ script = ExtResource("8_laugh")
 animation_player = NodePath("../../AnimationPlayer")
 greyson_animation_player = NodePath("../../../Greyson/AnimationPlayer")
 
-[node name="LaserBeam" type="Node" parent="ComputahCharacterBody/StateManager" unique_id=408908381 node_paths=PackedStringArray("animation_player", "laser_beam_left_hitbox", "laser_beam_right_hitbox", "laser_beam_left_area", "laser_beam_right_area", "laser_sfx_player")]
+[node name="LaserBeam" type="Node" parent="ComputahCharacterBody/StateManager" unique_id=408908381 node_paths=PackedStringArray("animation_player", "laser_beam_left", "laser_beam_right", "laser_sfx_player")]
 script = ExtResource("5_gi5wc")
 animation_player = NodePath("../../AnimationPlayer")
-laser_beam_left_hitbox = NodePath("../../LaserBeamLeft/CollisionShape2D")
-laser_beam_right_hitbox = NodePath("../../LaserBeamRight/CollisionShape2D")
-laser_beam_left_area = NodePath("../../LaserBeamLeft")
-laser_beam_right_area = NodePath("../../LaserBeamRight")
+laser_beam_left = NodePath("../../LaserBeamLeft")
+laser_beam_right = NodePath("../../LaserBeamRight")
 laser_sfx_player = NodePath("../../LaserSfxPlayer")
 
 [node name="FireRockets" type="Node" parent="ComputahCharacterBody/StateManager" unique_id=1509538973 node_paths=PackedStringArray("animationPlayer", "sprite")]
@@ -177,7 +191,7 @@ one_shot = true
 wait_time = 0.5
 
 [node name="LaserBeamDurationTimer" type="Timer" parent="ComputahCharacterBody"]
-wait_time = 1.6
+wait_time = 2.7
 one_shot = true
 
 [node name="DownedStateTimer" type="Timer" parent="ComputahCharacterBody"]
@@ -192,23 +206,14 @@ one_shot = true
 wait_time = 1.4
 one_shot = true
 
-[node name="LaserBeamRight" type="Area2D" parent="ComputahCharacterBody" unique_id=1374613756 groups=["enemy projectile"]]
+[node name="LaserBeamRight" parent="ComputahCharacterBody" unique_id=1374613756 instance=ExtResource("10_laser")]
 position = Vector2(32, -4)
-monitoring = false
-monitorable = false
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ComputahCharacterBody/LaserBeamRight" unique_id=1041196691]
-shape = SubResource("RectangleShape2D_e5vby")
-
-[node name="LaserBeamLeft" type="Area2D" parent="ComputahCharacterBody" unique_id=1597549715 groups=["enemy projectile"]]
+[node name="LaserBeamLeft" parent="ComputahCharacterBody" unique_id=1597549715 instance=ExtResource("10_laser")]
 position = Vector2(-33, -4)
-monitoring = false
-monitorable = false
+rotation = 3.1415927
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ComputahCharacterBody/LaserBeamLeft" unique_id=1730870995]
-shape = SubResource("RectangleShape2D_uytwq")
-
-[node name="Hurtbox" type="Area2D" parent="ComputahCharacterBody" groups=["enemy"]]
+[node name="Hurtbox" type="Area2D" parent="ComputahCharacterBody" groups=["enemy", "boss_target"]]
 monitoring = false
 monitorable = false
 

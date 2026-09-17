@@ -1,13 +1,30 @@
 [gd_scene format=3 uid="uid://c7l5sbpwdkp6y"]
 
 [ext_resource type="Script" uid="uid://6nkihaekysc6" path="res://Scripts/PlayerScript.gd" id="1_0sgo8"]
-[ext_resource type="Texture2D" uid="uid://bbc8d1p6vbuy3" path="res://Assets/Characters/MainPlayer/Sprite-0004-sheet.png" id="2_ts1ug"]
+[ext_resource type="Texture2D" uid="uid://5e04xmf70xoh" path="res://Assets/Characters/MainPlayer/player_4dir_sheet.png" id="2_ts1ug"]
 [ext_resource type="Script" uid="uid://b7n7q842lsbq2" path="res://Scripts/StateMachine.gd" id="3_6rt1g"]
 [ext_resource type="Script" uid="uid://x6skx7vbfkma" path="res://Scripts/States/MainPlayer/PlayerIdle.gd" id="4_pt56f"]
 [ext_resource type="Script" uid="uid://dwk0ayp2kefoh" path="res://Scripts/States/MainPlayer/PlayerWalking.gd" id="5_pt56f"]
 [ext_resource type="Script" uid="uid://c6ek3euw3gb8l" path="res://Scripts/States/MainPlayer/PlayerPunching.gd" id="6_wotmp"]
 [ext_resource type="Script" uid="uid://eme7e8edw0ge" path="res://Scripts/States/MainPlayer/PlayerBlocking.gd" id="7_jsrhp"]
 [ext_resource type="PackedScene" uid="uid://cqe2px84rk50m" path="res://Scenes/Player/PlayerHealthScene.tscn" id="8_jsrhp"]
+[ext_resource type="Script" path="res://Scripts/PlayerCombo.gd" id="9_combo"]
+[ext_resource type="Script" path="res://Scripts/ComboCounterUI.gd" id="10_combo_ui"]
+[ext_resource type="Theme" uid="uid://dnd78vy0t1wm3" path="res://Assets/UI/ui_theme.tres" id="11_ui_theme"]
+[ext_resource type="Script" path="res://Scripts/States/MainPlayer/PlayerFinishing.gd" id="12_finishing"]
+[ext_resource type="Script" path="res://Scripts/PlayerFinisher.gd" id="13_finisher"]
+[ext_resource type="Script" path="res://Scripts/FinisherPromptUI.gd" id="14_finisher_prompt"]
+[ext_resource type="Script" path="res://Scripts/PlayerDefense.gd" id="15_defense"]
+[ext_resource type="Script" path="res://Scripts/StaminaBarUI.gd" id="16_stamina_bar"]
+[ext_resource type="Script" path="res://Scripts/PlayerCombatFx.gd" id="17_combat_fx"]
+[ext_resource type="Script" path="res://Scripts/States/MainPlayer/PlayerGuardBroken.gd" id="18_guard_broken"]
+[ext_resource type="Script" path="res://Scripts/CombatPopupUI.gd" id="19_combat_popups"]
+[ext_resource type="Script" path="res://Scripts/States/MainPlayer/PlayerDashRecovery.gd" id="20_dash_recovery"]
+[ext_resource type="Script" path="res://Scripts/PlayerHype.gd" id="21_hype"]
+[ext_resource type="Script" path="res://Scripts/HypeMeterUI.gd" id="22_hype_meter"]
+[ext_resource type="Script" path="res://Scripts/ParryStreakUI.gd" id="23_parry_streak"]
+[ext_resource type="Script" path="res://Scripts/PlayerStatus.gd" id="24_status"]
+[ext_resource type="Script" path="res://Scripts/StatusIconsUI.gd" id="25_status_icons"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_h87yu"]
 size = Vector2(12, 27)
@@ -16,14 +33,17 @@ size = Vector2(12, 27)
 size = Vector2(36, 81)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wotmp"]
-size = Vector2(4.3333335, 7.666666)
+size = Vector2(4.33, 7.67)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ghost"]
+size = Vector2(24, 54)
 
 [sub_resource type="Animation" id="Animation_0sgo8"]
 length = 0.20000334
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/path = NodePath("Sprite2D:frame_coords:x")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
@@ -39,7 +59,7 @@ loop_mode = 1
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/path = NodePath("Sprite2D:frame_coords:x")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
@@ -57,7 +77,7 @@ step = 0.16666667
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/path = NodePath("Sprite2D:frame_coords:x")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
@@ -74,7 +94,7 @@ step = 0.25
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/path = NodePath("Sprite2D:frame_coords:x")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
@@ -106,7 +126,7 @@ step = 0.16666667
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/path = NodePath("Sprite2D:frame_coords:x")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
@@ -145,6 +165,8 @@ debug_color = Color(0.9763635, 0, 0.41600993, 0.41960785)
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D" unique_id=1375516330]
 texture = ExtResource("2_ts1ug")
 hframes = 10
+vframes = 4
+frame = 10
 
 [node name="Hurtbox" type="Area2D" parent="CharacterBody2D" unique_id=1164196373]
 scale = Vector2(0.33333334, 0.33333334)
@@ -160,7 +182,7 @@ monitoring = false
 monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D/Hitbox" unique_id=289895406]
-position = Vector2(3.1666667, -14.166667)
+position = Vector2(-4, -14.165)
 shape = SubResource("RectangleShape2D_wotmp")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="CharacterBody2D" unique_id=863442886]
@@ -188,12 +210,118 @@ player = NodePath("../..")
 script = ExtResource("7_jsrhp")
 animation_player = NodePath("../../AnimationPlayer")
 
+[node name="Finishing" type="Node" parent="CharacterBody2D/StateMachine" node_paths=PackedStringArray("animation_player", "player")]
+script = ExtResource("12_finishing")
+animation_player = NodePath("../../AnimationPlayer")
+player = NodePath("../..")
+
+[node name="GuardBroken" type="Node" parent="CharacterBody2D/StateMachine" node_paths=PackedStringArray("animation_player", "player")]
+script = ExtResource("18_guard_broken")
+animation_player = NodePath("../../AnimationPlayer")
+player = NodePath("../..")
+
+[node name="DashRecovery" type="Node" parent="CharacterBody2D/StateMachine" node_paths=PackedStringArray("animation_player", "player")]
+script = ExtResource("20_dash_recovery")
+animation_player = NodePath("../../AnimationPlayer")
+player = NodePath("../..")
+
 [node name="HurtSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
 
 [node name="InvincibilityTimer" type="Timer" parent="CharacterBody2D" unique_id=633345939]
 
+[node name="Combo" type="Node" parent="CharacterBody2D"]
+script = ExtResource("9_combo")
+
+[node name="Finisher" type="Node" parent="CharacterBody2D"]
+script = ExtResource("13_finisher")
+
+[node name="Defense" type="Node" parent="CharacterBody2D"]
+script = ExtResource("15_defense")
+
+[node name="CombatFx" type="Node" parent="CharacterBody2D"]
+script = ExtResource("17_combat_fx")
+
+[node name="BlockSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="ParrySfxPlayer0" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="ParrySfxPlayer1" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="ParrySfxPlayer2" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="ParryStingPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="Hype" type="Node" parent="CharacterBody2D"]
+script = ExtResource("21_hype")
+
+[node name="Status" type="Node" parent="CharacterBody2D"]
+script = ExtResource("24_status")
+
+[node name="HypeFullSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=547045528]
 
 [node name="Control" parent="CanvasLayer" unique_id=1519141297 instance=ExtResource("8_jsrhp")]
+
+[node name="ComboCounter" type="Label" parent="CanvasLayer" node_paths=PackedStringArray("combo")]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 136.0
+offset_top = -238.0
+offset_right = 416.0
+offset_bottom = -154.0
+grow_vertical = 0
+theme = ExtResource("11_ui_theme")
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+vertical_alignment = 2
+script = ExtResource("10_combo_ui")
+combo = NodePath("../../CharacterBody2D/Combo")
+
+[node name="FinisherPrompt" type="Node2D" parent="CanvasLayer" node_paths=PackedStringArray("finisher", "player")]
+script = ExtResource("14_finisher_prompt")
+finisher = NodePath("../../CharacterBody2D/Finisher")
+player = NodePath("../../CharacterBody2D")
+
+[node name="StaminaBar" type="Control" parent="CanvasLayer" node_paths=PackedStringArray("defense")]
+mouse_filter = 2
+script = ExtResource("16_stamina_bar")
+defense = NodePath("../../CharacterBody2D/Defense")
+
+[node name="CombatPopups" type="Node2D" parent="CanvasLayer" node_paths=PackedStringArray("player", "defense", "hype", "status")]
+script = ExtResource("19_combat_popups")
+player = NodePath("../../CharacterBody2D")
+defense = NodePath("../../CharacterBody2D/Defense")
+hype = NodePath("../../CharacterBody2D/Hype")
+status = NodePath("../../CharacterBody2D/Status")
+
+[node name="HypeMeter" type="Control" parent="CanvasLayer" node_paths=PackedStringArray("hype", "finisher_prompt")]
+mouse_filter = 2
+script = ExtResource("22_hype_meter")
+hype = NodePath("../../CharacterBody2D/Hype")
+finisher_prompt = NodePath("../FinisherPrompt")
+
+[node name="ParryStreak" type="Control" parent="CanvasLayer" node_paths=PackedStringArray("defense")]
+mouse_filter = 2
+script = ExtResource("23_parry_streak")
+defense = NodePath("../../CharacterBody2D/Defense")
+
+[node name="StatusIcons" type="Control" parent="CanvasLayer" node_paths=PackedStringArray("status")]
+mouse_filter = 2
+script = ExtResource("25_status_icons")
+status = NodePath("../../CharacterBody2D/Status")
+
+[node name="FinisherFx" type="Node2D" parent="."]
+z_index = 2
+
+[node name="DodgeGhost" type="Area2D" parent="."]
+collision_layer = 2
+collision_mask = 13
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DodgeGhost"]
+shape = SubResource("RectangleShape2D_ghost")
 
 [connection signal="timeout" from="CharacterBody2D/InvincibilityTimer" to="CharacterBody2D" method="_on_invincibility_timer_timeout"]

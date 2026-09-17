@@ -1,0 +1,18 @@
+from parts import *
+FL = (136, 180, 99, 255)
+cv = Canvas()
+cape(cv)
+legs(cv)
+leg_details(cv)
+flap(cv)
+tassets(cv)
+belt(cv)
+tm = torso(cv)
+torso_details(cv, tm)
+belt_details(cv)
+gorget(cv)
+for f in (ID, mirror):
+    d, l1, l2 = pauldron(cv, f)
+    pauldron_details(cv, f, d, l1, l2)
+cv.save('stage2.png')
+cv.save('stage2_8x.png', 8, FL)

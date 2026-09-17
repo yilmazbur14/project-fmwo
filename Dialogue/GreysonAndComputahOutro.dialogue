@@ -1,0 +1,12 @@
+# Placeholder lines for the end of the Computah & Greyson fight, said before the fade to the Victory or Defeat screen.
+# player_won: the player beat the mech. player_lost: Computah and Greyson beat the player.
+
+~ player_won
+Computah: Bzzzt... critical failure... Mister Greyson, I have been... outplayed.
+Greyson: Get UP, Computah! I skipped the gym for this!
+=> END
+
+~ player_lost
+Computah: Target neutralised. Bzzzt. Shall I remove another heart, sir?
+Greyson: HAHAHA! Look at his face, Computah!
+=> END

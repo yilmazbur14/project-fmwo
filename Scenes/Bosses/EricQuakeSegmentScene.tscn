@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" uid="uid://cmj7p5xkvprl1" path="res://Assets/Characters/Eric/eric_quake_segment.png" id="1_segment"]
+
+[node name="EricQuakeSegment" type="Sprite2D"]
+scale = Vector2(3, 3)
+texture = ExtResource("1_segment")
+hframes = 4

@@ -1,0 +1,184 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/JoshCardsScript.gd" id="1_body"]
+[ext_resource type="Texture2D" uid="uid://d04tckeo1ms5d" path="res://Assets/Characters/Josh/josh_cards.png" id="2_cards"]
+[ext_resource type="Script" path="res://Scripts/States/JoshCards/JoshCardsStateMachine.gd" id="3_state_machine"]
+[ext_resource type="Script" path="res://Scripts/States/JoshCards/JoshCardsIntro.gd" id="4_intro"]
+[ext_resource type="Script" path="res://Scripts/States/JoshCards/JoshCardsIdle.gd" id="5_idle"]
+[ext_resource type="Script" path="res://Scripts/States/JoshCards/JoshCardsMount.gd" id="6_mount"]
+[ext_resource type="Script" path="res://Scripts/States/JoshCards/JoshCardsLayCards.gd" id="7_lay_cards"]
+[ext_resource type="Script" path="res://Scripts/States/JoshCards/JoshCardsCardStorm.gd" id="8_card_storm"]
+[ext_resource type="Script" path="res://Scripts/States/JoshCards/JoshCardsMonte.gd" id="9_monte"]
+[ext_resource type="Script" path="res://Scripts/States/JoshCards/JoshCardsDismount.gd" id="10_dismount"]
+[ext_resource type="Script" path="res://Scripts/States/JoshCards/JoshCardsThrow.gd" id="11_throw"]
+[ext_resource type="Script" path="res://Scripts/States/JoshCards/JoshCardsRecover.gd" id="12_recover"]
+[ext_resource type="Script" path="res://Scripts/States/JoshCards/JoshCardsDefeated.gd" id="13_defeated"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_josh_hurtbox"]
+size = Vector2(138, 168)
+
+[node name="JoshCardsScene" type="Node2D"]
+y_sort_enabled = true
+
+[node name="FloorLayer" type="Node2D" parent="."]
+position = Vector2(0, 101)
+
+[node name="ShadowLayer" type="Node2D" parent="."]
+position = Vector2(0, 101)
+
+[node name="Shadow" type="Node2D" parent="ShadowLayer"]
+visible = false
+
+[node name="IntroStage" type="Node2D" parent="."]
+position = Vector2(959, 700)
+
+[node name="JoshCardsCharacterBody" type="CharacterBody2D" parent="." node_paths=PackedStringArray("shadow", "floor_layer", "sky_layer")]
+position = Vector2(959, 700)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_body")
+shadow = NodePath("../ShadowLayer/Shadow")
+floor_layer = NodePath("../FloorLayer")
+sky_layer = NodePath("../SkyLayer")
+
+[node name="Air" type="Node2D" parent="JoshCardsCharacterBody"]
+visible = false
+
+[node name="Glider" type="Node2D" parent="JoshCardsCharacterBody/Air"]
+visible = false
+
+[node name="Sprite2D" type="Sprite2D" parent="JoshCardsCharacterBody/Air"]
+scale = Vector2(3, 3)
+texture = ExtResource("2_cards")
+offset = Vector2(0, -39)
+hframes = 2
+
+[node name="Hurtbox" type="Area2D" parent="JoshCardsCharacterBody/Air" groups=["enemy", "boss_target"]]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="JoshCardsCharacterBody/Air/Hurtbox"]
+position = Vector2(0, -84)
+shape = SubResource("RectangleShape2D_josh_hurtbox")
+
+[node name="StateManager" type="Node" parent="JoshCardsCharacterBody" node_paths=PackedStringArray("initial_state", "JoshCardsCharacterBody", "post_dialogue_pre_fight_timer", "recover_timer", "finisher_stagger_timer")]
+script = ExtResource("3_state_machine")
+initial_state = NodePath("Intro")
+JoshCardsCharacterBody = NodePath("..")
+post_dialogue_pre_fight_timer = NodePath("../PostDialoguePreFightTimer")
+recover_timer = NodePath("../RecoverTimer")
+finisher_stagger_timer = NodePath("../FinisherStaggerTimer")
+
+[node name="Intro" type="Node" parent="JoshCardsCharacterBody/StateManager" node_paths=PackedStringArray("body", "stage", "flash", "card_sfx_player", "land_sfx_player")]
+script = ExtResource("4_intro")
+body = NodePath("../..")
+stage = NodePath("../../../IntroStage")
+flash = NodePath("../../../FlashLayer/Flash")
+card_sfx_player = NodePath("../../CardSfxPlayer")
+land_sfx_player = NodePath("../../LandSfxPlayer")
+
+[node name="Idle" type="Node" parent="JoshCardsCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("5_idle")
+body = NodePath("../..")
+
+[node name="Mount" type="Node" parent="JoshCardsCharacterBody/StateManager" node_paths=PackedStringArray("body", "card_sfx_player")]
+script = ExtResource("6_mount")
+body = NodePath("../..")
+card_sfx_player = NodePath("../../CardSfxPlayer")
+
+[node name="LayCards" type="Node" parent="JoshCardsCharacterBody/StateManager" node_paths=PackedStringArray("body", "glide_sfx_player", "card_sfx_player")]
+script = ExtResource("7_lay_cards")
+body = NodePath("../..")
+glide_sfx_player = NodePath("../../GlideSfxPlayer")
+card_sfx_player = NodePath("../../CardSfxPlayer")
+
+[node name="CardStorm" type="Node" parent="JoshCardsCharacterBody/StateManager" node_paths=PackedStringArray("body", "glide_sfx_player")]
+script = ExtResource("8_card_storm")
+body = NodePath("../..")
+glide_sfx_player = NodePath("../../GlideSfxPlayer")
+
+[node name="Monte" type="Node" parent="JoshCardsCharacterBody/StateManager" node_paths=PackedStringArray("body", "glide_sfx_player", "shuffle_sfx_player", "reveal_sfx_player")]
+script = ExtResource("9_monte")
+body = NodePath("../..")
+glide_sfx_player = NodePath("../../GlideSfxPlayer")
+shuffle_sfx_player = NodePath("../../ShuffleSfxPlayer")
+reveal_sfx_player = NodePath("../../RevealSfxPlayer")
+
+[node name="Dismount" type="Node" parent="JoshCardsCharacterBody/StateManager" node_paths=PackedStringArray("body", "land_sfx_player")]
+script = ExtResource("10_dismount")
+body = NodePath("../..")
+land_sfx_player = NodePath("../../LandSfxPlayer")
+
+[node name="Throw" type="Node" parent="JoshCardsCharacterBody/StateManager" node_paths=PackedStringArray("body", "throw_sfx_player")]
+script = ExtResource("11_throw")
+body = NodePath("../..")
+throw_sfx_player = NodePath("../../ThrowSfxPlayer")
+
+[node name="Recover" type="Node" parent="JoshCardsCharacterBody/StateManager" node_paths=PackedStringArray("body", "recover_timer", "recover_sfx_player")]
+script = ExtResource("12_recover")
+body = NodePath("../..")
+recover_timer = NodePath("../../RecoverTimer")
+recover_sfx_player = NodePath("../../RecoverSfxPlayer")
+
+[node name="Defeated" type="Node" parent="JoshCardsCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("13_defeated")
+body = NodePath("../..")
+
+[node name="PostDialoguePreFightTimer" type="Timer" parent="JoshCardsCharacterBody"]
+wait_time = 0.6
+one_shot = true
+
+[node name="RecoverTimer" type="Timer" parent="JoshCardsCharacterBody"]
+one_shot = true
+
+[node name="FinisherStaggerTimer" type="Timer" parent="JoshCardsCharacterBody"]
+one_shot = true
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="JoshCardsCharacterBody"]
+volume_db = -4.0
+
+[node name="HitSfxPlayer" type="AudioStreamPlayer" parent="JoshCardsCharacterBody"]
+
+[node name="VictorySfxPlayer" type="AudioStreamPlayer" parent="JoshCardsCharacterBody"]
+
+[node name="GlideSfxPlayer" type="AudioStreamPlayer" parent="JoshCardsCharacterBody"]
+volume_db = -6.0
+pitch_scale = 1.3
+
+[node name="ThrowSfxPlayer" type="AudioStreamPlayer" parent="JoshCardsCharacterBody"]
+volume_db = -3.0
+pitch_scale = 1.6
+
+[node name="LandSfxPlayer" type="AudioStreamPlayer" parent="JoshCardsCharacterBody"]
+
+[node name="RecoverSfxPlayer" type="AudioStreamPlayer" parent="JoshCardsCharacterBody"]
+
+[node name="ShuffleSfxPlayer" type="AudioStreamPlayer" parent="JoshCardsCharacterBody"]
+volume_db = -5.0
+pitch_scale = 1.8
+
+[node name="RevealSfxPlayer" type="AudioStreamPlayer" parent="JoshCardsCharacterBody"]
+pitch_scale = 1.2
+
+[node name="CardSfxPlayer" type="AudioStreamPlayer" parent="JoshCardsCharacterBody"]
+volume_db = -4.0
+pitch_scale = 1.5
+
+[node name="SkyLayer" type="Node2D" parent="."]
+z_index = 2
+
+[node name="FlashLayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="Flash" type="ColorRect" parent="FlashLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.98, 0.84, 0)
+
+[connection signal="timeout" from="JoshCardsCharacterBody/PostDialoguePreFightTimer" to="JoshCardsCharacterBody/StateManager" method="_on_post_dialogue_pre_fight_timer_timeout"]
+[connection signal="timeout" from="JoshCardsCharacterBody/RecoverTimer" to="JoshCardsCharacterBody/StateManager/Recover" method="_on_recover_timer_timeout"]
+[connection signal="timeout" from="JoshCardsCharacterBody/FinisherStaggerTimer" to="JoshCardsCharacterBody/StateManager" method="_on_finisher_stagger_timer_timeout"]

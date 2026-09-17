@@ -1,0 +1,203 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/JordanScript.gd" id="1_jordan_script"]
+[ext_resource type="Texture2D" uid="uid://bccjynvgjxxbr" path="res://Assets/Characters/Jordan/jordan.png" id="2_jordan_tex"]
+[ext_resource type="Script" path="res://Scripts/States/Jordan/JordanStateMachine.gd" id="3_state_machine"]
+[ext_resource type="Script" path="res://Scripts/States/Jordan/JordanIdle.gd" id="4_idle"]
+[ext_resource type="Script" path="res://Scripts/States/Jordan/JordanSummonFunkos.gd" id="5_summon_funkos"]
+[ext_resource type="Script" path="res://Scripts/States/Jordan/JordanTaunt.gd" id="6_taunt"]
+[ext_resource type="Script" path="res://Scripts/States/Jordan/JordanDefeated.gd" id="7_defeated"]
+
+[sub_resource type="Animation" id="Animation_jordan_reset"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(3, 3)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Sprite2D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+
+[sub_resource type="Animation" id="Animation_jordan_idle"]
+resource_name = "idle"
+loop_mode = 1
+step = 0.5
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.5),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [Vector2(3, 3), Vector2(2.94, 3.09)]
+}
+
+[sub_resource type="Animation" id="Animation_jordan_summon"]
+resource_name = "summon"
+length = 0.8
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.3, 0.6, 0.8),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(3, 3), Vector2(3.3, 2.7), Vector2(2.8, 3.3), Vector2(3, 3)]
+}
+
+[sub_resource type="Animation" id="Animation_jordan_taunt"]
+resource_name = "taunt"
+length = 0.4
+loop_mode = 1
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [Vector2(3, 3), Vector2(3.15, 2.85), Vector2(3, 3), Vector2(2.9, 3.12)]
+}
+
+[sub_resource type="Animation" id="Animation_jordan_defeated"]
+resource_name = "defeated"
+length = 0.5
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [Vector2(3, 3)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Sprite2D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.5),
+"transitions": PackedFloat32Array(2, 1),
+"update": 0,
+"values": [0.0, -1.45]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_jordan"]
+_data = {
+&"RESET": SubResource("Animation_jordan_reset"),
+&"defeated": SubResource("Animation_jordan_defeated"),
+&"idle": SubResource("Animation_jordan_idle"),
+&"summon": SubResource("Animation_jordan_summon"),
+&"taunt": SubResource("Animation_jordan_taunt")
+}
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_jordan_hurtbox"]
+size = Vector2(96, 180)
+
+[node name="JordanScene" type="Node2D"]
+y_sort_enabled = true
+
+[node name="JordanCharacterBody" type="CharacterBody2D" parent="."]
+y_sort_enabled = true
+position = Vector2(960, 300)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_jordan_script")
+
+[node name="Sprite2D" type="Sprite2D" parent="JordanCharacterBody"]
+position = Vector2(0, 96)
+scale = Vector2(3, 3)
+texture = ExtResource("2_jordan_tex")
+offset = Vector2(0, -32)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="JordanCharacterBody"]
+libraries/ = SubResource("AnimationLibrary_jordan")
+
+[node name="Hurtbox" type="Area2D" parent="JordanCharacterBody" groups=["enemy", "boss_target"]]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="JordanCharacterBody/Hurtbox"]
+position = Vector2(0, 6)
+shape = SubResource("RectangleShape2D_jordan_hurtbox")
+
+[node name="StateManager" type="Node" parent="JordanCharacterBody" node_paths=PackedStringArray("initial_state", "JordanCharacterBody", "post_dialogue_pre_fight_timer", "finisher_stagger_timer")]
+script = ExtResource("3_state_machine")
+initial_state = NodePath("Idle")
+JordanCharacterBody = NodePath("..")
+post_dialogue_pre_fight_timer = NodePath("../PostDialoguePreFightTimer")
+finisher_stagger_timer = NodePath("../FinisherStaggerTimer")
+
+[node name="Idle" type="Node" parent="JordanCharacterBody/StateManager" node_paths=PackedStringArray("animation_player")]
+script = ExtResource("4_idle")
+animation_player = NodePath("../../AnimationPlayer")
+
+[node name="SummonFunkos" type="Node" parent="JordanCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "summon_sfx_player", "body")]
+script = ExtResource("5_summon_funkos")
+animation_player = NodePath("../../AnimationPlayer")
+summon_sfx_player = NodePath("../../SummonSfxPlayer")
+body = NodePath("../..")
+
+[node name="Taunt" type="Node" parent="JordanCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "hurtbox", "taunt_sfx_player", "body")]
+script = ExtResource("6_taunt")
+animation_player = NodePath("../../AnimationPlayer")
+hurtbox = NodePath("../../Hurtbox")
+taunt_sfx_player = NodePath("../../TauntSfxPlayer")
+body = NodePath("../..")
+
+[node name="Defeated" type="Node" parent="JordanCharacterBody/StateManager" node_paths=PackedStringArray("animation_player")]
+script = ExtResource("7_defeated")
+animation_player = NodePath("../../AnimationPlayer")
+
+[node name="PostDialoguePreFightTimer" type="Timer" parent="JordanCharacterBody"]
+wait_time = 2.0
+one_shot = true
+
+[node name="FinisherStaggerTimer" type="Timer" parent="JordanCharacterBody"]
+one_shot = true
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="JordanCharacterBody"]
+volume_db = -4.0
+
+[node name="HitSfxPlayer" type="AudioStreamPlayer" parent="JordanCharacterBody"]
+
+[node name="VictorySfxPlayer" type="AudioStreamPlayer" parent="JordanCharacterBody"]
+
+[node name="SummonSfxPlayer" type="AudioStreamPlayer" parent="JordanCharacterBody"]
+
+[node name="TauntSfxPlayer" type="AudioStreamPlayer" parent="JordanCharacterBody"]
+
+[connection signal="timeout" from="JordanCharacterBody/PostDialoguePreFightTimer" to="JordanCharacterBody/StateManager" method="_on_post_dialogue_pre_fight_timer_timeout"]

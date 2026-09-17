@@ -1,0 +1,20 @@
+[gd_resource type="Theme" format=3 uid="uid://dnd78vy0t1wm3"]
+
+[ext_resource type="FontFile" uid="uid://ceh4hdh0651ro" path="res://fonts/PixelifySans.ttf" id="1_font"]
+
+[sub_resource type="FontVariation" id="FontVariation_no_liga"]
+base_font = ExtResource("1_font")
+opentype_features = {
+1818847073: 0
+}
+
+[resource]
+default_font = SubResource("FontVariation_no_liga")
+default_font_size = 33
+CardTitle/base_type = &"Label"
+CardTitle/constants/line_spacing = 0
+CardTitle/font_sizes/font_size = 55
+LargeButton/base_type = &"Button"
+LargeButton/font_sizes/font_size = 55
+TitleLabel/base_type = &"Label"
+TitleLabel/font_sizes/font_size = 99

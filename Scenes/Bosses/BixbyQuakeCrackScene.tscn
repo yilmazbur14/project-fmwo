@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/BixbyQuakeCrackScript.gd" id="1_crack"]
+[ext_resource type="AudioStream" uid="uid://cvd2eh0p6ay8i" path="res://Assets/Audio/SFX/earthquake_slam.ogg" id="2_erupt"]
+
+[node name="BixbyQuakeCrack" type="Node2D" groups=["bixby_beast_hazard"]]
+y_sort_enabled = true
+script = ExtResource("1_crack")
+
+[node name="Crack" type="Sprite2D" parent="."]
+
+[node name="EruptSfx" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2_erupt")
+volume_db = -7.0
+pitch_scale = 1.3

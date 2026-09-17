@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://ou8k2s74hjh0"
+path="res://.godot/imported/JordanPreFight.dialogue-421eefdab265cf961bd5f5fb1e43f55e.tres"
+
+[deps]
+
+source_file="res://Dialogue/JordanPreFight.dialogue"
+dest_files=["res://.godot/imported/JordanPreFight.dialogue-421eefdab265cf961bd5f5fb1e43f55e.tres"]
+
+[params]
+
+defaults=true

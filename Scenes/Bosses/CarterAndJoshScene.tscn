@@ -9,7 +9,7 @@
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(26, 44)
 
-[sub_resource type="Animation" id="Animation_reset"]
+[sub_resource type="Animation" id="Animation_josh_reset"]
 length = 0.001
 tracks/0/type = "value"
 tracks/0/imported = false
@@ -24,10 +24,125 @@ tracks/0/keys = {
 "values": [0]
 }
 
-[sub_resource type="Animation" id="Animation_idle"]
+[sub_resource type="Animation" id="Animation_josh_idle"]
 resource_name = "idle"
+length = 1.05
 loop_mode = 1
-step = 0.4
+step = 0.35
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.35, 0.7),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [0, 1, 2]
+}
+
+[sub_resource type="Animation" id="Animation_josh_telegraph"]
+resource_name = "telegraph"
+length = 0.4
+loop_mode = 1
+step = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [3, 4]
+}
+
+[sub_resource type="Animation" id="Animation_josh_charge"]
+resource_name = "charge"
+length = 0.24
+loop_mode = 1
+step = 0.12
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.12),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [5, 6]
+}
+
+[sub_resource type="Animation" id="Animation_josh_recover"]
+resource_name = "recover"
+length = 0.75
+loop_mode = 1
+step = 0.25
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [7, 8, 9]
+}
+
+[sub_resource type="Animation" id="Animation_josh_hit"]
+resource_name = "hit"
+length = 0.2
+step = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [10]
+}
+
+[sub_resource type="Animation" id="Animation_josh_defeated"]
+resource_name = "defeated"
+length = 0.7
+step = 0.35
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.35),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [11, 12]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_josh"]
+_data = {
+&"RESET": SubResource("Animation_josh_reset"),
+&"charge": SubResource("Animation_josh_charge"),
+&"defeated": SubResource("Animation_josh_defeated"),
+&"hit": SubResource("Animation_josh_hit"),
+&"idle": SubResource("Animation_josh_idle"),
+&"recover": SubResource("Animation_josh_recover"),
+&"telegraph": SubResource("Animation_josh_telegraph")
+}
+
+[sub_resource type="Animation" id="Animation_carter_reset"]
+length = 0.001
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
@@ -41,17 +156,148 @@ tracks/0/keys = {
 "values": [0]
 }
 
-[sub_resource type="AnimationLibrary" id="AnimationLibrary_shared"]
-_data = {
-&"RESET": SubResource("Animation_reset"),
-&"idle": SubResource("Animation_idle")
+[sub_resource type="Animation" id="Animation_carter_idle"]
+resource_name = "idle"
+length = 1.05
+loop_mode = 1
+step = 0.35
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.35, 0.7),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [0, 1, 2]
 }
 
-[node name="CarterAndJoshScene" type="Node2D" node_paths=PackedStringArray("josh", "carter", "cycle_timer")]
+[sub_resource type="Animation" id="Animation_carter_telegraph"]
+resource_name = "telegraph"
+length = 0.4
+loop_mode = 1
+step = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [3, 4]
+}
+
+[sub_resource type="Animation" id="Animation_carter_charge_down"]
+resource_name = "charge_down"
+length = 0.24
+loop_mode = 1
+step = 0.12
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.12),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [5, 6]
+}
+
+[sub_resource type="Animation" id="Animation_carter_charge_up"]
+resource_name = "charge_up"
+length = 0.24
+loop_mode = 1
+step = 0.12
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.12),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [7, 8]
+}
+
+[sub_resource type="Animation" id="Animation_carter_recover"]
+resource_name = "recover"
+length = 0.75
+loop_mode = 1
+step = 0.25
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [9, 10, 11]
+}
+
+[sub_resource type="Animation" id="Animation_carter_hit"]
+resource_name = "hit"
+length = 0.2
+step = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [12]
+}
+
+[sub_resource type="Animation" id="Animation_carter_defeated"]
+resource_name = "defeated"
+length = 0.7
+step = 0.35
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.35),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [13, 14]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_carter"]
+_data = {
+&"RESET": SubResource("Animation_carter_reset"),
+&"charge_down": SubResource("Animation_carter_charge_down"),
+&"charge_up": SubResource("Animation_carter_charge_up"),
+&"defeated": SubResource("Animation_carter_defeated"),
+&"hit": SubResource("Animation_carter_hit"),
+&"idle": SubResource("Animation_carter_idle"),
+&"recover": SubResource("Animation_carter_recover"),
+&"telegraph": SubResource("Animation_carter_telegraph")
+}
+
+[node name="CarterAndJoshScene" type="Node2D" node_paths=PackedStringArray("josh", "carter", "cycle_timer", "post_dialogue_pre_fight_timer")]
 script = ExtResource("3_coord")
 josh = NodePath("Josh")
 carter = NodePath("Carter")
 cycle_timer = NodePath("CycleTimer")
+post_dialogue_pre_fight_timer = NodePath("PostDialoguePreFightTimer")
 
 [node name="Josh" type="CharacterBody2D" parent="." node_paths=PackedStringArray("sprite", "animation_player", "telegraph_line", "body_hitbox")]
 collision_layer = 4
@@ -68,10 +314,11 @@ shape = SubResource("RectangleShape2D_body")
 
 [node name="Sprite2D" type="Sprite2D" parent="Josh"]
 texture = ExtResource("2_josh_tex")
-hframes = 1
+hframes = 13
+vframes = 1
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Josh"]
-libraries/ = SubResource("AnimationLibrary_shared")
+libraries/ = SubResource("AnimationLibrary_josh")
 
 [node name="TelegraphLine" type="Line2D" parent="Josh"]
 points = PackedVector2Array(-450, 0, 450, 0)
@@ -79,7 +326,7 @@ width = 2.0
 default_color = Color(1, 0.55, 0.1, 0.55)
 visible = false
 
-[node name="BodyHitbox" type="Area2D" parent="Josh" groups=["josh_body"]]
+[node name="BodyHitbox" type="Area2D" parent="Josh" groups=["josh_body", "boss_target"]]
 monitoring = true
 monitorable = true
 
@@ -102,10 +349,11 @@ shape = SubResource("RectangleShape2D_body")
 
 [node name="Sprite2D" type="Sprite2D" parent="Carter"]
 texture = ExtResource("1_carter_tex")
-hframes = 1
+hframes = 15
+vframes = 1
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Carter"]
-libraries/ = SubResource("AnimationLibrary_shared")
+libraries/ = SubResource("AnimationLibrary_carter")
 
 [node name="TelegraphLine" type="Line2D" parent="Carter"]
 points = PackedVector2Array(0, -450, 0, 450)
@@ -113,7 +361,7 @@ width = 2.0
 default_color = Color(0.2, 0.45, 1, 0.55)
 visible = false
 
-[node name="BodyHitbox" type="Area2D" parent="Carter" groups=["carter_body"]]
+[node name="BodyHitbox" type="Area2D" parent="Carter" groups=["carter_body", "boss_target"]]
 monitoring = true
 monitorable = true
 
@@ -122,6 +370,10 @@ shape = SubResource("RectangleShape2D_body")
 
 [node name="CycleTimer" type="Timer" parent="."]
 wait_time = 3.2
+
+[node name="PostDialoguePreFightTimer" type="Timer" parent="."]
+wait_time = 2.0
+one_shot = true
 
 [node name="MusicPlayer" type="AudioStreamPlayer" parent="."]
 volume_db = -4.0
@@ -133,3 +385,4 @@ volume_db = -4.0
 [node name="VictorySfxPlayer" type="AudioStreamPlayer" parent="."]
 
 [connection signal="timeout" from="CycleTimer" to="." method="_on_cycle_timer_timeout"]
+[connection signal="timeout" from="PostDialoguePreFightTimer" to="." method="_on_post_dialogue_pre_fight_timer_timeout"]
