@@ -13,11 +13,11 @@ PROJ = "C:/Users/theyi/OneDrive/Documents/new-game-project/"
 TITLE = dict(cx=320, top=8)     # label box  y 8..48  (screen 24..144)
 BANNER = (160, 50, 320, 46)     # x, y, w, h  (screen 480,150 960x138)
 LADDER_Y = 234                  # slot row top (screen 702..822)
-N_BOSSES = 5                    # Eric, Computah & Greyson, Carter & Josh, Liam & Bixby, Jordan
+N_BOSSES = 6                    # Eric, Computah & Greyson, Carter & Josh, Mason, Liam & Bixby, Jordan
 N_SLOTS = N_BOSSES + 1          # + the invite GOAL slot
 SLOT, LINK = 40, 8
 LADDER_W = N_SLOTS * SLOT + (N_SLOTS - 1) * LINK
-LADDER_X = (640 - LADDER_W) // 2   # 6 slots: base 180 -> screen 540 .. 1380, centred on 960
+LADDER_X = (640 - LADDER_W) // 2   # 7 slots: base 156 -> screen 468 .. 1452, centred on 960
 BUTTON = (251, 280, 138, 42)    # base; screen 753,840 414x126
 
 

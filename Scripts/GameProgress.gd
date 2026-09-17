@@ -6,11 +6,12 @@ extends Node
 # falls back to returning to the Main Menu.
 var next_boss_scene: String = ""
 
-# The story's fights in order. "" marks a fight that isn't built yet.
+# The story's fights in order.
 const FIGHT_SCENES: Array[String] = [
 	"res://Scenes/Bosses/EricBossFightScene.tscn",
 	"res://Scenes/Bosses/GreysonBossFightScene.tscn",
 	"res://Scenes/Bosses/CarterAndJoshBossFightScene.tscn",
+	"res://Scenes/Bosses/MasonBossFightScene.tscn",
 	"res://Scenes/Bosses/LiamBossFightScene.tscn",
 	"res://Scenes/Bosses/JordanBossFightScene.tscn",
 ]
@@ -23,7 +24,7 @@ const RESULT_SCENES: Array[String] = [
 ]
 
 # Index into FIGHT_SCENES of the fight the player is in (or just left for a
-# result screen); -1 for anything outside the order, e.g. Mason.
+# result screen); -1 for anything outside the order.
 var fight_index := -1
 var bosses_cleared := 0
 

@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://bq5iwwrym521u" path="res://Assets/UI/key_arrows.png" id="5_arrows"]
 [ext_resource type="Texture2D" uid="uid://dpl6unwxam3x4" path="res://Assets/UI/key_q.png" id="6_q"]
 [ext_resource type="Texture2D" uid="uid://b7q4kf6uuw6ca" path="res://Assets/UI/key_w.png" id="7_w"]
+[ext_resource type="Texture2D" uid="uid://dfxl06ct6h6j" path="res://Assets/UI/key_shift.png" id="13_shift"]
 [ext_resource type="Texture2D" uid="uid://clehl74kprl7h" path="res://Assets/UI/ui_button_3x.png" id="8_button"]
 [ext_resource type="Texture2D" uid="uid://buu7dkol6ncb6" path="res://Assets/UI/ui_button_hover_3x.png" id="9_button_hover"]
 [ext_resource type="Texture2D" uid="uid://dumy2xwfcof6i" path="res://Assets/UI/ui_button_pressed_3x.png" id="10_button_pressed"]
@@ -136,7 +137,7 @@ offset_left = 60.0
 offset_top = 36.0
 offset_right = 1620.0
 offset_bottom = 570.0
-theme_override_constants/separation = 33
+theme_override_constants/separation = 24
 
 [node name="MoveCard" type="PanelContainer" parent="Cards" unique_id=1730149436]
 layout_mode = 2
@@ -220,6 +221,35 @@ size_flags_vertical = 3
 custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
 texture = ExtResource("7_w")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BlockCard" type="PanelContainer" parent="Cards"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxTexture_card")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Cards/BlockCard"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Label" type="Label" parent="Cards/BlockCard/VBoxContainer"]
+custom_minimum_size = Vector2(0, 138)
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+text = "Block / Parry"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="Cards/BlockCard/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TextureRect" type="TextureRect" parent="Cards/BlockCard/VBoxContainer/CenterContainer"]
+custom_minimum_size = Vector2(192, 96)
+layout_mode = 2
+texture = ExtResource("13_shift")
 expand_mode = 1
 stretch_mode = 5
 

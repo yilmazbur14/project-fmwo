@@ -1,4 +1,4 @@
-"""Main-menu background 'The Ladder' (v3: five tiers). 640x360, DB32 only, built as separate layers.
+"""Main-menu background 'The Ladder' (six tiers). 640x360, DB32 only, built as separate layers.
 
 Night. A tower of stacked boxing-ring tiers; each tier is one rank of the server, lit in its role
 colour, with that rank's member(s) standing on it as rim-lit silhouettes. A red-carpet stair climbs
@@ -37,18 +37,19 @@ BASE_Y = 316                 # bottom row of tier 1's apron
 GLOW = (CX, 34)
 CARD_X, CARD_Y = CX - 38, 8  # invite canvas origin (card rect at +3..+72, +4..+44)
 
-# role colour ramps (hi, base, lo) per tier, bottom (1) to top (5)
+# role colour ramps (hi, base, lo) per tier, bottom (1) to top (6)
 ROLE = {
     1: (LG, GR, OG),        # green   - Eric
     2: (WH2, CY, BL),       # cyan    - Computah & Greyson
     3: (SK, OR, BR),        # orange  - Carter & Josh
-    4: (SK, PK, RD),        # red     - Liam & Bixby
-    5: (WH, YL, TN),        # gold    - Jordan (final boss)
+    4: (WH2, MG, PU),       # pink    - Mason
+    5: (SK, PK, RD),        # red     - Liam & Bixby
+    6: (WH, YL, TN),        # gold    - Jordan (final boss)
 }
 
 
 def _tiers():
-    spec = [(36, 8, 150), (34, 7, 126), (32, 7, 102), (30, 6, 80), (29, 6, 56)]   # (face, strip, half-width)
+    spec = [(32, 7, 150), (30, 6, 126), (28, 6, 104), (26, 5, 84), (24, 5, 66), (22, 4, 50)]   # (face, strip, half-width)
     out, fb = [], BASE_Y
     for face, strip, hw in spec:
         ft = fb - face + 1
@@ -121,7 +122,7 @@ def layer_sky(stars=True):
 
 # ------------------------------------------------------------------ drifting server-icon lanterns
 SKY_LANTERNS = [  # x, y, size (5 or 7), tier colour -- kept clear of the UI column (x < 250)
-    (272, 150, 7, 3), (306, 62, 5, 2), (612, 120, 7, 4), (598, 238, 5, 5), (288, 238, 5, 1),
+    (272, 150, 7, 4), (306, 62, 5, 2), (612, 120, 7, 5), (598, 238, 5, 6), (288, 238, 5, 1),
 ]
 ICON7 = ['..KKK..', '.KhbbK.', 'KhbbbbK', 'KbbbblK', 'KbbbllK', '.KbllK.', '..KKK..']
 ICON5 = ['.KKK.', 'KhbbK', 'KbbbK', 'KbblK', '.KKK.']
@@ -228,10 +229,6 @@ def draw_tier(c, k):
     ph = min(16, fb - ft - 8)
     for side in (-1, 1):
         bx = CX + side * (hw - 16) - 4
-        if k == N_TIERS:
-            # the top tier is too narrow for end pennants (the rank below would hide them):
-            # hang them either side of the carpet instead
-            bx = CX + side * 19 - 4
         for j in range(ph + 1):
             for i in range(9):
                 notch = j >= ph - 3 and abs(i - 4) <= (j - (ph - 3))
@@ -242,7 +239,7 @@ def draw_tier(c, k):
                 c.set(bx + i, ft + 3 + j, col)
         c.hline(bx - 1, bx + 9, ft + 2, K)
         c.hline(bx, bx + 8, ft + 3, K)
-        # tier number (Arena #1 at the bottom .. #5 at the top)
+        # tier number (Arena #1 at the bottom .. #6 at the top)
         g = F35[str(k)]
         ex, ey = bx + 3, ft + 3 + (ph - 3) // 2 - 2
         for j, row in enumerate(g):
@@ -371,9 +368,10 @@ PLACE = [  # name, tier, x of anchor column, anchor column
     ('greyson', 2, CX + 44, 11),
     ('carter', 3, CX - 44, 11),
     ('josh', 3, CX + 44, 14),
-    ('liam', 4, CX - 40, 14),
-    ('bixby', 4, CX + 40, 14),
-    ('jordan', 5, CX, 8),
+    ('mason', 4, CX, 14),
+    ('liam', 5, CX - 38, 14),
+    ('bixby', 5, CX + 38, 14),
+    ('jordan', 6, CX, 8),
 ]
 
 

@@ -143,7 +143,7 @@ func _on_defeated() -> void:
 		music_player.stop()
 	victory_sfx_player.play()
 	get_tree().call_group("arena_crowd", "cheer", 2.0)
-	GameProgress.next_boss_scene = "res://Scenes/Bosses/LiamBossFightScene.tscn"
+	GameProgress.next_boss_scene = "res://Scenes/Bosses/MasonBossFightScene.tscn"
 
 	if josh and josh.has_method("play_defeated"):
 		josh.play_defeated()

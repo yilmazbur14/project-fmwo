@@ -1,8 +1,9 @@
 """Boss face icons for the rank ladder (40x40 cells; art visible inside the slot window).
 Built from the approved sprites' heads (1:1 pixels, remapped to DB32 by hand-checked tables),
 duo slots as diagonal tag-team splits, plus an original INVITE envelope icon.
-Frame order (approved boss order; Mason is not in the ladder):
-0 Eric, 1 Computah & Greyson (mech), 2 Carter & Josh, 3 Liam & Bixby, 4 Jordan (final boss), 5 Invite.
+Frame order (approved boss order):
+0 Eric, 1 Computah & Greyson (mech), 2 Carter & Josh, 3 Mason, 4 Liam & Bixby,
+5 Jordan (final boss), 6 Invite.
 python icons.py outdir"""
 import sys, math
 from cv import *
@@ -10,7 +11,7 @@ import slots
 
 CHAR = "C:/Users/theyi/OneDrive/Documents/new-game-project/Assets/Characters/"
 S = 40
-ORDER = ['eric', 'mech', 'carter_josh', 'liam_bixby', 'jordan', 'invite']
+ORDER = ['eric', 'mech', 'carter_josh', 'mason', 'liam_bixby', 'jordan', 'invite']
 
 
 def rgb(h):
@@ -55,6 +56,8 @@ REMAP = {
     'josh': dict(SKIN_MAP, **{'130b09': K, '24160f': PLUM, '3a2014': PLUM, '3d261a': PLUM,
                               '5f3c29': BROWN, '8a5b3d': RUST, '173c8a': INDIGO, '2a67c9': BLURPLE,
                               '5fa8f0': SKY, 'c8ecff': PALE, 'd3d9e4': PALE, 'fff0dc': WHITE}),
+    'mason': dict(SKIN_MAP, **{'90765e': RUST, '7d5631': BROWN, 'd4cc2e': TAN, 'ae8358': RUST,
+                               'fadcb8': SKIN}),
     'liam': dict(SKIN_MAP, **{'1b0f0d': K, '120a08': K, '36201a': PLUM, '56352a': BROWN,
                               'a96b43': RUST, 'c3885a': TAN, 'b8794a': TAN, '6e7d86': ASH,
                               '7b8893': DGREY, '4a5563': DASH, 'b3c0c9': GREY, 'a3b1bc': GREY,
@@ -167,6 +170,8 @@ def build():
     b = crop_icon('josh', CHAR + "Josh/josh_redesign.png", 25, 17)
     bg_disc(b, ORANGE, RUST)
     ic['carter_josh'] = split(a, b, 0.35)
+    ic['mason'] = crop_icon('mason', CHAR + "Mason/mason.png", 32, 20)
+    bg_disc(ic['mason'], RED, BROWN)
     a = crop_icon('liam', CHAR + "Liam/liam.png", 38, 18)
     bg_disc(a, TEAL, OLIVE)
     b = crop_icon('bixby', CHAR + "Bixby/bixby.png", 26, 15)

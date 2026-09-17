@@ -11,7 +11,7 @@ const LADDER_TOP := 702.0
 const SLOT_SIZE := 120.0
 const SLOT_GAP := 24.0
 const PULSE_TIME := 0.4
-const RANKS := ["@member", "@regular", "@veteran", "@moderator"]
+const RANKS := ["@member", "@regular", "@veteran", "@trusted", "@moderator"]
 
 enum SlotFrame { LOCKED, CLEARED, CURRENT, CURRENT_PULSE, GOAL }
 enum LinkFrame { LOCKED, CLEARED, NEXT }

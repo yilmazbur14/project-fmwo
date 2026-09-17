@@ -197,7 +197,7 @@ func _on_defeated() -> void:
 		music_player.stop()
 	victory_sfx_player.play()
 	get_tree().call_group("arena_crowd", "cheer", 2.0)
-	GameProgress.next_boss_scene = ""
+	GameProgress.next_boss_scene = "res://Scenes/Bosses/LiamBossFightScene.tscn"
 	FightOutro.finish_fight(get_tree(), true)
 
 
