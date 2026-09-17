@@ -16,6 +16,7 @@ import fx_defense as FD
 import fx_dodge as DG
 import fx_super as FS
 import player_guard_break as GB
+import parry_tell as PT
 
 CHECK = '--check' in sys.argv
 OVERWRITE_OWN = '--overwrite-own' in sys.argv
@@ -191,7 +192,10 @@ def main():
     specs = [('block_spark', fd['block_spark'], [40, 50, 60, 70], [('block', 1, 4)]),
              ('parry_flash', fd['parry_flash'], [30, 50, 60, 70, 80], [('parry', 1, 5)]),
              ('guard_break_stars', fd['guard_break_stars'], [100] * 6, [('dizzy_loop', 1, 6)]),
-             ('uppercut_impact_super', FS.impact_super(), FS.IMPACT_DURATIONS_MS, [('impact', 1, 7)])]
+             ('uppercut_impact_super', FS.impact_super(), FS.IMPACT_DURATIONS_MS, [('impact', 1, 7)]),
+             ('parry_tell', PT.parry_tell(), PT.TELL_DURATIONS_MS, [('tell_loop', 1, 6)]),
+             ('parry_tell_strong', PT.parry_tell_strong(), PT.STRONG_DURATIONS_MS, [('tell_loop', 1, 6)]),
+             ('parry_glow', PT.parry_glow(), PT.GLOW_DURATIONS_MS, [('glow_loop', 1, 4)])]
     for name, frames, durs, tags in specs:
         s = strip(frames)
         p = PROJ + FX + name + '.png'

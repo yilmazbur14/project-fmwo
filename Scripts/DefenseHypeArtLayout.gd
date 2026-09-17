@@ -130,12 +130,15 @@ const FINAL_PARRY_FLASH := {
 }
 
 #PARRY TELL
-# The warning over an attacking boss's head, in px from his daze anchor (about 34 px over his head).
+# The warning over an attacking boss's head. Attacks pass their own head point (Eric's states do);
+# bosses without one fall back to their daze anchor, shifted by this.
 const PARRY_TELL_OFFSET := Vector2(0, -20)
 # Above the boss and his effects.
 const PARRY_TELL_Z_INDEX := 3
+# It shows at once, on its biggest frame, so it never eats reaction time; only its exit fades.
+const PARRY_TELL_FADE_OUT := 0.09
 
-const USE_FINAL_PARRY_TELL := false
+const USE_FINAL_PARRY_TELL := true
 # A chevron built in code, pointing down at him, pulsing between the two scales.
 const PLACEHOLDER_PARRY_TELL := {
 	"size": Vector2(44, 16),
@@ -146,14 +149,34 @@ const PLACEHOLDER_PARRY_TELL := {
 	"pulse": [0.85, 1.15],
 	"pulse_time": 0.5,
 }
-# Provisional until the art contract lands.
+# A red diamond badge with a white "!", looping; the strong one is bigger, in a broken ring. Each
+# pivot is the badge's bottom tip, so the anchor sits a few texels over the boss's head and the badge
+# grows upward from it. Drawn at 3x, like the daze stars.
 const FINAL_PARRY_TELL := {
-	"standard": "res://Assets/Effects/parry_tell.png",
-	"strong": "res://Assets/Effects/parry_tell_strong.png",
-	"hframes": 2,
-	"frame_time": 0.12,
-	"scale": 2.0,
+	"scale": 3.0,
+	"standard": {
+		"texture": "res://Assets/Effects/parry_tell.png",
+		"hframes": 6,
+		"frame_times": [0.09, 0.09, 0.11, 0.11, 0.09, 0.09],
+		"pivot": Vector2(16, 24),
+	},
+	"strong": {
+		"texture": "res://Assets/Effects/parry_tell_strong.png",
+		"hframes": 6,
+		"frame_times": [0.07, 0.07, 0.08, 0.08, 0.07, 0.07],
+		"pivot": Vector2(24, 36),
+	},
+}
+
+# The aura for a parryable projectile in flight, drawn behind it and centred on it, through
+# ParryTell.glow(). Wired but unused: only Eric's whirlwind and grab tell at all for now. The art is
+# sized for a projectile 12-16 texels across, so bigger ones want a larger whole-number scale.
+const PARRY_GLOW := {
+	"texture": "res://Assets/Effects/parry_glow.png",
+	"hframes": 4,
+	"frame_time": 0.09,
 	"pivot": Vector2(16, 16),
+	"scale": 2.0,
 }
 
 #PLAYER FLASHES

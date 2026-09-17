@@ -2,6 +2,10 @@ extends State
 
 const HitInfo := preload("res://Scripts/HitInfo.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
+const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
+
+# Over his head on the spin frames, right of the sword he hoists on his left.
+const TELL_HEAD_PIXEL := Vector2(152, 116)
 
 @export var animation_player : AnimationPlayer
 
@@ -38,7 +42,7 @@ func Enter() -> void:
 
 	animation_player.play("whirlwind")
 	# The spin has no separate wind-up: the warning stays up while he bears down on the player.
-	ParryTell.telegraph(character_body, &"eric_whirlwind", duration)
+	ParryTell.telegraph(character_body, &"eric_whirlwind", duration, _tell_anchor)
 	boss_collision_shape.disabled = true
 	whirlwind_hitbox.monitoring = true
 	whirlwind_duration_timer.start(duration)
@@ -101,6 +105,11 @@ func _damage_player() -> int:
 	if near_miss:
 		player.receive_near_miss(_hit())
 	return HitInfo.Result.IGNORED
+
+
+# His daze anchor is tuned for his downed frames, too low for a standing tell.
+func _tell_anchor() -> Vector2:
+	return character_body.to_global(EricArtLayout.frame_local(TELL_HEAD_PIXEL + Vector2(0.5, 0.5), character_body.sprite.flip_h))
 
 
 func _hit() -> RefCounted:

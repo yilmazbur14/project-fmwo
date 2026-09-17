@@ -6,6 +6,10 @@ extends State
 
 const HitInfo := preload("res://Scripts/HitInfo.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
+
+# Over his head on the charge frames, on the same side as the whirlwind's tell and clear of his
+# planted sword; his head tops out 8 texels below it.
+const TELL_HEAD_PIXEL := Vector2(150, 114)
 const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
 const HUG_TEXTURE := preload("res://Assets/Characters/Eric/eric_bearhug_v2.png")
 const PLANTED_SWORD_TEXTURE := preload("res://Assets/Characters/Eric/eric_bearhug_planted_sword_v2.png")
@@ -128,6 +132,11 @@ func _catches_player() -> bool:
 	return false
 
 
+# His daze anchor is tuned for his downed frames, too low for a standing tell.
+func _tell_anchor() -> Vector2:
+	return character_body.to_global(EricArtLayout.frame_local(TELL_HEAD_PIXEL + Vector2(0.5, 0.5), character_body.sprite.flip_h))
+
+
 func _hit() -> RefCounted:
 	var centre: Vector2 = grab_area.get_node("CollisionShape2D").global_position
 	return HitInfo.make(&"eric_bear_hug_grab", self, centre, character_body)
@@ -191,7 +200,7 @@ func _on_animation_player_animation_finished(anim_name: StringName) -> void:
 			charge_left = lerpf(charge_time, rage_charge_time, eric_state_machine.rage)
 			phase = Phase.CHARGE
 			# The charge frames are the grab's wind-up: a parry during the lunge staggers him.
-			ParryTell.telegraph(character_body, &"eric_bear_hug_grab", charge_left)
+			ParryTell.telegraph(character_body, &"eric_bear_hug_grab", charge_left, _tell_anchor)
 			animation_player.play("hug_charge")
 		&"hug_whiff":
 			hurtbox.monitoring = true
