@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/BixbyFirePatchScript.gd" id="1_patch"]
+[ext_resource type="Texture2D" uid="uid://dvo3k0r3nx3ek" path="res://Assets/Characters/Bixby/bixby_fire_trail.png" id="2_trail"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_fire_patch"]
+size = Vector2(96, 30)
+
+[node name="BixbyFirePatch" type="StaticBody2D" groups=["bixby_beast_hazard"]]
+collision_mask = 0
+script = ExtResource("1_patch")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_fire_patch")
+disabled = true
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(3, 3)
+texture = ExtResource("2_trail")
+offset = Vector2(0, -11)
+hframes = 10

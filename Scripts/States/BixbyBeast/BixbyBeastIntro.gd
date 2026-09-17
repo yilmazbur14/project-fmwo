@@ -1,15 +1,33 @@
 extends State
 
-# Liam and Bixby's entrance, as named beats: carry_in runs first, then LiamPreFight.dialogue calls the
-# rest between its lines. Each beat is its own coroutine that the dialogue waits on, so a drawn
-# animation from Assets/Characters/Liam/Entrance/ can replace one beat's placeholder tweens at a time.
+# Liam and Bixby's entrance, as named beats: carry_in plays first, then LiamPreFight.dialogue calls the
+# rest between its lines and waits for each one. Placement follows the entrance mockups
+# (LiamEntranceLayout).
+
+const LiamEntranceLayout := preload("res://Scripts/LiamEntranceLayout.gd")
+const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
+const CARRIERS_TEXTURE := preload("res://Assets/Characters/Liam/Entrance/liam_carriers.png")
+# Storyboard strips of 128x96 frames with the lettering drawn in.
+const SLAP_KEYS := preload("res://Assets/Characters/Liam/Entrance/liam_slap_keys.png")
+const FED_UP := preload("res://Assets/Characters/Liam/Entrance/bixby_fedup.png")
+const SWALLOW_KEYS := preload("res://Assets/Characters/Liam/Entrance/bixby_swallow_keys.png")
 
 @export var body : CharacterBody2D
-@export var entrance : Node2D
-@export var liam : Sprite2D
-@export var bixby : Sprite2D
-@export var smack_label : Label
+@export var procession : Node2D
+@export var marcher : Node2D
+@export var march_shadows : Node2D
+@export var set_down_shadows : Node2D
+@export var walking_carrier : Sprite2D
+@export var throne_bixby : Sprite2D
+@export var seated_liam : Sprite2D
+@export var downstage : Node2D
+@export var hop_bixby : Sprite2D
+@export var hop_liam : Sprite2D
+@export var storyboard : Sprite2D
+@export var tint : ColorRect
+@export var transform_keys : Sprite2D
 @export var flash : ColorRect
+@export var land_sfx_player : AudioStreamPlayer
 @export var slap_sfx_player : AudioStreamPlayer
 @export var growl_sfx_player : AudioStreamPlayer
 @export var gulp_sfx_player : AudioStreamPlayer
@@ -18,75 +36,56 @@ extends State
 
 @onready var state_machine = get_parent()
 
-const SWALLOW_TEXTURE := preload("res://Assets/Characters/Bixby/bixby_swallow_draft.png")
-# bixby_swallow_draft.png is 8 texels taller than bixby.png, all of it above his feet.
-const SWALLOW_OFFSET := Vector2(0, -4)
+#SET DOWN
+const SET_DOWN_SHAKE_STRENGTH := 6.0
+const SET_DOWN_SHAKE_STEPS := 4
+const SET_DOWN_SHAKE_STEP_TIME := 0.03
+const BEAT_BEFORE_FLOP := 0.25
+const FLOP_CHEER := 1.0
+const BEAT_AFTER_FLOP := 0.5
 
-#CARRY IN
-# The palanquin comes down from above the top of the screen to where the scene places it.
-const CARRY_IN_RISE := 760.0
-const CARRY_IN_TIME := 2.6
-# The carriers' steps bob it by a texel.
-const CARRY_STEP_TIME := 0.2
-const CARRY_STEP_PX := 3.0
-const BEAT_AFTER_CARRY_IN := 0.4
-
-#SLAP
-const SLAP_REACH := Vector2(27, -6)
-const SLAP_WIND_UP_TIME := 0.12
-const SLAP_RETURN_TIME := 0.2
-const SMACK_POP_SCALE := 1.2
-const SMACK_POP_TIME := 0.07
-const SMACK_HOLD := 0.35
-const SMACK_FADE_TIME := 0.2
-const SMACK_TILT_DEGREES := 10.0
-const SMACK_CHEER := 0.6
-const FLINCH_PX := 6.0
-const FLINCH_STEPS := 5
-const FLINCH_STEP_TIME := 0.03
-const BEAT_AFTER_SLAP := 0.35
-
-#GROWL
-const GROWL_TIME := 0.9
-const GROWL_TINT := Color(1.35, 0.8, 0.75)
-const TREMBLE_PX := 3.0
-const TREMBLE_STEP_TIME := 0.04
-
-#SWALLOW
-# Normal Bixby's middle mouth on bixby.png, in px from his feet.
-const BIXBY_MOUTH := Vector2(0, -132)
-const SWALLOW_TIME := 0.4
-const SWALLOWED_SCALE := 0.6
-const GULP_HOP_PX := 9.0
-const GULP_HOP_TIME := 0.08
-const GULP_CHEER := 1.0
-const BEAT_AFTER_SWALLOW := 0.5
+#STORYBOARD (seconds each frame holds)
+const LANDING_SHAKE_STRENGTH := 4.0
+const BEAT_AFTER_HOP := 0.3
+const WIND_UP_HOLD := 0.45
+const SMACK_HOLD := 0.55
+const LIKES_IT_HOLD := 0.3
+const FED_UP_HOLD := 0.5
+const LUNGE_HOLD := 0.4
+const CHOMP_HOLD := 0.6
+const GULP_HOLD := 0.5
+# On SMACK and CHOMP.
+const HIT_SHAKE_PX := 6.0
+const HIT_SCREEN_SHAKE := 8.0
+const HIT_SHAKE_STEPS := 5
+const HIT_SHAKE_STEP_TIME := 0.03
+const SMACK_CHEER := 0.8
+const CHOMP_CHEER := 1.2
 
 #TRANSFORM
-const GLOW_COLOR := Color(2.6, 1.5, 0.9)
-const GLOW_PULSES := 4
-const GLOW_PULSE_TIME := 0.28
-const FLASH_IN_TIME := 0.12
-const FLASH_HOLD := 0.1
-const FLASH_OUT_TIME := 0.6
-const ROAR_SCREEN_SHAKE := 18.0
-const ROAR_SPRITE_SHAKE := 4.0
-const ROAR_SHAKE_STEPS := 14
+const GLOW_HOLD := 0.7
+const SWELL_HOLD := 0.5
+const FLASH_FRAME_HOLD := 0.35
+const FLASH_IN_TIME := 0.08
+const FLASH_OUT_TIME := 0.5
+const ROAR_SCREEN_SHAKE := 16.0
 const ROAR_SHAKE_STEP_TIME := 0.04
-const ROAR_CHEER := 2.0
-const BEAT_AFTER_ROAR := 0.6
+const ROAR_CHEER := 2.5
+const THRONE_FADE_TIME := 0.8
 
-var entrance_stop := Vector2.ZERO
-var liam_seat := Vector2.ZERO
-var bixby_seat := Vector2.ZERO
-var smack_tween: Tween
+var carrier_rests := {}
+var bixby_shadow: Sprite2D
+var liam_shadow: Sprite2D
 
 
 func Enter() -> void:
-	entrance_stop = entrance.position
-	liam_seat = liam.position
-	bixby_seat = bixby.position
-	smack_label.pivot_offset = smack_label.size / 2.0
+	for spec in LiamEntranceLayout.MARCH_SHADOWS:
+		_add_shadow(march_shadows, spec[0], spec[1])
+	_add_shadow(set_down_shadows, LiamEntranceLayout.SET_DOWN_SHADOW[0], LiamEntranceLayout.SET_DOWN_SHADOW[1])
+	bixby_shadow = _add_shadow(downstage, LiamEntranceLayout.BIXBY_SHADOW[0], LiamEntranceLayout.BIXBY_SHADOW[1])
+	liam_shadow = _add_shadow(downstage, LiamEntranceLayout.LIAM_SHADOW[0], LiamEntranceLayout.LIAM_SHADOW[1])
+	tint.color = Color(LiamEntranceLayout.FLASH_COLOR, 0.0)
+	flash.color = Color(LiamEntranceLayout.FLASH_COLOR, 0.0)
 	_play()
 
 
@@ -95,121 +94,182 @@ func _play() -> void:
 	state_machine.show_pre_fight_dialogue(self)
 
 
+# Behind everything else on `parent`.
+func _add_shadow(parent: Node2D, centre: Vector2, radii: Vector2) -> Sprite2D:
+	var shadow := LiamEntranceLayout.floor_shadow(radii)
+	shadow.position = centre
+	parent.add_child(shadow)
+	parent.move_child(shadow, 0)
+	return shadow
+
+
+# The procession marches in from the top of the screen and sets the throne down, and the carriers flop.
 func carry_in() -> void:
-	var from := entrance_stop - Vector2(0, CARRY_IN_RISE)
-	entrance.position = from
-	entrance.show()
-	get_tree().call_group("arena_crowd", "cheer", CARRY_IN_TIME)
-	var tween := create_tween()
-	tween.tween_method(_carry.bind(from), 0.0, 1.0, CARRY_IN_TIME)
-	await tween.finished
-	await _pause(BEAT_AFTER_CARRY_IN)
+	for carrier_name in LiamEntranceLayout.CARRIERS:
+		carrier_rests[carrier_name] = marcher.get_node(NodePath(carrier_name)).position
+	var start := Vector2(0, -LiamEntranceLayout.MARCH_RISE)
+	marcher.position = start
+	procession.show()
+	get_tree().call_group("arena_crowd", "cheer", LiamEntranceLayout.MARCH_TIME)
+	var march := create_tween()
+	march.tween_method(_march.bind(start), 0.0, 1.0, LiamEntranceLayout.MARCH_TIME)
+	await march.finished
+
+	land_sfx_player.play()
+	body.shake_screen(SET_DOWN_SHAKE_STRENGTH, SET_DOWN_SHAKE_STEPS, SET_DOWN_SHAKE_STEP_TIME)
+	march_shadows.hide()
+	set_down_shadows.show()
+	await _pause(BEAT_BEFORE_FLOP)
+
+	var flop := create_tween().set_parallel()
+	for carrier_name in LiamEntranceLayout.CARRIERS:
+		var carrier: Sprite2D = marcher.get_node(NodePath(carrier_name))
+		var spec: Dictionary = LiamEntranceLayout.CARRIERS[carrier_name]
+		carrier.texture = CARRIERS_TEXTURE
+		carrier.frame = spec.frame
+		flop.tween_method(_flop.bind(carrier, carrier.position, spec.flop, deg_to_rad(spec.turn)), 0.0, 1.0, LiamEntranceLayout.FLOP_TIME)
+	await flop.finished
+	for carrier_name in LiamEntranceLayout.CARRIERS:
+		var spec: Dictionary = LiamEntranceLayout.CARRIERS[carrier_name]
+		_add_shadow(set_down_shadows, spec.shadow, LiamEntranceLayout.FLOPPED_SHADOW_RADII)
+		var sweat := LiamEntranceLayout.sweat_drop()
+		sweat.position = spec.sweat
+		marcher.add_child(sweat)
+	get_tree().call_group("arena_crowd", "cheer", FLOP_CHEER)
+	await _pause(BEAT_AFTER_FLOP)
 
 
-func _carry(weight: float, from: Vector2) -> void:
-	var travelled := 1.0 - (1.0 - weight) * (1.0 - weight)
-	var stepping := weight < 1.0 and int(weight * CARRY_IN_TIME / CARRY_STEP_TIME) % 2 == 1
-	entrance.position = (from.lerp(entrance_stop, travelled) - Vector2(0, CARRY_STEP_PX if stepping else 0.0)).round()
+func _march(weight: float, start: Vector2) -> void:
+	marcher.position = start.lerp(Vector2.ZERO, weight).round()
+	var step := int(weight * LiamEntranceLayout.MARCH_TIME / LiamEntranceLayout.WALK_FRAME_TIME) % LiamEntranceLayout.WALK_FRAMES
+	walking_carrier.frame = step
+	var bob := LiamEntranceLayout.MARCH_BOB_PX if step % 2 == 0 and weight < 1.0 else 0.0
+	for carrier_name in carrier_rests:
+		var carrier: Sprite2D = marcher.get_node(NodePath(carrier_name))
+		if carrier != walking_carrier:
+			carrier.position = carrier_rests[carrier_name] + Vector2(0, bob)
+
+
+func _flop(weight: float, carrier: Sprite2D, from: Vector2, to: Vector2, turn: float) -> void:
+	carrier.position = (from.lerp(to, weight) - Vector2(0, LiamEntranceLayout.FLOP_HOP * 4.0 * weight * (1.0 - weight))).round()
+	carrier.rotation = turn * weight
+
+
+# Liam and Bixby jump down off the throne to stand in front of it.
+func liam_and_bixby_step_down() -> void:
+	var seat := downstage.to_local(procession.to_global(LiamEntranceLayout.SEAT))
+	var cushion := downstage.to_local(procession.to_global(LiamEntranceLayout.CUSHION))
+	seated_liam.hide()
+	throne_bixby.hide()
+	bixby_shadow.hide()
+	liam_shadow.hide()
+	hop_liam.position = seat
+	hop_bixby.position = cushion
+	downstage.show()
+	var hop := create_tween().set_parallel()
+	hop.tween_method(_hop.bind(hop_liam, seat, LiamEntranceLayout.LIAM_FEET), 0.0, 1.0, LiamEntranceLayout.HOP_TIME)
+	hop.tween_method(_hop.bind(hop_bixby, cushion, Vector2.ZERO), 0.0, 1.0, LiamEntranceLayout.HOP_TIME)
+	await hop.finished
+	bixby_shadow.show()
+	liam_shadow.show()
+	body.shake_screen(LANDING_SHAKE_STRENGTH, HIT_SHAKE_STEPS, HIT_SHAKE_STEP_TIME)
+	await _pause(BEAT_AFTER_HOP)
+
+
+func _hop(weight: float, node: Node2D, from: Vector2, to: Vector2) -> void:
+	node.position = (from.lerp(to, weight) - Vector2(0, LiamEntranceLayout.HOP_HEIGHT * 4.0 * weight * (1.0 - weight))).round()
 
 
 func liam_slaps_bixby() -> void:
-	var tween := create_tween()
-	tween.tween_method(_move.bind(liam, liam_seat, liam_seat + SLAP_REACH), 0.0, 1.0, SLAP_WIND_UP_TIME).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
-	tween.tween_callback(_smack)
-	tween.tween_method(_move.bind(liam, liam_seat + SLAP_REACH, liam_seat), 0.0, 1.0, SLAP_RETURN_TIME).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	await tween.finished
-	await _pause(BEAT_AFTER_SLAP)
-
-
-func _smack() -> void:
+	_show_storyboard(SLAP_KEYS, 0)
+	await _pause(WIND_UP_HOLD)
+	_show_storyboard(SLAP_KEYS, 1)
 	slap_sfx_player.play()
+	_hit_shake()
 	get_tree().call_group("arena_crowd", "cheer", SMACK_CHEER)
-	_shake(bixby, bixby_seat, FLINCH_PX, FLINCH_STEPS, FLINCH_STEP_TIME)
-
-	if smack_tween:
-		smack_tween.kill()
-	smack_label.show()
-	smack_label.modulate.a = 1.0
-	smack_label.scale = Vector2.ONE * 0.4
-	smack_label.rotation = deg_to_rad(randf_range(-SMACK_TILT_DEGREES, SMACK_TILT_DEGREES))
-	smack_tween = smack_label.create_tween()
-	smack_tween.tween_property(smack_label, "scale", Vector2.ONE * SMACK_POP_SCALE, SMACK_POP_TIME)
-	smack_tween.tween_property(smack_label, "scale", Vector2.ONE, SMACK_POP_TIME)
-	smack_tween.tween_interval(SMACK_HOLD)
-	smack_tween.tween_property(smack_label, "modulate:a", 0.0, SMACK_FADE_TIME)
-	smack_tween.tween_callback(smack_label.hide)
+	await _pause(SMACK_HOLD)
+	# "He likes it!", while Bixby glares.
+	_show_storyboard(SLAP_KEYS, 2)
+	await _pause(LIKES_IT_HOLD)
 
 
 func bixby_growls() -> void:
+	_show_storyboard(FED_UP, 0)
 	growl_sfx_player.play()
-	_shake(bixby, bixby_seat, TREMBLE_PX, int(GROWL_TIME / TREMBLE_STEP_TIME), TREMBLE_STEP_TIME)
-	var tween := create_tween()
-	tween.tween_property(bixby, "modulate", GROWL_TINT, GROWL_TIME * 0.3)
-	tween.tween_interval(GROWL_TIME * 0.4)
-	tween.tween_property(bixby, "modulate", Color.WHITE, GROWL_TIME * 0.3)
-	await tween.finished
+	await _pause(FED_UP_HOLD)
 
 
 func bixby_swallows_liam() -> void:
-	var mouth := bixby_seat + BIXBY_MOUTH
-	var tween := create_tween().set_parallel()
-	tween.tween_method(_move.bind(liam, liam_seat, mouth), 0.0, 1.0, SWALLOW_TIME).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK)
-	tween.tween_property(liam, "scale", Vector2.ONE * SWALLOWED_SCALE, SWALLOW_TIME).set_ease(Tween.EASE_IN)
-	await tween.finished
-
-	liam.hide()
-	bixby.texture = SWALLOW_TEXTURE
-	bixby.offset += SWALLOW_OFFSET
+	_show_storyboard(SWALLOW_KEYS, 0)
+	await _pause(LUNGE_HOLD)
+	_show_storyboard(SWALLOW_KEYS, 1)
+	liam_shadow.hide()
 	gulp_sfx_player.play()
-	get_tree().call_group("arena_crowd", "cheer", GULP_CHEER)
-	var gulp := create_tween()
-	gulp.tween_callback(func() -> void: bixby.position = bixby_seat - Vector2(0, GULP_HOP_PX))
-	gulp.tween_interval(GULP_HOP_TIME)
-	gulp.tween_callback(func() -> void: bixby.position = bixby_seat)
-	await gulp.finished
-	await _pause(BEAT_AFTER_SWALLOW)
+	_hit_shake()
+	get_tree().call_group("arena_crowd", "cheer", CHOMP_CHEER)
+	await _pause(CHOMP_HOLD)
+	_show_storyboard(SWALLOW_KEYS, 2)
+	await _pause(GULP_HOLD)
 
 
+# Bixby glows and swells into the beast's silhouette, the screen flashes, and the beast stands in his place
+# and roars while the throne fades away.
 func bixby_transforms() -> void:
+	storyboard.hide()
+	transform_keys.position = downstage.global_position + LiamEntranceLayout.TRANSFORM_CORNER
+	transform_keys.frame = 0
+	transform_keys.show()
 	glow_sfx_player.play()
-	_shake(bixby, bixby_seat, TREMBLE_PX, int(GLOW_PULSES * GLOW_PULSE_TIME / TREMBLE_STEP_TIME), TREMBLE_STEP_TIME)
-	var glow := create_tween()
-	for i in GLOW_PULSES:
-		glow.tween_property(bixby, "modulate", GLOW_COLOR, GLOW_PULSE_TIME / 2.0)
-		glow.tween_property(bixby, "modulate", Color.WHITE, GLOW_PULSE_TIME / 2.0)
-	await glow.finished
+	await _pause(GLOW_HOLD)
+	transform_keys.frame = 1
+	await _pause(SWELL_HOLD)
+	transform_keys.frame = 2
+	tint.color.a = LiamEntranceLayout.FLASH_FRAME_TINT
+	await _pause(FLASH_FRAME_HOLD)
 
 	var flash_in := create_tween()
 	flash_in.tween_property(flash, "color:a", 1.0, FLASH_IN_TIME)
 	await flash_in.finished
-	entrance.hide()
-	body.appear(entrance.to_global(bixby_seat))
-	await _pause(FLASH_HOLD)
+	transform_keys.hide()
+	tint.color.a = 0.0
+	downstage.hide()
+	body.appear(downstage.global_position)
+	body.play_anim(&"roar")
+	create_tween().tween_property(flash, "color:a", 0.0, FLASH_OUT_TIME)
+	var fade := create_tween()
+	fade.tween_property(procession, "modulate:a", 0.0, THRONE_FADE_TIME)
+	fade.tween_callback(procession.hide)
 
-	var flash_out := create_tween()
-	flash_out.tween_property(flash, "color:a", 0.0, FLASH_OUT_TIME)
+	# The roar itself starts after the coil frame.
+	var coil := BixbyBeastArtLayout.time_to_step(&"roar", 1)
+	await _pause(coil)
 	roar_sfx_player.play()
-	body.play_anim(&"roar", &"hover")
-	body.shake_screen(ROAR_SCREEN_SHAKE, ROAR_SHAKE_STEPS, ROAR_SHAKE_STEP_TIME)
-	body.shake_sprite(ROAR_SPRITE_SHAKE, ROAR_SHAKE_STEPS, ROAR_SHAKE_STEP_TIME)
+	var roar_frames: int = BixbyBeastArtLayout.ANIMS[&"roar"].frames.size()
+	var roar_time := BixbyBeastArtLayout.time_to_step(&"roar", roar_frames) - coil
+	body.shake_screen(ROAR_SCREEN_SHAKE, roundi(roar_time / ROAR_SHAKE_STEP_TIME), ROAR_SHAKE_STEP_TIME)
 	get_tree().call_group("arena_crowd", "cheer", ROAR_CHEER)
-	await flash_out.finished
-	await _pause(BEAT_AFTER_ROAR)
-	body.play_anim(&"hover")
+	if not body.anim_done:
+		await body.anim_finished
 
 
-func _move(weight: float, node: Node2D, from: Vector2, to: Vector2) -> void:
-	node.position = from.lerp(to, weight).round()
+func _show_storyboard(sheet: Texture2D, frame: int) -> void:
+	hop_liam.hide()
+	hop_bixby.hide()
+	storyboard.frame = 0
+	storyboard.texture = sheet
+	storyboard.hframes = roundi(sheet.get_width() / float(LiamEntranceLayout.STORYBOARD_FRAME_WIDTH))
+	storyboard.frame = frame
+	storyboard.show()
 
 
-# Whole-pixel jolts around `rest`.
-func _shake(node: Node2D, rest: Vector2, strength: float, steps: int, step_time: float) -> void:
-	var tween := node.create_tween()
-	for i in steps:
-		var offset := Vector2(randf_range(-strength, strength), randf_range(-strength, strength)).round()
-		tween.tween_callback(func() -> void: node.position = rest + offset)
-		tween.tween_interval(step_time)
-	tween.tween_callback(func() -> void: node.position = rest)
+func _hit_shake() -> void:
+	body.shake_screen(HIT_SCREEN_SHAKE, HIT_SHAKE_STEPS, HIT_SHAKE_STEP_TIME)
+	var tween := storyboard.create_tween()
+	for i in HIT_SHAKE_STEPS:
+		var offset := Vector2(randf_range(-HIT_SHAKE_PX, HIT_SHAKE_PX), randf_range(-HIT_SHAKE_PX, HIT_SHAKE_PX)).round()
+		tween.tween_callback(func() -> void: storyboard.position = LiamEntranceLayout.STORYBOARD_CENTRE + offset)
+		tween.tween_interval(HIT_SHAKE_STEP_TIME)
+	tween.tween_callback(func() -> void: storyboard.position = LiamEntranceLayout.STORYBOARD_CENTRE)
 
 
 func _pause(seconds: float) -> void:

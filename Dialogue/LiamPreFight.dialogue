@@ -5,6 +5,7 @@
 Liam: Well, well! Welcome to my arena, newcomer.
 Liam: Nobody gets this far by accident. Congratulations, truly.
 Liam: Shame it ends here. Bixby will make quick work of you.
+do liam_and_bixby_step_down()
 do liam_slaps_bixby()
 Liam: Ha! Don't worry, he LOVES it!
 Liam: Come on boy, get 'em!

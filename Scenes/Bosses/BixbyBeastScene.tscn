@@ -5,7 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://ddmklsktxjcys" path="res://Assets/Characters/Bixby/bixby_beast_shadow.png" id="3_shadow"]
 [ext_resource type="Texture2D" uid="uid://b12yg630yepp2" path="res://Assets/Characters/Bixby/bixby.png" id="4_bixby"]
 [ext_resource type="Texture2D" uid="uid://cc6tw6pdj7f20" path="res://Assets/Characters/Liam/liam.png" id="5_liam"]
-[ext_resource type="Theme" uid="uid://dnd78vy0t1wm3" path="res://Assets/UI/ui_theme.tres" id="6_theme"]
+[ext_resource type="Texture2D" uid="uid://c8xmkxet23p8a" path="res://Assets/Characters/Liam/Entrance/liam_throne.png" id="6_throne"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastStateMachine.gd" id="7_state_machine"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastIntro.gd" id="8_intro"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastHover.gd" id="9_hover"]
@@ -15,9 +15,14 @@
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastTakeoff.gd" id="13_takeoff"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastIdle.gd" id="14_idle"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastDefeated.gd" id="15_defeated"]
+[ext_resource type="Texture2D" uid="uid://d3f1rlah14g7o" path="res://Assets/Characters/Liam/Entrance/liam_carriers.png" id="16_carriers"]
+[ext_resource type="Texture2D" uid="uid://cor4nb5lpd7u0" path="res://Assets/Characters/Liam/Entrance/liam_carrier_walk.png" id="17_carrier_walk"]
+[ext_resource type="Texture2D" uid="uid://bygxkir0f63ud" path="res://Assets/Characters/Liam/Entrance/liam_throne_seated.png" id="18_seated_liam"]
+[ext_resource type="Texture2D" uid="uid://dkkm0ejif7wws" path="res://Assets/Characters/Liam/Entrance/liam_slap_keys.png" id="19_slap_keys"]
+[ext_resource type="Texture2D" uid="uid://uo4heleiv15d" path="res://Assets/Characters/Liam/Entrance/bixby_transform_keys.png" id="20_transform_keys"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_beast_hurtbox"]
-size = Vector2(312, 228)
+size = Vector2(534, 282)
 
 [node name="BixbyBeastScene" type="Node2D"]
 y_sort_enabled = true
@@ -28,114 +33,99 @@ position = Vector2(0, 101)
 [node name="Shadow" type="Sprite2D" parent="ShadowLayer"]
 visible = false
 modulate = Color(1, 1, 1, 0.38)
-position = Vector2(1060, 499)
+position = Vector2(882, 669)
 scale = Vector2(3, 3)
 texture = ExtResource("3_shadow")
 offset = Vector2(0, -1)
 hframes = 4
 
-[node name="Entrance" type="Node2D" parent="."]
+[node name="Procession" type="Node2D" parent="."]
 visible = false
-position = Vector2(960, 600)
+position = Vector2(960, 470)
 
-[node name="BackRow" type="Node2D" parent="Entrance"]
+[node name="SetDownShadows" type="Node2D" parent="Procession"]
+visible = false
+
+[node name="Marcher" type="Node2D" parent="Procession"]
+
+[node name="MarchShadows" type="Node2D" parent="Procession/Marcher"]
+
+[node name="RearPole" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(-288, -372)
 scale = Vector2(3, 3)
+texture = ExtResource("6_throne")
+centered = false
+hframes = 2
+frame = 1
 
-[node name="BackPole" type="Polygon2D" parent="Entrance/BackRow"]
-color = Color(0.3, 0.19, 0.11, 1)
-polygon = PackedVector2Array(-100, -41, 100, -41, 100, -38, -100, -38)
-
-[node name="BackCarrierLeft" type="Polygon2D" parent="Entrance/BackRow"]
-position = Vector2(-86, -5)
-color = Color(0.3, 0.33, 0.42, 1)
-polygon = PackedVector2Array(-6, -32, 6, -32, 6, 0, -6, 0)
-
-[node name="Head" type="Polygon2D" parent="Entrance/BackRow/BackCarrierLeft"]
-color = Color(0.74, 0.56, 0.43, 1)
-polygon = PackedVector2Array(-4, -41, 4, -41, 4, -32, -4, -32)
-
-[node name="BackCarrierRight" type="Polygon2D" parent="Entrance/BackRow"]
-position = Vector2(86, -5)
-color = Color(0.3, 0.33, 0.42, 1)
-polygon = PackedVector2Array(-6, -32, 6, -32, 6, 0, -6, 0)
-
-[node name="Head" type="Polygon2D" parent="Entrance/BackRow/BackCarrierRight"]
-color = Color(0.74, 0.56, 0.43, 1)
-polygon = PackedVector2Array(-4, -41, 4, -41, 4, -32, -4, -32)
-
-[node name="Litter" type="Node2D" parent="Entrance"]
+[node name="RearLeft" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(-252, -39)
 scale = Vector2(3, 3)
+texture = ExtResource("16_carriers")
+hframes = 4
+frame = 2
 
-[node name="PlatformTrim" type="Polygon2D" parent="Entrance/Litter"]
-color = Color(0.8, 0.62, 0.2, 1)
-polygon = PackedVector2Array(-94, -46, 94, -46, 94, -35, -94, -35)
+[node name="RearRight" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(264, -39)
+scale = Vector2(3, 3)
+texture = ExtResource("16_carriers")
+hframes = 4
+frame = 3
 
-[node name="PlatformVelvet" type="Polygon2D" parent="Entrance/Litter"]
-color = Color(0.52, 0.09, 0.17, 1)
-polygon = PackedVector2Array(-91, -44, 91, -44, 91, -38, -91, -38)
+[node name="Throne" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(-288, -372)
+scale = Vector2(3, 3)
+texture = ExtResource("6_throne")
+centered = false
+hframes = 2
 
-[node name="ThroneTrim" type="Polygon2D" parent="Entrance/Litter"]
-color = Color(0.8, 0.62, 0.2, 1)
-polygon = PackedVector2Array(-78, -118, -2, -118, -2, -44, -78, -44)
+[node name="ThroneBixby" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(126, -153)
+scale = Vector2(3, 3)
+texture = ExtResource("4_bixby")
 
-[node name="ThroneVelvet" type="Polygon2D" parent="Entrance/Litter"]
-color = Color(0.52, 0.09, 0.17, 1)
-polygon = PackedVector2Array(-74, -114, -6, -114, -6, -44, -74, -44)
+[node name="SeatedLiam" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(-102, -156)
+scale = Vector2(3, 3)
+texture = ExtResource("18_seated_liam")
 
-[node name="Bixby" type="Sprite2D" parent="Entrance"]
-position = Vector2(100, -120)
+[node name="FrontLeft" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(-150, 3)
+scale = Vector2(3, 3)
+texture = ExtResource("17_carrier_walk")
+hframes = 4
+
+[node name="FrontRight" type="Sprite2D" parent="Procession/Marcher"]
+position = Vector2(114, 3)
+scale = Vector2(3, 3)
+texture = ExtResource("16_carriers")
+hframes = 4
+frame = 1
+
+[node name="Downstage" type="Node2D" parent="."]
+visible = false
+position = Vector2(882, 770)
+
+[node name="HopBixby" type="Sprite2D" parent="Downstage"]
 scale = Vector2(3, 3)
 texture = ExtResource("4_bixby")
 offset = Vector2(0, -32)
 
-[node name="Liam" type="Sprite2D" parent="Entrance"]
-position = Vector2(-120, -120)
+[node name="HopLiam" type="Sprite2D" parent="Downstage"]
+position = Vector2(162, 0)
 scale = Vector2(3, 3)
 texture = ExtResource("5_liam")
 offset = Vector2(0, -32)
 
-[node name="FrontRow" type="Node2D" parent="Entrance"]
-scale = Vector2(3, 3)
-
-[node name="FrontPole" type="Polygon2D" parent="Entrance/FrontRow"]
-color = Color(0.36, 0.23, 0.13, 1)
-polygon = PackedVector2Array(-102, -37, 102, -37, 102, -34, -102, -34)
-
-[node name="FrontCarrierLeft" type="Polygon2D" parent="Entrance/FrontRow"]
-position = Vector2(-80, 0)
-color = Color(0.24, 0.27, 0.35, 1)
-polygon = PackedVector2Array(-7, -31, 7, -31, 7, 0, -7, 0)
-
-[node name="Head" type="Polygon2D" parent="Entrance/FrontRow/FrontCarrierLeft"]
-color = Color(0.78, 0.6, 0.46, 1)
-polygon = PackedVector2Array(-5, -41, 5, -41, 5, -31, -5, -31)
-
-[node name="FrontCarrierRight" type="Polygon2D" parent="Entrance/FrontRow"]
-position = Vector2(80, 0)
-color = Color(0.24, 0.27, 0.35, 1)
-polygon = PackedVector2Array(-7, -31, 7, -31, 7, 0, -7, 0)
-
-[node name="Head" type="Polygon2D" parent="Entrance/FrontRow/FrontCarrierRight"]
-color = Color(0.78, 0.6, 0.46, 1)
-polygon = PackedVector2Array(-5, -41, 5, -41, 5, -31, -5, -31)
-
-[node name="SmackLabel" type="Label" parent="Entrance"]
+[node name="Storyboard" type="Sprite2D" parent="Downstage"]
 visible = false
-offset_left = -100.0
-offset_top = -365.0
-offset_right = 120.0
-offset_bottom = -295.0
-theme = ExtResource("6_theme")
-theme_override_colors/font_color = Color(1, 0.92, 0.35, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 10
-theme_override_font_sizes/font_size = 55
-text = "SMACK!"
-horizontal_alignment = 1
-vertical_alignment = 1
+position = Vector2(84, -144)
+scale = Vector2(3, 3)
+texture = ExtResource("19_slap_keys")
+hframes = 3
 
 [node name="BixbyBeastCharacterBody" type="CharacterBody2D" parent="." node_paths=PackedStringArray("shadow")]
-position = Vector2(1060, 600)
+position = Vector2(882, 770)
 collision_layer = 0
 collision_mask = 0
 script = ExtResource("1_body")
@@ -143,7 +133,6 @@ shadow = NodePath("../ShadowLayer/Shadow")
 
 [node name="Air" type="Node2D" parent="BixbyBeastCharacterBody"]
 visible = false
-position = Vector2(0, -120)
 
 [node name="Sprite2D" type="Sprite2D" parent="BixbyBeastCharacterBody/Air"]
 scale = Vector2(3, 3)
@@ -156,27 +145,13 @@ collision_layer = 0
 collision_mask = 2
 monitorable = false
 
-[node name="Hurtbox" type="Area2D" parent="BixbyBeastCharacterBody/Air" groups=["enemy"]]
+[node name="Hurtbox" type="Area2D" parent="BixbyBeastCharacterBody/Air" groups=["enemy", "boss_target"]]
 monitoring = false
 monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="BixbyBeastCharacterBody/Air/Hurtbox"]
-position = Vector2(0, -99)
+position = Vector2(3, -120)
 shape = SubResource("RectangleShape2D_beast_hurtbox")
-
-[node name="Dust" type="Node2D" parent="BixbyBeastCharacterBody"]
-
-[node name="NormalBixby" type="Sprite2D" parent="BixbyBeastCharacterBody"]
-visible = false
-scale = Vector2(3, 3)
-texture = ExtResource("4_bixby")
-offset = Vector2(0, -32)
-
-[node name="CoughedUpLiam" type="Sprite2D" parent="BixbyBeastCharacterBody"]
-visible = false
-scale = Vector2(3, 3)
-texture = ExtResource("5_liam")
-offset = Vector2(0, -32)
 
 [node name="StateManager" type="Node" parent="BixbyBeastCharacterBody" node_paths=PackedStringArray("initial_state", "BixbyBeastCharacterBody", "post_dialogue_pre_fight_timer", "recover_timer", "finisher_stagger_timer")]
 script = ExtResource("7_state_machine")
@@ -186,14 +161,24 @@ post_dialogue_pre_fight_timer = NodePath("../PostDialoguePreFightTimer")
 recover_timer = NodePath("../RecoverTimer")
 finisher_stagger_timer = NodePath("../FinisherStaggerTimer")
 
-[node name="Intro" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "entrance", "liam", "bixby", "smack_label", "flash", "slap_sfx_player", "growl_sfx_player", "gulp_sfx_player", "glow_sfx_player", "roar_sfx_player")]
+[node name="Intro" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "procession", "marcher", "march_shadows", "set_down_shadows", "walking_carrier", "throne_bixby", "seated_liam", "downstage", "hop_bixby", "hop_liam", "storyboard", "tint", "transform_keys", "flash", "land_sfx_player", "slap_sfx_player", "growl_sfx_player", "gulp_sfx_player", "glow_sfx_player", "roar_sfx_player")]
 script = ExtResource("8_intro")
 body = NodePath("../..")
-entrance = NodePath("../../../Entrance")
-liam = NodePath("../../../Entrance/Liam")
-bixby = NodePath("../../../Entrance/Bixby")
-smack_label = NodePath("../../../Entrance/SmackLabel")
+procession = NodePath("../../../Procession")
+marcher = NodePath("../../../Procession/Marcher")
+march_shadows = NodePath("../../../Procession/Marcher/MarchShadows")
+set_down_shadows = NodePath("../../../Procession/SetDownShadows")
+walking_carrier = NodePath("../../../Procession/Marcher/FrontLeft")
+throne_bixby = NodePath("../../../Procession/Marcher/ThroneBixby")
+seated_liam = NodePath("../../../Procession/Marcher/SeatedLiam")
+downstage = NodePath("../../../Downstage")
+hop_bixby = NodePath("../../../Downstage/HopBixby")
+hop_liam = NodePath("../../../Downstage/HopLiam")
+storyboard = NodePath("../../../Downstage/Storyboard")
+tint = NodePath("../../../FlashLayer/Tint")
+transform_keys = NodePath("../../../FlashLayer/TransformKeys")
 flash = NodePath("../../../FlashLayer/Flash")
+land_sfx_player = NodePath("../../LandSfxPlayer")
 slap_sfx_player = NodePath("../../SlapSfxPlayer")
 growl_sfx_player = NodePath("../../GrowlSfxPlayer")
 gulp_sfx_player = NodePath("../../GulpSfxPlayer")
@@ -230,13 +215,12 @@ wing_sfx_player = NodePath("../../WingSfxPlayer")
 script = ExtResource("14_idle")
 body = NodePath("../..")
 
-[node name="Defeated" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "normal_bixby", "liam")]
+[node name="Defeated" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body")]
 script = ExtResource("15_defeated")
 body = NodePath("../..")
-normal_bixby = NodePath("../../NormalBixby")
-liam = NodePath("../../CoughedUpLiam")
 
 [node name="PostDialoguePreFightTimer" type="Timer" parent="BixbyBeastCharacterBody"]
+wait_time = 0.3
 one_shot = true
 
 [node name="RecoverTimer" type="Timer" parent="BixbyBeastCharacterBody"]
@@ -283,6 +267,23 @@ pitch_scale = 0.7
 [node name="FlashLayer" type="CanvasLayer" parent="."]
 layer = 10
 
+[node name="Tint" type="ColorRect" parent="FlashLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.98, 0.84, 0)
+
+[node name="TransformKeys" type="Sprite2D" parent="FlashLayer"]
+visible = false
+position = Vector2(402, 14)
+scale = Vector2(3, 3)
+texture = ExtResource("20_transform_keys")
+centered = false
+hframes = 3
+
 [node name="Flash" type="ColorRect" parent="FlashLayer"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -290,7 +291,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(1, 1, 1, 0)
+color = Color(1, 0.98, 0.84, 0)
 
 [connection signal="timeout" from="BixbyBeastCharacterBody/PostDialoguePreFightTimer" to="BixbyBeastCharacterBody/StateManager" method="_on_post_dialogue_pre_fight_timer_timeout"]
 [connection signal="timeout" from="BixbyBeastCharacterBody/RecoverTimer" to="BixbyBeastCharacterBody/StateManager/Recover" method="_on_recover_timer_timeout"]

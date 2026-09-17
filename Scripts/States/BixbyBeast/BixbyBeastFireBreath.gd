@@ -13,10 +13,19 @@ var elapsed := 0.0
 # Where his feet breathe from.
 var aim := Vector2.ZERO
 
+# The fire trail's slots run along the ground-contact line fire_trail_spacing apart, counted from slot 0
+# under the middle of where the full stream first touched down. Slot 0 is never lit, so every trail has an
+# opening in it.
+var trail_started := false
+var trail_origin_x := 0.0
+var trail_slots := {}
+var trail_patches := 0
+
 
 func Enter() -> void:
 	body.play_anim(&"fly")
 	_start(Phase.APPROACH)
+	trail_started = false
 
 
 func Exit() -> void:
@@ -71,8 +80,31 @@ func _breathe(player: Node2D, delta: float) -> void:
 		if body.fire_touches(player.hurtBox):
 			player.take_damage()
 
+	# Only the full stream reaches the floor.
+	if body.current_anim == &"stream":
+		_lay_trail()
+
 	if elapsed >= state_machine.breath_time:
 		state_machine.attack_finished(self)
+
+
+# Lights every slot the stream's ground contact has reached that isn't lit yet, up to max_trail_patches.
+func _lay_trail() -> void:
+	var contact: Rect2 = body.fire_ground_contact()
+	if not trail_started:
+		trail_started = true
+		trail_origin_x = contact.get_center().x
+		trail_slots = {0: true}
+		trail_patches = 0
+	var spacing: float = state_machine.fire_trail_spacing
+	var first := ceili((contact.position.x - trail_origin_x) / spacing)
+	var last := floori((contact.end.x - trail_origin_x) / spacing)
+	for slot in range(first, last + 1):
+		if trail_slots.has(slot) or trail_patches >= state_machine.max_trail_patches:
+			continue
+		trail_slots[slot] = true
+		if state_machine.lay_fire_patch(Vector2(trail_origin_x + slot * spacing, contact.get_center().y), slot):
+			trail_patches += 1
 
 
 func _ground_under(feet: Vector2) -> Vector2:

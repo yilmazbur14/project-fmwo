@@ -1,27 +1,40 @@
 extends RefCounted
 
-# Every number that depends on how beast Bixby is drawn, so the combat set can drop in with only this
-# file changing. Points and boxes are in texels on a frame, origin top-left. BixbyBeastScript builds
-# the fire hitbox, the hurtbox and the shadow from these at runtime.
+# Every number that depends on how beast Bixby is drawn, so a redraw only needs this file. Points and
+# boxes are in texels on a frame, origin top-left. BixbyBeastScript builds the fire hitbox, the hurtbox and
+# the shadow from these at runtime.
 
 const SCALE := 3.0
 
-#HOVER (bixby_beast.png, 4 frames of 192x160)
+#SHEETS (strips of 192x160 frames, all drawn top-aligned around ANCHOR, with x=96 as the symmetry axis)
 const HOVER_SHEET := "res://Assets/Characters/Bixby/bixby_beast.png"
+const FLY_SHEET := "res://Assets/Characters/Bixby/bixby_beast_fly.png"
+const LAND_SHEET := "res://Assets/Characters/Bixby/bixby_beast_land.png"
+const RECOVER_SHEET := "res://Assets/Characters/Bixby/bixby_beast_recover.png"
+const HIT_SHEET := "res://Assets/Characters/Bixby/bixby_beast_hit.png"
+const TAKEOFF_SHEET := "res://Assets/Characters/Bixby/bixby_beast_takeoff.png"
+const ROAR_SHEET := "res://Assets/Characters/Bixby/bixby_beast_roar.png"
+const DEFEAT_SHEET := "res://Assets/Characters/Bixby/bixby_beast_defeat.png"
 const FRAME_SIZE := Vector2(192, 160)
-# His feet: where he stands once landed and what he hovers from. Every beast sheet is drawn top-aligned
-# with the hover frames around this point.
+# His feet: where he stands on the ground and what he hovers from.
 const ANCHOR := Vector2(96, 151)
-# The shadow is drawn this far below his feet while he hovers.
+# Hover, fly and fire breath are drawn this far above the floor point; everything else stands on it.
 const HOVER_HEIGHT := 40.0
-# What's drawn on the hover frames, and on the fire-breath frames with the stream at its longest.
-const HOVER_DRAWN := Rect2(4, 3, 184, 154)
+# What's drawn on any beast frame, and on the fire-breath frames with the stream at its longest.
+const BODY_DRAWN := Rect2(2, 2, 188, 156)
 const FIRE_DRAWN := Rect2(4, 3, 184, 250)
 
-#SHADOW (bixby_beast_shadow.png, 4 frames of 192x48, one per hover frame)
-const SHADOW_SHEET := "res://Assets/Characters/Bixby/bixby_beast_shadow.png"
+#SHADOWS (4 frames of 192x48 each, black, centred on the floor point)
+# bixby_beast_shadow.png is cast from the air, one frame per hover frame. bixby_beast_shadow_ground.png
+# is at his feet: 0 crouching or standing, 1 exhausted with the wings flat, 2 normal Bixby, 3 Bixby with Liam.
+const SHADOW_SHEETS := [
+	"res://Assets/Characters/Bixby/bixby_beast_shadow.png",
+	"res://Assets/Characters/Bixby/bixby_beast_shadow_ground.png",
+]
+enum Shadow { AIR, GROUND }
 const SHADOW_FRAME_SIZE := Vector2(192, 48)
 const SHADOW_CENTRE := Vector2(96, 25)
+# The air shadow's drawn extent, the wider of the two.
 const SHADOW_DRAWN := Rect2(10, 5, 172, 33)
 const SHADOW_ALPHA := 0.38
 
@@ -72,57 +85,63 @@ const FIRE_OUTLINES := {
 	],
 }
 
+# Where the full stream (frame 2) hits the ground: its flame tongues. The fire trail is laid along its
+# middle row.
+const FIRE_GROUND_CONTACT := Rect2(53, 240, 90, 12)
+
 #RECOVERY
-# What the player can punch while he's down: his torso and legs, out to the side heads' jaws.
-const RECOVER_BODY_BOX := Rect2(44, 80, 104, 76)
+# What the player can punch while he's down: his grounded body on the recover frames, side heads and
+# draped wings included, below the horns.
+const RECOVER_BODY_BOX := Rect2(8, 64, 178, 94)
 # Where the finisher's daze stars circle, between his horns.
 const DAZE_ANCHOR := Vector2(96, 30)
+# The defeat frame on which the coughed-up Liam lands.
+const DEFEAT_LIAM_LANDS_FRAME := 8
 
 #ANIMATIONS
-# name: sheet, its frame size, the frames in order (empty for every frame on the sheet), seconds per
-# frame, whether it loops, and the shadow frame under each frame (the last one repeats).
-# The placeholders reuse the hover and fire-breath sheets, and the states add tweens to them (a descent,
-# a darker slow bob, a flinch). Set a USE_FINAL entry once its sheet is approved and imported to play
-# the drawn animation instead and drop the placeholder tweens.
-const PLACEHOLDER_ANIMS := {
-	&"hover": {sheet = HOVER_SHEET, frame_size = FRAME_SIZE, frames = [0, 1, 2, 3], frame_time = 0.12, loop = true, shadow = [0, 1, 2, 3]},
-	&"fly": {sheet = HOVER_SHEET, frame_size = FRAME_SIZE, frames = [0, 1, 2, 3], frame_time = 0.08, loop = true, shadow = [0, 1, 2, 3]},
-	&"windup": {sheet = FIRE_SHEET, frame_size = FIRE_FRAME_SIZE, frames = [0], frame_time = 1.0, loop = true, shadow = [2]},
-	&"burst": {sheet = FIRE_SHEET, frame_size = FIRE_FRAME_SIZE, frames = [1], frame_time = 1.0, loop = true, shadow = [2]},
-	&"stream": {sheet = FIRE_SHEET, frame_size = FIRE_FRAME_SIZE, frames = [2], frame_time = 1.0, loop = true, shadow = [2]},
-	&"land": {sheet = HOVER_SHEET, frame_size = FRAME_SIZE, frames = [0, 1, 2, 3], frame_time = 0.06, loop = true, shadow = [0, 1, 2, 3]},
-	&"recover": {sheet = HOVER_SHEET, frame_size = FRAME_SIZE, frames = [0], frame_time = 1.0, loop = true, shadow = [0]},
-	&"hit": {sheet = HOVER_SHEET, frame_size = FRAME_SIZE, frames = [2], frame_time = 0.2, loop = false, shadow = [2]},
-	&"takeoff": {sheet = HOVER_SHEET, frame_size = FRAME_SIZE, frames = [0, 1, 2, 3], frame_time = 0.06, loop = true, shadow = [0, 1, 2, 3]},
-	&"roar": {sheet = HOVER_SHEET, frame_size = FRAME_SIZE, frames = [0, 1, 2, 3], frame_time = 0.05, loop = true, shadow = [0, 1, 2, 3]},
-}
-const FINAL_ANIMS := {
-	&"fly": {sheet = "res://Assets/Characters/Bixby/bixby_beast_fly.png", frame_size = FRAME_SIZE, frames = [], frame_time = 0.1, loop = true, shadow = [1]},
-	&"land": {sheet = "res://Assets/Characters/Bixby/bixby_beast_land.png", frame_size = FRAME_SIZE, frames = [0, 1, 2], frame_time = 0.17, loop = false, shadow = [1, 0, 0]},
-	&"recover": {sheet = "res://Assets/Characters/Bixby/bixby_beast_recover.png", frame_size = FRAME_SIZE, frames = [0, 1, 2, 3], frame_time = 0.25, loop = true, shadow = [0]},
-	&"hit": {sheet = "res://Assets/Characters/Bixby/bixby_beast_hit.png", frame_size = FRAME_SIZE, frames = [0, 1], frame_time = 0.1, loop = false, shadow = [0]},
-	&"takeoff": {sheet = "res://Assets/Characters/Bixby/bixby_beast_takeoff.png", frame_size = FRAME_SIZE, frames = [0, 1, 2], frame_time = 0.2, loop = false, shadow = [0, 1, 2]},
-	# Ends on normal Bixby with Liam coughed up beside him.
-	&"defeat": {sheet = "res://Assets/Characters/Bixby/bixby_beast_defeat.png", frame_size = FRAME_SIZE, frames = [], frame_time = 0.1, loop = false, shadow = [0]},
-	&"roar": {sheet = "res://Assets/Characters/Bixby/bixby_beast_roar.png", frame_size = FRAME_SIZE, frames = [0, 1, 2], frame_time = 0.15, loop = false, shadow = [1]},
-}
-const USE_FINAL := {
-	&"fly": false,
-	&"land": false,
-	&"recover": false,
-	&"hit": false,
-	&"takeoff": false,
-	&"defeat": false,
-	&"roar": false,
+# name: sheet, frames in order, seconds on each (the last value repeats), whether it loops, and the shadow
+# under each frame as [Shadow sheet, frame] (the last one repeats). Optional: frame_size (default
+# FRAME_SIZE), and flips for animations drawn facing right that are mirrored while he flies left.
+const ANIMS := {
+	&"hover": {sheet = HOVER_SHEET, frames = [0, 1, 2, 3], times = [0.12], loop = true,
+		shadows = [[Shadow.AIR, 0], [Shadow.AIR, 1], [Shadow.AIR, 2], [Shadow.AIR, 3]]},
+	# 0 wings up, 1 downstroke, 2 recovering.
+	&"fly": {sheet = FLY_SHEET, frames = [0, 1, 2], times = [0.09, 0.07, 0.08], loop = true, flips = true,
+		shadows = [[Shadow.AIR, 0], [Shadow.AIR, 2], [Shadow.AIR, 3]]},
+	&"windup": {sheet = FIRE_SHEET, frame_size = FIRE_FRAME_SIZE, frames = [0], times = [1.0], loop = true,
+		shadows = [[Shadow.AIR, 2]]},
+	&"burst": {sheet = FIRE_SHEET, frame_size = FIRE_FRAME_SIZE, frames = [1], times = [1.0], loop = true,
+		shadows = [[Shadow.AIR, 2]]},
+	&"stream": {sheet = FIRE_SHEET, frame_size = FIRE_FRAME_SIZE, frames = [2], times = [1.0], loop = true,
+		shadows = [[Shadow.AIR, 2]]},
+	# 0 wings flared while he comes down (the air shadow stays for his feet to land on), 1 the impact, 2 the heavy crouch.
+	&"land": {sheet = LAND_SHEET, frames = [0, 1, 2], times = [0.2, 0.14, 0.35], loop = false,
+		shadows = [[Shadow.AIR, 2], [Shadow.GROUND, 0]]},
+	&"recover": {sheet = RECOVER_SHEET, frames = [0, 1, 2, 3], times = [0.18, 0.14, 0.18, 0.16], loop = true,
+		shadows = [[Shadow.GROUND, 1]]},
+	&"hit": {sheet = HIT_SHEET, frames = [0, 1], times = [0.08, 0.14], loop = false,
+		shadows = [[Shadow.GROUND, 1]]},
+	# 0 crouch, 1 wing downbeat, still on the ground, 2 rising.
+	&"takeoff": {sheet = TAKEOFF_SHEET, frames = [0, 1, 2], times = [0.22, 0.12, 0.15], loop = false,
+		shadows = [[Shadow.GROUND, 0], [Shadow.GROUND, 0], [Shadow.AIR, 3]]},
+	# The coil, then the roar shaking between frames 1 and 2 for about a second. On the ground.
+	&"roar": {sheet = ROAR_SHEET, frames = [0, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2], times = [0.34, 0.07], loop = false,
+		shadows = [[Shadow.GROUND, 0]]},
+	# 0 the final blow, 1 collapse, 2 the glow dies, 3 smoke, 4 normal Bixby dizzy, 5 cough wind-up,
+	# 6 Liam shoots out, 7 tumbles, 8 lands, 9 the hold. Bixby and Liam are drawn in.
+	&"defeat": {sheet = DEFEAT_SHEET, frames = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], times = [0.1, 0.3, 0.16, 0.14, 0.6, 0.34, 0.12, 0.12, 0.4, 1.0], loop = false,
+		shadows = [[Shadow.GROUND, 0], [Shadow.GROUND, 1], [Shadow.GROUND, 1], [Shadow.GROUND, 1], [Shadow.GROUND, 2],
+			[Shadow.GROUND, 2], [Shadow.GROUND, 2], [Shadow.GROUND, 2], [Shadow.GROUND, 3]]},
 }
 
 
-static func uses_final(anim_name: StringName) -> bool:
-	return USE_FINAL.get(anim_name, false)
-
-
-static func anim(anim_name: StringName) -> Dictionary:
-	return FINAL_ANIMS[anim_name] if uses_final(anim_name) else PLACEHOLDER_ANIMS[anim_name]
+# Seconds from the start of an animation to the start of its frame at `step`.
+static func time_to_step(anim_name: StringName, step: int) -> float:
+	var times: Array = ANIMS[anim_name].times
+	var total := 0.0
+	for i in step:
+		total += times[mini(i, times.size() - 1)]
+	return total
 
 
 # Sprite offset, in texels, that puts ANCHOR on the sprite's origin for a sheet of this frame size.

@@ -11,10 +11,21 @@ extends Node
 @export var recover_timer: Timer
 @export var finisher_stagger_timer: Timer
 
+const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
+const FIRE_PATCH_SCENE := preload("res://Scenes/Bosses/BixbyFirePatchScene.tscn")
+const FirePatch := preload("res://Scripts/BixbyFirePatchScript.gd")
+
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/LiamPreFight.dialogue"
 const HAZARD_GROUP := "bixby_beast_hazard"
 # The inside edges of the ropes, as Mason's Carter call-in measures them.
 const ROPES := Rect2(113, 114, 1692, 853)
+# Where the centre of the player's body can go, inside the arena walls.
+const PLAYER_FLOOR := Rect2(117, 132, 1686, 816)
+# Half the player's collision box, and the margin past it that fire has to leave for a way through to count.
+const PLAYER_HALF_BODY := Vector2(12, 27)
+const FIRE_PASSAGE_MARGIN := 6.0
+# The grid the floor is checked on for places the fire would wall off.
+const FLOOR_CELL := 16.0
 
 # The fight's loop: hover and strafe, run the cycle's attacks with a short hover between them, land for
 # the punishable recovery, take off, repeat. Cycles take turns through this list, so every second cycle
@@ -46,9 +57,17 @@ const ATTACK_CYCLES := [["FireBreath"], ["FireBreath", "FireBreath"]]
 @export var breath_top_overshoot := 120.0
 # How far past a side of the screen his sprite may go to reach a player against a side rope.
 @export var breath_side_overshoot := 48.0
-@export var land_time := 0.5
 @export var recover_time := 3.5
-@export var takeoff_time := 0.6
+# How long he takes to rise to hover height, from the takeoff's rising frame.
+@export var takeoff_rise_time := 0.3
+# The fire trail the full stream leaves on the floor: patches that block the player but don't hurt. How
+# long each burns between catching and burning out, whose timing is drawn.
+@export var fire_trail_time := 6.0
+@export var fire_trail_spacing := 96.0
+@export var max_fire_patches := 14
+@export var max_trail_patches := 6
+# When he lands, fire this close to where he'll be punched burns out.
+@export var fire_landing_clearance := 220.0
 
 var player_defeated := false
 var cycles_started := 0
@@ -107,9 +126,10 @@ func _on_dialogue_ended(_dialogue: Object) -> void:
 	post_dialogue_pre_fight_timer.start()
 
 
+# The transformation leaves him standing after his roar: the fight starts with his takeoff.
 func _on_post_dialogue_pre_fight_timer_timeout() -> void:
 	BixbyBeastCharacterBody.start_music()
-	start_cycle()
+	on_child_transition(current_state, "Takeoff")
 
 
 func start_cycle() -> void:
@@ -159,6 +179,115 @@ func _on_finisher_stagger_timer_timeout() -> void:
 
 func get_player() -> Node2D:
 	return get_tree().current_scene.get_node_or_null("Arena/MainPlayer/CharacterBody2D")
+
+
+#FIRE TRAIL
+
+# Sets a patch of floor burning at `centre`, slot `trail_slot` of its trail, unless it's outside the ropes,
+# too much fire is already burning, or the patch would wall off part of the floor. Returns whether it was laid.
+func lay_fire_patch(centre: Vector2, trail_slot := 0) -> bool:
+	if not ROPES.has_point(centre):
+		return false
+	var active := fire_patches(false)
+	if active.size() >= max_fire_patches:
+		return false
+	var footprint := Rect2(centre.round() - FirePatch.SIZE / 2.0, FirePatch.SIZE)
+	var footprints: Array = active.map(func(patch: Node) -> Rect2: return patch.footprint())
+	footprints.append(footprint)
+	if not _floor_stays_connected(footprints):
+		return false
+
+	var patch := FIRE_PATCH_SCENE.instantiate()
+	patch.position = centre.round()
+	patch.burn_time = fire_trail_time
+	patch.trail_slot = trail_slot
+	patch.player = get_player()
+	patch.may_turn_solid = _fire_patch_may_turn_solid
+	get_tree().current_scene.add_child(patch)
+	return true
+
+
+# Patches that are burning or about to, or only those already solid.
+func fire_patches(solid_only: bool) -> Array:
+	return get_tree().get_nodes_in_group(HAZARD_GROUP).filter(func(hazard: Node) -> bool:
+		return hazard is FirePatch and (hazard.solid if solid_only else hazard.is_active()))
+
+
+# The last word before a patch turns solid, counting only the fire that's solid already. Patches still
+# waiting for the player to step off them are open floor here, so solid fire can never close in around
+# the player standing in one.
+func _fire_patch_may_turn_solid(patch: Node) -> bool:
+	var footprints: Array = fire_patches(true).map(func(other: Node) -> Rect2: return other.footprint())
+	footprints.append(patch.footprint())
+	return _floor_stays_connected(footprints)
+
+
+# Whether every spot on the floor the player could stand on can still reach every other one around these
+# fire footprints. Fire can close down space, but never wall any of it off.
+func _floor_stays_connected(footprints: Array) -> bool:
+	var columns := int(PLAYER_FLOOR.size.x / FLOOR_CELL) + 1
+	var rows := int(PLAYER_FLOOR.size.y / FLOOR_CELL) + 1
+	var cells := PackedByteArray()
+	cells.resize(columns * rows)
+	var reach := PLAYER_HALF_BODY + Vector2.ONE * FIRE_PASSAGE_MARGIN
+	for footprint in footprints:
+		var blocked: Rect2 = footprint.grow_individual(reach.x, reach.y, reach.x, reach.y)
+		var first := ((blocked.position - PLAYER_FLOOR.position) / FLOOR_CELL).ceil()
+		var last := ((blocked.end - PLAYER_FLOOR.position) / FLOOR_CELL).floor()
+		for row in range(maxi(int(first.y), 0), mini(int(last.y), rows - 1) + 1):
+			for column in range(maxi(int(first.x), 0), mini(int(last.x), columns - 1) + 1):
+				cells[row * columns + column] = 1
+
+	var start := cells.find(0)
+	if start < 0:
+		return false
+	var open_cells := cells.count(0)
+	var queue := PackedInt32Array([start])
+	cells[start] = 2
+	var head := 0
+	while head < queue.size():
+		var cell := queue[head]
+		head += 1
+		var column := cell % columns
+		if cell >= columns and cells[cell - columns] == 0:
+			cells[cell - columns] = 2
+			queue.append(cell - columns)
+		if cell + columns < cells.size() and cells[cell + columns] == 0:
+			cells[cell + columns] = 2
+			queue.append(cell + columns)
+		if column > 0 and cells[cell - 1] == 0:
+			cells[cell - 1] = 2
+			queue.append(cell - 1)
+		if column < columns - 1 and cells[cell + 1] == 0:
+			cells[cell + 1] = 2
+			queue.append(cell + 1)
+	return queue.size() == open_cells
+
+
+# The punish window has to be reachable: as he comes down, fire near where he'll land, or in the way
+# between the player and there, burns out.
+func clear_fire_for_landing(landing_point: Vector2) -> void:
+	var body_box := BixbyBeastArtLayout.local_rect(BixbyBeastArtLayout.RECOVER_BODY_BOX)
+	var landed := Rect2(landing_point + body_box.position, body_box.size)
+	var near := landed.grow(fire_landing_clearance)
+	var player := get_player()
+	for patch in fire_patches(false):
+		var footprint: Rect2 = patch.footprint()
+		if footprint.intersects(near) or (player and _fire_in_the_way(footprint, player.global_position, landed)):
+			patch.burn_out()
+
+
+# Whether fire stands anywhere on the straight way from `from` to the nearest point of `target`, for the
+# player's body walking it.
+func _fire_in_the_way(footprint: Rect2, from: Vector2, target: Rect2) -> bool:
+	var reach := PLAYER_HALF_BODY + Vector2.ONE * FIRE_PASSAGE_MARGIN
+	var blocked := footprint.grow_individual(reach.x, reach.y, reach.x, reach.y)
+	var to := from.clamp(target.position, target.end)
+	var steps := ceili(from.distance_to(to) / FLOOR_CELL) + 1
+	for i in steps + 1:
+		if blocked.has_point(from.lerp(to, float(i) / steps)):
+			return true
+	return false
 
 
 func enter_defeated() -> void:

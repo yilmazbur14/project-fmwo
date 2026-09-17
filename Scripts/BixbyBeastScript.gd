@@ -1,5 +1,8 @@
 extends CharacterBody2D
 
+# A non-looping animation reached the end of its last frame.
+signal anim_finished(anim_name: StringName)
+
 const HitStop := preload("res://Scripts/HitStop.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
@@ -13,22 +16,14 @@ const NEXT_FIGHT_SCENE := "res://Scenes/Bosses/JordanBossFightScene.tscn"
 var boss_health := max_health
 const MAX_HITS_PER_WINDOW := 3
 const PHANTOM_HIT_WINDOW := 0.5
-const BOSS_TARGET_GROUP := "boss_target"
 const VIEW_SIZE := Vector2(1920, 1080)
 const HOVER_HEIGHT_PX := BixbyBeastArtLayout.HOVER_HEIGHT * BixbyBeastArtLayout.SCALE
 # He eases into and out of every move: his speed never changes faster than FLY_ACCELERATION px/s², and
 # over the last stretch he slows down as if FLY_ARRIVE_TIME seconds away.
 const FLY_ARRIVE_TIME := 0.25
 const FLY_ACCELERATION := 2600.0
-
-# Placeholder landing dust, until bixby_beast_land.png: puffs kicked out along the floor either side.
-const DUST_PUFFS_PER_SIDE := 5
-const DUST_PUFF_SIZE := 12.0
-const DUST_COLOR := Color(0.86, 0.8, 0.66, 0.9)
-const DUST_START_SPREAD := Vector2(60, 140)
-const DUST_REACH := Vector2(90, 230)
-const DUST_RISE := Vector2(15, 45)
-const DUST_TIME := 0.45
+# Flying sideways faster than this turns the fly frames to face the way he's going.
+const FLY_TURN_SPEED := 60.0
 
 #UI (built at runtime - no new art needed)
 var health_bar: ProgressBar
@@ -42,7 +37,6 @@ var fill_style: StyleBoxFlat
 @onready var sprite: Sprite2D = $Air/Sprite2D
 @onready var fire_hitbox: Area2D = $Air/FireHitbox
 @onready var hurtbox: Area2D = $Air/Hurtbox
-@onready var dust: Node2D = $Dust
 @onready var state_machine = $StateManager
 
 #AUDIO
@@ -75,15 +69,15 @@ var sprite_base_position: Vector2
 var ground_position := Vector2.ZERO
 var height := 0.0
 var fly_velocity := Vector2.ZERO
-# px his drawn body is lowered by, for the placeholder recovery's heave.
-var bob := 0.0
+var flying_left := false
 
 var current_anim := &""
 var anim: Dictionary = {}
-var anim_frames: Array = []
 var anim_step := 0
 var anim_clock := 0.0
 var anim_next := &""
+var anim_done := false
+var shadow_sheets: Array[Texture2D] = []
 # Fire outline per fire-breath frame.
 var fire_shapes := {}
 
@@ -131,7 +125,9 @@ func _physics_process(delta: float) -> void:
 
 
 func _apply_art_layout() -> void:
-	shadow.texture = load(BixbyBeastArtLayout.SHADOW_SHEET)
+	for path in BixbyBeastArtLayout.SHADOW_SHEETS:
+		shadow_sheets.append(load(path))
+	shadow.texture = shadow_sheets[BixbyBeastArtLayout.Shadow.AIR]
 	shadow.hframes = roundi(shadow.texture.get_width() / BixbyBeastArtLayout.SHADOW_FRAME_SIZE.x)
 	shadow.offset = BixbyBeastArtLayout.shadow_offset()
 	shadow.modulate.a = BixbyBeastArtLayout.SHADOW_ALPHA
@@ -151,46 +147,60 @@ func _apply_art_layout() -> void:
 
 #ANIMATION
 
+# A non-looping animation holds its last frame when it ends, unless `next_anim` follows it.
 func play_anim(anim_name: StringName, next_anim: StringName = &"") -> void:
 	current_anim = anim_name
-	anim = BixbyBeastArtLayout.anim(anim_name)
+	anim = BixbyBeastArtLayout.ANIMS[anim_name]
 	anim_next = next_anim
+	anim_step = 0
+	anim_clock = 0.0
+	anim_done = false
 	var sheet: Texture2D = load(anim.sheet)
+	var frame_size: Vector2 = anim.get("frame_size", BixbyBeastArtLayout.FRAME_SIZE)
 	# Back to the first frame before the frame count changes, so the current one can't be out of range.
 	sprite.frame = 0
 	sprite.texture = sheet
-	sprite.hframes = roundi(sheet.get_width() / anim.frame_size.x)
-	sprite.offset = BixbyBeastArtLayout.sheet_offset(anim.frame_size)
-	anim_frames = anim.frames if not anim.frames.is_empty() else range(sprite.hframes)
-	anim_step = 0
-	anim_clock = 0.0
+	sprite.hframes = roundi(sheet.get_width() / frame_size.x)
+	sprite.offset = BixbyBeastArtLayout.sheet_offset(frame_size)
 	_show_anim_frame()
 
 
 func _process(delta: float) -> void:
-	if anim.is_empty():
+	if anim.is_empty() or anim_done:
 		return
 	anim_clock += delta
-	while anim_clock >= anim.frame_time:
-		anim_clock -= anim.frame_time
-		if anim_step < anim_frames.size() - 1:
+	while anim_clock >= _frame_time():
+		anim_clock -= _frame_time()
+		if anim_step < anim.frames.size() - 1:
 			anim_step += 1
 		elif anim.loop:
 			anim_step = 0
-		elif anim_next != &"":
-			play_anim(anim_next)
-			return
 		else:
-			anim_clock = 0.0
+			anim_done = true
+			var finished := current_anim
+			if anim_next != &"":
+				play_anim(anim_next)
+			anim_finished.emit(finished)
 			return
 		_show_anim_frame()
 
 
+func _frame_time() -> float:
+	var times: Array = anim.times
+	return times[mini(anim_step, times.size() - 1)]
+
+
 func _show_anim_frame() -> void:
-	var frame: int = anim_frames[anim_step]
+	var frame: int = anim.frames[anim_step]
 	sprite.frame = frame
-	var shadow_frames: Array = anim.shadow
-	shadow.frame = shadow_frames[mini(anim_step, shadow_frames.size() - 1)]
+	var shadows: Array = anim.shadows
+	var shadow_step: Array = shadows[mini(anim_step, shadows.size() - 1)]
+	shadow.texture = shadow_sheets[shadow_step[0]]
+	shadow.frame = shadow_step[1]
+	# The symmetry axis is the anchor's column, so mirroring keeps his feet in place.
+	var mirrored: bool = anim.get("flips", false) and flying_left
+	sprite.flip_h = mirrored
+	shadow.flip_h = mirrored
 	# The fire hitbox is always the fire the current frame draws.
 	_set_fire_shape(frame if anim.sheet == BixbyBeastArtLayout.FIRE_SHEET else -1)
 
@@ -205,18 +215,23 @@ func fire_touches(area: Area2D) -> bool:
 	return fire_hitbox.get_overlapping_areas().has(area)
 
 
+# Where the full stream's fire meets the floor, in global px.
+func fire_ground_contact() -> Rect2:
+	var contact := BixbyBeastArtLayout.local_rect(BixbyBeastArtLayout.FIRE_GROUND_CONTACT)
+	return Rect2(air.global_position + contact.position, contact.size)
+
+
 #FLIGHT
 
-# The transformation: he appears in the air with his feet at `feet`.
+# The transformation: he appears standing where Bixby stood.
 func appear(feet: Vector2) -> void:
-	height = HOVER_HEIGHT_PX
+	height = 0.0
 	var bounds := ground_bounds(height)
-	ground_position = (feet + Vector2(0, height)).clamp(bounds.position, bounds.end)
+	ground_position = feet.clamp(bounds.position, bounds.end)
 	fly_velocity = Vector2.ZERO
 	place()
 	air.show()
 	shadow.show()
-	play_anim(&"hover")
 
 
 func feet_position() -> Vector2:
@@ -225,7 +240,7 @@ func feet_position() -> Vector2:
 
 func place() -> void:
 	global_position = ground_position.round()
-	air.position = Vector2(0, roundf(bob - height))
+	air.position = Vector2(0, -roundf(height))
 	shadow.global_position = global_position
 
 
@@ -241,6 +256,10 @@ func fly_toward(target: Vector2, max_speed: float, delta: float) -> float:
 	fly_velocity = fly_velocity.move_toward(desired, FLY_ACCELERATION * delta)
 	ground_position += fly_velocity * delta
 	place()
+	if absf(fly_velocity.x) > FLY_TURN_SPEED and (fly_velocity.x < 0.0) != flying_left:
+		flying_left = fly_velocity.x < 0.0
+		if anim.get("flips", false):
+			_show_anim_frame()
 	return ground_position.distance_to(target)
 
 
@@ -249,7 +268,7 @@ func fly_toward(target: Vector2, max_speed: float, delta: float) -> float:
 func ground_bounds(at_height: float) -> Rect2:
 	var ropes: Rect2 = state_machine.ROPES
 	var shadow_box := BixbyBeastArtLayout.shadow_rect()
-	var body_box := BixbyBeastArtLayout.local_rect(BixbyBeastArtLayout.HOVER_DRAWN)
+	var body_box := BixbyBeastArtLayout.local_rect(BixbyBeastArtLayout.BODY_DRAWN)
 	var top_left := Vector2(
 		maxf(ropes.position.x - shadow_box.position.x, -body_box.position.x),
 		maxf(ropes.position.y - shadow_box.position.y, at_height - body_box.position.y))
@@ -291,40 +310,14 @@ func shake_sprite(strength: float, steps: int, step_time: float) -> void:
 	tween.tween_callback(func() -> void: sprite.position = sprite_base_position)
 
 
-func kick_up_dust() -> void:
-	for i in DUST_PUFFS_PER_SIDE * 2:
-		var side := -1.0 if i % 2 == 0 else 1.0
-		var spread := floorf(i / 2.0) / float(DUST_PUFFS_PER_SIDE - 1)
-		var puff := ColorRect.new()
-		puff.color = DUST_COLOR
-		puff.size = Vector2(DUST_PUFF_SIZE, DUST_PUFF_SIZE)
-		puff.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		dust.add_child(puff)
-		var from := Vector2(side * lerpf(DUST_START_SPREAD.x, DUST_START_SPREAD.y, spread), randf_range(-12.0, 6.0))
-		var to := from + Vector2(side * lerpf(DUST_REACH.x, DUST_REACH.y, spread), -randf_range(DUST_RISE.x, DUST_RISE.y))
-		var tween := puff.create_tween()
-		tween.tween_method(_move_puff.bind(puff, from, to), 0.0, 1.0, DUST_TIME)
-		tween.parallel().tween_property(puff, "modulate:a", 0.0, DUST_TIME).set_ease(Tween.EASE_IN)
-		tween.tween_callback(puff.queue_free)
-
-
-func _move_puff(weight: float, puff: ColorRect, from: Vector2, to: Vector2) -> void:
-	var eased := 1.0 - (1.0 - weight) * (1.0 - weight)
-	puff.position = (from.lerp(to, eased) - puff.size / 2.0).round()
-
-
 #COMBAT
 
-# Only while he's down on the ground. The player only turns to face him then: in the air there's nothing
-# to punch.
+# Punches only reach him while he's down on the ground. The hurtbox stays a facing target the whole
+# fight, so the player keeps facing him while he flies.
 func set_hurtbox_active(active: bool) -> void:
 	# Deferred: monitoring can't change inside a physics flush.
 	hurtbox.set_deferred("monitoring", active)
 	hurtbox.set_deferred("monitorable", active)
-	if active:
-		hurtbox.add_to_group(BOSS_TARGET_GROUP)
-	else:
-		hurtbox.remove_from_group(BOSS_TARGET_GROUP)
 
 
 func _on_hurtbox_entered(area: Area2D) -> void:
@@ -416,6 +409,10 @@ func _on_defeated() -> void:
 		music_player.stop()
 	victory_sfx_player.play()
 	get_tree().call_group("arena_crowd", "cheer", 2.0)
+
+
+# Called by Defeated once the coughed-up Liam has landed, so the win lines come after it.
+func finish_victory() -> void:
 	GameProgress.next_boss_scene = NEXT_FIGHT_SCENE
 	FightOutro.finish_fight(get_tree(), true)
 
