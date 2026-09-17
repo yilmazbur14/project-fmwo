@@ -152,7 +152,8 @@ tracks/0/keys = {
 
 [sub_resource type="Animation" id="Animation_mason_nugget_toss"]
 resource_name = "nugget_toss"
-step = 0.2
+length = 0.83
+step = 0.01
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
@@ -160,10 +161,24 @@ tracks/0/path = NodePath("Sprite2D:frame")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
-"times": PackedFloat32Array(0, 0.6),
-"transitions": PackedFloat32Array(1, 1),
+"times": PackedFloat32Array(0, 0.3, 0.65),
+"transitions": PackedFloat32Array(1, 1, 1),
 "update": 1,
-"values": [8, 12]
+"values": [15, 16, 17]
+}
+tracks/1/type = "method"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("StateManager/NuggetShower")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.65),
+"transitions": PackedFloat32Array(1),
+"values": [{
+"args": [],
+"method": &"start_shower"
+}]
 }
 
 [sub_resource type="Animation" id="Animation_mason_nugget_hold"]
@@ -181,7 +196,7 @@ tracks/0/keys = {
 "times": PackedFloat32Array(0),
 "transitions": PackedFloat32Array(1),
 "update": 1,
-"values": [12]
+"values": [18]
 }
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_mason"]
@@ -216,7 +231,7 @@ position = Vector2(0, 96)
 scale = Vector2(3, 3)
 texture = ExtResource("2_mason_sheet")
 offset = Vector2(0, -32)
-hframes = 15
+hframes = 19
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="MasonCharacterBody"]
 libraries/ = SubResource("AnimationLibrary_mason")
