@@ -4,6 +4,8 @@ const HitStop := preload("res://Scripts/HitStop.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
 # What he says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/MasonOutro.dialogue"
+# This fight's place in the order; GameProgress decides what follows it.
+const FIGHT_SCENE := "res://Scenes/Bosses/MasonBossFightScene.tscn"
 
 #CONSTANTS
 @export var max_health := 10
@@ -197,7 +199,7 @@ func _on_defeated() -> void:
 		music_player.stop()
 	victory_sfx_player.play()
 	get_tree().call_group("arena_crowd", "cheer", 2.0)
-	GameProgress.next_boss_scene = "res://Scenes/Bosses/LiamBossFightScene.tscn"
+	GameProgress.next_boss_scene = GameProgress.next_fight_after(FIGHT_SCENE)
 	FightOutro.finish_fight(get_tree(), true)
 
 
@@ -215,7 +217,7 @@ func _build_health_bar() -> void:
 	add_child(layer)
 
 	name_label = Label.new()
-	name_label.text = "MASON"
+	name_label.text = GameProgress.boss_name(FIGHT_SCENE)
 	name_label.position = Vector2(770, 36)
 	name_label.theme = load("res://Assets/UI/ui_theme.tres")
 	name_label.add_theme_color_override("font_color", Color(1, 1, 1))

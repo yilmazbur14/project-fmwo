@@ -43,6 +43,7 @@ var punch_buffered := false
 @onready var finisher: Node = $Finisher
 @onready var defense: Node = $Defense
 @onready var hype: Node = $Hype
+@onready var status: Node = $Status
 # A copy of the hurtbox left where a dash started; see PlayerDefense's perfect dodge.
 @onready var dodge_ghost: Area2D = get_parent().get_node("DodgeGhost")
 
@@ -154,8 +155,11 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector2.ZERO
 
 	else:
-		var directionHorz := Input.get_axis("ui_left", "ui_right")
-		var directionVert := Input.get_axis("ui_up", "ui_down")
+		# Reversed while a status inverts the controls (PlayerStatus); the axes stay separate, so the
+		# diagonal is as fast as it has always been.
+		var steer: Vector2 = status.steer(Vector2(Input.get_axis("ui_left", "ui_right"), Input.get_axis("ui_up", "ui_down")))
+		var directionHorz := steer.x
+		var directionVert := steer.y
 		var speed := SPEED
 		if state_machine.current_state.name == "Blocking":
 			speed *= defense.block_move_speed_ratio
@@ -207,7 +211,7 @@ func _input(event: InputEvent) -> void:
 		if state_machine.current_state.name == "Blocking":
 			state_machine.on_child_transition(state_machine.current_state, "Idle")
 		is_dodging = true
-		direction = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+		direction = status.steer(Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down"))
 		previous_dodge_physics_frame = last_dodge_physics_frame
 		last_dodge_physics_frame = Engine.get_physics_frames()
 		defense.on_dash_started()
@@ -267,6 +271,8 @@ func dodge_ghost_position() -> Vector2:
 
 func _apply_damage(hit: RefCounted) -> void:
 	playerHealth = maxi(playerHealth - hit.damage, 0)
+	if playerHealth <= 0:
+		status.clear_all()
 	combo.reset()
 	healthUI.update_health(playerHealth)
 	invincibility_timer.start()
@@ -299,6 +305,20 @@ func _flicker_while_invincible(duration: float) -> void:
 	for i in cycles:
 		flicker_tween.tween_property(sprite, "modulate:a", 0.3, 0.05)
 		flicker_tween.tween_property(sprite, "modulate:a", 1.0, 0.05)
+
+
+# A boss puts a temporary status effect on the player (PlayerStatus). A duration of 0 takes the
+# kind's default; applying one that is already running refreshes it.
+func apply_status(kind: StringName, duration := 0.0) -> void:
+	status.apply(kind, duration)
+
+
+func has_status(kind: StringName) -> bool:
+	return status.has(kind)
+
+
+func clear_statuses() -> void:
+	status.clear_all()
 
 
 # Eric's bear hug draws the held player in his own frames.
@@ -337,6 +357,7 @@ func begin_finisher() -> void:
 	dodge_timer = 0.0
 	punch_buffered = false
 	defense.clear_dash_recovery()
+	status.clear_all()
 	velocity = Vector2.ZERO
 
 
@@ -363,6 +384,7 @@ func end_fight() -> void:
 	dodge_timer = 0.0
 	defense.on_fight_over()
 	hype.on_fight_over()
+	status.clear_all()
 	# A finisher under way plays out to its landing first.
 	if is_finishing:
 		finisher.finished.connect(_stand_still, CONNECT_ONE_SHOT)

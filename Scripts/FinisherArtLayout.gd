@@ -115,12 +115,57 @@ const FINAL_IMPACT := {
 const USE_FINAL_SUPER_IMPACT := true
 # The normal burst, whichever it is, tinted gold.
 const PLACEHOLDER_SUPER_IMPACT := {"tint": Color(1.6, 1.25, 0.45)}
+# Drawn bigger than the normal burst, and still under the player, who draws at FINISHING_Z_INDEX.
 const FINAL_SUPER_IMPACT := {
 	"texture": "res://Assets/Effects/uppercut_impact_super.png",
 	"hframes": 7,
 	"frame_times": [0.04, 0.06, 0.06, 0.07, 0.08, 0.09, 0.10],
-	"scale": 2.0,
+	"scale": 2.75,
 	"pivot": Vector2(48, 48),
+}
+
+#SUPERCHARGED CONTACT EXTRAS
+# A shock ring and radial speed lines thrown out by a supercharged contact. Both are built in code
+# until the artist's sheets land; the flags then swap them the way every other asset works.
+# The ring is drawn in world space on the ground under the impact, beneath the boss and the player;
+# the lines are drawn in screen space, over the arena and under the HUD.
+const USE_FINAL_SUPER_SHOCK_RING := true
+# An expanding circle, in px.
+const PLACEHOLDER_SUPER_SHOCK_RING := {
+	"points": 40,
+	"radius": 36.0,
+	"to_radius": 340.0,
+	"width": 9.0,
+	"color": Color(1.0, 0.86, 0.4, 0.9),
+	"time": 0.32,
+}
+const FINAL_SUPER_SHOCK_RING := {
+	"texture": "res://Assets/Effects/super_impact_ring.png",
+	"hframes": 6,
+	"frame_times": [0.04, 0.05, 0.06, 0.07, 0.08, 0.09],
+	"scale": 3.0,
+	"pivot": Vector2(96, 48),
+}
+
+const USE_FINAL_SUPER_SPEEDLINES := true
+# Wedges radiating from the contact, in px.
+const PLACEHOLDER_SUPER_SPEEDLINES := {
+	"rays": 20,
+	"inner_radius": 120.0,
+	"length": 1100.0,
+	"width": 30.0,
+	"color": Color(1.0, 0.95, 0.75, 0.45),
+	"time": 0.3,
+}
+const FINAL_SUPER_SPEEDLINES := {
+	"texture": "res://Assets/Effects/super_impact_rays.png",
+	"hframes": 5,
+	"frame_times": [0.03, 0.04, 0.05, 0.06, 0.07],
+	# 3x fills the screen from the middle; further out than off_centre px the corners need 4x.
+	"scale": 3.0,
+	"off_centre": 150.0,
+	"off_centre_scale": 4.0,
+	"pivot": Vector2(320, 180),
 }
 
 #SUPERCHARGED PLAYER SHEET
@@ -208,6 +253,14 @@ static func stars() -> Dictionary:
 
 static func impact() -> Dictionary:
 	return FINAL_IMPACT if USE_FINAL_IMPACT else PLACEHOLDER_IMPACT
+
+
+static func super_shock_ring() -> Dictionary:
+	return FINAL_SUPER_SHOCK_RING if USE_FINAL_SUPER_SHOCK_RING else PLACEHOLDER_SUPER_SHOCK_RING
+
+
+static func super_speedlines() -> Dictionary:
+	return FINAL_SUPER_SPEEDLINES if USE_FINAL_SUPER_SPEEDLINES else PLACEHOLDER_SUPER_SPEEDLINES
 
 
 static func super_impact() -> Dictionary:

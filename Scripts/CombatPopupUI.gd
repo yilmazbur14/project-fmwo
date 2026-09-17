@@ -1,8 +1,8 @@
 extends Node2D
 
-# Word popups over the player's head: PARRY!, PERFECT!, GUARD BREAK! and HYPE!. They're on the HUD
-# layer, so the finisher's zoom doesn't scale them; DefenseHypeArtLayout's POPUPS section has their
-# rules.
+# Word popups over the player's head: PARRY!, PERFECT!, GUARD BREAK!, HYPE! and the status effects.
+# They're on the HUD layer, so the finisher's zoom doesn't scale them; DefenseHypeArtLayout's POPUPS
+# section has their rules.
 
 const DefenseHypeArtLayout := preload("res://Scripts/DefenseHypeArtLayout.gd")
 const FinisherArtLayout := preload("res://Scripts/FinisherArtLayout.gd")
@@ -11,19 +11,44 @@ const ScreenView := preload("res://Scripts/ScreenView.gd")
 @export var player: CharacterBody2D
 @export var defense: Node
 @export var hype: Node
+@export var status: Node
+
+# The word each status effect (PlayerStatus) announces itself with.
+const STATUS_WORDS := {
+	&"stamina_drain": &"drained",
+	&"inverted_controls": &"reversed",
+}
 
 # {kind, node, size, stack: px above the first line, lift, clock} for each popup still showing.
 var popups: Array = []
+# The status effects whose word has already been said.
+var status_shown := {}
 
 
 func _ready() -> void:
-	defense.parried.connect(func(_hit: RefCounted, _point: Vector2, _staggered: bool) -> void: show_popup(&"parry"))
+	defense.parried.connect(func(_hit: RefCounted, _point: Vector2, _staggered: bool, streak: int) -> void:
+		# One word per tier; the exact count is on the streak badge.
+		if streak >= 3:
+			show_popup(&"parry_x3")
+		elif streak == 2:
+			show_popup(&"parry_x2")
+		else:
+			show_popup(&"parry")
+	)
 	defense.perfect_dodged.connect(func(_hit: RefCounted) -> void: show_popup(&"perfect"))
 	defense.guard_broken.connect(show_popup.bind(&"guard_break"))
 	hype.hype_full_changed.connect(func(full: bool) -> void:
 		if full:
 			show_popup(&"hype")
 	)
+	# Only when the effect lands, not when a boss refreshes one that is already running.
+	status.status_started.connect(func(kind: StringName, _duration: float) -> void:
+		if status_shown.has(kind):
+			return
+		status_shown[kind] = true
+		show_popup(STATUS_WORDS[kind])
+	)
+	status.status_ended.connect(func(kind: StringName) -> void: status_shown.erase(kind))
 
 
 func _process(delta: float) -> void:
@@ -33,9 +58,9 @@ func _process(delta: float) -> void:
 		_place(popup)
 
 
-func show_popup(kind: StringName) -> void:
+func show_popup(kind: StringName, count := 0) -> void:
 	var spec := DefenseHypeArtLayout.popup(kind)
-	var popup := {"kind": kind, "stack": 0.0, "lift": 0.0, "clock": 0.0}
+	var popup := {"kind": kind, "count": count, "stack": 0.0, "lift": 0.0, "clock": 0.0}
 	for other in popups:
 		popup.stack = maxf(popup.stack, other.stack + other.size.y)
 	if spec.has("texture"):
@@ -49,7 +74,7 @@ func show_popup(kind: StringName) -> void:
 	else:
 		var label := Label.new()
 		label.theme = load("res://Assets/UI/ui_theme.tres")
-		label.text = spec.text
+		label.text = spec.text % count if spec.text.contains("%d") else spec.text
 		label.add_theme_font_size_override("font_size", spec.font_size)
 		label.add_theme_constant_override("outline_size", spec.outline)
 		label.add_theme_color_override("font_outline_color", Color(0, 0, 0))

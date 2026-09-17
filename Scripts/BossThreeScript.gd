@@ -14,6 +14,9 @@ extends Node2D
 const FightOutro := preload("res://Scripts/FightOutro.gd")
 # What Carter and Josh say once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/CarterAndJoshOutro.dialogue"
+# Carter and Josh are separate fights now, so this tag-team fight is no longer part of the
+# order: GameProgress finds nothing after it and the Victory screen offers the main menu.
+const FIGHT_SCENE := "res://Scenes/Bosses/CarterAndJoshBossFightScene.tscn"
 
 #CONSTANTS
 @export var max_health := 10
@@ -143,7 +146,7 @@ func _on_defeated() -> void:
 		music_player.stop()
 	victory_sfx_player.play()
 	get_tree().call_group("arena_crowd", "cheer", 2.0)
-	GameProgress.next_boss_scene = "res://Scenes/Bosses/MasonBossFightScene.tscn"
+	GameProgress.next_boss_scene = GameProgress.next_fight_after(FIGHT_SCENE)
 
 	if josh and josh.has_method("play_defeated"):
 		josh.play_defeated()

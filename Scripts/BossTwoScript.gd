@@ -6,6 +6,8 @@ const HitStop := preload("res://Scripts/HitStop.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
 # What Computah and Greyson say once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/GreysonAndComputahOutro.dialogue"
+# This fight's place in the order; GameProgress decides what follows it.
+const FIGHT_SCENE := "res://Scenes/Bosses/GreysonBossFightScene.tscn"
 
 #CONSTANTS
 @export var max_health := 10
@@ -69,7 +71,7 @@ func _process(_delta: float) -> void:
 		if music_player.playing:
 			music_player.stop()
 		victory_sfx_player.play()
-		GameProgress.next_boss_scene = "res://Scenes/Bosses/CarterAndJoshBossFightScene.tscn"
+		GameProgress.next_boss_scene = GameProgress.next_fight_after(FIGHT_SCENE)
 		FightOutro.finish_fight(get_tree(), true)
 
 
@@ -172,7 +174,7 @@ func _build_health_bar() -> void:
 	add_child(layer)
 
 	name_label = Label.new()
-	name_label.text = "COMPUTAH"
+	name_label.text = GameProgress.boss_name(FIGHT_SCENE)
 	name_label.position = Vector2(770, 36)
 	name_label.theme = load("res://Assets/UI/ui_theme.tres")
 	name_label.add_theme_color_override("font_color", Color(1, 1, 1))

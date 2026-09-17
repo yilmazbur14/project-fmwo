@@ -7,8 +7,13 @@ const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
 # What he says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/EricOutro.dialogue"
+# This fight's place in the order; GameProgress decides what follows it.
+const FIGHT_SCENE := "res://Scenes/Bosses/EricBossFightScene.tscn"
 
 #CONSTANTS
+# Where an uppercut may leave him: his body box inside the ring's walls (ArenaScene's
+# wallBoundaries), with a margin so he never leans through a rope.
+const KNOCKBACK_AREA := Rect2(240, 200, 1440, 570)
 @export var max_health := 24
 var boss_health := max_health
 
@@ -68,7 +73,7 @@ func _process(delta: float) -> void:
 			music_player.stop()
 		victory_sfx_player.play()
 		get_tree().call_group("arena_crowd", "cheer", 2.0)
-		GameProgress.next_boss_scene = "res://Scenes/Bosses/GreysonBossFightScene.tscn"
+		GameProgress.next_boss_scene = GameProgress.next_fight_after(FIGHT_SCENE)
 		FightOutro.finish_fight(get_tree(), true)
 
 
@@ -180,6 +185,17 @@ func get_max_health() -> int:
 	return max_health
 
 
+# The uppercut shoves him back (PlayerFinisher). Each of his attacks takes its own starting spot as it
+# begins, and his hazards spawn where he is at the time, so he just fights on from where he lands.
+func knock_back(push: Vector2, time: float) -> void:
+	var target := (global_position + push).clamp(KNOCKBACK_AREA.position, KNOCKBACK_AREA.end)
+	var player := get_tree().current_scene.get_node_or_null(FightOutro.PLAYER_PATH)
+	# The ropes must never shove him back onto the player.
+	if player and target.distance_to(player.global_position) < global_position.distance_to(player.global_position):
+		return
+	create_tween().tween_property(self, "global_position", target, time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
 func get_daze_anchor() -> Vector2:
 	return to_global(EricArtLayout.frame_local(EricArtLayout.DAZE_HEAD_PIXEL + Vector2(0.5, 0.5), sprite.flip_h))
 
@@ -193,7 +209,7 @@ func _build_health_bar() -> void:
 	add_child(layer)
 
 	name_label = Label.new()
-	name_label.text = "ERIC"
+	name_label.text = GameProgress.boss_name(FIGHT_SCENE)
 	name_label.position = Vector2(770, 36)
 	name_label.theme = load("res://Assets/UI/ui_theme.tres")
 	name_label.add_theme_color_override("font_color", Color(1, 1, 1))

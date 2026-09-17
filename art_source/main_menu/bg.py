@@ -1,4 +1,4 @@
-"""Main-menu background 'The Ladder' (six tiers). 640x360, DB32 only, built as separate layers.
+"""Main-menu background 'The Ladder' (seven tiers). 640x360, DB32 only, built as separate layers.
 
 Night. A tower of stacked boxing-ring tiers; each tier is one rank of the server, lit in its role
 colour, with that rank's member(s) standing on it as rim-lit silhouettes. A red-carpet stair climbs
@@ -37,19 +37,20 @@ BASE_Y = 316                 # bottom row of tier 1's apron
 GLOW = (CX, 34)
 CARD_X, CARD_Y = CX - 38, 8  # invite canvas origin (card rect at +3..+72, +4..+44)
 
-# role colour ramps (hi, base, lo) per tier, bottom (1) to top (6)
+# role colour ramps (hi, base, lo) per tier, bottom (1) to top (7)
 ROLE = {
     1: (LG, GR, OG),        # green   - Eric
-    2: (WH2, CY, BL),       # cyan    - Computah & Greyson
-    3: (SK, OR, BR),        # orange  - Carter & Josh
-    4: (WH2, MG, PU),       # pink    - Mason
-    5: (SK, PK, RD),        # red     - Liam & Bixby
-    6: (WH, YL, TN),        # gold    - Jordan (final boss)
+    2: (WH2, CY, BL),       # cyan    - Greyson & Computah
+    3: (WH2, MG, PU),       # pink    - Mason
+    4: (SK, OR, BR),        # orange  - Josh
+    5: (SB, RB, IN),        # blurple - Carter
+    6: (SK, PK, RD),        # red     - Liam & Bixby
+    7: (WH, YL, TN),        # gold    - Jordan (final boss)
 }
 
 
 def _tiers():
-    spec = [(32, 7, 150), (30, 6, 126), (28, 6, 104), (26, 5, 84), (24, 5, 66), (22, 4, 50)]   # (face, strip, half-width)
+    spec = [(32, 7, 150), (29, 6, 128), (27, 6, 108), (25, 5, 90), (23, 5, 74), (21, 4, 60), (19, 4, 46)]   # (face, strip, half-width)
     out, fb = [], BASE_Y
     for face, strip, hw in spec:
         ft = fb - face + 1
@@ -362,16 +363,18 @@ def layer_floor():
 
 # ------------------------------------------------------------------ members
 MASKS = load_masks(os.path.join(HERE, 'masks_clean.txt'))
+# Tiers 3, 4 and 5 each hold one member, so they alternate off the carpet: at this pitch two
+# centred members on neighbouring tiers would stand on each other's heads.
 PLACE = [  # name, tier, x of anchor column, anchor column
     ('eric', 1, CX, 23),
     ('computah', 2, CX - 44, 7),
     ('greyson', 2, CX + 44, 11),
-    ('carter', 3, CX - 44, 11),
-    ('josh', 3, CX + 44, 14),
-    ('mason', 4, CX, 14),
-    ('liam', 5, CX - 38, 14),
-    ('bixby', 5, CX + 38, 14),
-    ('jordan', 6, CX, 8),
+    ('mason', 3, CX, 14),
+    ('josh', 4, CX - 42, 13),
+    ('carter', 5, CX, 12),
+    ('liam', 6, CX - 38, 14),
+    ('bixby', 6, CX + 38, 14),
+    ('jordan', 7, CX, 8),
 ]
 
 

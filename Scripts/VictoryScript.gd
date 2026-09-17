@@ -11,7 +11,6 @@ const LADDER_TOP := 702.0
 const SLOT_SIZE := 120.0
 const SLOT_GAP := 24.0
 const PULSE_TIME := 0.4
-const RANKS := ["@member", "@regular", "@veteran", "@trusted", "@moderator"]
 
 enum SlotFrame { LOCKED, CLEARED, CURRENT, CURRENT_PULSE, GOAL }
 enum LinkFrame { LOCKED, CLEARED, NEXT }
@@ -48,9 +47,11 @@ func _on_next_boss_button_pressed() -> void:
 func _rank_message(cleared: int) -> String:
 	if GameProgress.fight_index < 0:
 		return "@newcomer won the fight!"
-	if cleared >= GameProgress.FIGHT_SCENES.size():
+	var rank: String = GameProgress.BOSSES[cleared - 1]["rank"]
+	# The last fight on the ladder hands over the invite instead of a rank.
+	if rank == "":
 		return "@newcomer received an invite!"
-	return "@newcomer ranked up to %s!" % RANKS[cleared - 1]
+	return "@newcomer ranked up to %s!" % rank
 
 
 func _build_rank_ladder(cleared: int) -> void:

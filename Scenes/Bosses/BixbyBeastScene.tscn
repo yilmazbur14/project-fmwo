@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastIntro.gd" id="8_intro"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastHover.gd" id="9_hover"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastFireBreath.gd" id="10_fire_breath"]
+[ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastCombined.gd" id="10b_combined"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastLand.gd" id="11_land"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastRecover.gd" id="12_recover"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastTakeoff.gd" id="13_takeoff"]
@@ -225,6 +226,13 @@ body = NodePath("../..")
 windup_sfx_player = NodePath("../../WindupSfxPlayer")
 breath_sfx_player = NodePath("../../BreathSfxPlayer")
 
+[node name="Combined" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "pound_sfx_player", "scream_sfx_player", "dizzy_sfx_player")]
+script = ExtResource("10b_combined")
+body = NodePath("../..")
+pound_sfx_player = NodePath("../../PoundSfxPlayer")
+scream_sfx_player = NodePath("../../ScreamSfxPlayer")
+dizzy_sfx_player = NodePath("../../RecoverSfxPlayer")
+
 [node name="Land" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "land_sfx_player")]
 script = ExtResource("11_land")
 body = NodePath("../..")
@@ -294,6 +302,12 @@ pitch_scale = 0.7
 [node name="RoarSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
 
 [node name="BlastSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+
+[node name="PoundSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 0.85
+
+[node name="ScreamSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 1.25
 
 [node name="DimLayer" type="CanvasLayer" parent="."]
 layer = 0

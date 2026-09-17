@@ -15,6 +15,9 @@ const HIT_SHEET := "res://Assets/Characters/Bixby/bixby_beast_hit.png"
 const TAKEOFF_SHEET := "res://Assets/Characters/Bixby/bixby_beast_takeoff.png"
 const ROAR_SHEET := "res://Assets/Characters/Bixby/bixby_beast_roar.png"
 const DEFEAT_SHEET := "res://Assets/Characters/Bixby/bixby_beast_defeat.png"
+const POUND_SHEET := "res://Assets/Characters/Bixby/bixby_pound.png"
+const SPIN_SHEET := "res://Assets/Characters/Bixby/bixby_spin.png"
+const DIZZY_SHEET := "res://Assets/Characters/Bixby/bixby_dizzy.png"
 const FRAME_SIZE := Vector2(192, 160)
 # His feet: where he stands on the ground and what he hovers from.
 const ANCHOR := Vector2(96, 151)
@@ -89,6 +92,12 @@ const FIRE_OUTLINES := {
 # middle row.
 const FIRE_GROUND_CONTACT := Rect2(53, 240, 90, 12)
 
+#COMBINED ATTACK
+# The step of the "pound" animation his claws land on, at frame texels (34, 151) and (158, 151).
+const POUND_IMPACT_STEP := 1
+# The step of "spin_up" his maws light up on, which is where the sonic beams come out.
+const SPIN_BEAMS_STEP := 1
+
 #RECOVERY
 # What the player can punch while he's down: his grounded body on the recover frames, side heads and
 # draped wings included, below the horns.
@@ -127,6 +136,27 @@ const ANIMS := {
 	# The coil, then the roar shaking between frames 1 and 2 for about a second. On the ground.
 	&"roar": {sheet = ROAR_SHEET, frames = [0, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2], times = [0.34, 0.07], loop = false,
 		shadows = [[Shadow.GROUND, 0]]},
+	# THE COMBINED ATTACK. The pound sheet's first two frames are the rear back, held until he slams; the
+	# last four are one slam, looped once per pound, with the claws landing on POUND_IMPACT_STEP.
+	&"brace": {sheet = POUND_SHEET, frames = [0, 1], times = [0.09, 0.12], loop = false,
+		shadows = [[Shadow.GROUND, 0]]},
+	&"pound": {sheet = POUND_SHEET, frames = [2, 3, 4, 5], times = [0.07, 0.08, 0.08, 0.12], loop = true,
+		shadows = [[Shadow.GROUND, 0]]},
+	# The spin sheet holds all three beats: the lead-in his maws light up on, the seamless loop (a third
+	# of a turn each time round) and the wobble he stops on. He spins on the floor, not in the air.
+	&"spin_up": {sheet = SPIN_SHEET, frames = [0, 1], times = [0.11, 0.09], loop = false,
+		shadows = [[Shadow.GROUND, 0]]},
+	# Held twice as long as the 50ms it was drawn at, which turns him once every 1.2s. At the drawn cadence
+	# a beam crossed any spot on the floor every 0.2s, faster than a dash can answer, so dodging one was
+	# worth nothing.
+	&"spin": {sheet = SPIN_SHEET, frames = [2, 3, 4, 5], times = [0.1], loop = true,
+		shadows = [[Shadow.GROUND, 0]]},
+	# Held to the same doubled beat, so the wobble slows out of the loop instead of whipping round faster
+	# than it: its two frames are drawn 42 and 40 degrees on from the last frame of the loop.
+	&"spin_down": {sheet = SPIN_SHEET, frames = [6, 7], times = [0.2, 0.3], loop = false,
+		shadows = [[Shadow.GROUND, 0]]},
+	&"dizzy": {sheet = DIZZY_SHEET, frames = [0, 1, 2, 3], times = [0.13], loop = true,
+		shadows = [[Shadow.GROUND, 0]]},
 	# 0 the final blow, 1 collapse, 2 the glow dies, 3 smoke, 4 normal Bixby dizzy, 5 cough wind-up,
 	# 6 Liam shoots out, 7 tumbles, 8 lands, 9 the hold. Bixby and Liam are drawn in.
 	&"defeat": {sheet = DEFEAT_SHEET, frames = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], times = [0.1, 0.3, 0.16, 0.14, 0.6, 0.34, 0.12, 0.12, 0.4, 1.0], loop = false,
@@ -142,6 +172,11 @@ static func time_to_step(anim_name: StringName, step: int) -> float:
 	for i in step:
 		total += times[mini(i, times.size() - 1)]
 	return total
+
+
+# How long a whole animation lasts, once.
+static func anim_time(anim_name: StringName) -> float:
+	return time_to_step(anim_name, ANIMS[anim_name].frames.size())
 
 
 # Sprite offset, in texels, that puts ANCHOR on the sprite's origin for a sheet of this frame size.

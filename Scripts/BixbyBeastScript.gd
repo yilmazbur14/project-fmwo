@@ -54,6 +54,8 @@ var fill_style: StyleBoxFlat
 @onready var glow_sfx_player: AudioStreamPlayer = $GlowSfxPlayer
 @onready var roar_sfx_player: AudioStreamPlayer = $RoarSfxPlayer
 @onready var blast_sfx_player: AudioStreamPlayer = $BlastSfxPlayer
+@onready var pound_sfx_player: AudioStreamPlayer = $PoundSfxPlayer
+@onready var scream_sfx_player: AudioStreamPlayer = $ScreamSfxPlayer
 
 var defeated := false
 var hits_this_window := 0
@@ -109,9 +111,11 @@ func _ready() -> void:
 	growl_sfx_player.stream = load("res://Assets/Audio/SFX/wrestler_charge.ogg")
 	gulp_sfx_player.stream = load("res://Assets/Audio/SFX/wrestler_collision.ogg")
 	glow_sfx_player.stream = load("res://Assets/Audio/SFX/laser_charge.ogg")
-	# His own voice: the blast he transforms on, and the roar he lands on.
+	# His own voice: the blast he transforms on, the roar he lands on, and the scream he spins with.
 	blast_sfx_player.stream = load("res://Assets/Audio/SFX/bixby_roar_short.wav")
 	roar_sfx_player.stream = load("res://Assets/Audio/SFX/bixby_roar.wav")
+	scream_sfx_player.stream = load("res://Assets/Audio/SFX/bixby_roar_short.wav")
+	pound_sfx_player.stream = load("res://Assets/Audio/SFX/earthquake_slam.ogg")
 
 
 func start_music() -> void:
@@ -150,12 +154,13 @@ func _apply_art_layout() -> void:
 
 #ANIMATION
 
-# A non-looping animation holds its last frame when it ends, unless `next_anim` follows it.
-func play_anim(anim_name: StringName, next_anim: StringName = &"") -> void:
+# A non-looping animation holds its last frame when it ends, unless `next_anim` follows it. A looping one
+# can be started part way round, which is how the scream picks the heads it switches on with.
+func play_anim(anim_name: StringName, next_anim: StringName = &"", from_step := 0) -> void:
 	current_anim = anim_name
 	anim = BixbyBeastArtLayout.ANIMS[anim_name]
 	anim_next = next_anim
-	anim_step = 0
+	anim_step = from_step
 	anim_clock = 0.0
 	anim_done = false
 	var sheet: Texture2D = load(anim.sheet)
@@ -214,6 +219,11 @@ func _set_fire_shape(frame: int) -> void:
 		fire_shapes[shape_frame].set_deferred("disabled", shape_frame != frame)
 
 
+# The frame of `sheet` on screen right now, or -1 if that isn't the sheet he's drawing.
+func drawn_frame_of(sheet: String) -> int:
+	return sprite.frame if anim.get("sheet", "") == sheet else -1
+
+
 func fire_touches(area: Area2D) -> bool:
 	return fire_hitbox.get_overlapping_areas().has(area)
 
@@ -240,6 +250,18 @@ func appear(feet: Vector2, at_height := 0.0) -> void:
 
 func feet_position() -> Vector2:
 	return ground_position - Vector2(0, height)
+
+
+# The uppercut shoves him back (PlayerFinisher). He flies, so his floor point simply moves, clamped
+# to the same bounds his own flight uses; the fire patches he has already laid stay where they are.
+func knock_back(push: Vector2, time: float) -> void:
+	var bounds := ground_bounds(height)
+	var target := (ground_position + push).clamp(bounds.position, bounds.end)
+	var slide := create_tween()
+	slide.tween_method(func(to: Vector2) -> void:
+		ground_position = to
+		place()
+	, ground_position, target, time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 func place() -> void:

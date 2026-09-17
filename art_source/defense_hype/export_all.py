@@ -17,6 +17,8 @@ import fx_dodge as DG
 import fx_super as FS
 import player_guard_break as GB
 import parry_tell as PT
+import parry_streak as PK
+import super_impact as SI
 
 CHECK = '--check' in sys.argv
 OVERWRITE_OWN = '--overwrite-own' in sys.argv
@@ -165,6 +167,18 @@ def ui_asset(name, frames, durations, tags=None):
               durations, tags)
 
 
+def ui_sheet(name, rows, durations, tags):
+    """UI asset whose PNG is a grid (rows x frames); the .aseprite gets every cell as a frame"""
+    sheet = grid_sheet(rows)
+    p = PROJ + UI + name + '.png'
+    emit(sheet, p)
+    check_png(p, DB32)
+    emit(scale3(sheet), PROJ + UI + name + '_3x.png')
+    check_png(PROJ + UI + name + '_3x.png', DB32)
+    flat = [f for row in rows for f in row]
+    build_ase(PROJ + UI + name + '.aseprite', flat[0].w, flat[0].h, [name], [[f] for f in flat], durations, tags)
+
+
 def main():
     # ---------------- UI
     st = ST.build()
@@ -187,6 +201,16 @@ def main():
     for name, frames in PO.build().items():
         ui_asset(name, frames, PO.DURATIONS_MS[name])
 
+    streak = PK.popups()
+    for name, frames in streak.items():
+        ui_asset(name, frames, PK.POPUP_DURATIONS_MS[name])
+    badge = PK.streak_badge()
+    assert all((f.w, f.h) == (PK.BW, PK.BH) for row in badge for f in row)
+    ui_sheet('streak_badge', badge, PK.BADGE_DURATIONS_MS * 3,
+             [('streak_x1', 1, 4), ('streak_x2', 5, 8), ('streak_x3', 9, 12)])
+    digits = PK.streak_digits()
+    ui_asset('streak_digits', digits, [100] * 10, [('digits', 1, 10)])
+
     # ---------------- effects (1x only)
     fd = FD.build()
     specs = [('block_spark', fd['block_spark'], [40, 50, 60, 70], [('block', 1, 4)]),
@@ -195,7 +219,11 @@ def main():
              ('uppercut_impact_super', FS.impact_super(), FS.IMPACT_DURATIONS_MS, [('impact', 1, 7)]),
              ('parry_tell', PT.parry_tell(), PT.TELL_DURATIONS_MS, [('tell_loop', 1, 6)]),
              ('parry_tell_strong', PT.parry_tell_strong(), PT.STRONG_DURATIONS_MS, [('tell_loop', 1, 6)]),
-             ('parry_glow', PT.parry_glow(), PT.GLOW_DURATIONS_MS, [('glow_loop', 1, 4)])]
+             ('parry_glow', PT.parry_glow(), PT.GLOW_DURATIONS_MS, [('glow_loop', 1, 4)]),
+             ('parry_flash_strong', PK.parry_flash_strong(), PK.FLASH_DURATIONS_MS, [('parry_strong', 1, 7)]),
+             ('parry_shatter', PK.parry_shatter(), PK.SHATTER_DURATIONS_MS, [('shatter', 1, 4)]),
+             ('super_impact_rays', SI.super_impact_rays(), SI.RAY_DURATIONS_MS, [('rays', 1, 5)]),
+             ('super_impact_ring', SI.super_impact_ring(), SI.RING_DURATIONS_MS, [('ring', 1, 6)])]
     for name, frames, durs, tags in specs:
         s = strip(frames)
         p = PROJ + FX + name + '.png'

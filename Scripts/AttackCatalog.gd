@@ -56,6 +56,16 @@ const ATTACKS := {
 	&"carter_elbow_drop": {"blockable": true, "weight": Weight.HEAVY, "from_above": true},
 	&"funko_blast": {"blockable": true, "weight": Weight.LIGHT},
 	&"bixby_fire_breath": {"blockable": true, "weight": Weight.LIGHT},
+	# The ground wave an erupting crack sends out.
+	&"bixby_quake_burst": {"blockable": true, "weight": Weight.LIGHT},
+	# Swept beams, like the other ones: dashing through is the dodge.
+	&"bixby_sonic_beam": {"dash_through": true},
+	# Josh's cards.
+	# A giant card slamming down on a third of the arena: it can only be moved out of.
+	&"josh_card_fall": {"damage": 2},
+	&"josh_card_bomb": {"blockable": true, "weight": Weight.LIGHT, "from_above": true},
+	# Three in a row, each with its own tell; a parry negates but never staggers him.
+	&"josh_card_throw": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
 	# Anything that hits without an id: exactly the old behaviour.
 	&"untagged": {},
 }

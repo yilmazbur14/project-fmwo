@@ -15,8 +15,8 @@ static var shake_tween: Tween
 
 
 # SceneTree tweens, so hit-stop slows them like the fight and a scene change can't leave the canvas
-# offset or zoomed.
-static func zoom_to(tree: SceneTree, to_zoom: float, to_focus: Vector2, duration: float) -> void:
+# offset or zoomed. `ignore_time_scale` is for punches meant to play out during a hit-stop.
+static func zoom_to(tree: SceneTree, to_zoom: float, to_focus: Vector2, duration: float, ignore_time_scale := false) -> void:
 	if zoom_tween:
 		zoom_tween.kill()
 	var from_zoom := zoom
@@ -25,17 +25,21 @@ static func zoom_to(tree: SceneTree, to_zoom: float, to_focus: Vector2, duration
 		zoom = lerpf(from_zoom, to_zoom, weight)
 		focus = from_focus.lerp(to_focus, weight)
 		apply(tree)
-	zoom_tween = tree.create_tween()
+	zoom_tween = tree.create_tween().set_ignore_time_scale(ignore_time_scale)
 	zoom_tween.tween_method(step, 0.0, 1.0, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
-static func shake(tree: SceneTree, strength: float, steps: int, step_time: float) -> void:
+# With a `direction`, the shake is a jolt along it that settles instead of a random rattle.
+static func shake(tree: SceneTree, strength: float, steps: int, step_time: float, direction := Vector2.ZERO, ignore_time_scale := false) -> void:
 	if shake_tween:
 		shake_tween.kill()
-	shake_tween = tree.create_tween()
+	shake_tween = tree.create_tween().set_ignore_time_scale(ignore_time_scale)
+	var push := direction.normalized()
 	for i in steps:
 		var step_strength := strength * (1.0 - float(i) / steps)
 		var offset := Vector2(randf_range(-step_strength, step_strength), randf_range(-step_strength, step_strength)).round()
+		if push != Vector2.ZERO:
+			offset = (push * step_strength * (1.0 if i % 2 == 0 else -0.5)).round()
 		shake_tween.tween_callback(func() -> void:
 			shake_offset = offset
 			apply(tree)

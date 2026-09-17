@@ -47,6 +47,15 @@ GLYPHS = {
     'K': ["XXX....XXX", "XXX...XXX.", "XXX..XXX..", "XXX.XXX...", "XXXXXX....", "XXXXXX....",
           "XXX.XXX...", "XXX..XXX..", "XXX...XXX.", "XXX....XXX", "XXX....XXX"],
     ' ': ["..", "..", "..", "..", "..", "..", "..", "..", "..", "..", ".."],
+    # streak glyphs: multiplier, digits and the "and above" plus
+    'x': ["..........", "..........", "..........", "XXX....XXX", ".XXX..XXX.", "..XXXXXX..",
+          "...XXXX...", "..XXXXXX..", ".XXX..XXX.", "XXX....XXX", ".........."],
+    '2': [".XXXXXXXX.", "XXXXXXXXXX", "XXX....XXX", ".......XXX", "......XXXX", "....XXXX..",
+          "..XXXX....", "XXXX......", "XXX.......", "XXXXXXXXXX", "XXXXXXXXXX"],
+    '3': ["XXXXXXXXXX", "XXXXXXXXXX", "......XXX.", "....XXXX..", "..XXXXXX..", ".....XXXX.",
+          ".......XXX", ".......XXX", "XXX....XXX", "XXXXXXXXXX", ".XXXXXXXX."],
+    '+': ["..........", "..........", "...XXX....", "...XXX....", "XXXXXXXXX.", "XXXXXXXXX.",
+          "...XXX....", "...XXX....", "..........", "..........", ".........."],
 }
 SLANT = [2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0]
 
@@ -83,6 +92,12 @@ SCHEMES = {
     # HYPE! gold into magenta, purple extrusion
     'hype': (_s("YYYY.mmm.VV", {4: 'Ym', 8: 'mV'}, 'pn', 'W', 'W'),
              _s("WWWW.YYY.mm", {4: 'WY', 8: 'Ym'}, 'Vpn', 'W', 'W')),
+    # PARRY x2: the x1 popup's white-gold pushed hotter, into orange
+    'parry_x2': (_s("WWW.YYYY.OO", {3: 'WY', 8: 'YO'}, 'rp', 'W', 'W'),
+                 _s("WWWWW.YY.OO", {5: 'WY', 8: 'YO'}, 'Trp', 'W', 'W')),
+    # PARRY x3+: gold into magenta with a deeper extrusion (the hype family's colours)
+    'parry_x3': (_s("WWW.YYY.mmm", {3: 'WY', 7: 'Ym'}, 'Vpn', 'W', 'W'),
+                 _s("WWWWW.YY.mm", {5: 'WY', 8: 'Ym'}, 'mVpn', 'W', 'W')),
 }
 
 

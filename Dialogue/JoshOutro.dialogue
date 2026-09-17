@@ -1,0 +1,12 @@
+# Lines for the end of the Josh fight, said before the fade to the Victory or Defeat screen.
+# player_won: the player beat Josh. player_lost: Josh beat the player.
+
+~ player_won
+Josh: You counted them. Nobody counts them.
+Josh: Keep the deck, kid. Don't let it go to your head.
+=> END
+
+~ player_lost
+Josh: House rules. The house shuffles.
+Josh: Come back when you can tell a bomb from a bluff.
+=> END

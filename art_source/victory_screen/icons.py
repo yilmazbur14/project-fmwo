@@ -2,8 +2,8 @@
 Built from the approved sprites' heads (1:1 pixels, remapped to DB32 by hand-checked tables),
 duo slots as diagonal tag-team splits, plus an original INVITE envelope icon.
 Frame order (approved boss order):
-0 Eric, 1 Computah & Greyson (mech), 2 Carter & Josh, 3 Mason, 4 Liam & Bixby,
-5 Jordan (final boss), 6 Invite.
+0 Eric, 1 Greyson & Computah (mech), 2 Mason, 3 Josh, 4 Carter, 5 Liam & Bixby,
+6 Jordan (final boss), 7 Invite.
 python icons.py outdir"""
 import sys, math
 from cv import *
@@ -11,7 +11,7 @@ import slots
 
 CHAR = "C:/Users/theyi/OneDrive/Documents/new-game-project/Assets/Characters/"
 S = 40
-ORDER = ['eric', 'mech', 'carter_josh', 'mason', 'liam_bixby', 'jordan', 'invite']
+ORDER = ['eric', 'mech', 'mason', 'josh', 'carter', 'liam_bixby', 'jordan', 'invite']
 
 
 def rgb(h):
@@ -51,11 +51,34 @@ REMAP = {
                               'eef3f6': WHITE, 'b0aab4': GREY, '24212a': NAVY, '37333d': NAVY,
                               'fff7a0': WHITE, 'd6dee5': PALE, '8a5236': RUST, '4a1a1a': PLUM,
                               '604090': PURPLE}),
-    'carter': dict(SKIN_MAP, **{'d66c28': ORANGE, 'f09040': TAN, '703414': BROWN, 'b05b21': RUST,
-                                '4a2c1a': PLUM, 'e6ecf2': WHITE}),
-    'josh': dict(SKIN_MAP, **{'130b09': K, '24160f': PLUM, '3a2014': PLUM, '3d261a': PLUM,
-                              '5f3c29': BROWN, '8a5b3d': RUST, '173c8a': INDIGO, '2a67c9': BLURPLE,
-                              '5fa8f0': SKY, 'c8ecff': PALE, 'd3d9e4': PALE, 'fff0dc': WHITE}),
+    # ffd2d8/ff5a62/e0203c only ever colour his eye slits, so they take the hottest ramp on the
+    # sheet (white core in a red slit) - at portrait size that glare is what identifies him.
+    # The aura that falls outside the window keeps its own ramp for the rest of the sheet's uses:
+    # PLUM/PURPLE for the wisps, RED/PINK for the flames.
+    'carter': dict(SKIN_MAP, **{'221208': K, '111131': NAVY, '0c1430': NAVY, '150f33': NAVY,
+                                '19062a': NAVY, '2e0c4c': PLUM, '23184e': PLUM, '34236d': PURPLE,
+                                '4e1878': PURPLE, '7c2eb0': PURPLE, '780c28': PLUM, 'c01830': RED,
+                                'e0203c': RED, 'ff5a62': PINK, 'ff4a3c': PINK, 'ffd2d8': WHITE,
+                                'd0ae74': TAN, 'c08a58': TAN, 'c8a46a': TAN, 'f0d8a4': SKIN,
+                                'fff2d6': WHITE, 'e6ecf2': WHITE, 'd66c28': ORANGE, 'f09040': ORANGE,
+                                'b05b21': RUST, 'ffb45e': TAN, '703414': BROWN, '552619': BROWN,
+                                '58341c': BROWN, '3a2010': PLUM, '32210f': PLUM, '4a2210': PLUM,
+                                '14204a': NAVY, '1b1c4c': NAVY, '1d2b60': INDIGO, '292767': INDIGO,
+                                '2d4392': STEEL, '4a6ed8': BLURPLE, 'bed6ff': PALE, 'a07e4c': BRASS,
+                                'a07c46': BRASS, '74562e': MUD, '6e5230': MUD, '50381c': BROWN}),
+    # His deepened palette: bone duster (WHITE..DASH), wine fedora crown (PLUM/RED, one PINK
+    # highlight - the mid wine shares RED so the crown doesn't read pink at portrait size), gold
+    # band and spade rim on DB32's own gold ramp, and lenses dark enough for the PALE streak to
+    # stay the glint.
+    'josh': dict(SKIN_MAP, **{'0d0d13': K, '130b09': K, '1f1d17': K, '1c1c24': NAVY, '24160f': PLUM,
+                              '2b0a12': PLUM, '3d261a': PLUM, '5f3c29': BROWN, 'b58773': TAN,
+                              'e0917c': PINK, 'd9ab93': SKIN, 'f4ead6': WHITE, 'fff0dc': WHITE,
+                              'e8e2ce': PALE, 'c6bfa4': GREY, '918b72': DGREY, '5e5a48': DASH,
+                              '39362b': SLATE, '4d1420': PLUM, '7a2032': RED, 'a63b4b': RED,
+                              'c96c74': PINK, '7a5216': MUD, 'b07d22': BRASS, 'e0ab35': TAN,
+                              'f5d94e': YEL, 'fff3b0': WHITE, '0d1f4a': NAVY, '20203c': NAVY,
+                              '32335c': INDIGO, '45487f': INDIGO, '1b3f86': STEEL, 'bde0ff': PALE,
+                              '32323e': NAVY, '50505e': DASH, '7e7e90': DGREY, 'e07a2c': ORANGE}),
     'mason': dict(SKIN_MAP, **{'90765e': RUST, '7d5631': BROWN, 'd4cc2e': TAN, 'ae8358': RUST,
                                'fadcb8': SKIN}),
     'liam': dict(SKIN_MAP, **{'1b0f0d': K, '120a08': K, '36201a': PLUM, '56352a': BROWN,
@@ -165,11 +188,13 @@ def build():
     bg_disc(ic['eric'], STEEL, NAVY)
     ic['mech'] = crop_icon('mech', CHAR + "GreysonMech/greyson_mech.png", 48, 24)
     bg_disc(ic['mech'], PURPLE, PLUM)
-    a = crop_icon('carter', CHAR + "Carter/carter_redesign.png", 38, 16)
-    bg_disc(a, BLURPLE, INDIGO)
-    b = crop_icon('josh', CHAR + "Josh/josh_redesign.png", 25, 17)
-    bg_disc(b, ORANGE, RUST)
-    ic['carter_josh'] = split(a, b, 0.35)
+    # Their own slots each now, off their final solo sheets: Josh's idle, whose head is drawn for
+    # this crop (fedora band and brim over the shades), and Carter's crossed-arms pose, framed on
+    # the glare and the beard like the other portraits.
+    ic['josh'] = crop_icon('josh', CHAR + "Josh/josh_cards.png", 40, 29)
+    bg_disc(ic['josh'], ORANGE, RUST)
+    ic['carter'] = crop_icon('carter', CHAR + "Carter/carter_akuma.png", 143, 26)
+    bg_disc(ic['carter'], BLURPLE, INDIGO)
     ic['mason'] = crop_icon('mason', CHAR + "Mason/mason.png", 32, 20)
     bg_disc(ic['mason'], RED, BROWN)
     a = crop_icon('liam', CHAR + "Liam/liam.png", 38, 18)

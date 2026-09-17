@@ -14,6 +14,8 @@ extends Node
 const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
 const FIRE_PATCH_SCENE := preload("res://Scenes/Bosses/BixbyFirePatchScene.tscn")
 const FirePatch := preload("res://Scripts/BixbyFirePatchScript.gd")
+const QUAKE_CRACK_SCENE := preload("res://Scenes/Bosses/BixbyQuakeCrackScene.tscn")
+const QuakeCrack := preload("res://Scripts/BixbyQuakeCrackScript.gd")
 
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/LiamPreFight.dialogue"
 const HAZARD_GROUP := "bixby_beast_hazard"
@@ -26,11 +28,16 @@ const PLAYER_HALF_BODY := Vector2(12, 27)
 const FIRE_PASSAGE_MARGIN := 6.0
 # The grid the floor is checked on for places the fire would wall off.
 const FLOOR_CELL := 16.0
+# A quake wave runs along the line between him and the crack it comes out of. Off a crack planted against a
+# rope, that way is a few steps of floor, so it runs the other way along the same line instead.
+const QUAKE_MIN_TRAVEL := 500.0
 
 # The fight's loop: hover and strafe, run the cycle's attacks with a short hover between them, land for
-# the punishable recovery, take off, repeat. Cycles take turns through this list, so every second cycle
-# breathes fire twice. A new attack is a state that calls attack_finished() when it's done, listed here.
-const ATTACK_CYCLES := [["FireBreath"], ["FireBreath", "FireBreath"]]
+# the punishable recovery, take off, repeat. Cycles take turns through this list: fire breath, the combined
+# attack, a double breath, the combined attack again. A new attack is a state that calls attack_finished()
+# when it's done, listed here. The combined attack ends on a punish window of its own and takes off from
+# it, so it is always the last attack of its cycle and that cycle has no landing recovery.
+const ATTACK_CYCLES := [["FireBreath"], ["Combined"], ["FireBreath", "FireBreath"], ["Combined"]]
 
 #TUNING (seconds, px and px/s)
 @export var hover_time := 1.8
@@ -60,6 +67,22 @@ const ATTACK_CYCLES := [["FireBreath"], ["FireBreath", "FireBreath"]]
 @export var recover_time := 3.5
 # How long he takes to rise to hover height, from the takeoff's rising frame.
 @export var takeoff_rise_time := 0.3
+# The combined attack: he lands and braces this long, then pounds this many cracks into the floor this far
+# apart, one under the player each time.
+@export var combined_windup := 0.5
+@export var combined_pounds := 3
+@export var combined_pound_interval := 0.35
+# How long the first pound's crack glows before it erupts, and how fast its wave then travels out.
+@export var quake_warning := 1.2
+@export var quake_speed := 700.0
+# Every crack after it burns this much longer than the one before, so the three go off further apart than
+# the player's invincibility lasts: together they were one hit, spread out they are three to keep clear of.
+@export var quake_stagger := 0.85
+# The scream: one full turn of the drawn spin, which is a third of a turn every 0.3s. Kept to whole turns,
+# since the wobble he stops on is drawn to follow the last frame of the loop. He wobbles dizzy for this
+# long afterwards.
+@export var combined_spin_time := 1.2
+@export var combined_dizzy_time := 2.0
 # The fire trail the full stream leaves on the floor: patches that block the player but don't hurt. How
 # long each burns between catching and burning out, whose timing is drawn.
 @export var fire_trail_time := 6.0
@@ -157,8 +180,11 @@ func attack_finished(state: State) -> void:
 	on_child_transition(state, "Land" if attacks.is_empty() else "Hover")
 
 
+# His punish windows: the recovery he lands in, and the dizzy spell the combined attack ends on.
 func is_recovering() -> bool:
-	return current_state == states.get("Recover")
+	if current_state == states.get("Recover"):
+		return true
+	return current_state == states.get("Combined") and current_state.is_dizzy()
 
 
 func flinch() -> void:
@@ -288,6 +314,35 @@ func _fire_in_the_way(footprint: Rect2, from: Vector2, target: Rect2) -> bool:
 		if blocked.has_point(from.lerp(to, float(i) / steps)):
 			return true
 	return false
+
+
+#COMBINED ATTACK
+
+# Sets a crack glowing where a pound landed, pointing the way its wave travels when it erupts. Kept inside
+# the ropes, so a pound aimed at a player against one still cracks floor. `order` is which pound planted
+# it, which is what holds its eruption back behind the one before.
+func plant_quake_crack(at: Vector2, from: Vector2, order := 0) -> void:
+	var point := at.clamp(ROPES.position, ROPES.end)
+	var direction := Vector2.DOWN if point.is_equal_approx(from) else (point - from).normalized()
+	if _wave_room(point, direction) < QUAKE_MIN_TRAVEL:
+		direction = -direction
+	var crack := QUAKE_CRACK_SCENE.instantiate()
+	crack.position = point.round()
+	crack.warning_time = quake_warning + order * quake_stagger
+	crack.speed = quake_speed
+	crack.direction = direction
+	get_tree().current_scene.add_child(crack)
+
+
+# How far a wave out of `point` runs that way before it is off the floor.
+func _wave_room(point: Vector2, direction: Vector2) -> float:
+	var floor_area: Rect2 = QuakeCrack.WAVE_AREA
+	var room := INF
+	if absf(direction.x) > 0.001:
+		room = minf(room, ((floor_area.end.x if direction.x > 0.0 else floor_area.position.x) - point.x) / direction.x)
+	if absf(direction.y) > 0.001:
+		room = minf(room, ((floor_area.end.y if direction.y > 0.0 else floor_area.position.y) - point.y) / direction.y)
+	return room
 
 
 func enter_defeated() -> void:

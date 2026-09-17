@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/JoshCardBombScript.gd" id="1_bomb"]
+[ext_resource type="AudioStream" uid="uid://bjnbrjopwuft7" path="res://Assets/Audio/SFX/wrestler_collision.ogg" id="2_blast"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_josh_card_bomb"]
+resource_local_to_scene = true
+radius = 110.0
+
+[node name="JoshCardBomb" type="Node2D" node_paths=PackedStringArray("shadow", "card", "hitbox", "hitbox_shape", "blast_sfx")]
+script = ExtResource("1_bomb")
+shadow = NodePath("Shadow")
+card = NodePath("Card")
+hitbox = NodePath("Hitbox")
+hitbox_shape = NodePath("Hitbox/CollisionShape2D")
+blast_sfx = NodePath("BlastSfx")
+
+[node name="Shadow" type="Node2D" parent="."]
+modulate = Color(1, 1, 1, 0)
+
+[node name="Card" type="Node2D" parent="."]
+
+[node name="Hitbox" type="Area2D" parent="." groups=["enemy projectile"]]
+collision_mask = 0
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("CircleShape2D_josh_card_bomb")
+disabled = true
+
+[node name="BlastSfx" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2_blast")
+pitch_scale = 1.2

@@ -49,14 +49,26 @@ enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE }
 @export var focus_boss_weight := 0.35
 # Of the boss's max health, at least 1.
 @export var finisher_damage_ratio := 0.25
-# The same, for an uppercut supercharged by a full hype meter (PlayerHype).
+# The same, for an uppercut supercharged by a full hype meter (PlayerHype). Every dial on the
+# supercharged contact is bigger than the normal one: that gap is the point.
 @export var supercharged_damage_ratio := 0.40
-@export var super_impact_hit_stop := 0.25
-@export var super_impact_shake := 24.0
+@export var super_impact_hit_stop := 0.35
+@export var super_impact_shake := 34.0
+@export var super_impact_shake_steps := 10
+# Multiplies the view at contact, snapped to, held, then eased back out. Real seconds: the punch
+# plays out during the hit-stop.
+@export var super_impact_zoom := 1.25
+@export var super_impact_zoom_in_time := 0.03
+@export var super_impact_zoom_hold := 0.12
+@export var super_impact_zoom_out_time := 0.45
 @export var super_impact_flash := Color(2.6, 2.2, 0.9)
-@export var super_impact_cheer := 3.0
+@export var super_impact_cheer := 4.0
 # On the player as the uppercut launches.
 @export var super_launch_flash := Color(2.0, 1.6, 0.6)
+# How far the uppercut shoves the boss away from the player, and how long the shove takes.
+@export var uppercut_knockback := 120.0
+@export var super_uppercut_knockback := 240.0
+@export var uppercut_knockback_time := 0.3
 # px the boss's hurtbox grows by for the reach check.
 @export var uppercut_reach := 48.0
 @export var impact_hit_stop := 0.15
@@ -65,8 +77,10 @@ enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE }
 # Stacks on the boss's own hit flash, which tweens modulate.
 @export var impact_flash := Color(2.2, 1.9, 1.3)
 @export var impact_flash_time := 0.35
-# A boss the finisher lands on idles this long, hopping, then attacks again.
-@export var stagger_time := 0.6
+# A boss the finisher lands on idles this long, hopping, then attacks again: long enough for the
+# player to back off and read what comes next.
+@export var stagger_time := 1.2
+@export var super_stagger_time := 1.8
 @export var stagger_hop_texels := 10
 @export var fizzle_time := 0.25
 # After the finisher, punch and dodge presses are swallowed for this long, so leftover mashing can't
@@ -297,6 +311,7 @@ func _advance_uppercut() -> void:
 func _contact() -> void:
 	var landed := _boss_valid() and _in_reach()
 	var box := _hurtbox_rect() if landed else Rect2()
+	var super_applied := false
 	FightFreeze.unfreeze(get_tree())
 	_clear_stars()
 	if landed:
@@ -304,21 +319,161 @@ func _contact() -> void:
 		var normal := maxi(1, roundi(max_health * finisher_damage_ratio))
 		var dealt: int = boss.take_finisher(maxi(1, roundi(max_health * supercharged_damage_ratio)) if supercharged else normal)
 		# A phase floor or a nearly dead boss can clip it: hype is only spent for damage it added.
-		var super_applied := supercharged and dealt > normal
+		super_applied = supercharged and dealt > normal
 		if super_applied:
 			player.hype.spend()
 		boss.exit_daze(true)
-		if boss.get_health_ratio() > 0.0 and boss.end_recovery(stagger_time):
-			_hop(boss.sprite)
+		var stagger: float = super_stagger_time if super_applied else stagger_time
+		# A killing blow leaves him where he stands: his defeat and the outro play from that spot.
+		if boss.get_health_ratio() > 0.0:
+			var rocked := _knock_back(super_uppercut_knockback if super_applied else uppercut_knockback, stagger)
+			# A boss rocking back on his sprite is already reeling; a hop on the same offset would fight it.
+			if boss.end_recovery(stagger) and not rocked:
+				_hop(boss.sprite)
 		_spawn_impact(box, super_applied)
+		if super_applied:
+			_super_contact_extras(box)
 		HitStop.freeze(get_tree(), super_impact_hit_stop if super_applied else impact_hit_stop)
-		ScreenView.shake(get_tree(), super_impact_shake if super_applied else impact_shake, IMPACT_SHAKE_STEPS, IMPACT_SHAKE_STEP_TIME)
+		ScreenView.shake(get_tree(), super_impact_shake if super_applied else impact_shake, super_impact_shake_steps if super_applied else IMPACT_SHAKE_STEPS, IMPACT_SHAKE_STEP_TIME)
 		_flash(boss.sprite, super_impact_flash if super_applied else impact_flash)
 		get_tree().call_group("arena_crowd", "cheer", super_impact_cheer if super_applied else impact_cheer)
 	elif _boss_valid():
 		# A whiff: the punish window carries on with the time it had left.
 		boss.exit_daze(false)
-	ScreenView.zoom_to(get_tree(), 1.0, ScreenView.focus, zoom_out_time)
+	if super_applied:
+		# The punch owns the view from here: it snaps in, holds, then eases out over the freeze.
+		_super_zoom_punch()
+	else:
+		ScreenView.zoom_to(get_tree(), 1.0, ScreenView.focus, zoom_out_time)
+
+
+# The shove away from the player. A boss who can take it moves for real, clamped to his own ground;
+# the rest rock back on their sprite and settle through the stagger, so nothing anchored to their
+# position moves with them. Returns true when the sprite is what moved.
+func _knock_back(distance: float, settle_time: float) -> bool:
+	if distance <= 0.0 or not _boss_valid():
+		return false
+	var push := (_hurtbox_rect().get_center() - player.global_position).normalized()
+	if push == Vector2.ZERO:
+		push = Vector2.UP
+	if boss.has_method("knock_back"):
+		boss.knock_back(push * distance, uppercut_knockback_time)
+		return false
+	var sprite: Sprite2D = boss.sprite
+	var rest := sprite.offset
+	# The offset is in the sheet's texels, so the px shove is divided by what the sprite is drawn at.
+	var slide: Vector2 = rest + push * distance / sprite.global_scale
+	var recoil := sprite.create_tween()
+	recoil.tween_property(sprite, "offset", slide, uppercut_knockback_time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	recoil.tween_property(sprite, "offset", rest, maxf(settle_time - uppercut_knockback_time, 0.1)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	return true
+
+
+# The supercharged extras: a shock ring rolling out along the floor and speed lines across the
+# screen. Both ignore hit-stop, so they play out during the longer freeze.
+func _super_contact_extras(box: Rect2) -> void:
+	var point := box.get_center() if box.has_area() else player.global_position
+	# The ring rolls out along the floor, so it starts at the boss's feet rather than his chest.
+	_spawn_shock_ring(Vector2(point.x, box.end.y) if box.has_area() else point)
+	_spawn_speedlines(point)
+
+
+# Snapped in on the contact frame and eased back out, in real time so it reads through the hit-stop.
+func _super_zoom_punch() -> void:
+	ScreenView.zoom_to(get_tree(), ScreenView.zoom * super_impact_zoom, ScreenView.focus, super_impact_zoom_in_time, true)
+	var settle := get_tree().create_timer(super_impact_zoom_in_time + super_impact_zoom_hold, true, false, true)
+	# A method rather than a closure: the timer outlives a scene change, the connection doesn't.
+	settle.timeout.connect(_ease_out_super_zoom)
+
+
+func _ease_out_super_zoom() -> void:
+	if not player.fight_over:
+		ScreenView.zoom_to(get_tree(), 1.0, ScreenView.focus, super_impact_zoom_out_time, true)
+
+
+func _spawn_shock_ring(point: Vector2) -> void:
+	var spec := FinisherArtLayout.super_shock_ring()
+	if spec.has("texture"):
+		var sheet := _make_sheet(spec, spec.scale)
+		_ground_layer().add_child(sheet)
+		sheet.global_position = point.round()
+		_play_sheet(sheet, spec)
+		return
+	var ring := Line2D.new()
+	ring.width = spec.width
+	ring.default_color = spec.color
+	ring.closed = true
+	var points := PackedVector2Array()
+	for i in spec.points:
+		points.append(Vector2.from_angle(TAU * i / spec.points))
+	ring.points = points
+	ring.scale = Vector2.ONE * spec.radius
+	fx_layer.add_child(ring)
+	ring.global_position = point
+	var grow := ring.create_tween().set_parallel().set_ignore_time_scale(true)
+	grow.tween_property(ring, "scale", Vector2.ONE * spec.to_radius, spec.time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	grow.tween_property(ring, "modulate:a", 0.0, spec.time)
+	grow.chain().tween_callback(ring.queue_free)
+
+
+func _spawn_speedlines(point: Vector2) -> void:
+	var spec := FinisherArtLayout.super_speedlines()
+	if spec.has("texture"):
+		var screen_point: Vector2 = get_viewport().get_canvas_transform() * point
+		var middle := get_viewport().get_visible_rect().size / 2.0
+		var lines_scale: float = spec.off_centre_scale if screen_point.distance_to(middle) > spec.off_centre else spec.scale
+		var sheet := _make_sheet(spec, lines_scale)
+		var hud: CanvasLayer = player.get_parent().get_node("CanvasLayer")
+		hud.add_child(sheet)
+		# First on the HUD layer: over the arena, under every readout.
+		hud.move_child(sheet, 0)
+		sheet.position = screen_point.round()
+		_play_sheet(sheet, spec)
+		return
+	var lines := Node2D.new()
+	fx_layer.add_child(lines)
+	lines.global_position = point
+	for i in spec.rays:
+		var ray := Polygon2D.new()
+		var out := Vector2.from_angle(TAU * i / spec.rays)
+		var side: Vector2 = out.orthogonal() * spec.width / 2.0
+		ray.polygon = PackedVector2Array([out * spec.inner_radius + side, out * spec.length, out * spec.inner_radius - side])
+		ray.color = spec.color
+		lines.add_child(ray)
+	var fade := lines.create_tween().set_ignore_time_scale(true)
+	fade.tween_property(lines, "modulate:a", 0.0, spec.time)
+	fade.tween_callback(lines.queue_free)
+
+
+func _make_sheet(spec: Dictionary, sheet_scale: float) -> Sprite2D:
+	var sheet := Sprite2D.new()
+	sheet.texture = load(spec.texture)
+	sheet.hframes = spec.hframes
+	sheet.centered = false
+	sheet.offset = -spec.pivot
+	sheet.scale = Vector2.ONE * sheet_scale
+	return sheet
+
+
+func _play_sheet(sheet: Sprite2D, spec: Dictionary) -> void:
+	var frames := sheet.create_tween().set_ignore_time_scale(true)
+	for i in spec.frame_times.size():
+		frames.tween_callback(sheet.set_frame.bind(i))
+		frames.tween_interval(spec.frame_times[i])
+	frames.tween_callback(sheet.queue_free)
+
+
+# A layer in the arena drawn before the player and the boss, for effects that belong on the floor.
+func _ground_layer() -> Node2D:
+	var stage: Node2D = player.get_parent()
+	var arena: Node = stage.get_parent()
+	var layer: Node2D = arena.get_node_or_null("GroundFx")
+	if layer == null:
+		layer = Node2D.new()
+		layer.name = "GroundFx"
+		arena.add_child(layer)
+		arena.move_child(layer, stage.get_index())
+	return layer
 
 
 func _land() -> void:

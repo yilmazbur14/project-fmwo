@@ -17,7 +17,8 @@ const CROWD_GROUP := "arena_crowd"
 @export var punch_gain := 5.0
 # Instead of punch_gain, not on top of it.
 @export var charged_punch_gain := 12.0
-@export var parry_gain := 25.0
+# By parry streak tier: the first parry, the second, then the third and up.
+@export var parry_gains: Array = [25.0, 30.0, 35.0]
 @export var perfect_dodge_gain := 15.0
 # A punched figure's blast catching Jordan.
 @export var explosion_redirect_gain := 8.0
@@ -95,8 +96,8 @@ func _on_punch_landed(_target: Node, _dealt: int, charged: bool) -> void:
 	add(charged_punch_gain if charged else punch_gain)
 
 
-func _on_parried(_hit: RefCounted, _contact_point: Vector2, _staggered: bool) -> void:
-	add(parry_gain)
+func _on_parried(_hit: RefCounted, _contact_point: Vector2, _staggered: bool, streak: int) -> void:
+	add(parry_gains[clampi(streak - 1, 0, parry_gains.size() - 1)])
 
 
 func _on_perfect_dodged(_hit: RefCounted) -> void:

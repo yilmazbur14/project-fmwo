@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://bpvc6ieo013t6"
+path="res://.godot/imported/JoshOutro.dialogue-2d695e55dfe4d2f105306dcd7933d120.tres"
+
+[deps]
+
+source_file="res://Dialogue/JoshOutro.dialogue"
+dest_files=["res://.godot/imported/JoshOutro.dialogue-2d695e55dfe4d2f105306dcd7933d120.tres"]
+
+[params]
+
+defaults=true

@@ -18,13 +18,21 @@ const SHAKE_STEP_TIME := 0.03
 @onready var fx_layer: Node2D = player.get_parent().get_node("FinisherFx")
 @onready var sfx_player: AudioStreamPlayer = player.get_node("BlockSfxPlayer")
 @onready var hype_sfx_player: AudioStreamPlayer = player.get_node("HypeFullSfxPlayer")
+# The tinks ring on: parries in quick succession each need their own voice, and the sting its own.
+@onready var sting_player: AudioStreamPlayer = player.get_node("ParryStingPlayer")
+var parry_voices: Array[AudioStreamPlayer] = []
+var parry_voice := 0
 
 var flash: Tween
 var stars: Sprite2D
 var stun_clock := 0.0
+# Only the newest zoom punch pulls the view back out.
+var zoom_punch := 0
 
 
 func _ready() -> void:
+	for i in DefenseHypeArtLayout.PARRY_SFX_VOICES:
+		parry_voices.append(player.get_node("ParrySfxPlayer%d" % i))
 	defense.blocked.connect(_on_blocked)
 	defense.parried.connect(_on_parried)
 	defense.perfect_dodged.connect(_on_perfect_dodged)
@@ -54,14 +62,82 @@ func _on_blocked(hit: RefCounted, point: Vector2) -> void:
 		HitStop.freeze(get_tree(), defense.heavy_block_hit_stop)
 
 
-func _on_parried(_hit: RefCounted, point: Vector2, _staggered: bool) -> void:
-	var spec := DefenseHypeArtLayout.parry_flash()
+func _on_parried(hit: RefCounted, point: Vector2, _staggered: bool, streak: int) -> void:
+	var tier := clampi(streak - 1, 0, 2)
+	var spec := DefenseHypeArtLayout.parry_flash(tier)
 	var away: Vector2 = point - player.hurtBox.get_node("CollisionShape2D").global_position
-	_spawn_burst(spec, point + away.normalized() * spec.push)
-	_flash_player(DefenseHypeArtLayout.PARRY_FLASH, DefenseHypeArtLayout.PARRY_FLASH_TIME)
-	_play(DefenseHypeArtLayout.PARRY_SFX)
+	_spawn_burst(spec, point + away.normalized() * spec.push, DefenseHypeArtLayout.PARRY_FLASH_SCALE[tier])
+	_flash_player(DefenseHypeArtLayout.PARRY_FLASH[tier], DefenseHypeArtLayout.PARRY_FLASH_TIME[tier])
+	_flick_attack(hit, away)
+	_play_on(parry_voices[parry_voice], DefenseHypeArtLayout.parry_sfx(tier))
+	parry_voice = (parry_voice + 1) % parry_voices.size()
+	if tier >= 2:
+		# After the tink, so the hit reads before the flourish.
+		var sting := get_tree().create_timer(DefenseHypeArtLayout.PARRY_STREAK_STING_DELAY, true, false, true)
+		sting.timeout.connect(func() -> void: _play_on(sting_player, DefenseHypeArtLayout.parry_streak_sting()))
 	HitStop.freeze(get_tree(), defense.parry_hit_stop)
-	get_tree().call_group("arena_crowd", "cheer", DefenseHypeArtLayout.PARRY_CHEER)
+	_parry_punch(tier, away)
+	get_tree().call_group("arena_crowd", "cheer", DefenseHypeArtLayout.PARRY_CHEER[tier])
+
+
+# The jolt, and from tier 3 a short zoom, both in real time so the parry's hit-stop doesn't stretch
+# them. Skipped during a finisher, which owns the zoom, and once the fight is decided.
+func _parry_punch(tier: int, away: Vector2) -> void:
+	if player.fight_over or player.finisher.is_active():
+		return
+	ScreenView.shake(get_tree(), DefenseHypeArtLayout.PARRY_SHAKE[tier], DefenseHypeArtLayout.PARRY_SHAKE_STEPS, DefenseHypeArtLayout.PARRY_SHAKE_STEP_TIME, -away, true)
+	var zoom: float = DefenseHypeArtLayout.PARRY_ZOOM[tier]
+	if zoom <= 1.0:
+		return
+	var half: float = DefenseHypeArtLayout.PARRY_ZOOM_TIME / 2.0
+	zoom_punch += 1
+	var punch := zoom_punch
+	ScreenView.zoom_to(get_tree(), zoom, player.global_position, half, true)
+	var settle := get_tree().create_timer(half, true, false, true)
+	settle.timeout.connect(func() -> void:
+		# Only the latest punch pulls the view back, so parries in a row can't fight each other.
+		if punch == zoom_punch and not player.fight_over and not player.finisher.is_active():
+			ScreenView.zoom_to(get_tree(), 1.0, ScreenView.focus, half, true)
+	)
+
+
+# The parried attack reacts: its art flashes, and a projectile's is knocked back a few px before it
+# carries on. The boss's own sprite only flashes, and no hitbox ever moves.
+func _flick_attack(hit: RefCounted, away: Vector2) -> void:
+	var art := _attack_art(hit)
+	if art == null:
+		return
+	art.self_modulate = DefenseHypeArtLayout.PARRY_ATTACK_FLASH
+	art.create_tween().tween_property(art, "self_modulate", Color.WHITE, DefenseHypeArtLayout.PARRY_KNOCKBACK_TIME)
+	if not (art is Sprite2D) or (is_instance_valid(hit.boss) and art == hit.boss.get("sprite")):
+		return
+	# The projectile breaks up where it was parried, at its own scale.
+	var shatter := DefenseHypeArtLayout.parry_shatter()
+	if not shatter.is_empty():
+		var sprite_scale: float = (art as Sprite2D).global_scale.x
+		_spawn_burst(shatter.merged({"scale": sprite_scale}, true), (art as Node2D).global_position)
+	var sprite := art as Sprite2D
+	var rest := sprite.offset
+	var knock := rest + away.normalized() * DefenseHypeArtLayout.PARRY_KNOCKBACK / sprite.global_scale.x
+	var flick := sprite.create_tween()
+	flick.tween_property(sprite, "offset", knock, DefenseHypeArtLayout.PARRY_KNOCKBACK_TIME / 2.0)
+	flick.tween_property(sprite, "offset", rest, DefenseHypeArtLayout.PARRY_KNOCKBACK_TIME / 2.0)
+
+
+# Whatever draws the attack: the source itself, its own sprite, or the one beside it.
+func _attack_art(hit: RefCounted) -> CanvasItem:
+	var source = hit.source
+	if not (source is Node) or not is_instance_valid(source):
+		return null
+	if source is Sprite2D:
+		return source
+	for parent in [source, source.get_parent()]:
+		if parent == null:
+			continue
+		for child in parent.get_children():
+			if child is Sprite2D and child.visible:
+				return child
+	return null
 
 
 # No hit-stop: a slowdown inside a dash would eat the immunity, which counts physics frames.
@@ -128,10 +204,7 @@ func _on_guard_broken() -> void:
 func _on_hype_full_changed(full: bool) -> void:
 	if not full:
 		return
-	var sound := DefenseHypeArtLayout.HYPE_FULL_SFX
-	hype_sfx_player.stream = load(sound.stream)
-	hype_sfx_player.pitch_scale = sound.pitch
-	hype_sfx_player.play()
+	_play_on(hype_sfx_player, DefenseHypeArtLayout.HYPE_FULL_SFX)
 
 
 func _on_guard_recovered() -> void:
@@ -154,21 +227,25 @@ func _flash_player(color: Color, time: float) -> void:
 
 
 func _play(sound: Dictionary) -> void:
-	sfx_player.stream = load(sound.stream)
-	sfx_player.pitch_scale = sound.pitch
-	sfx_player.volume_db = sound.get("volume_db", 0.0)
-	sfx_player.play()
+	_play_on(sfx_player, sound)
+
+
+func _play_on(speaker: AudioStreamPlayer, sound: Dictionary) -> void:
+	speaker.stream = load(sound.stream)
+	speaker.pitch_scale = sound.pitch
+	speaker.volume_db = sound.get("volume_db", 0.0)
+	speaker.play()
 
 
 # A sheet played once, or the placeholder star growing and fading.
-func _spawn_burst(spec: Dictionary, point: Vector2) -> void:
+func _spawn_burst(spec: Dictionary, point: Vector2, at_scale := 1.0) -> void:
 	if spec.has("texture"):
 		var burst := Sprite2D.new()
 		burst.texture = load(spec.texture)
 		burst.hframes = spec.hframes
 		burst.centered = false
 		burst.offset = -spec.pivot
-		burst.scale = Vector2.ONE * spec.scale
+		burst.scale = Vector2.ONE * spec.scale * at_scale
 		fx_layer.add_child(burst)
 		burst.global_position = point.round()
 		var frames := burst.create_tween()
@@ -185,10 +262,10 @@ func _spawn_burst(spec: Dictionary, point: Vector2) -> void:
 		polygon.append(Vector2.from_angle(TAU * i / corners - PI / 2.0) * radius)
 	star.polygon = polygon
 	star.color = spec.color
-	star.scale = Vector2.ONE * spec.from_scale
+	star.scale = Vector2.ONE * spec.from_scale * at_scale
 	fx_layer.add_child(star)
 	star.global_position = point.round()
 	var grow := star.create_tween().set_parallel()
-	grow.tween_property(star, "scale", Vector2.ONE * spec.to_scale, spec.time)
+	grow.tween_property(star, "scale", Vector2.ONE * spec.to_scale * at_scale, spec.time)
 	grow.tween_property(star, "modulate:a", 0.0, spec.time)
 	grow.chain().tween_callback(star.queue_free)

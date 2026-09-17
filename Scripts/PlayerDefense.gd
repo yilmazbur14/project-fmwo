@@ -10,6 +10,8 @@ extends Node
 # within parry_mash_lockout of an earlier press that didn't parry gets no parry credit, so mashing
 # block can't parry; a parry re-arms the next press at once. A `parryable` attack, like Eric's grab,
 # can only be answered this way: a held guard doesn't stop it.
+# Parries in a row build a streak, which pays more hype, louder feedback and a longer stagger window.
+# A hit, a guard break or parry_streak_timeout without a parry ends it.
 # Guard break: the block that empties the bar is still absorbed, then the player is stunned and every
 # hit lands; the first one ends the stun, so it isn't punished twice. Only blocks break the guard.
 # Perfect dodge: either a dash-through attack touches the player during dash immunity, or another
@@ -20,13 +22,17 @@ extends Node
 # so every attack area that watches the player can see it.
 # Dash recovery: a dash ends in recovery frames where the player can't move, punch or dash, so dash
 # spam is slower than walking. The guard may still go up, and a parry during them ends them at once.
+# Status drain: a status effect (PlayerStatus) can empty the bar over time through drain_stamina(),
+# which keeps the refill off and breaks the guard of a player who holds block through it.
 # Stamina keeps refilling through a finisher's freeze, since the player's branch keeps processing.
 
 signal stamina_changed(stamina: float, max_stamina: float)
 # A dash was pressed without the stamina for it.
 signal stamina_refused
 signal blocked(hit: RefCounted, contact_point: Vector2)
-signal parried(hit: RefCounted, contact_point: Vector2, staggered: bool)
+# `streak` counts this parry: 1 for the first, then up while they keep landing.
+signal parried(hit: RefCounted, contact_point: Vector2, staggered: bool, streak: int)
+signal parry_streak_changed(streak: int)
 signal guard_broken
 signal guard_recovered
 signal perfect_dodged(hit: RefCounted)
@@ -68,9 +74,14 @@ static var LOG_HITS := false
 @export var guard_break_shake := 10.0
 @export var parry_window := 0.15
 @export var parry_mash_lockout := 0.5
-@export var parry_hit_stop := 0.08
+@export var parry_hit_stop := 0.12
 # How long a parried boss that can be staggered stays open to punches.
 @export var parry_stagger_time := 1.2
+# Seconds without a parry before the streak lapses.
+@export var parry_streak_timeout := 8.0
+# Added to the stagger window per streak tier above 2, up to the cap.
+@export var parry_stagger_streak_bonus := 0.2
+@export var parry_stagger_streak_bonus_max := 0.4
 # How long after a dash an attack reaching its starting spot still counts.
 @export var perfect_dodge_window := 0.2
 # A dash any sooner after the one before it can't earn a dodge, the DashImmunity rule.
@@ -100,6 +111,8 @@ var is_guard_broken := false
 var last_press_time := -INF
 var press_credited := false
 var last_press_parried := false
+var parry_streak := 0
+var last_parry_time := -INF
 # Instance id of whatever is hitting -> {contact, absorbed_until, lockout_until}, in game time.
 var sources := {}
 var guard_break_timer: Timer
@@ -131,6 +144,8 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	clock += delta
 	_regen(delta)
+	if parry_streak > 0 and clock - last_parry_time > parry_streak_timeout:
+		_end_parry_streak()
 	if ghost_active and clock - dash_start_time > perfect_dodge_window:
 		clear_dodge_ghost()
 
@@ -198,6 +213,16 @@ func refund(amount: float) -> void:
 	_set_stamina(minf(stamina + amount, max_stamina))
 
 
+# A status effect emptying the bar (PlayerStatus). It counts as a spend, so the refill stays off
+# while it lasts, and emptying the bar breaks a held guard the way a block that empties it does.
+func drain_stamina(amount: float) -> void:
+	if amount <= 0.0 or is_guard_broken or player.fight_over or player.is_finishing:
+		return
+	_spend(amount)
+	if stamina <= 0.0 and is_guarding():
+		_start_guard_break()
+
+
 func is_regen_paused() -> bool:
 	return guard_up and block_hold_regen_multiplier <= 0.0 and stamina < max_stamina
 
@@ -231,6 +256,7 @@ func clear_guard_break() -> void:
 
 
 func on_fight_over() -> void:
+	_end_parry_streak()
 	clear_guard_break()
 	clear_dodge_ghost()
 	clear_dash_recovery()
@@ -308,12 +334,26 @@ func _parry(hit: RefCounted, record: Dictionary) -> int:
 	last_press_parried = true
 	# The reward for reading the attack: a parry cancels a dash's recovery frames.
 	clear_dash_recovery()
+	parry_streak += 1
+	last_parry_time = clock
+	parry_streak_changed.emit(parry_streak)
 	var staggered: bool = hit.parry_stagger and is_instance_valid(hit.boss) and hit.boss.has_method("can_parry_stagger") and hit.boss.can_parry_stagger(hit)
 	if staggered:
 		# Parries resolve inside physics flushes and the boss's own physics step, where it can't switch state.
-		hit.boss.parry_stagger.call_deferred(parry_stagger_time)
-	parried.emit(hit, _contact_point(hit), staggered)
+		hit.boss.parry_stagger.call_deferred(parry_stagger_time + _streak_stagger_bonus())
+	parried.emit(hit, _contact_point(hit), staggered, parry_streak)
 	return HitInfo.Result.PARRIED
+
+
+func _streak_stagger_bonus() -> float:
+	return clampf((parry_streak - 2) * parry_stagger_streak_bonus, 0.0, parry_stagger_streak_bonus_max)
+
+
+func _end_parry_streak() -> void:
+	if parry_streak == 0:
+		return
+	parry_streak = 0
+	parry_streak_changed.emit(0)
 
 
 func _on_ghost_entered(area: Area2D) -> void:
@@ -341,6 +381,7 @@ func _try_award_perfect_dodge(hit: RefCounted) -> void:
 
 func _take_hit(hit: RefCounted) -> int:
 	hit_during_window = true
+	_end_parry_streak()
 	hit_taken.emit(hit)
 	if is_guard_broken and guard_break_ends_on_hit:
 		_end_guard_break.call_deferred()
@@ -350,6 +391,7 @@ func _take_hit(hit: RefCounted) -> int:
 func _start_guard_break() -> void:
 	is_guard_broken = true
 	clear_dash_recovery()
+	_end_parry_streak()
 	_set_stamina(0.0)
 	guard_break_timer.start(guard_break_time)
 	player.combo.reset()
