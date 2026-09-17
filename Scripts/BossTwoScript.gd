@@ -26,6 +26,13 @@ var fill_style: StyleBoxFlat
 var defeated := false
 var phase_two := false
 
+# The finisher's daze stars circle here, from the sprite's centre: about 34 px over the antenna.
+const DAZE_ANCHOR_OFFSET := Vector2(0, -92)
+# One finisher daze per Downed window; Downed clears it.
+var daze_used := false
+# Runs the stagger after a landed finisher, straight into the next attack cycle.
+var finisher_stagger_timer: Timer
+
 var sprite_base_position: Vector2
 
 # Called when the node enters the scene tree for the first time.
@@ -33,6 +40,12 @@ func _ready() -> void:
 	add_to_group(FightOutro.BOSS_GROUP)
 	var hurtBox = get_node("Hurtbox")
 	hurtBox.area_entered.connect(_on_hurtbox_entered)
+
+	finisher_stagger_timer = Timer.new()
+	finisher_stagger_timer.name = "FinisherStaggerTimer"
+	finisher_stagger_timer.one_shot = true
+	finisher_stagger_timer.timeout.connect($StateManager.resume_attack_cycle)
+	add_child(finisher_stagger_timer)
 
 	sprite_base_position = sprite.position
 	_build_health_bar()
@@ -62,6 +75,7 @@ func _process(_delta: float) -> void:
 
 # Called by FightOutro when the player loses. From phase two on, the mech has the attacks to stop.
 func on_player_defeated() -> void:
+	finisher_stagger_timer.stop()
 	if not phase_two:
 		$StateManager.end_phase_one()
 
@@ -100,7 +114,51 @@ func take_hit(amount: int) -> int:
 	return dealt
 
 
+# The player's finisher (PlayerFinisher). Only Downed can be dazed, and only while the finisher can
+# still take health before the phase-two threshold.
+func can_be_dazed() -> bool:
+	var state_machine = $StateManager
+	return not phase_two and not defeated and boss_health > floori(max_health * PHASE_TWO_RATIO) and not daze_used and state_machine.current_state == state_machine.states.get("Downed")
+
+
+func enter_daze() -> void:
+	daze_used = true
+
+
+func exit_daze(_finisher_landed: bool) -> void:
+	pass
+
+
+# A finisher that reaches the threshold starts the morph instead.
+func end_recovery(stagger_time: float) -> bool:
+	if phase_two or defeated:
+		return false
+	var state_machine = $StateManager
+	state_machine.downed_state_timer.stop()
+	state_machine.on_child_transition(state_machine.current_state, "Idle")
+	finisher_stagger_timer.start(stagger_time)
+	return true
+
+
+# take_punch already cuts it down to the threshold and starts the morph there.
+func take_finisher(amount: int) -> int:
+	return take_punch(amount)
+
+
+func get_max_health() -> int:
+	return max_health
+
+
+func get_daze_anchor() -> Vector2:
+	return sprite.global_position + DAZE_ANCHOR_OFFSET
+
+
+func get_finisher_hurtbox() -> Area2D:
+	return $Hurtbox
+
+
 func _start_phase_two() -> void:
+	finisher_stagger_timer.stop()
 	# The player faces the mech once it has formed; until then there's nothing to face.
 	$Hurtbox.remove_from_group("boss_target")
 	$StateManager.end_phase_one()

@@ -65,6 +65,12 @@ func start_cycle() -> void:
 	rest_then("LaserSweep", cycle_pause)
 
 
+# After a landed finisher: the stagger, then straight into the next cycle's laser sweep.
+func resume_after_finisher(stagger_time: float) -> void:
+	_apply_rage_scaling()
+	rest_then("LaserSweep", stagger_time)
+
+
 func rest_then(next_state_name: String, duration: float) -> void:
 	state_after_rest = next_state_name
 	on_child_transition(current_state, "Idle")

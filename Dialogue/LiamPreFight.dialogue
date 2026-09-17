@@ -1,0 +1,19 @@
+# Placeholder lines for Liam and Bixby's entrance. The "do" lines play the entrance's beats (in
+# BixbyBeastIntro.gd) and the dialogue waits for each one to finish before the next line.
+
+~ start
+Liam: Well, well! Welcome to my arena, newcomer.
+Liam: Nobody gets this far by accident. Congratulations, truly.
+Liam: Shame it ends here. Bixby will make quick work of you.
+do liam_slaps_bixby()
+Liam: Ha! Don't worry, he LOVES it!
+Liam: Come on boy, get 'em!
+do liam_slaps_bixby()
+do bixby_growls()
+Bixby: Grrrrrrr...
+Liam: That's my good boy! One more for luck!
+do liam_slaps_bixby()
+do bixby_swallows_liam()
+Bixby: *GULP*
+do bixby_transforms()
+=> END

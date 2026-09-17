@@ -48,6 +48,8 @@ const HUG_PLAYER_CENTRES := {
 }
 # Centre of the player thrown on frame 11, where they reappear when frame 12 starts.
 const HUG_RELEASE_CENTRE := Vector2(30.5, -83.5)
+# Just above his head on downed frames 27-31, where the finisher's daze stars circle.
+const DAZE_HEAD_PIXEL := Vector2(128, 112)
 
 #THROWN SWORD (eric_thrown_sword_v2.png, eric_sword_planted_v2.png)
 const SPIN_FRAMES := 8

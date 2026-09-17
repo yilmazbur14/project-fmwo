@@ -11,8 +11,8 @@ const FIGHT_SCENES: Array[String] = [
 	"res://Scenes/Bosses/EricBossFightScene.tscn",
 	"res://Scenes/Bosses/GreysonBossFightScene.tscn",
 	"res://Scenes/Bosses/CarterAndJoshBossFightScene.tscn",
-	"", # Liam & Bixby
-	"", # Jordan
+	"res://Scenes/Bosses/LiamBossFightScene.tscn",
+	"res://Scenes/Bosses/JordanBossFightScene.tscn",
 ]
 
 # The result screens report on the fight that led to them, so arriving at one

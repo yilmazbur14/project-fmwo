@@ -11,6 +11,7 @@ extends State
 
 func Enter() -> void:
 	body.hits_this_window = 0
+	body.daze_used = false
 	animation_player.play("eat")
 	downed_sfx_player.play()
 	# Eat is entered from the driver scene's signal, which isn't guaranteed to fire

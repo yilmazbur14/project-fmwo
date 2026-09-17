@@ -7,8 +7,11 @@ extends Node
 # take_punch() and counts the damage the boss reports back.
 signal combo_changed(count: int, charged: bool)
 signal beat_window_changed(open: bool)
+# A charged punch dealt damage to `target`. Emitted inside the physics flush that reported the hit.
+signal charged_hit_landed(target: Node)
 
 const HitStop := preload("res://Scripts/HitStop.gd")
+const ScreenView := preload("res://Scripts/ScreenView.gd")
 
 # Seconds of game time after a swing ends. A swing lasts 22 physics frames (0.37s) from the
 # press to its hitbox switching off, so by default the window runs 0.42s-0.77s after the press
@@ -121,6 +124,7 @@ func resolve_punch(target: Node) -> int:
 	if charged:
 		count = 0
 		_charged_feedback(target.sprite)
+		charged_hit_landed.emit(target)
 	elif beat_missed:
 		reset()
 	return dealt
@@ -136,9 +140,10 @@ func _set_window(open: bool) -> void:
 func _charged_feedback(sprite: CanvasItem) -> void:
 	HitStop.freeze(get_tree(), charged_hit_stop)
 
-	# self_modulate stacks on the boss's own white flash, which tweens modulate.
+	# self_modulate stacks on the boss's own white flash, which tweens modulate. A SceneTree tween:
+	# one bound to the boss would stop mid-glow if the hit dazes it and the fight freezes.
 	sprite.self_modulate = CHARGED_FLASH
-	sprite.create_tween().tween_property(sprite, "self_modulate", Color(1, 1, 1), CHARGED_FLASH_TIME)
+	get_tree().create_tween().tween_property(sprite, "self_modulate", Color(1, 1, 1), CHARGED_FLASH_TIME)
 
 	_shake_screen()
 	get_tree().call_group("arena_crowd", "cheer", 1.5)
@@ -146,13 +151,4 @@ func _charged_feedback(sprite: CanvasItem) -> void:
 
 # Offsets the canvas instead of moving nodes, so physics bodies and the UI layers stay put.
 func _shake_screen() -> void:
-	var viewport := get_viewport()
-	var base := viewport.canvas_transform
-	# A SceneTree tween, so a scene change mid-shake can't leave the canvas offset.
-	var tween := get_tree().create_tween()
-	for i in SHAKE_STEPS:
-		var strength := shake_strength * (1.0 - float(i) / SHAKE_STEPS)
-		var offset := Vector2(randf_range(-strength, strength), randf_range(-strength, strength)).round()
-		tween.tween_callback(func(): viewport.canvas_transform = base.translated(offset))
-		tween.tween_interval(SHAKE_STEP_TIME)
-	tween.tween_callback(func(): viewport.canvas_transform = base)
+	ScreenView.shake(get_tree(), shake_strength, SHAKE_STEPS, SHAKE_STEP_TIME)

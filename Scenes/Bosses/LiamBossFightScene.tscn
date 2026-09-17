@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" uid="uid://4pqund3nukl7" path="res://Scenes/Core/ArenaScene.tscn" id="1_arena"]
+[ext_resource type="PackedScene" path="res://Scenes/Bosses/BixbyBeastScene.tscn" id="2_beast"]
+
+[node name="LiamBossFightScene" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Arena" parent="." instance=ExtResource("1_arena")]
+y_sort_enabled = true
+
+[node name="MainPlayer" parent="Arena" index="6"]
+y_sort_enabled = true
+
+[node name="CharacterBody2D" parent="Arena/MainPlayer" index="0"]
+y_sort_enabled = true
+
+[node name="Sprite2D" parent="Arena/MainPlayer/CharacterBody2D" index="1"]
+position = Vector2(0, 13)
+offset = Vector2(0, -13)
+
+[node name="wallBoundaries" parent="Arena" index="7"]
+z_index = 1
+
+[node name="BixbyBeastScene" parent="Arena" instance=ExtResource("2_beast")]
+
+[editable path="Arena"]
+[editable path="Arena/MainPlayer"]

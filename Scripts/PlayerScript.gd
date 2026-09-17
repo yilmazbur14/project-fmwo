@@ -39,17 +39,27 @@ var sprite_base_position: Vector2
 
 @onready var combo: Node = $Combo
 var punch_buffered := false
+@onready var finisher: Node = $Finisher
 
 #FACING
 # Rows of player_4dir_sheet.png; the animations only step the column.
 enum Facing { DOWN, UP, LEFT, RIGHT }
 # Bosses add the hurtbox to face to this group; its shape has to be a child named CollisionShape2D.
 const BOSS_TARGET_GROUP := "boss_target"
+# Hazards the player can punch away, like Jordan's figures, add their hurtbox (shaped the same way) to
+# this group while they're worth turning to. The nearest one within this many px takes the facing if
+# it's nearer than the nearest boss by more than TARGET_SWITCH_MARGIN.
+const THREAT_GROUP := "facing_threat"
+const THREAT_FACING_RADIUS := 240.0
+# After turning to a threat the facing holds for this many seconds, so a swarm shifting around a
+# moving player can't flicker it.
+const THREAT_FACING_HOLD := 0.25
 # The facing only turns to the other axis once the boss is this far past the 45° diagonal, so
 # walking along the diagonal can't flicker it.
 const FACING_HYSTERESIS_DEGREES := 10.0
-# Between Carter and Josh, the other one has to be this many px nearer to take over, so standing
-# midway can't flip the facing back and forth.
+# Between Carter and Josh, or two threats, the other one has to be this many px nearer to take over,
+# and a threat being faced keeps the facing this far past THREAT_FACING_RADIUS, so standing midway
+# can't flip the facing back and forth.
 const TARGET_SWITCH_MARGIN := 12.0
 # Punch hitbox per facing, in texels from the frame centre: 4.33 across the arm by 7.67 along it,
 # reaching 2 texels past the glove at full extension, the size and reach of the original up-only
@@ -64,6 +74,7 @@ const PUNCH_HITBOXES := {
 
 var facing := Facing.UP
 var facing_target: Area2D
+var threat_turn_frame := -1
 @onready var punch_hitbox: CollisionShape2D = $Hitbox/CollisionShape2D
 
 #AUDIO
@@ -74,6 +85,9 @@ var is_talking = false
 var is_grabbed := false
 # Set once the fight is decided, won or lost: from then on the player can't act or be hurt.
 var fight_over := false
+# Set while the finisher plays, from the beat after the charged punch until the player lands: they
+# can't act, turn or be hurt.
+var is_finishing := false
 
 var state_machine : Node
 var current_state : State
@@ -98,7 +112,7 @@ func _ready():
 	DialogueManager.dialogue_ended.connect(_on_dialogue_ended)
 
 func _process(delta: float) -> void:
-	if punch_buffered and not combo.report_pending():
+	if punch_buffered and not is_finishing and not combo.report_pending():
 		punch_buffered = false
 		state_machine.on_child_transition(state_machine.current_state, "Punching")
 	current_state = state_machine.current_state
@@ -110,7 +124,7 @@ func _physics_process(delta: float) -> void:
 	_update_facing()
 
 	# Don't move during punch or block
-	if current_state.name == "Punching" || is_talking || is_grabbed || fight_over:
+	if current_state.name == "Punching" || is_talking || is_grabbed || fight_over || is_finishing:
 		return
 
 	if is_dodging:
@@ -138,6 +152,9 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 func _input(event: InputEvent) -> void:
+	# The finisher swallows these presses before they reach this node; this guard doesn't rely on that order.
+	if is_finishing or finisher.is_input_locked():
+		return
 	if event.is_action_pressed("punch") and not is_talking and not is_grabbed and not fight_over:
 		combo.register_press()
 		# A press held back until the last punch's report is in, so its hit can't be lost.
@@ -181,6 +198,8 @@ func _on_dialogue_ended(dialogue: Object) -> void:
 func take_damage() -> void:
 	# At 0 the loss is only reported at the end of the frame, and nothing may hurt them before that.
 	if fight_over or playerHealth <= 0:
+		return
+	if is_finishing:
 		return
 	if is_invincible:
 		print("Player is invincible, ignoring damage")
@@ -247,12 +266,40 @@ func release_grab(push_direction: Vector2) -> void:
 	_flicker_while_invincible(invincibility_timer.wait_time)
 
 
+# Called by PlayerFinisher as its beat starts; the charged punch is left to finish its swing.
+func begin_finisher() -> void:
+	is_finishing = true
+	is_dodging = false
+	dodge_timer = 0.0
+	punch_buffered = false
+	velocity = Vector2.ZERO
+
+
+func enter_finisher_pose() -> void:
+	state_machine.on_child_transition(state_machine.current_state, "Finishing")
+
+
+func end_finisher(grant_grace: bool) -> void:
+	if state_machine.current_state == state_machine.states.get("Finishing"):
+		state_machine.on_child_transition(state_machine.current_state, "Idle")
+	is_finishing = false
+	_apply_facing()
+	if grant_grace and not fight_over:
+		is_invincible = true
+		invincibility_timer.start()
+		_flicker_while_invincible(invincibility_timer.wait_time)
+
+
 # Called by FightOutro once the fight is decided.
 func end_fight() -> void:
 	fight_over = true
 	punch_buffered = false
 	is_dodging = false
 	dodge_timer = 0.0
+	# A finisher under way plays out to its landing first.
+	if is_finishing:
+		finisher.finished.connect(_stand_still, CONNECT_ONE_SHOT)
+		return
 	# The fight can end inside a physics callback, where ending a punch can't switch its hitbox off.
 	_stand_still.call_deferred()
 
@@ -267,6 +314,9 @@ func _stand_still() -> void:
 
 
 func _update_facing() -> void:
+	# The finisher faces the player toward the boss itself.
+	if is_finishing:
+		return
 	# Held from the press until the boss has reported the swing: a hurtbox reports a punch after
 	# the hitbox switches off, and moving the hitbox before then would lose the hit.
 	if state_machine.current_state.name == "Punching" or combo.report_pending():
@@ -275,9 +325,17 @@ func _update_facing() -> void:
 	if aim == Vector2.ZERO:
 		return
 	var new_facing := _facing_toward(aim)
-	if new_facing != facing:
+	if new_facing != facing and not _threat_turn_held():
 		facing = new_facing
 		_apply_facing()
+		if facing_target and facing_target.is_in_group(THREAT_GROUP):
+			threat_turn_frame = Engine.get_physics_frames()
+
+
+func _threat_turn_held() -> bool:
+	if threat_turn_frame < 0:
+		return false
+	return Engine.get_physics_frames() - threat_turn_frame < roundi(THREAT_FACING_HOLD * Engine.physics_ticks_per_second)
 
 
 # Toward the nearest point of the nearest target's hurtbox, so the player faces the side of the
@@ -288,24 +346,43 @@ func _aim() -> Vector2:
 	if target == null:
 		return velocity
 	var box := _hurtbox_rect(target)
+	# A threat the punch already reaches keeps the facing, so one jostling around the player can't spin them.
+	if target.is_in_group(THREAT_GROUP) and box.intersects(global_transform * PUNCH_HITBOXES[facing]):
+		return Vector2.ZERO
 	if box.has_point(global_position):
 		return box.get_center() - global_position
 	return global_position.clamp(box.position, box.end) - global_position
 
 
+# A near tie goes to the boss, so a player standing by it can still punch it with figures around.
 func _nearest_target() -> Area2D:
+	var nearest := _nearest_in_group(BOSS_TARGET_GROUP, INF)
+	var threat := _nearest_in_group(THREAT_GROUP, THREAT_FACING_RADIUS)
+	if threat and (nearest == null or _target_distance(threat) < _target_distance(nearest) - TARGET_SWITCH_MARGIN):
+		nearest = threat
+	facing_target = nearest
+	return nearest
+
+
+# The target whose hurtbox's nearest point is closest, if that's nearer than `radius`.
+func _nearest_in_group(group: String, radius: float) -> Area2D:
 	var nearest: Area2D = null
-	var nearest_distance := INF
-	for target in get_tree().get_nodes_in_group(BOSS_TARGET_GROUP):
-		var box := _hurtbox_rect(target)
-		var distance := global_position.distance_to(global_position.clamp(box.position, box.end))
-		if target == facing_target:
-			distance -= TARGET_SWITCH_MARGIN
+	var nearest_distance := radius
+	for target in get_tree().get_nodes_in_group(group):
+		var distance := _target_distance(target)
 		if distance < nearest_distance:
 			nearest = target
 			nearest_distance = distance
-	facing_target = nearest
 	return nearest
+
+
+# To the nearest point of the target's hurtbox, less TARGET_SWITCH_MARGIN for the target already faced.
+func _target_distance(target: Area2D) -> float:
+	var box := _hurtbox_rect(target)
+	var distance := global_position.distance_to(global_position.clamp(box.position, box.end))
+	if target == facing_target:
+		distance -= TARGET_SWITCH_MARGIN
+	return distance
 
 
 func _hurtbox_rect(target: Area2D) -> Rect2:

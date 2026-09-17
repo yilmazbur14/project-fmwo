@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://btdc3eg7v4crw"
+path="res://.godot/imported/JordanOutro.dialogue-6a111ac52831c39c26a47d02271340e3.tres"
+
+[deps]
+
+source_file="res://Dialogue/JordanOutro.dialogue"
+dest_files=["res://.godot/imported/JordanOutro.dialogue-6a111ac52831c39c26a47d02271340e3.tres"]
+
+[params]
+
+defaults=true

@@ -13,6 +13,8 @@ const HAZARD_GROUP := "greyson_mech_hazard"
 const MAX_HITS_PER_WINDOW := 3
 const PHANTOM_HIT_WINDOW := 0.5
 const FRAME_SIZE := 96.0
+# Where the finisher's daze stars circle on the vulnerable frames: about 34 px over Greyson's antenna.
+const DAZE_HEAD_PIXEL := Vector2(48, 0)
 
 @onready var body: CharacterBody2D = $MechCharacterBody
 @onready var sprite: Sprite2D = $MechCharacterBody/Sprite2D
@@ -28,6 +30,8 @@ const FRAME_SIZE := 96.0
 
 var defeated := false
 var hits_this_window := 0
+# One finisher daze per vulnerable window; Vulnerable clears it.
+var daze_used := false
 
 var fight_clock := 0.0
 var last_contact_hit_time := -INF
@@ -88,6 +92,10 @@ func take_punch(amount: int) -> int:
 		return 0
 
 	hits_this_window += 1
+	return _apply_hit(amount)
+
+
+func _apply_hit(amount: int) -> int:
 	var dealt: int = computah.take_hit(amount)
 	_hit_feedback()
 
@@ -98,6 +106,45 @@ func take_punch(amount: int) -> int:
 		animation_player.play("hit")
 		animation_player.queue("vulnerable")
 	return dealt
+
+
+# The player's finisher (PlayerFinisher). Only the vulnerable window can be dazed.
+func can_be_dazed() -> bool:
+	return not defeated and computah.boss_health > 0 and not daze_used and state_machine.current_state == state_machine.states.get("Vulnerable")
+
+
+func enter_daze() -> void:
+	daze_used = true
+
+
+func exit_daze(_finisher_landed: bool) -> void:
+	pass
+
+
+func end_recovery(stagger_time: float) -> bool:
+	if defeated or computah.boss_health <= 0:
+		return false
+	state_machine.resume_after_finisher(stagger_time)
+	return true
+
+
+# Past the hit cap: the combo that led to it has already used the window's hits.
+func take_finisher(amount: int) -> int:
+	if state_machine.current_state != state_machine.states.get("Vulnerable"):
+		return 0
+	return _apply_hit(amount)
+
+
+func get_max_health() -> int:
+	return computah.max_health
+
+
+func get_daze_anchor() -> Vector2:
+	return frame_point(DAZE_HEAD_PIXEL)
+
+
+func get_finisher_hurtbox() -> Area2D:
+	return hurtbox
 
 
 func _on_defeated() -> void:

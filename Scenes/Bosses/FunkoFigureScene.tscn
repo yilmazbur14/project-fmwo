@@ -1,0 +1,54 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/FunkoFigureScript.gd" id="1_funko"]
+[ext_resource type="AudioStream" path="res://Assets/Audio/SFX/wrestler_collision.ogg" id="2_punch_sfx"]
+[ext_resource type="AudioStream" uid="uid://b0tkyutiwfk03" path="res://Assets/Audio/SFX/hit_impact.ogg" id="3_explode_sfx"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_funko_body"]
+size = Vector2(51, 39)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_funko_hurtbox"]
+size = Vector2(54, 54)
+
+[node name="FunkoFigure" type="CharacterBody2D" node_paths=PackedStringArray("visual", "figure_sprite", "pop_sprite", "explosion_sprite", "body_shape", "hurtbox", "punch_sfx", "explode_sfx") groups=["jordan_hazard"]]
+y_sort_enabled = true
+collision_layer = 0
+motion_mode = 1
+script = ExtResource("1_funko")
+visual = NodePath("Visual")
+figure_sprite = NodePath("Visual/FigureSprite")
+pop_sprite = NodePath("Visual/PopSprite")
+explosion_sprite = NodePath("ExplosionSprite")
+body_shape = NodePath("CollisionShape2D")
+hurtbox = NodePath("Hurtbox")
+punch_sfx = NodePath("PunchSfx")
+explode_sfx = NodePath("ExplodeSfx")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_funko_body")
+
+[node name="Hurtbox" type="Area2D" parent="."]
+collision_layer = 0
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("RectangleShape2D_funko_hurtbox")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="FigureSprite" type="Sprite2D" parent="Visual"]
+
+[node name="PopSprite" type="Sprite2D" parent="Visual"]
+visible = false
+
+[node name="ExplosionSprite" type="Sprite2D" parent="."]
+visible = false
+z_index = 2
+
+[node name="PunchSfx" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2_punch_sfx")
+volume_db = -6.0
+
+[node name="ExplodeSfx" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_explode_sfx")
+volume_db = -8.0

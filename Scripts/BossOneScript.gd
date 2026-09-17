@@ -27,6 +27,8 @@ var fill_style: StyleBoxFlat
 @onready var hit_sfx_player: AudioStreamPlayer = $HitSfxPlayer
 @onready var victory_sfx_player: AudioStreamPlayer = $VictorySfxPlayer
 var defeated := false
+# One finisher daze per Downed window; Downed clears it.
+var daze_used := false
 
 var sprite_base_position: Vector2
 
@@ -111,6 +113,44 @@ func take_punch(amount: int) -> int:
 	_hit_feedback()
 	hit_sfx_player.play()
 	return dealt
+
+
+# The player's finisher (PlayerFinisher). Only the Downed window can be dazed: the bear hug's stumble
+# is too short for a three-punch combo.
+func can_be_dazed() -> bool:
+	return not defeated and boss_health > 0 and not daze_used and state_machine.current_state == state_machine.states.get("Downed")
+
+
+func enter_daze() -> void:
+	daze_used = true
+
+
+func exit_daze(_finisher_landed: bool) -> void:
+	pass
+
+
+func end_recovery(stagger_time: float) -> bool:
+	if defeated or boss_health <= 0:
+		return false
+	state_machine.downed_state_timer.stop()
+	state_machine.start_chain(stagger_time)
+	return true
+
+
+func take_finisher(amount: int) -> int:
+	return take_punch(amount)
+
+
+func get_max_health() -> int:
+	return max_health
+
+
+func get_daze_anchor() -> Vector2:
+	return to_global(EricArtLayout.frame_local(EricArtLayout.DAZE_HEAD_PIXEL + Vector2(0.5, 0.5), sprite.flip_h))
+
+
+func get_finisher_hurtbox() -> Area2D:
+	return $Hurtbox
 
 
 func _build_health_bar() -> void:

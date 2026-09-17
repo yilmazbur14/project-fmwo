@@ -84,6 +84,11 @@ func _start_attack_cycle() -> void:
 	rocket_fire_interval_timer.start()
 
 
+# After a landed finisher's stagger, skipping the recovery rest and the laugh.
+func resume_attack_cycle() -> void:
+	_start_attack_cycle()
+
+
 func _apply_rage_scaling() -> void:
 	# Ramp up intensity as Computah's health drops - mirrors Eric's
 	# lerp-based rage scaling.

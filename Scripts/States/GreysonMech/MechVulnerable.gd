@@ -14,6 +14,7 @@ const DURATION := 3.5
 
 func Enter() -> void:
 	mech.hits_this_window = 0
+	mech.daze_used = false
 	animation_player.play("vulnerable")
 	downed_sfx_player.play()
 	hurtbox.set_deferred("monitoring", true)

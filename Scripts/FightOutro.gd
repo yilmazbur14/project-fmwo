@@ -6,6 +6,8 @@ extends CanvasLayer
 # away and the next screen being drawn.
 
 const HitStop := preload("res://Scripts/HitStop.gd")
+const ScreenView := preload("res://Scripts/ScreenView.gd")
+const FightFreeze := preload("res://Scripts/FightFreeze.gd")
 
 # Seconds between the fight being decided and the boss's first line.
 const LINE_DELAY := 0.7
@@ -53,6 +55,8 @@ func _ready() -> void:
 	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(fade)
 
+	# The outro's dialogue balloon is added to the fight scene, which mustn't still be frozen by a finisher.
+	FightFreeze.unfreeze(get_tree())
 	get_tree().current_scene.get_node(PLAYER_PATH).end_fight()
 	var dialogue: DialogueResource
 	for boss in get_tree().get_nodes_in_group(BOSS_GROUP):
@@ -99,4 +103,4 @@ func _playing_sounds() -> Array:
 func _settle_screen() -> void:
 	HitStop.release_timer = null
 	Engine.time_scale = 1.0
-	get_viewport().canvas_transform = Transform2D.IDENTITY
+	ScreenView.reset(get_tree())

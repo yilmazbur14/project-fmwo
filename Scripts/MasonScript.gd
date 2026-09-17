@@ -11,6 +11,8 @@ var boss_health := max_health
 const PHASE_TWO_RATIO := 0.5
 const MAX_HITS_PER_WINDOW := 3
 const PHANTOM_HIT_WINDOW := 0.5
+# The finisher's daze stars circle here, from his origin: about 34 px over his hat.
+const DAZE_ANCHOR_OFFSET := Vector2(0, -124)
 
 #UI (built at runtime - no new art needed)
 var health_bar: ProgressBar
@@ -34,6 +36,10 @@ var fill_style: StyleBoxFlat
 var phase_two := false
 var defeated := false
 var hits_this_window := 0
+# One finisher daze per eat window; Eat clears it.
+var daze_used := false
+# Runs the stagger after a landed finisher, straight into the next cycle.
+var finisher_stagger_timer: Timer
 
 var fight_clock := 0.0
 var last_contact_hit_time := -INF
@@ -44,6 +50,12 @@ var sprite_base_position: Vector2
 func _ready() -> void:
 	add_to_group(FightOutro.BOSS_GROUP)
 	hurtbox.area_entered.connect(_on_hurtbox_entered)
+
+	finisher_stagger_timer = Timer.new()
+	finisher_stagger_timer.name = "FinisherStaggerTimer"
+	finisher_stagger_timer.one_shot = true
+	finisher_stagger_timer.timeout.connect(state_machine.start_cycle)
+	add_child(finisher_stagger_timer)
 
 	sprite_base_position = sprite.position
 	_build_health_bar()
@@ -90,16 +102,25 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 func take_punch(amount: int) -> int:
 	if hits_this_window >= MAX_HITS_PER_WINDOW:
 		return 0
-	# Phase two can't be skipped: until a phase-two cycle starts, Mason can't drop past the
-	# threshold, and a charged punch that would carry past it is cut down to reach it exactly.
-	var lowest_health := 0
+	var dealt := _apply_damage(amount)
+	if dealt > 0:
+		hits_this_window += 1
+	return dealt
+
+
+# Phase two can't be skipped: until a phase-two cycle starts, Mason can't drop past the threshold.
+func _lowest_health() -> int:
 	if state_machine.cycle_phase == 0:
-		lowest_health = floori(max_health * PHASE_TWO_RATIO)
-	var dealt := mini(amount, boss_health - lowest_health)
+		return floori(max_health * PHASE_TWO_RATIO)
+	return 0
+
+
+# A hit that would carry past the threshold is cut down to reach it exactly.
+func _apply_damage(amount: int) -> int:
+	var dealt := mini(amount, boss_health - _lowest_health())
 	if dealt <= 0:
 		return 0
 
-	hits_this_window += 1
 	boss_health -= dealt
 	_update_health_bar()
 	_hit_feedback()
@@ -119,7 +140,48 @@ func take_punch(amount: int) -> int:
 	return dealt
 
 
+# The player's finisher (PlayerFinisher). Only the eat window can be dazed, and only while the
+# finisher can still take health past the phase floor.
+func can_be_dazed() -> bool:
+	return not defeated and boss_health > _lowest_health() and not daze_used and state_machine.current_state == state_machine.states.get("Eat")
+
+
+func enter_daze() -> void:
+	daze_used = true
+
+
+func exit_daze(_finisher_landed: bool) -> void:
+	pass
+
+
+func end_recovery(stagger_time: float) -> bool:
+	if defeated or boss_health <= 0:
+		return false
+	state_machine.eat_timer.stop()
+	state_machine.on_child_transition(state_machine.current_state, "Idle")
+	finisher_stagger_timer.start(stagger_time)
+	return true
+
+
+# Past the hit cap, which the combo that led to it has used up, but not past the phase floor.
+func take_finisher(amount: int) -> int:
+	return _apply_damage(amount)
+
+
+func get_max_health() -> int:
+	return max_health
+
+
+func get_daze_anchor() -> Vector2:
+	return global_position + DAZE_ANCHOR_OFFSET
+
+
+func get_finisher_hurtbox() -> Area2D:
+	return hurtbox
+
+
 func _on_defeated() -> void:
+	finisher_stagger_timer.stop()
 	defeated = true
 	hurtbox.set_deferred("monitoring", false)
 	hurtbox.set_deferred("monitorable", false)
@@ -139,6 +201,7 @@ func _on_defeated() -> void:
 
 # Called by FightOutro when the player loses.
 func on_player_defeated() -> void:
+	finisher_stagger_timer.stop()
 	state_machine.enter_player_defeated()
 	# As after a win, nothing he's sent out may stay live.
 	for hazard in get_tree().get_nodes_in_group("mason_hazard"):

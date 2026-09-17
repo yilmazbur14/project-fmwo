@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://dpiv63lssdfd0"
+path="res://.godot/imported/LiamOutro.dialogue-56ee0215ca9f712a80c12c697ab1970a.tres"
+
+[deps]
+
+source_file="res://Dialogue/LiamOutro.dialogue"
+dest_files=["res://.godot/imported/LiamOutro.dialogue-56ee0215ca9f712a80c12c697ab1970a.tres"]
+
+[params]
+
+defaults=true
