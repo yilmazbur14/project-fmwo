@@ -93,8 +93,13 @@ func _drop_nugget(aimed: bool, drop_time: float) -> void:
 func _aimed_spot(target: Vector2, hurtbox: Rect2, drop_time: float) -> Vector2:
 	var area: Rect2 = state_machine.BOMB_AREA
 	var center := target.clamp(area.position, area.end)
+	# No spot further out can reach the hurtbox, and searching every ring for a player deep inside Mason's
+	# keep-out would cost a frame hitch.
+	var reach_limit := center.distance_to(hurtbox.get_center()) + maxf(NuggetMeteor.HIT_SIZE.x, NuggetMeteor.HIT_SIZE.y) / 2.0 + hurtbox.size.length() / 2.0
 	var over_mason := Vector2.INF
 	for ring in SEARCH_RINGS:
+		if ring * SEARCH_STEP > reach_limit:
+			break
 		var points := maxi(1, ring * 6)
 		for k in points:
 			var spot := (center + Vector2.from_angle(TAU * k / points) * ring * SEARCH_STEP).clamp(area.position, area.end)

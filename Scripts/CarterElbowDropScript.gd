@@ -6,9 +6,11 @@ const DIVE_FRAME_INTERVAL := 0.08
 const HITBOX_ACTIVE_TIME := 0.15
 const LANDED_TIME := 0.2
 
-# Screen px. The capsule lies flat along the ground under Carter, so it's wider than it is tall.
-const HITBOX_RADIUS := 55.0
-const HITBOX_LENGTH := 194.0
+# The damage area: elbow_target_v2.png's oval, 72x40 texels at 3x with its outline on the resting frame,
+# so a player just outside the drawn marker is never hit. A polygon rather than a capsule, which would
+# bulge past the oval's shoulders.
+const HITBOX_SIZE := Vector2(216, 120)
+const HITBOX_OVAL_POINTS := 32
 # How deep a landing moved off Mason has to reach into the hurtbox of a player standing by him, so the
 # hit registers reliably rather than by a hair.
 const MIN_PLAYER_OVERLAP := 4.0
@@ -25,12 +27,10 @@ const AIR_LAYER := 2
 # Above the characters, so Mason's body can't hide a marker that lands over him.
 const RAISED_MARKER_LAYER := 1
 
-# Art swap point: elbow_target_v2.png (2 frames) and elbow_impact_v2.png (4 frames) are being drawn to
-# fit the bigger hitbox. Until they're in, the v1 art stays at its native 3x rather than being stretched.
 # Frame size follows from the texture width and the frame count.
-const TARGET_TEXTURE := preload("res://Assets/Characters/Mason/elbow_target.png")
+const TARGET_TEXTURE := preload("res://Assets/Characters/Mason/elbow_target_v2.png")
 const TARGET_FRAMES := 2
-const IMPACT_TEXTURE := preload("res://Assets/Characters/Mason/elbow_impact.png")
+const IMPACT_TEXTURE := preload("res://Assets/Characters/Mason/elbow_impact_v2.png")
 const IMPACT_FRAMES := 4
 
 @export var target_sprite: Sprite2D
@@ -59,9 +59,10 @@ func _ready() -> void:
 	target_sprite.hframes = TARGET_FRAMES
 	impact_sprite.texture = IMPACT_TEXTURE
 	impact_sprite.hframes = IMPACT_FRAMES
-	var capsule := hitbox_shape.shape as CapsuleShape2D
-	capsule.radius = HITBOX_RADIUS
-	capsule.height = HITBOX_LENGTH
+	var oval := PackedVector2Array()
+	for i in HITBOX_OVAL_POINTS:
+		oval.append(Vector2.from_angle(TAU * i / HITBOX_OVAL_POINTS) * HITBOX_SIZE / 2.0)
+	(hitbox_shape.shape as ConvexPolygonShape2D).points = oval
 
 
 # Everything a drop covers around its landing spot: Carter's pose, the marker, the dust burst and the
@@ -133,11 +134,9 @@ func _landing_spot(target: Vector2, hurtbox: Rect2) -> Vector2:
 	var spot := target.clamp(arena_bounds.position, arena_bounds.end)
 	if not keep_out.has_point(spot):
 		return spot
-	# The capsule overlaps the hurtbox when its centre is within `reach` of the hurtbox stretched by the
-	# capsule's straight middle.
-	var half_middle := HITBOX_LENGTH / 2.0 - HITBOX_RADIUS
-	var reach_box := hurtbox.grow_individual(half_middle, 0.0, half_middle, 0.0)
-	var reach := HITBOX_RADIUS - MIN_PLAYER_OVERLAP
+	# Measured in semi-axes of the oval, shrunk by the overlap it needs: a landing reaches the player when
+	# their hurtbox comes within 1 of it.
+	var semi_axes := HITBOX_SIZE / 2.0 - Vector2.ONE * MIN_PLAYER_OVERLAP
 	var pushed := Vector2.INF
 	var reaching := Vector2.INF
 	for axis in 2:
@@ -149,12 +148,12 @@ func _landing_spot(target: Vector2, hurtbox: Rect2) -> Vector2:
 			candidate[axis] = edge
 			if candidate.distance_to(spot) < pushed.distance_to(spot):
 				pushed = candidate
-			var gap := maxf(0.0, maxf(reach_box.position[axis] - edge, edge - reach_box.end[axis]))
-			if gap >= reach:
+			var gap := maxf(0.0, maxf(hurtbox.position[axis] - edge, edge - hurtbox.end[axis])) / semi_axes[axis]
+			if gap >= 1.0:
 				continue
-			var spread := sqrt(reach * reach - gap * gap)
-			var low := maxf(reach_box.position[across] - spread, arena_bounds.position[across])
-			var high := minf(reach_box.end[across] + spread, arena_bounds.end[across])
+			var spread := semi_axes[across] * sqrt(1.0 - gap * gap)
+			var low := maxf(hurtbox.position[across] - spread, arena_bounds.position[across])
+			var high := minf(hurtbox.end[across] + spread, arena_bounds.end[across])
 			if low > high:
 				continue
 			candidate[across] = clampf(spot[across], low, high)
@@ -163,7 +162,7 @@ func _landing_spot(target: Vector2, hurtbox: Rect2) -> Vector2:
 	if reaching != Vector2.INF:
 		return reaching
 	# Landing over Mason is only worth it if it hits; a player the bounds keep out of reach is pushed out.
-	if spot.distance_to(spot.clamp(reach_box.position, reach_box.end)) < reach:
+	if ((spot.clamp(hurtbox.position, hurtbox.end) - spot) / semi_axes).length() < 1.0:
 		return spot
 	return spot if pushed == Vector2.INF else pushed
 

@@ -4,9 +4,8 @@
 [ext_resource type="Texture2D" uid="uid://cm51xpb1vy2eb" path="res://Assets/Characters/Mason/carter_elbowdrop.png" id="3_carter_tex"]
 [ext_resource type="AudioStream" uid="uid://cvd2eh0p6ay8i" path="res://Assets/Audio/SFX/earthquake_slam.ogg" id="5_slam"]
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_elbow_hitbox"]
-radius = 55.0
-height = 194.0
+[sub_resource type="ConvexPolygonShape2D" id="ConvexPolygonShape2D_elbow_hitbox"]
+points = PackedVector2Array(108, 0, 105.92, 11.71, 99.78, 22.96, 89.8, 33.33, 76.37, 42.43, 60, 49.89, 41.33, 55.43, 21.07, 58.85, 0, 60, -21.07, 58.85, -41.33, 55.43, -60, 49.89, -76.37, 42.43, -89.8, 33.33, -99.78, 22.96, -105.92, 11.71, -108, 0, -105.92, -11.71, -99.78, -22.96, -89.8, -33.33, -76.37, -42.43, -60, -49.89, -41.33, -55.43, -21.07, -58.85, 0, -60, 21.07, -58.85, 41.33, -55.43, 60, -49.89, 76.37, -42.43, 89.8, -33.33, 99.78, -22.96, 105.92, -11.71)
 
 [sub_resource type="Animation" id="Animation_elbow_reset"]
 length = 0.001
@@ -89,9 +88,9 @@ y_sort_enabled = true
 
 [node name="TargetSprite" type="Sprite2D" parent="."]
 visible = false
-position = Vector2(0, -36)
+position = Vector2(0, -60)
 scale = Vector2(3, 3)
-offset = Vector2(0, 12)
+offset = Vector2(0, 20)
 
 [node name="CarterSprite" type="Sprite2D" parent="."]
 visible = false
@@ -109,8 +108,7 @@ scale = Vector2(3, 3)
 [node name="Hitbox" type="Area2D" parent="." groups=["enemy projectile"]]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
-rotation = 1.5707964
-shape = SubResource("CapsuleShape2D_elbow_hitbox")
+shape = SubResource("ConvexPolygonShape2D_elbow_hitbox")
 disabled = true
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
