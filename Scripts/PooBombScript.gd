@@ -1,5 +1,7 @@
 extends Node2D
 
+const HitInfo := preload("res://Scripts/HitInfo.gd")
+
 @export var animation_player: AnimationPlayer
 @export var detonate_timer: Timer
 @export var explode_sfx: AudioStreamPlayer
@@ -8,6 +10,7 @@ extends Node2D
 
 
 func _ready() -> void:
+	explosion_hitbox_shape.get_parent().set_meta(HitInfo.META_ATTACK, &"mason_poo_blast")
 	detonate_timer.timeout.connect(_detonate)
 	animation_player.animation_finished.connect(_on_animation_player_animation_finished)
 	animation_player.play("armed")

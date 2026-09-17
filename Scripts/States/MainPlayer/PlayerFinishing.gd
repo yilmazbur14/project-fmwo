@@ -28,7 +28,7 @@ func Enter() -> void:
 	saved_flip_h = sprite.flip_h
 	saved_z_index = sprite.z_index
 	var sheet := FinisherArtLayout.player_sheet()
-	sprite.texture = load(sheet.texture)
+	sprite.texture = load(FinisherArtLayout.player_texture(player.finisher.supercharged))
 	sprite.hframes = sheet.hframes
 	sprite.vframes = sheet.vframes
 	sprite.z_index = FinisherArtLayout.FINISHING_Z_INDEX

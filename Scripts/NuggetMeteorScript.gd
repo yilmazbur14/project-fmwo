@@ -1,5 +1,8 @@
 extends Node2D
 
+const HitInfo := preload("res://Scripts/HitInfo.gd")
+const ScreenView := preload("res://Scripts/ScreenView.gd")
+
 # The damage area: the marker's oval, so a player just outside the drawn marker is never hit. A polygon
 # rather than a capsule, which would bulge past the oval's shoulders.
 const HIT_SIZE := Vector2(132, 66)
@@ -30,13 +33,9 @@ const SHAKE_STRENGTH := 4.0
 @export var animation_player: AnimationPlayer
 @export var impact_sfx: AudioStreamPlayer
 
-# Impacts can land closer together than a shake lasts, and a shake started partway through another
-# would take the shaken canvas as its rest position and leave it there. So all nuggets share one.
-static var shake: Tween
-static var shake_rest: Transform2D
-
 
 func _ready() -> void:
+	hitbox_shape.get_parent().set_meta(HitInfo.META_ATTACK, &"mason_nugget")
 	animation_player.animation_finished.connect(_on_animation_player_animation_finished)
 	var oval := PackedVector2Array()
 	for i in HIT_OVAL_POINTS:
@@ -95,22 +94,10 @@ func _disable_hitbox() -> void:
 	hitbox_shape.set_deferred("disabled", true)
 
 
-# Offsets the canvas instead of moving nodes, so physics bodies and the UI layers stay put.
+# Through ScreenView, the only writer of the canvas transform, so overlapping nugget shakes and a
+# zoom can't be left applied.
 func _shake_screen() -> void:
-	var viewport := get_viewport()
-	if shake and shake.is_valid():
-		shake.kill()
-	else:
-		shake_rest = viewport.canvas_transform
-	var rest := shake_rest
-	# A SceneTree tween, so the canvas is put back even if this nugget is freed mid-shake.
-	shake = get_tree().create_tween()
-	for i in SHAKE_STEPS:
-		var strength := SHAKE_STRENGTH * (1.0 - float(i) / SHAKE_STEPS)
-		var offset := Vector2(randf_range(-strength, strength), randf_range(-strength, strength)).round()
-		shake.tween_callback(func(): viewport.canvas_transform = rest.translated(offset))
-		shake.tween_interval(SHAKE_STEP_TIME)
-	shake.tween_callback(func(): viewport.canvas_transform = rest)
+	ScreenView.shake(get_tree(), SHAKE_STRENGTH, SHAKE_STEPS, SHAKE_STEP_TIME)
 
 
 func _on_animation_player_animation_finished(anim_name: StringName) -> void:

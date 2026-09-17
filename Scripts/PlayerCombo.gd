@@ -9,6 +9,8 @@ signal combo_changed(count: int, charged: bool)
 signal beat_window_changed(open: bool)
 # A charged punch dealt damage to `target`. Emitted inside the physics flush that reported the hit.
 signal charged_hit_landed(target: Node)
+# Any punch that dealt damage.
+signal punch_landed(target: Node, dealt: int, charged: bool)
 
 const HitStop := preload("res://Scripts/HitStop.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
@@ -121,6 +123,7 @@ func resolve_punch(target: Node) -> int:
 
 	count += 1
 	combo_changed.emit(count, charged)
+	punch_landed.emit(target, dealt, charged)
 	if charged:
 		count = 0
 		_charged_feedback(target.sprite)

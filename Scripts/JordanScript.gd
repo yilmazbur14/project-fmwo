@@ -111,6 +111,8 @@ func take_explosion_hit(amount: int) -> int:
 		return 0
 	explosion_hits_this_cycle += 1
 	var dealt := _take_damage(amount)
+	if dealt > 0:
+		state_machine.get_player().hype.reward_explosion_redirect()
 	get_tree().call_group("arena_crowd", "cheer", 1.5)
 	if boss_health > 0:
 		_stagger()

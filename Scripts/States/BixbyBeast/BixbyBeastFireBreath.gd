@@ -1,5 +1,7 @@
 extends State
 
+const HitInfo := preload("res://Scripts/HitInfo.gd")
+
 @export var body : CharacterBody2D
 @export var windup_sfx_player : AudioStreamPlayer
 @export var breath_sfx_player : AudioStreamPlayer
@@ -78,7 +80,10 @@ func _breathe(player: Node2D, delta: float) -> void:
 		body.place()
 		# Not dash-immune. Standing in it hurts again as soon as the player's invincibility runs out.
 		if body.fire_touches(player.hurtBox):
-			player.take_damage()
+			player.receive_hit(_hit())
+		# Only where the player isn't: fire reaching the spot a dash left is a perfect dodge.
+		elif player.dodge_ghost_position() != Vector2.INF and body.fire_touches(player.dodge_ghost):
+			player.receive_near_miss(_hit())
 
 	# Only the full stream reaches the floor.
 	if body.current_anim == &"stream":
@@ -105,6 +110,10 @@ func _lay_trail() -> void:
 		trail_slots[slot] = true
 		if state_machine.lay_fire_patch(Vector2(trail_origin_x + slot * spacing, contact.get_center().y), slot):
 			trail_patches += 1
+
+
+func _hit() -> RefCounted:
+	return HitInfo.make(&"bixby_fire_breath", body.fire_hitbox, body.feet_position(), body)
 
 
 func _ground_under(feet: Vector2) -> Vector2:

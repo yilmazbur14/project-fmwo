@@ -8,6 +8,7 @@ signal landed
 signal returned
 
 const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
+const HitInfo := preload("res://Scripts/HitInfo.gd")
 
 const SPIN_FRAME_TIME := 0.05
 # Flights end or start with the spinning sword's centre where the planted sword's centre is, so
@@ -52,6 +53,7 @@ func _ready() -> void:
 	planted.hframes = EricArtLayout.PLANTED_FRAMES
 	planted.offset = EricArtLayout.PLANTED_OFFSET
 	hitbox.get_node("CollisionShape2D").shape.radius = EricArtLayout.SWORD_HITBOX_RADIUS
+	hitbox.set_meta(HitInfo.META_ATTACK, &"eric_thrown_sword")
 
 
 # `hand` is the sword's centre as it leaves his hand; `ground_y` is the floor line under Eric.

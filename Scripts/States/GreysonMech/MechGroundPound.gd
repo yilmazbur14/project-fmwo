@@ -6,6 +6,7 @@ extends State
 
 const SHOCKWAVE_SCENE := preload("res://Scenes/Bosses/MechShockwaveScene.tscn")
 const IMPACT_SCENE := preload("res://Scenes/Bosses/MechPoundImpactScene.tscn")
+const ScreenView := preload("res://Scripts/ScreenView.gd")
 # Midpoint of the two fists on frame 14, on the feet row.
 const SLAM_PIXEL := Vector2(47.5, 95)
 
@@ -35,18 +36,10 @@ func slam() -> void:
 	_shake_screen()
 
 
-# Offsets the canvas instead of moving nodes, so physics bodies and the UI layers stay put.
+# Through ScreenView, the only writer of the canvas transform, so an overlapping zoom or shake
+# can't be left applied.
 func _shake_screen() -> void:
-	var viewport := get_viewport()
-	var base := viewport.canvas_transform
-	# A SceneTree tween, so a scene change mid-shake can't leave the canvas offset.
-	var tween := get_tree().create_tween()
-	for i in SHAKE_STEPS:
-		var strength := SHAKE_STRENGTH * (1.0 - float(i) / SHAKE_STEPS)
-		var offset := Vector2(randf_range(-strength, strength), randf_range(-strength, strength)).round()
-		tween.tween_callback(func(): viewport.canvas_transform = base.translated(offset))
-		tween.tween_interval(SHAKE_STEP_TIME)
-	tween.tween_callback(func(): viewport.canvas_transform = base)
+	ScreenView.shake(get_tree(), SHAKE_STRENGTH, SHAKE_STEPS, SHAKE_STEP_TIME)
 
 
 func _on_animation_player_animation_finished(anim_name: StringName) -> void:

@@ -9,6 +9,7 @@
 [ext_resource type="Script" uid="uid://b8j1w6wdugn8b" path="res://Scripts/States/Eric/EricDowned.gd" id="6_yo8tt"]
 [ext_resource type="Script" path="res://Scripts/States/Eric/EricSwordThrow.gd" id="7_throw"]
 [ext_resource type="Script" path="res://Scripts/States/Eric/EricBearHug.gd" id="8_hug"]
+[ext_resource type="Script" path="res://Scripts/States/Eric/EricParryStaggered.gd" id="9_parry_staggered"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_whhg3"]
 size = Vector2(58, 72)
@@ -578,6 +579,18 @@ one_shot = true
 wait_time = 3.0
 one_shot = true
 
+[node name="ParryStaggered" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox", "boss_collision_shape", "eric_state_machine", "stagger_timer")]
+script = ExtResource("9_parry_staggered")
+animation_player = NodePath("../../AnimationPlayer")
+character_body = NodePath("../..")
+hurtbox = NodePath("../../Hurtbox")
+boss_collision_shape = NodePath("../../CollisionShape2D")
+eric_state_machine = NodePath("..")
+stagger_timer = NodePath("../ParryStaggerTimer")
+
+[node name="ParryStaggerTimer" type="Timer" parent="CharacterBody2D/StateManager"]
+one_shot = true
+
 [connection signal="animation_finished" from="CharacterBody2D/AnimationPlayer" to="CharacterBody2D/StateManager/Earthquake" method="_on_animation_player_animation_finished"]
 [connection signal="animation_finished" from="CharacterBody2D/AnimationPlayer" to="CharacterBody2D/StateManager/SwordThrow" method="_on_animation_player_animation_finished"]
 [connection signal="animation_finished" from="CharacterBody2D/AnimationPlayer" to="CharacterBody2D/StateManager/BearHug" method="_on_animation_player_animation_finished"]
@@ -585,3 +598,4 @@ one_shot = true
 [connection signal="timeout" from="CharacterBody2D/StateManager/RestTimer" to="CharacterBody2D/StateManager" method="_on_rest_timer_timeout"]
 [connection signal="timeout" from="CharacterBody2D/StateManager/DownedTimer" to="CharacterBody2D/StateManager" method="_on_downed_timer_timeout"]
 [connection signal="timeout" from="CharacterBody2D/StateManager/WhirlwindDuration" to="CharacterBody2D/StateManager/Whirlwind" method="_on_whirlwind_duration_timeout"]
+[connection signal="timeout" from="CharacterBody2D/StateManager/ParryStaggerTimer" to="CharacterBody2D/StateManager/ParryStaggered" method="_on_parry_stagger_timer_timeout"]

@@ -29,6 +29,9 @@ var fill_style: StyleBoxFlat
 var defeated := false
 # One finisher daze per Downed window; Downed clears it.
 var daze_used := false
+# Punches that can land while a parry has him staggered.
+const PARRY_STAGGER_HIT_CAP := 2
+var parry_stagger_hits := 0
 
 var sprite_base_position: Vector2
 
@@ -106,6 +109,10 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 
 
 func take_punch(amount: int) -> int:
+	if state_machine.current_state == state_machine.states.get("ParryStaggered"):
+		if parry_stagger_hits >= PARRY_STAGGER_HIT_CAP:
+			return 0
+		parry_stagger_hits += 1
 	var dealt := mini(amount, boss_health)
 	boss_health -= dealt
 	print("Boss health: ", boss_health)
@@ -113,6 +120,32 @@ func take_punch(amount: int) -> int:
 	_hit_feedback()
 	hit_sfx_player.play()
 	return dealt
+
+
+# The attacks a parry (PlayerDefense) can stagger him out of, and the state each runs in.
+const PARRY_STAGGER_STATES := {
+	&"eric_whirlwind": "Whirlwind",
+	&"eric_bear_hug_grab": "BearHug",
+}
+
+
+func can_parry_stagger(hit: RefCounted) -> bool:
+	if defeated or boss_health <= 0 or state_machine.defeated:
+		return false
+	var state_name: String = PARRY_STAGGER_STATES.get(hit.attack_id, "")
+	return not state_name.is_empty() and state_machine.current_state == state_machine.states.get(state_name)
+
+
+# Deferred from the parry, so the conditions are checked again. He picks himself up where the
+# interrupted attack started from.
+func parry_stagger(duration: float) -> void:
+	if defeated or boss_health <= 0 or state_machine.defeated:
+		return
+	var state = state_machine.current_state
+	if state == state_machine.states.get("Whirlwind"):
+		state_machine.parry_stagger(duration, state.eric_original_position)
+	elif state == state_machine.states.get("BearHug"):
+		state_machine.parry_stagger(duration, state.plant_spot)
 
 
 # The player's finisher (PlayerFinisher). Only the Downed window can be dazed: the bear hug's stumble

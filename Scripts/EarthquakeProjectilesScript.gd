@@ -7,6 +7,7 @@ extends Node2D
 
 const STRAIGHT_TEXTURE := preload("res://Assets/Characters/Eric/eric_quake_projectile.png")
 const TILTED_TEXTURE := preload("res://Assets/Characters/Eric/eric_quake_projectile_tilted.png")
+const HitInfo := preload("res://Scripts/HitInfo.gd")
 const TILTED_OFFSET_DEGREES := 22.5
 const FRAME_COUNT := 4
 const FRAME_TIME := 0.08
@@ -64,6 +65,9 @@ func _ready() -> void:
 
 	for numpad in collision_map:
 		var area: Area2D = collision_map[numpad]
+		area.set_meta(HitInfo.META_ATTACK, &"eric_quake_wave")
+		# Every wave comes from the slam, so a guard facing the slam point blocks it.
+		area.set_meta(HitInfo.META_ORIGIN, global_position)
 		var degrees: float = NUMPAD_ANGLES[numpad] + (TILTED_OFFSET_DEGREES if tilted else 0.0)
 		var dir := Vector2.from_angle(deg_to_rad(degrees))
 		directions[numpad] = dir

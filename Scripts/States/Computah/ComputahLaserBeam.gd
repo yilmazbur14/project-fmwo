@@ -23,15 +23,9 @@ extends State
 # outline on each side; 21 skips the outline so grazing the edge doesn't hurt.
 @export var hitbox_thickness := 21.0
 
-# The laser covers the whole arena; dashing through it is the intended dodge.
-@export var dash_immunity_time := 0.18
-# A dash only grants laser immunity if the previous dash started at least this
-# long before it, so mashing dash can't chain immunity windows together.
-@export var dash_immunity_cooldown := 0.6
-
 enum Phase { TELEGRAPH, SWEEP, FADE }
 
-const DashImmunity := preload("res://Scripts/DashImmunity.gd")
+const HitInfo := preload("res://Scripts/HitInfo.gd")
 
 const BEAM_EXTEND_DURATION := 0.08
 const BEAM_TEXTURE_HEIGHT := 23.0
@@ -136,18 +130,14 @@ func _start_fade() -> void:
 		beam.monitoring = false
 
 
-# The beams aren't in the "enemy projectile" group (that damages dashing
-# players too), so they deal their own damage and apply the dash rule here.
+# The beams aren't in the "enemy projectile" group (that damages dashing players too): they report
+# their own hits, and PlayerDefense applies the dash-through rule the laser is built around.
 func _damage_players_in_beams() -> void:
 	for beam in _beams():
 		for area in beam.get_overlapping_areas():
 			var player := area.get_parent()
-			if player.get("hurtBox") == area and not _is_dash_immune(player):
-				player.take_damage()
-
-
-func _is_dash_immune(player: Node) -> bool:
-	return DashImmunity.is_immune(player, dash_immunity_time, dash_immunity_cooldown)
+			if player.get("hurtBox") == area:
+				player.receive_hit(HitInfo.make(&"computah_laser", beam, beam.global_position))
 
 
 func _beams() -> Array[Area2D]:

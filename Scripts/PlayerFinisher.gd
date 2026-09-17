@@ -49,6 +49,14 @@ enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE }
 @export var focus_boss_weight := 0.35
 # Of the boss's max health, at least 1.
 @export var finisher_damage_ratio := 0.25
+# The same, for an uppercut supercharged by a full hype meter (PlayerHype).
+@export var supercharged_damage_ratio := 0.40
+@export var super_impact_hit_stop := 0.25
+@export var super_impact_shake := 24.0
+@export var super_impact_flash := Color(2.6, 2.2, 0.9)
+@export var super_impact_cheer := 3.0
+# On the player as the uppercut launches.
+@export var super_launch_flash := Color(2.0, 1.6, 0.6)
 # px the boss's hurtbox grows by for the reach check.
 @export var uppercut_reach := 48.0
 @export var impact_hit_stop := 0.15
@@ -98,6 +106,9 @@ var flipped := false
 var stars: Sprite2D
 var stars_clock := 0.0
 var input_lock_left := 0.0
+# Decided when the daze starts: nothing can hit the player during the finisher, so the hype it needs
+# can't drain in between. PlayerFinishing reads it for the recoloured sheet.
+var supercharged := false
 
 
 func _ready() -> void:
@@ -212,6 +223,7 @@ func _begin_daze() -> void:
 		return
 	boss.enter_daze()
 	dazed = true
+	supercharged = player.hype.is_full()
 	FightFreeze.freeze(get_tree(), [player.get_parent()])
 	player.enter_finisher_pose()
 	flipped = _boss_on_left()
@@ -261,6 +273,8 @@ func _animate_charge(delta: float) -> void:
 
 func _start_uppercut() -> void:
 	charge_ended.emit(true)
+	if supercharged:
+		_flash(player.sprite, super_launch_flash)
 	_set_phase(Phase.UPPERCUT)
 	uppercut_step = -1
 	_advance_uppercut()
@@ -286,15 +300,21 @@ func _contact() -> void:
 	FightFreeze.unfreeze(get_tree())
 	_clear_stars()
 	if landed:
-		boss.take_finisher(maxi(1, roundi(boss.get_max_health() * finisher_damage_ratio)))
+		var max_health: int = boss.get_max_health()
+		var normal := maxi(1, roundi(max_health * finisher_damage_ratio))
+		var dealt: int = boss.take_finisher(maxi(1, roundi(max_health * supercharged_damage_ratio)) if supercharged else normal)
+		# A phase floor or a nearly dead boss can clip it: hype is only spent for damage it added.
+		var super_applied := supercharged and dealt > normal
+		if super_applied:
+			player.hype.spend()
 		boss.exit_daze(true)
 		if boss.get_health_ratio() > 0.0 and boss.end_recovery(stagger_time):
 			_hop(boss.sprite)
-		_spawn_impact(box)
-		HitStop.freeze(get_tree(), impact_hit_stop)
-		ScreenView.shake(get_tree(), impact_shake, IMPACT_SHAKE_STEPS, IMPACT_SHAKE_STEP_TIME)
-		_flash(boss.sprite)
-		get_tree().call_group("arena_crowd", "cheer", impact_cheer)
+		_spawn_impact(box, super_applied)
+		HitStop.freeze(get_tree(), super_impact_hit_stop if super_applied else impact_hit_stop)
+		ScreenView.shake(get_tree(), super_impact_shake if super_applied else impact_shake, IMPACT_SHAKE_STEPS, IMPACT_SHAKE_STEP_TIME)
+		_flash(boss.sprite, super_impact_flash if super_applied else impact_flash)
+		get_tree().call_group("arena_crowd", "cheer", super_impact_cheer if super_applied else impact_cheer)
 	elif _boss_valid():
 		# A whiff: the punish window carries on with the time it had left.
 		boss.exit_daze(false)
@@ -338,6 +358,7 @@ func _finish() -> void:
 	phase = Phase.OFF
 	boss = null
 	dazed = false
+	supercharged = false
 	prompt_visible = false
 	zoomed = false
 	finished.emit()
@@ -411,17 +432,19 @@ func _clear_stars() -> void:
 	stars = null
 
 
-func _spawn_impact(box: Rect2) -> void:
+func _spawn_impact(box: Rect2, super_burst: bool) -> void:
 	var point := _fist_point(_sheet().contact_step) + FinisherArtLayout.mirrored(FinisherArtLayout.IMPACT_OFFSET, flipped)
 	point = point.clamp(box.position, box.end).round()
-	var spec := FinisherArtLayout.impact()
-	if FinisherArtLayout.USE_FINAL_IMPACT:
+	var spec := FinisherArtLayout.super_impact() if super_burst else FinisherArtLayout.impact()
+	if spec.has("texture"):
 		var burst := Sprite2D.new()
 		burst.texture = load(spec.texture)
 		burst.hframes = spec.hframes
 		burst.centered = false
 		burst.offset = -spec.pivot
 		burst.scale = Vector2.ONE * spec.scale
+		# The placeholder supercharged burst is the normal one, tinted.
+		burst.self_modulate = spec.get("tint", Color.WHITE)
 		fx_layer.add_child(burst)
 		burst.global_position = point
 		var frames := burst.create_tween()
@@ -437,7 +460,7 @@ func _spawn_impact(box: Rect2) -> void:
 		var radius: float = spec.outer_radius if i % 2 == 0 else spec.inner_radius
 		polygon.append(Vector2.from_angle(TAU * i / corners - PI / 2.0) * radius)
 	spark.polygon = polygon
-	spark.color = spec.color
+	spark.color = spec.color * spec.get("tint", Color.WHITE)
 	spark.scale = Vector2.ONE * spec.from_scale
 	fx_layer.add_child(spark)
 	spark.global_position = point
@@ -447,8 +470,8 @@ func _spawn_impact(box: Rect2) -> void:
 	grow.chain().tween_callback(spark.queue_free)
 
 
-func _flash(sprite: CanvasItem) -> void:
-	sprite.self_modulate = impact_flash
+func _flash(sprite: CanvasItem, color: Color) -> void:
+	sprite.self_modulate = color
 	get_tree().create_tween().tween_property(sprite, "self_modulate", Color(1, 1, 1), impact_flash_time)
 
 

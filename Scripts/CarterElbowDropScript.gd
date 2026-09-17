@@ -2,6 +2,8 @@ extends Node2D
 
 signal finished
 
+const HitInfo := preload("res://Scripts/HitInfo.gd")
+
 const DIVE_FRAME_INTERVAL := 0.08
 const HITBOX_ACTIVE_TIME := 0.15
 const LANDED_TIME := 0.2
@@ -54,6 +56,7 @@ var over_mason := false
 
 
 func _ready() -> void:
+	hitbox_shape.get_parent().set_meta(HitInfo.META_ATTACK, &"carter_elbow_drop")
 	animation_player.animation_finished.connect(_on_animation_player_animation_finished)
 	target_sprite.texture = TARGET_TEXTURE
 	target_sprite.hframes = TARGET_FRAMES

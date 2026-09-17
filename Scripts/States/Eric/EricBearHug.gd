@@ -4,7 +4,8 @@ extends State
 # them, one damage per squeeze, and tosses them; a miss leaves him stumbling, open to punches.
 # Either way he goes back to the sword and pulls it out.
 
-const DashImmunity := preload("res://Scripts/DashImmunity.gd")
+const HitInfo := preload("res://Scripts/HitInfo.gd")
+const ParryTell := preload("res://Scripts/ParryTell.gd")
 const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
 const HUG_TEXTURE := preload("res://Assets/Characters/Eric/eric_bearhug_v2.png")
 const PLANTED_SWORD_TEXTURE := preload("res://Assets/Characters/Eric/eric_bearhug_planted_sword_v2.png")
@@ -24,8 +25,6 @@ const PLANTED_SWORD_TEXTURE := preload("res://Assets/Characters/Eric/eric_bearhu
 @export var lunge_max_distance := 650.0
 @export var return_speed := 900.0
 @export var squeezes := 3
-@export var dash_immunity_time := 0.18
-@export var dash_immunity_cooldown := 0.6
 
 const TOSS_DIRECTION := Vector2(0.7071, -0.7071)
 # Where the player's centre can be inside the ropes.
@@ -60,6 +59,7 @@ func Enter() -> void:
 
 
 func Exit() -> void:
+	ParryTell.clear(character_body)
 	if holding:
 		_release_player()
 	grab_area.monitoring = false
@@ -101,7 +101,9 @@ func Physics_Update(delta: float) -> void:
 		player.velocity = Vector2.ZERO
 
 
+# The lunge is the hitbox: the warning has done its job by now.
 func _start_lunge() -> void:
+	ParryTell.clear(character_body)
 	var grab_offset: Vector2 = grab_area.get_node("CollisionShape2D").global_position - character_body.global_position
 	var to_player: Vector2 = player.global_position - grab_offset - character_body.global_position
 	lunge_target = character_body.global_position + to_player.limit_length(lunge_max_distance)
@@ -114,12 +116,21 @@ func _start_lunge() -> void:
 
 
 func _catches_player() -> bool:
-	if player.is_invincible or player.is_grabbed:
-		return false
+	var near_miss := false
 	for area in grab_area.get_overlapping_areas():
 		if area == player.hurtBox:
-			return not DashImmunity.is_immune(player, dash_immunity_time, dash_immunity_cooldown)
+			return player.receive_hit(_hit()) == HitInfo.Result.HIT
+		if player.is_dodge_ghost(area):
+			near_miss = true
+	# Only where the player isn't: the lunge closing on the spot a dash left is a perfect dodge.
+	if near_miss:
+		player.receive_near_miss(_hit())
 	return false
+
+
+func _hit() -> RefCounted:
+	var centre: Vector2 = grab_area.get_node("CollisionShape2D").global_position
+	return HitInfo.make(&"eric_bear_hug_grab", self, centre, character_body)
 
 
 func _grab() -> void:
@@ -179,6 +190,8 @@ func _on_animation_player_animation_finished(anim_name: StringName) -> void:
 		&"hug_plant":
 			charge_left = lerpf(charge_time, rage_charge_time, eric_state_machine.rage)
 			phase = Phase.CHARGE
+			# The charge frames are the grab's wind-up: a parry during the lunge staggers him.
+			ParryTell.telegraph(character_body, &"eric_bear_hug_grab", charge_left)
 			animation_player.play("hug_charge")
 		&"hug_whiff":
 			hurtbox.monitoring = true

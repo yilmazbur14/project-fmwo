@@ -110,6 +110,25 @@ const FINAL_IMPACT := {
 	"pivot": Vector2(48, 48),
 }
 
+#SUPERCHARGED IMPACT
+# The burst when a full hype meter supercharges the uppercut (PlayerHype).
+const USE_FINAL_SUPER_IMPACT := true
+# The normal burst, whichever it is, tinted gold.
+const PLACEHOLDER_SUPER_IMPACT := {"tint": Color(1.6, 1.25, 0.45)}
+const FINAL_SUPER_IMPACT := {
+	"texture": "res://Assets/Effects/uppercut_impact_super.png",
+	"hframes": 7,
+	"frame_times": [0.04, 0.06, 0.06, 0.07, 0.08, 0.09, 0.10],
+	"scale": 2.0,
+	"pivot": Vector2(48, 48),
+}
+
+#SUPERCHARGED PLAYER SHEET
+# The same frames as the finisher sheet with the energy recoloured, swapped in for the whole
+# supercharged finisher so the charge reads as loaded.
+const USE_FINAL_SUPER_PLAYER := true
+const FINAL_SUPER_PLAYER_TEXTURE := "res://Assets/Characters/MainPlayer/player_uppercut_super.png"
+
 #PROMPT
 # One row on the HUD layer, in screen px: [punch key] [meter] [dodge key], with the text centred
 # under the meter.
@@ -189,6 +208,17 @@ static func stars() -> Dictionary:
 
 static func impact() -> Dictionary:
 	return FINAL_IMPACT if USE_FINAL_IMPACT else PLACEHOLDER_IMPACT
+
+
+static func super_impact() -> Dictionary:
+	return FINAL_SUPER_IMPACT if USE_FINAL_SUPER_IMPACT else impact().merged(PLACEHOLDER_SUPER_IMPACT, true)
+
+
+# The recoloured sheet only exists for the final frames.
+static func player_texture(supercharged: bool) -> String:
+	if supercharged and USE_FINAL_PLAYER and USE_FINAL_SUPER_PLAYER:
+		return FINAL_SUPER_PLAYER_TEXTURE
+	return player_sheet().texture
 
 
 static func keys() -> Dictionary:

@@ -5,6 +5,7 @@ extends CharacterBody2D
 
 const PlayerScript := preload("res://Scripts/PlayerScript.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
+const HitInfo := preload("res://Scripts/HitInfo.gd")
 
 # The figures still in play, for spreading a swarm out. A figure leaves it once it goes off.
 const FIGURE_GROUP := "funko_figure"
@@ -312,7 +313,10 @@ static func _frame_at(frame_times: Array, time: float) -> int:
 
 func _blast() -> void:
 	if global_position.distance_to(player.global_position) <= EXPLOSION_RADIUS:
-		player.take_damage()
+		player.receive_hit(HitInfo.make(&"funko_blast", self, global_position))
+	# Only where the player isn't: a blast reaching the spot a dash left is a perfect dodge.
+	elif global_position.distance_to(player.dodge_ghost_position()) <= EXPLOSION_RADIUS:
+		player.receive_near_miss(HitInfo.make(&"funko_blast", self, global_position))
 	if not redirected or blast_hit_jordan:
 		return
 	var box: Rect2 = jordan.hurtbox_rect()

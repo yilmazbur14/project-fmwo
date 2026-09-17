@@ -3,7 +3,7 @@ extends Node2D
 # The mech's ground-pound ring: crest segments around an expanding ellipse. Only a segment's
 # crest hurts, so a player the ring has already passed is safe; dashing through is the dodge.
 
-const DashImmunity := preload("res://Scripts/DashImmunity.gd")
+const HitInfo := preload("res://Scripts/HitInfo.gd")
 const SEGMENT_SCENE := preload("res://Scenes/Bosses/MechShockwaveSegmentScene.tscn")
 
 const VERTICAL_RATIO := 0.42
@@ -23,9 +23,6 @@ const FRAME_TIME := 0.08
 const VISIBLE_AREA := Rect2(149, 186, 1627, 781)
 const HURT_AREA := Rect2(105, 105, 1710, 870)
 const ARC_SAMPLES := 256
-
-@export var dash_immunity_time := 0.18
-@export var dash_immunity_cooldown := 0.6
 
 # Horizontal radius growth in px/s, set by the ground pound before the ring is added.
 var speed := 900.0
@@ -98,15 +95,16 @@ func _place_segments() -> void:
 		segment.get_node("Sprite2D").frame = (start_frames[i] + frame_step) % FRAME_COUNT
 
 
-# Deals its own damage rather than joining "enemy projectile", which also hits dashing players.
+# Reports its own hits rather than joining "enemy projectile", which also hits dashing players:
+# PlayerDefense applies the dash-through rule this ring is built around.
 func _damage_player() -> void:
 	for segment in segments:
 		if not HURT_AREA.has_point(segment.global_position):
 			continue
 		for area in segment.get_overlapping_areas():
 			var player := area.get_parent()
-			if player.get("hurtBox") == area and not DashImmunity.is_immune(player, dash_immunity_time, dash_immunity_cooldown):
-				player.take_damage()
+			if player.get("hurtBox") == area:
+				player.receive_hit(HitInfo.make(&"mech_shockwave", self, global_position))
 				return
 
 

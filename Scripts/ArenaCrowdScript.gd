@@ -12,6 +12,7 @@ const CHEER_FRAME_TIME := 0.15
 var _cheer_time_left := 0.0
 var _frame_clock := 0.0
 var _step := 0
+var _hyped := false
 
 
 func _ready() -> void:
@@ -26,13 +27,32 @@ func cheer(duration: float = 1.5) -> void:
 	_cheer_time_left = maxf(_cheer_time_left, duration)
 
 
+# Cuts a cheer short, for a moment that needs the crowd quiet:
+#     get_tree().call_group("arena_crowd", "hush")
+func hush() -> void:
+	if _cheer_time_left <= 0.0:
+		return
+	_cheer_time_left = 0.0
+	if not _hyped:
+		_restart_loop()
+
+
+# While the player's hype meter is full the cheer loop never runs out.
+func set_hyped(on: bool) -> void:
+	if on == _hyped:
+		return
+	_hyped = on
+	if _cheer_time_left <= 0.0:
+		_restart_loop()
+
+
 func _process(delta: float) -> void:
 	if _cheer_time_left > 0.0:
 		_cheer_time_left -= delta
-		if _cheer_time_left <= 0.0:
+		if _cheer_time_left <= 0.0 and not _hyped:
 			_restart_loop()
 
-	var cheering := _cheer_time_left > 0.0
+	var cheering := _hyped or _cheer_time_left > 0.0
 	var frame_time := CHEER_FRAME_TIME if cheering else IDLE_FRAME_TIME
 	_frame_clock += delta
 	if _frame_clock >= frame_time:

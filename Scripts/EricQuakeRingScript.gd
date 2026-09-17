@@ -4,7 +4,7 @@ extends Node2D
 # circle. Only the band the segment art covers hurts, so a player the ring has already passed is
 # safe; dashing through it is the dodge.
 
-const DashImmunity := preload("res://Scripts/DashImmunity.gd")
+const HitInfo := preload("res://Scripts/HitInfo.gd")
 const SEGMENT_SCENE := preload("res://Scenes/Bosses/EricQuakeSegmentScene.tscn")
 
 # Smaller rings look octagonal.
@@ -22,9 +22,6 @@ const LANDING_HIT_TIME := 0.1
 # everywhere up to the ropes, so hugging a rope isn't safe.
 const VISIBLE_AREA := Rect2(160, 160, 1600, 757)
 const HURT_AREA := Rect2(105, 105, 1710, 870)
-
-@export var dash_immunity_time := 0.18
-@export var dash_immunity_cooldown := 0.6
 
 # Radius growth in px/s and the player to hurt, set by the throw before the ring is added.
 var speed := 950.0
@@ -81,9 +78,7 @@ func _damage_player() -> void:
 	var inner := 0.0 if elapsed < LANDING_HIT_TIME else radius - HURT_HALF_WIDTH
 	if nearest > radius + HURT_HALF_WIDTH or farthest < inner:
 		return
-	if DashImmunity.is_immune(player, dash_immunity_time, dash_immunity_cooldown):
-		return
-	player.take_damage()
+	player.receive_hit(HitInfo.make(&"eric_quake_ring", self, centre))
 
 
 func _has_passed_hurt_area() -> bool:

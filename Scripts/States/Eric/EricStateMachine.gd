@@ -10,6 +10,8 @@ extends Node
 @export var rest_timer: Timer
 @export var downed_state_timer: Timer
 
+const ParryTell := preload("res://Scripts/ParryTell.gd")
+
 const HAZARD_GROUP := "eric_hazard"
 const ATTACKS := ["Earthquake", "Whirlwind", "SwordThrow", "BearHug"]
 
@@ -158,10 +160,20 @@ func enter_player_defeated() -> void:
 	_end_fight("Idle")
 
 
+# Called by the boss after a parry: his attack stops and he's open to punches for `duration`, then he
+# picks himself up at `home`, where the attack started.
+func parry_stagger(duration: float, home: Vector2) -> void:
+	states["ParryStaggered"].duration = duration
+	states["ParryStaggered"].home = home
+	on_child_transition(current_state, "ParryStaggered")
+
+
 func _end_fight(final_state_name: String) -> void:
+	ParryTell.clear(boss)
 	post_dialogue_pre_fight_timer.stop()
 	rest_timer.stop()
 	downed_state_timer.stop()
+	states["ParryStaggered"].stagger_timer.stop()
 	# Anything he threw that outlives the fight could still hurt the player.
 	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
 		hazard.queue_free()

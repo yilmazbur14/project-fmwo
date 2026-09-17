@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+const HitInfo := preload("res://Scripts/HitInfo.gd")
+
 # Carter only ever charges VERTICALLY - the mirror of Josh. He locks
 # onto the player's X position the instant a charge begins, snaps to
 # that horizontal spot, then sweeps the whole height of the arena.
@@ -33,6 +35,7 @@ func _ready() -> void:
 		telegraph_line.visible = false
 	if body_hitbox:
 		body_hitbox.area_entered.connect(_on_body_hitbox_area_entered)
+		body_hitbox.set_meta(HitInfo.META_ATTACK, &"wrestler_charge")
 	_play_idle()
 
 
@@ -145,8 +148,8 @@ func _on_body_hitbox_area_entered(area: Area2D) -> void:
 	# Attempting to punch either wrestler - even mid-recovery, out of
 	# breath - always gets the player hit back. Never a safe window.
 	if area.is_in_group("player attack"):
-		if main_player and main_player.has_method("take_damage"):
-			main_player.take_damage()
+		if main_player and main_player.has_method("receive_hit"):
+			main_player.receive_hit(HitInfo.make(&"wrestler_punish", self, global_position))
 		return
 
 	# Only counts while actually charging - this is how Carter and Josh

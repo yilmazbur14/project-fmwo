@@ -5,6 +5,7 @@ const SPEED = 600.0
 const DODGE_SPEED = 5000
 const GRAB_KNOCKBACK_SPEED = 4200.0
 const FightOutro := preload("res://Scripts/FightOutro.gd")
+const HitInfo := preload("res://Scripts/HitInfo.gd")
 # const JUMP_VELOCITY = -400.0
 
 #DODGING VARS
@@ -40,6 +41,10 @@ var sprite_base_position: Vector2
 @onready var combo: Node = $Combo
 var punch_buffered := false
 @onready var finisher: Node = $Finisher
+@onready var defense: Node = $Defense
+@onready var hype: Node = $Hype
+# A copy of the hurtbox left where a dash started; see PlayerDefense's perfect dodge.
+@onready var dodge_ghost: Area2D = get_parent().get_node("DodgeGhost")
 
 #FACING
 # Rows of player_4dir_sheet.png; the animations only step the column.
@@ -126,6 +131,12 @@ func _physics_process(delta: float) -> void:
 	# Don't move during punch or block
 	if current_state.name == "Punching" || is_talking || is_grabbed || fight_over || is_finishing:
 		return
+	if defense.is_guard_broken:
+		return
+
+	# Held block brings the guard back up once a dash or a punch is over.
+	if Input.is_action_pressed("block") and not punch_buffered:
+		_raise_guard()
 
 	if is_dodging:
 		dodge_timer += delta
@@ -134,18 +145,29 @@ func _physics_process(delta: float) -> void:
 		if dodge_timer >= dodge_time:
 			is_dodging = false
 			dodge_timer = 0.0
+			defense.on_dash_ended()
+			var state_name: String = state_machine.current_state.name
+			if state_name == "Idle" or state_name == "Walking":
+				state_machine.on_child_transition(state_machine.current_state, "DashRecovery")
+
+	elif defense.is_dash_recovering():
+		velocity = Vector2.ZERO
 
 	else:
 		var directionHorz := Input.get_axis("ui_left", "ui_right")
 		var directionVert := Input.get_axis("ui_up", "ui_down")
+		var speed := SPEED
+		if state_machine.current_state.name == "Blocking":
+			speed *= defense.block_move_speed_ratio
 
+		# Slowing down stays at full rate, so a guard raised mid-knockback still stops the player.
 		if directionHorz:
-			velocity.x = directionHorz * SPEED
+			velocity.x = directionHorz * speed
 		else:
 			velocity.x = move_toward(velocity.x, 0, SPEED)
 
 		if directionVert:
-			velocity.y = directionVert * SPEED
+			velocity.y = directionVert * speed
 		else:
 			velocity.y = move_toward(velocity.y, 0, SPEED)
 
@@ -154,6 +176,12 @@ func _physics_process(delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	# The finisher swallows these presses before they reach this node; this guard doesn't rely on that order.
 	if is_finishing or finisher.is_input_locked():
+		return
+	# Stunned: no punch, dash or guard until it wears off.
+	if defense.is_guard_broken:
+		return
+	# A dash's recovery frames: the guard may go up, and a parry ends them, but nothing else counts.
+	if defense.is_dash_recovering() and not event.is_action_pressed("block"):
 		return
 	if event.is_action_pressed("punch") and not is_talking and not is_grabbed and not fight_over:
 		combo.register_press()
@@ -167,24 +195,42 @@ func _input(event: InputEvent) -> void:
 		# print("Current state: ", current_state.name)
 		return
 
+	if event.is_action_pressed("block"):
+		# A press during a dash still counts toward a parry; the guard goes up when the dash ends.
+		defense.on_block_pressed()
+		_raise_guard()
+
 	if event.is_action_pressed("dodge"):
+		# Before anything about the dash is set, so a refused one can't grant dash immunity.
+		if not defense.try_spend_dash():
+			return
+		if state_machine.current_state.name == "Blocking":
+			state_machine.on_child_transition(state_machine.current_state, "Idle")
 		is_dodging = true
 		direction = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 		previous_dodge_physics_frame = last_dodge_physics_frame
 		last_dodge_physics_frame = Engine.get_physics_frames()
+		defense.on_dash_started()
 
 	if event.is_action_pressed("punch"):
 		# print("Punch")
-		state_machine.on_child_transition(current_state, "Punching")
+		# The live state: the guard may have gone up earlier in this same input flush.
+		state_machine.on_child_transition(state_machine.current_state, "Punching")
+
+
+func _raise_guard() -> void:
+	if is_dodging or not defense.can_raise_guard():
+		return
+	var state: State = state_machine.current_state
+	if state.name == "Idle" or state.name == "Walking" or state.name == "DashRecovery":
+		state_machine.on_child_transition(state, "Blocking")
+
 
 func _on_hurtbox_entered(area: Area2D) -> void:
 	print("Hurtbox entered by: ", area.name)
 	print("Groups: ", area.get_groups())
-	if is_invincible:
-		print("Player is invincible, ignoring damage")
-		return
 	if area.is_in_group("enemy projectile"):
-		take_damage()
+		receive_hit(HitInfo.from_area(area))
 
 
 func _on_invincibility_timer_timeout() -> void:
@@ -195,16 +241,32 @@ func _on_invincibility_timer_timeout() -> void:
 func _on_dialogue_ended(dialogue: Object) -> void:
 	is_talking = false
 
-func take_damage() -> void:
-	# At 0 the loss is only reported at the end of the frame, and nothing may hurt them before that.
-	if fight_over or playerHealth <= 0:
-		return
-	if is_finishing:
-		return
-	if is_invincible:
-		print("Player is invincible, ignoring damage")
-		return
-	playerHealth -= 1
+# Every attack reaches the player through here. Returns a HitInfo.Result; for a grab, HIT means the
+# grab landed and the caller grabs.
+func receive_hit(hit: RefCounted) -> int:
+	var result: int = defense.resolve_hit(hit)
+	if result == HitInfo.Result.HIT and hit.damage > 0:
+		_apply_damage(hit)
+	defense.log_hit(hit, result)
+	return result
+
+
+# This frame the attack touches the dodge ghost but not the player. Attackers that loop over their
+# overlaps report either this or receive_hit(), never both.
+func receive_near_miss(hit: RefCounted) -> void:
+	defense.resolve_near_miss(hit)
+
+
+func is_dodge_ghost(area: Area2D) -> bool:
+	return area == dodge_ghost
+
+
+func dodge_ghost_position() -> Vector2:
+	return defense.dodge_ghost_position()
+
+
+func _apply_damage(hit: RefCounted) -> void:
+	playerHealth = maxi(playerHealth - hit.damage, 0)
 	combo.reset()
 	healthUI.update_health(playerHealth)
 	invincibility_timer.start()
@@ -241,6 +303,9 @@ func _flicker_while_invincible(duration: float) -> void:
 
 # Eric's bear hug draws the held player in his own frames.
 func grab() -> void:
+	defense.clear_guard_break()
+	defense.clear_dodge_ghost()
+	defense.clear_dash_recovery()
 	is_grabbed = true
 	is_dodging = false
 	dodge_timer = 0.0
@@ -252,8 +317,7 @@ func grab() -> void:
 
 # A held player can't dodge, so every squeeze lands, even inside the last one's invincibility.
 func take_grab_damage() -> void:
-	is_invincible = false
-	take_damage()
+	receive_hit(HitInfo.make(&"eric_bear_hug_squeeze", self, global_position))
 
 
 func release_grab(push_direction: Vector2) -> void:
@@ -272,6 +336,7 @@ func begin_finisher() -> void:
 	is_dodging = false
 	dodge_timer = 0.0
 	punch_buffered = false
+	defense.clear_dash_recovery()
 	velocity = Vector2.ZERO
 
 
@@ -296,6 +361,8 @@ func end_fight() -> void:
 	punch_buffered = false
 	is_dodging = false
 	dodge_timer = 0.0
+	defense.on_fight_over()
+	hype.on_fight_over()
 	# A finisher under way plays out to its landing first.
 	if is_finishing:
 		finisher.finished.connect(_stand_still, CONNECT_ONE_SHOT)
@@ -315,7 +382,7 @@ func _stand_still() -> void:
 
 func _update_facing() -> void:
 	# The finisher faces the player toward the boss itself.
-	if is_finishing:
+	if is_finishing or defense.is_guard_broken:
 		return
 	# Held from the press until the boss has reported the swing: a hurtbox reports a punch after
 	# the hitbox switches off, and moving the hitbox before then would lose the hit.

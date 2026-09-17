@@ -14,6 +14,14 @@
 [ext_resource type="Script" path="res://Scripts/States/MainPlayer/PlayerFinishing.gd" id="12_finishing"]
 [ext_resource type="Script" path="res://Scripts/PlayerFinisher.gd" id="13_finisher"]
 [ext_resource type="Script" path="res://Scripts/FinisherPromptUI.gd" id="14_finisher_prompt"]
+[ext_resource type="Script" path="res://Scripts/PlayerDefense.gd" id="15_defense"]
+[ext_resource type="Script" path="res://Scripts/StaminaBarUI.gd" id="16_stamina_bar"]
+[ext_resource type="Script" path="res://Scripts/PlayerCombatFx.gd" id="17_combat_fx"]
+[ext_resource type="Script" path="res://Scripts/States/MainPlayer/PlayerGuardBroken.gd" id="18_guard_broken"]
+[ext_resource type="Script" path="res://Scripts/CombatPopupUI.gd" id="19_combat_popups"]
+[ext_resource type="Script" path="res://Scripts/States/MainPlayer/PlayerDashRecovery.gd" id="20_dash_recovery"]
+[ext_resource type="Script" path="res://Scripts/PlayerHype.gd" id="21_hype"]
+[ext_resource type="Script" path="res://Scripts/HypeMeterUI.gd" id="22_hype_meter"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_h87yu"]
 size = Vector2(12, 27)
@@ -23,6 +31,9 @@ size = Vector2(36, 81)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wotmp"]
 size = Vector2(4.33, 7.67)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ghost"]
+size = Vector2(24, 54)
 
 [sub_resource type="Animation" id="Animation_0sgo8"]
 length = 0.20000334
@@ -201,6 +212,16 @@ script = ExtResource("12_finishing")
 animation_player = NodePath("../../AnimationPlayer")
 player = NodePath("../..")
 
+[node name="GuardBroken" type="Node" parent="CharacterBody2D/StateMachine" node_paths=PackedStringArray("animation_player", "player")]
+script = ExtResource("18_guard_broken")
+animation_player = NodePath("../../AnimationPlayer")
+player = NodePath("../..")
+
+[node name="DashRecovery" type="Node" parent="CharacterBody2D/StateMachine" node_paths=PackedStringArray("animation_player", "player")]
+script = ExtResource("20_dash_recovery")
+animation_player = NodePath("../../AnimationPlayer")
+player = NodePath("../..")
+
 [node name="HurtSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
 
 [node name="InvincibilityTimer" type="Timer" parent="CharacterBody2D" unique_id=633345939]
@@ -211,6 +232,19 @@ script = ExtResource("9_combo")
 [node name="Finisher" type="Node" parent="CharacterBody2D"]
 script = ExtResource("13_finisher")
 
+[node name="Defense" type="Node" parent="CharacterBody2D"]
+script = ExtResource("15_defense")
+
+[node name="CombatFx" type="Node" parent="CharacterBody2D"]
+script = ExtResource("17_combat_fx")
+
+[node name="BlockSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="Hype" type="Node" parent="CharacterBody2D"]
+script = ExtResource("21_hype")
+
+[node name="HypeFullSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=547045528]
 
 [node name="Control" parent="CanvasLayer" unique_id=1519141297 instance=ExtResource("8_jsrhp")]
@@ -220,9 +254,9 @@ anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 136.0
-offset_top = -202.0
+offset_top = -238.0
 offset_right = 416.0
-offset_bottom = -118.0
+offset_bottom = -154.0
 grow_vertical = 0
 theme = ExtResource("11_ui_theme")
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -236,7 +270,33 @@ script = ExtResource("14_finisher_prompt")
 finisher = NodePath("../../CharacterBody2D/Finisher")
 player = NodePath("../../CharacterBody2D")
 
+[node name="StaminaBar" type="Control" parent="CanvasLayer" node_paths=PackedStringArray("defense")]
+mouse_filter = 2
+script = ExtResource("16_stamina_bar")
+defense = NodePath("../../CharacterBody2D/Defense")
+
+[node name="CombatPopups" type="Node2D" parent="CanvasLayer" node_paths=PackedStringArray("player", "defense", "hype")]
+script = ExtResource("19_combat_popups")
+player = NodePath("../../CharacterBody2D")
+defense = NodePath("../../CharacterBody2D/Defense")
+hype = NodePath("../../CharacterBody2D/Hype")
+
+[node name="HypeMeter" type="Control" parent="CanvasLayer" node_paths=PackedStringArray("hype", "finisher_prompt")]
+mouse_filter = 2
+script = ExtResource("22_hype_meter")
+hype = NodePath("../../CharacterBody2D/Hype")
+finisher_prompt = NodePath("../FinisherPrompt")
+
 [node name="FinisherFx" type="Node2D" parent="."]
 z_index = 2
+
+[node name="DodgeGhost" type="Area2D" parent="."]
+collision_layer = 2
+collision_mask = 13
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DodgeGhost"]
+shape = SubResource("RectangleShape2D_ghost")
 
 [connection signal="timeout" from="CharacterBody2D/InvincibilityTimer" to="CharacterBody2D" method="_on_invincibility_timer_timeout"]

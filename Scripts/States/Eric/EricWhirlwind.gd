@@ -1,5 +1,8 @@
 extends State
 
+const HitInfo := preload("res://Scripts/HitInfo.gd")
+const ParryTell := preload("res://Scripts/ParryTell.gd")
+
 @export var animation_player : AnimationPlayer
 
 #MainPlayer
@@ -34,6 +37,8 @@ func Enter() -> void:
 	animation_player.speed_scale = lerpf(animation_speed, rage_animation_speed, rage)
 
 	animation_player.play("whirlwind")
+	# The spin has no separate wind-up: the warning stays up while he bears down on the player.
+	ParryTell.telegraph(character_body, &"eric_whirlwind", duration)
 	boss_collision_shape.disabled = true
 	whirlwind_hitbox.monitoring = true
 	whirlwind_duration_timer.start(duration)
@@ -45,6 +50,7 @@ func Enter() -> void:
 		sfx.play()
 
 func Exit() -> void:
+	ParryTell.clear(character_body)
 	boss_collision_shape.disabled = false
 	whirlwind_hitbox.monitoring = false
 	whirlwind_duration_timer.stop()
@@ -54,7 +60,9 @@ func Exit() -> void:
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func Physics_Update(_delta: float):
-	_damage_player()
+	# A parry staggers him at the end of this step, where he is now.
+	if _damage_player() == HitInfo.Result.PARRIED:
+		return
 
 	if back_to_original_position:
 		whirlwind_direction = (
@@ -82,11 +90,22 @@ func Physics_Update(_delta: float):
 
 # The whirlwind hurts whoever it overlaps while it spins, and only then: a flag set on the
 # player when they entered it could outlive the whirlwind if it switched off around them.
-func _damage_player() -> void:
+func _damage_player() -> int:
+	var near_miss := false
 	for area in whirlwind_hitbox.get_overlapping_areas():
 		if area == player.hurtBox:
-			player.take_damage()
-			return
+			return player.receive_hit(_hit())
+		if player.is_dodge_ghost(area):
+			near_miss = true
+	# Only where the player isn't: the spin passing the spot a dash left is a perfect dodge.
+	if near_miss:
+		player.receive_near_miss(_hit())
+	return HitInfo.Result.IGNORED
+
+
+func _hit() -> RefCounted:
+	var centre: Vector2 = whirlwind_hitbox.get_node("CollisionShape2D").global_position
+	return HitInfo.make(&"eric_whirlwind", whirlwind_hitbox, centre, character_body)
 
 
 func _on_whirlwind_duration_timeout() -> void:
