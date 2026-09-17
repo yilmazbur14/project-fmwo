@@ -9,12 +9,14 @@ extends State
 func Enter() -> void:
 	hitBox.monitoring = true
 	hitBox.monitorable = true
+	player.combo.start_swing()
 	animation_player.speed_scale = 2.0  # Speed up only the punch animation
 	animation_player.play(punching_animation)
 
 func Exit() -> void:
 	hitBox.monitoring = false  # Disable hitbox when exiting punch state
 	hitBox.monitorable = false
+	player.combo.end_swing()
 	animation_player.speed_scale = 1.0  # Reset back to normal for other animations
 
 func Update(delta: float) -> void:

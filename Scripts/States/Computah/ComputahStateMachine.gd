@@ -147,6 +147,17 @@ func _on_laughing_timer_timeout() -> void:
 	_start_attack_cycle()
 
 
+func end_phase_one() -> void:
+	for timer in [post_dialogue_pre_fight_timer, rocket_fire_interval_timer, laser_beam_duration_timer, downed_state_timer, recovery_timer, laughing_timer]:
+		timer.stop()
+	rocket_projectile_count = 0
+	# Idle's Enter shuts the hurtbox and the laser state's Exit hides and disarms the beams.
+	on_child_transition(current_state, "Idle")
+	for node in get_tree().current_scene.get_children():
+		if node.scene_file_path == Projectile.resource_path:
+			node.queue_free()
+
+
 func _play_downed_stinger() -> void:
 	if not ComputahCharacterBody:
 		return

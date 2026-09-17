@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+const HitStop := preload("res://Scripts/HitStop.gd")
+
 #CONSTANTS
 @export var max_health := 10
 var boss_health := max_health
@@ -76,17 +78,24 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 	# (~0.65s) after that contact. Game time, so hit-stop and frame hitches can't stretch the gap.
 	if not area.monitorable and fight_clock - last_contact_hit_time < PHANTOM_HIT_WINDOW:
 		return
-	if hits_this_window >= MAX_HITS_PER_WINDOW:
-		return
-	# Phase two can't be skipped: until a phase-two cycle starts, Mason can't drop past the threshold.
-	if state_machine.cycle_phase == 0 and get_health_ratio() <= PHASE_TWO_RATIO:
-		return
-
-	hits_this_window += 1
-	if area.monitorable:
+	if area.get_parent().combo.resolve_punch(self) > 0 and area.monitorable:
 		last_contact_hit_time = fight_clock
 
-	boss_health = max(boss_health - 1, 0)
+
+func take_punch(amount: int) -> int:
+	if hits_this_window >= MAX_HITS_PER_WINDOW:
+		return 0
+	# Phase two can't be skipped: until a phase-two cycle starts, Mason can't drop past the
+	# threshold, and a charged punch that would carry past it is cut down to reach it exactly.
+	var lowest_health := 0
+	if state_machine.cycle_phase == 0:
+		lowest_health = floori(max_health * PHASE_TWO_RATIO)
+	var dealt := mini(amount, boss_health - lowest_health)
+	if dealt <= 0:
+		return 0
+
+	hits_this_window += 1
+	boss_health -= dealt
 	_update_health_bar()
 	_hit_feedback()
 	hit_sfx_player.play()
@@ -102,6 +111,7 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 		# area_entered fires mid physics flush; deferring keeps the state Exit/Enter
 		# code the defeat sequence runs from having to be flush-safe.
 		call_deferred("_on_defeated")
+	return dealt
 
 
 func _on_defeated() -> void:
@@ -193,8 +203,4 @@ func _hit_feedback() -> void:
 		shake_tween.tween_property(sprite, "position", sprite_base_position + offset, 0.025)
 	shake_tween.tween_property(sprite, "position", sprite_base_position, 0.025)
 
-	# Hit-stop timer ignores time_scale, otherwise the 0.05 slowdown would stretch its own duration.
-	Engine.time_scale = 0.05
-	get_tree().create_timer(0.06, true, false, true).timeout.connect(
-		func(): Engine.time_scale = 1.0
-	)
+	HitStop.freeze(get_tree(), 0.06)

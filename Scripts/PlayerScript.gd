@@ -35,6 +35,9 @@ var is_invincible = false
 @onready var sprite: Sprite2D = $Sprite2D
 var sprite_base_position: Vector2
 
+@onready var combo: Node = $Combo
+var punch_buffered := false
+
 #AUDIO
 @onready var hurt_sfx_player: AudioStreamPlayer = $HurtSfxPlayer
 
@@ -64,6 +67,9 @@ func _ready():
 	DialogueManager.dialogue_ended.connect(_on_dialogue_ended)
 
 func _process(delta: float) -> void:
+	if punch_buffered and not combo.report_pending():
+		punch_buffered = false
+		state_machine.on_child_transition(state_machine.current_state, "Punching")
 	current_state = state_machine.current_state
 	if playerHealth <= 0:
 		get_tree().change_scene_to_file("res://Scenes/Core/DefeatScene.tscn")
@@ -103,6 +109,13 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("punch") and not is_talking:
+		combo.register_press()
+		# A press held back until the last punch's report is in, so its hit can't be lost.
+		if combo.report_pending():
+			punch_buffered = true
+			return
+
 	# Don't allow any input if currently punching or blocking
 	if current_state.name == "Punching" || is_talking:
 		# print("Current state: ", current_state.name)
@@ -145,6 +158,7 @@ func take_damage() -> void:
 		print("Player is invincible, ignoring damage")
 		return
 	playerHealth -= 1
+	combo.reset()
 	healthUI.update_health(playerHealth)
 	invincibility_timer.start()
 	is_invincible = true

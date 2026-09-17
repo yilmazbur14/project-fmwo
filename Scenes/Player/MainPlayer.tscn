@@ -8,6 +8,9 @@
 [ext_resource type="Script" uid="uid://c6ek3euw3gb8l" path="res://Scripts/States/MainPlayer/PlayerPunching.gd" id="6_wotmp"]
 [ext_resource type="Script" uid="uid://eme7e8edw0ge" path="res://Scripts/States/MainPlayer/PlayerBlocking.gd" id="7_jsrhp"]
 [ext_resource type="PackedScene" uid="uid://cqe2px84rk50m" path="res://Scenes/Player/PlayerHealthScene.tscn" id="8_jsrhp"]
+[ext_resource type="Script" path="res://Scripts/PlayerCombo.gd" id="9_combo"]
+[ext_resource type="Script" path="res://Scripts/ComboCounterUI.gd" id="10_combo_ui"]
+[ext_resource type="Theme" uid="uid://dnd78vy0t1wm3" path="res://Assets/UI/ui_theme.tres" id="11_ui_theme"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_h87yu"]
 size = Vector2(12, 27)
@@ -192,8 +195,27 @@ animation_player = NodePath("../../AnimationPlayer")
 
 [node name="InvincibilityTimer" type="Timer" parent="CharacterBody2D" unique_id=633345939]
 
+[node name="Combo" type="Node" parent="CharacterBody2D"]
+script = ExtResource("9_combo")
+
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=547045528]
 
 [node name="Control" parent="CanvasLayer" unique_id=1519141297 instance=ExtResource("8_jsrhp")]
+
+[node name="ComboCounter" type="Label" parent="CanvasLayer" node_paths=PackedStringArray("combo")]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 136.0
+offset_top = -202.0
+offset_right = 416.0
+offset_bottom = -118.0
+grow_vertical = 0
+theme = ExtResource("11_ui_theme")
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+vertical_alignment = 2
+script = ExtResource("10_combo_ui")
+combo = NodePath("../../CharacterBody2D/Combo")
 
 [connection signal="timeout" from="CharacterBody2D/InvincibilityTimer" to="CharacterBody2D" method="_on_invincibility_timer_timeout"]

@@ -1,0 +1,382 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/GreysonMechScript.gd" id="1_mech_script"]
+[ext_resource type="Texture2D" uid="uid://b47dq67flsw3g" path="res://Assets/Characters/GreysonMech/greyson_mech_sheet.png" id="2_sheet"]
+[ext_resource type="Texture2D" uid="uid://dr7c4k53eeg3p" path="res://Assets/Characters/GreysonMech/greyson_mech_morph.png" id="3_morph"]
+[ext_resource type="PackedScene" uid="uid://cglk8pm5w4p1y" path="res://Scenes/Bosses/LaserBeamProjectileScene.tscn" id="4_laser"]
+[ext_resource type="Script" path="res://Scripts/States/GreysonMech/GreysonMechStateMachine.gd" id="5_state_machine"]
+[ext_resource type="Script" path="res://Scripts/States/GreysonMech/MechDormant.gd" id="6_dormant"]
+[ext_resource type="Script" path="res://Scripts/States/GreysonMech/MechMorph.gd" id="7_morph"]
+[ext_resource type="Script" path="res://Scripts/States/GreysonMech/MechIdle.gd" id="8_idle"]
+[ext_resource type="Script" path="res://Scripts/States/GreysonMech/MechLaserSweep.gd" id="9_laser_sweep"]
+[ext_resource type="Script" path="res://Scripts/States/GreysonMech/MechRocketVolley.gd" id="10_rocket_volley"]
+[ext_resource type="Script" path="res://Scripts/States/GreysonMech/MechGroundPound.gd" id="11_ground_pound"]
+[ext_resource type="Script" path="res://Scripts/States/GreysonMech/MechVulnerable.gd" id="12_vulnerable"]
+[ext_resource type="Script" path="res://Scripts/States/GreysonMech/MechDefeated.gd" id="13_defeated"]
+[ext_resource type="Script" path="res://Scripts/States/GreysonMech/MechAwaitRockets.gd" id="14_await_rockets"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_mech_upper"]
+size = Vector2(282, 189)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_mech_lower"]
+size = Vector2(180, 114)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_mech_hurtbox"]
+size = Vector2(260, 274)
+
+[sub_resource type="Animation" id="Animation_mech_reset"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MechCharacterBody/Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("MechCharacterBody/MorphSprite:frame")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Animation_mech_morph"]
+resource_name = "morph"
+length = 1.4
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MechCharacterBody/MorphSprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.37, 0.49, 0.59, 0.69, 0.8, 1),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1),
+"update": 1,
+"values": [0, 1, 2, 3, 4, 5, 6, 7]
+}
+
+[sub_resource type="Animation" id="Animation_mech_idle"]
+resource_name = "idle"
+length = 0.72
+loop_mode = 1
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MechCharacterBody/Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.18, 0.36, 0.54),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [0, 1, 2, 3]
+}
+
+[sub_resource type="Animation" id="Animation_mech_laser_charge"]
+resource_name = "laser_charge"
+length = 0.5
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MechCharacterBody/Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [4, 5]
+}
+
+[sub_resource type="Animation" id="Animation_mech_laser_fire"]
+resource_name = "laser_fire"
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MechCharacterBody/Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [6]
+}
+
+[sub_resource type="Animation" id="Animation_mech_rocket_volley"]
+resource_name = "rocket_volley"
+length = 0.56
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MechCharacterBody/Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.3, 0.38),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [9, 10, 11]
+}
+tracks/1/type = "method"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("StateManager/RocketVolley")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.3),
+"transitions": PackedFloat32Array(1),
+"values": [{
+"args": [],
+"method": &"fire_volley"
+}]
+}
+
+[sub_resource type="Animation" id="Animation_mech_ground_pound"]
+resource_name = "ground_pound"
+length = 1.01
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MechCharacterBody/Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.28, 0.48, 0.56),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [12, 13, 14, 15]
+}
+tracks/1/type = "method"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("StateManager/GroundPound")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.48),
+"transitions": PackedFloat32Array(1),
+"values": [{
+"args": [],
+"method": &"slam"
+}]
+}
+
+[sub_resource type="Animation" id="Animation_mech_vulnerable"]
+resource_name = "vulnerable"
+length = 0.52
+loop_mode = 1
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MechCharacterBody/Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.26),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [16, 17]
+}
+
+[sub_resource type="Animation" id="Animation_mech_hit"]
+resource_name = "hit"
+length = 0.15
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MechCharacterBody/Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [18]
+}
+
+[sub_resource type="Animation" id="Animation_mech_defeat"]
+resource_name = "defeat"
+length = 0.6
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MechCharacterBody/Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.14, 0.3, 0.52),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [19, 20, 21, 22]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_mech"]
+_data = {
+&"RESET": SubResource("Animation_mech_reset"),
+&"defeat": SubResource("Animation_mech_defeat"),
+&"ground_pound": SubResource("Animation_mech_ground_pound"),
+&"hit": SubResource("Animation_mech_hit"),
+&"idle": SubResource("Animation_mech_idle"),
+&"laser_charge": SubResource("Animation_mech_laser_charge"),
+&"laser_fire": SubResource("Animation_mech_laser_fire"),
+&"morph": SubResource("Animation_mech_morph"),
+&"rocket_volley": SubResource("Animation_mech_rocket_volley"),
+&"vulnerable": SubResource("Animation_mech_vulnerable")
+}
+
+[node name="GreysonMechScene" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_mech_script")
+
+[node name="MechCharacterBody" type="CharacterBody2D" parent="."]
+collision_layer = 4
+collision_mask = 0
+
+[node name="UpperCollisionShape2D" type="CollisionShape2D" parent="MechCharacterBody"]
+position = Vector2(0, -206.5)
+shape = SubResource("RectangleShape2D_mech_upper")
+disabled = true
+
+[node name="LowerCollisionShape2D" type="CollisionShape2D" parent="MechCharacterBody"]
+position = Vector2(0, -55)
+shape = SubResource("RectangleShape2D_mech_lower")
+disabled = true
+
+[node name="Sprite2D" type="Sprite2D" parent="MechCharacterBody"]
+visible = false
+position = Vector2(0, -142)
+scale = Vector2(3, 3)
+texture = ExtResource("2_sheet")
+hframes = 23
+
+[node name="MorphSprite" type="Sprite2D" parent="MechCharacterBody"]
+visible = false
+position = Vector2(0, -142)
+scale = Vector2(3, 3)
+texture = ExtResource("3_morph")
+hframes = 8
+
+[node name="LaserMount" type="Node2D" parent="MechCharacterBody"]
+position = Vector2(0, -142)
+scale = Vector2(2, 2)
+
+[node name="LaserBeamLeft" parent="MechCharacterBody/LaserMount" instance=ExtResource("4_laser")]
+rotation = 3.1415927
+
+[node name="LaserBeamRight" parent="MechCharacterBody/LaserMount" instance=ExtResource("4_laser")]
+
+[node name="Hurtbox" type="Area2D" parent="MechCharacterBody" groups=["enemy"]]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="MechCharacterBody/Hurtbox"]
+position = Vector2(0, -113)
+shape = SubResource("RectangleShape2D_mech_hurtbox")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries/ = SubResource("AnimationLibrary_mech")
+
+[node name="StateManager" type="Node" parent="." node_paths=PackedStringArray("initial_state", "mech", "rest_timer")]
+script = ExtResource("5_state_machine")
+initial_state = NodePath("Dormant")
+mech = NodePath("..")
+rest_timer = NodePath("../RestTimer")
+
+[node name="Dormant" type="Node" parent="StateManager"]
+script = ExtResource("6_dormant")
+
+[node name="Morph" type="Node" parent="StateManager" node_paths=PackedStringArray("animation_player", "mech", "sprite", "morph_sprite")]
+script = ExtResource("7_morph")
+animation_player = NodePath("../../AnimationPlayer")
+mech = NodePath("../..")
+sprite = NodePath("../../MechCharacterBody/Sprite2D")
+morph_sprite = NodePath("../../MechCharacterBody/MorphSprite")
+
+[node name="Idle" type="Node" parent="StateManager" node_paths=PackedStringArray("animation_player")]
+script = ExtResource("8_idle")
+animation_player = NodePath("../../AnimationPlayer")
+
+[node name="LaserSweep" type="Node" parent="StateManager" node_paths=PackedStringArray("laser_beam_left", "laser_beam_right", "animation_player", "laser_sfx_player", "mech", "sprite")]
+script = ExtResource("9_laser_sweep")
+laser_beam_left = NodePath("../../MechCharacterBody/LaserMount/LaserBeamLeft")
+laser_beam_right = NodePath("../../MechCharacterBody/LaserMount/LaserBeamRight")
+animation_player = NodePath("../../AnimationPlayer")
+charge_animation = &"laser_charge"
+fire_animation = &"laser_fire"
+laser_sfx_player = NodePath("../../LaserSfxPlayer")
+start_angle_up_degrees = 60.0
+cross_past_vertical_degrees = 30.0
+mech = NodePath("../..")
+sprite = NodePath("../../MechCharacterBody/Sprite2D")
+
+[node name="RocketVolley" type="Node" parent="StateManager" node_paths=PackedStringArray("animation_player", "mech", "rocket_sfx_player")]
+script = ExtResource("10_rocket_volley")
+animation_player = NodePath("../../AnimationPlayer")
+mech = NodePath("../..")
+rocket_sfx_player = NodePath("../../RocketSfxPlayer")
+
+[node name="AwaitRockets" type="Node" parent="StateManager" node_paths=PackedStringArray("animation_player", "rocket_volley")]
+script = ExtResource("14_await_rockets")
+animation_player = NodePath("../../AnimationPlayer")
+rocket_volley = NodePath("../RocketVolley")
+
+[node name="GroundPound" type="Node" parent="StateManager" node_paths=PackedStringArray("animation_player", "mech", "slam_sfx_player")]
+script = ExtResource("11_ground_pound")
+animation_player = NodePath("../../AnimationPlayer")
+mech = NodePath("../..")
+slam_sfx_player = NodePath("../../SlamSfxPlayer")
+
+[node name="Vulnerable" type="Node" parent="StateManager" node_paths=PackedStringArray("animation_player", "mech", "hurtbox", "downed_sfx_player", "vulnerable_timer")]
+script = ExtResource("12_vulnerable")
+animation_player = NodePath("../../AnimationPlayer")
+mech = NodePath("../..")
+hurtbox = NodePath("../../MechCharacterBody/Hurtbox")
+downed_sfx_player = NodePath("../../DownedSfxPlayer")
+vulnerable_timer = NodePath("../../VulnerableTimer")
+
+[node name="Defeated" type="Node" parent="StateManager" node_paths=PackedStringArray("animation_player")]
+script = ExtResource("13_defeated")
+animation_player = NodePath("../../AnimationPlayer")
+
+[node name="RestTimer" type="Timer" parent="."]
+one_shot = true
+
+[node name="VulnerableTimer" type="Timer" parent="."]
+one_shot = true
+
+[node name="RocketSfxPlayer" type="AudioStreamPlayer" parent="."]
+
+[node name="LaserSfxPlayer" type="AudioStreamPlayer" parent="."]
+
+[node name="SlamSfxPlayer" type="AudioStreamPlayer" parent="."]
+
+[node name="DownedSfxPlayer" type="AudioStreamPlayer" parent="."]
+
+[connection signal="timeout" from="RestTimer" to="StateManager" method="_on_rest_timer_timeout"]
+[connection signal="timeout" from="VulnerableTimer" to="StateManager/Vulnerable" method="_on_vulnerable_timer_timeout"]
+[connection signal="animation_finished" from="AnimationPlayer" to="StateManager/Morph" method="_on_animation_player_animation_finished"]
+[connection signal="animation_finished" from="AnimationPlayer" to="StateManager/RocketVolley" method="_on_animation_player_animation_finished"]
+[connection signal="animation_finished" from="AnimationPlayer" to="StateManager/GroundPound" method="_on_animation_player_animation_finished"]

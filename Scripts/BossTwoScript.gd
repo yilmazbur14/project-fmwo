@@ -1,8 +1,13 @@
 extends Node2D
 
+signal phase_two_reached
+
+const HitStop := preload("res://Scripts/HitStop.gd")
+
 #CONSTANTS
 @export var max_health := 10
 var boss_health := max_health
+const PHASE_TWO_RATIO := 0.5
 
 #UI (built at runtime - no new art needed)
 var health_bar: ProgressBar
@@ -16,6 +21,7 @@ var fill_style: StyleBoxFlat
 @onready var hit_sfx_player: AudioStreamPlayer = $HitSfxPlayer
 @onready var victory_sfx_player: AudioStreamPlayer = $VictorySfxPlayer
 var defeated := false
+var phase_two := false
 
 var sprite_base_position: Vector2
 
@@ -57,11 +63,37 @@ func get_health_ratio() -> float:
 
 func _on_hurtbox_entered(area: Area2D) -> void:
 	if area.is_in_group("player attack"):
-		boss_health = max(boss_health - 1, 0)
-		print("Boss health: ", boss_health)
-		_update_health_bar()
-		_hit_feedback()
-		hit_sfx_player.play()
+		area.get_parent().combo.resolve_punch(self)
+
+
+func take_punch(amount: int) -> int:
+	# Computah stops taking hits at the threshold, so a burst of hits can't skip the mech;
+	# from then on only the mech's overheat window deals damage, through take_hit().
+	# A charged punch that would carry past the threshold is cut down to reach it exactly.
+	if phase_two:
+		return 0
+	var phase_two_health := floori(max_health * PHASE_TWO_RATIO)
+	var dealt := take_hit(mini(amount, boss_health - phase_two_health))
+	_hit_feedback()
+	if get_health_ratio() <= PHASE_TWO_RATIO:
+		phase_two = true
+		# area_entered fires mid physics flush, and ending phase one toggles hurtbox monitoring.
+		call_deferred("_start_phase_two")
+	return dealt
+
+
+func take_hit(amount: int) -> int:
+	var dealt := mini(amount, boss_health)
+	boss_health -= dealt
+	print("Boss health: ", boss_health)
+	_update_health_bar()
+	hit_sfx_player.play()
+	return dealt
+
+
+func _start_phase_two() -> void:
+	$StateManager.end_phase_one()
+	phase_two_reached.emit()
 
 
 func _build_health_bar() -> void:
@@ -134,8 +166,5 @@ func _hit_feedback() -> void:
 		shake_tween.tween_property(sprite, "position", sprite_base_position + offset, 0.025)
 	shake_tween.tween_property(sprite, "position", sprite_base_position, 0.025)
 
-	# Brief hit-stop for weight (measured in real time, ignores the slowdown itself)
-	Engine.time_scale = 0.05
-	get_tree().create_timer(0.06, true, false, true).timeout.connect(
-		func(): Engine.time_scale = 1.0
-	)
+	# Brief hit-stop for weight
+	HitStop.freeze(get_tree(), 0.06)

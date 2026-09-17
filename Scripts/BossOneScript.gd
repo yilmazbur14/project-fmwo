@@ -2,6 +2,7 @@ extends Node2D
 
 #REFERENCES
 var Projectile = preload("res://Scenes/Bosses/BossProjectileScene.tscn")
+const HitStop := preload("res://Scripts/HitStop.gd")
 
 #CONSTANTS
 @export var max_health := 10
@@ -61,11 +62,17 @@ func get_health_ratio() -> float:
 
 func _on_hurtbox_entered(area: Area2D) -> void:
 	if area.is_in_group("player attack"):
-		boss_health = max(boss_health - 1, 0)
-		print("Boss health: ", boss_health)
-		_update_health_bar()
-		_hit_feedback()
-		hit_sfx_player.play()
+		area.get_parent().combo.resolve_punch(self)
+
+
+func take_punch(amount: int) -> int:
+	var dealt := mini(amount, boss_health)
+	boss_health -= dealt
+	print("Boss health: ", boss_health)
+	_update_health_bar()
+	_hit_feedback()
+	hit_sfx_player.play()
+	return dealt
 
 
 func _build_health_bar() -> void:
@@ -138,11 +145,8 @@ func _hit_feedback() -> void:
 		shake_tween.tween_property(sprite, "position", sprite_base_position + offset, 0.025)
 	shake_tween.tween_property(sprite, "position", sprite_base_position, 0.025)
 
-	# Brief hit-stop for weight (measured in real time, ignores the slowdown itself)
-	Engine.time_scale = 0.05
-	get_tree().create_timer(0.06, true, false, true).timeout.connect(
-		func(): Engine.time_scale = 1.0
-	)
+	# Brief hit-stop for weight
+	HitStop.freeze(get_tree(), 0.06)
 
 
 func _on_dialogue_ended(dialogue: Object) -> void:

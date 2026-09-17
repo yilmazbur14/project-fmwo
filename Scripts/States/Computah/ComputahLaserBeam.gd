@@ -31,6 +31,8 @@ extends State
 
 enum Phase { TELEGRAPH, SWEEP, FADE }
 
+const DashImmunity := preload("res://Scripts/DashImmunity.gd")
+
 const BEAM_EXTEND_DURATION := 0.08
 const BEAM_TEXTURE_HEIGHT := 23.0
 const BEAM_TEXTURE_WIDTH := 16.0
@@ -145,14 +147,7 @@ func _damage_players_in_beams() -> void:
 
 
 func _is_dash_immune(player: Node) -> bool:
-	var dodge_frame: int = player.last_dodge_physics_frame
-	if dodge_frame < 0:
-		return false
-	var ticks := Engine.physics_ticks_per_second
-	if Engine.get_physics_frames() - dodge_frame > roundi(dash_immunity_time * ticks):
-		return false
-	var previous_frame: int = player.previous_dodge_physics_frame
-	return previous_frame < 0 or dodge_frame - previous_frame >= roundi(dash_immunity_cooldown * ticks)
+	return DashImmunity.is_immune(player, dash_immunity_time, dash_immunity_cooldown)
 
 
 func _beams() -> Array[Area2D]:
