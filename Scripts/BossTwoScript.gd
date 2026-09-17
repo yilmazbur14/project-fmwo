@@ -136,6 +136,8 @@ func end_recovery(stagger_time: float) -> bool:
 	var state_machine = $StateManager
 	state_machine.downed_state_timer.stop()
 	state_machine.on_child_transition(state_machine.current_state, "Idle")
+	# He has no hit frames; staying dazed reads better than snapping back to idle.
+	$AnimationPlayer.play("downed")
 	finisher_stagger_timer.start(stagger_time)
 	return true
 

@@ -159,6 +159,8 @@ func end_recovery(stagger_time: float) -> bool:
 		return false
 	state_machine.eat_timer.stop()
 	state_machine.on_child_transition(state_machine.current_state, "Idle")
+	# Held on the recoil frame through the stagger instead of the idle loop Idle starts.
+	animation_player.play("hit")
 	finisher_stagger_timer.start(stagger_time)
 	return true
 

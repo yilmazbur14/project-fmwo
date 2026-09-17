@@ -125,6 +125,8 @@ func end_recovery(stagger_time: float) -> bool:
 	if defeated or computah.boss_health <= 0:
 		return false
 	state_machine.resume_after_finisher(stagger_time)
+	# Held on the recoil frame through the stagger instead of the idle loop Idle starts.
+	animation_player.play("hit")
 	return true
 
 

@@ -55,8 +55,8 @@ enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE }
 @export var impact_shake := 16.0
 @export var impact_cheer := 2.0
 # Stacks on the boss's own hit flash, which tweens modulate.
-@export var impact_flash := Color(4, 3.2, 1.2)
-@export var impact_flash_time := 0.45
+@export var impact_flash := Color(2.2, 1.9, 1.3)
+@export var impact_flash_time := 0.35
 # A boss the finisher lands on idles this long, hopping, then attacks again.
 @export var stagger_time := 0.6
 @export var stagger_hop_texels := 10

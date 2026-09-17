@@ -4,6 +4,7 @@ extends CharacterBody2D
 # runs out. A punch knocks it tumbling away, and from then on its blast can hurt Jordan as well.
 
 const PlayerScript := preload("res://Scripts/PlayerScript.gd")
+const ScreenView := preload("res://Scripts/ScreenView.gd")
 
 # The figures still in play, for spreading a swarm out. A figure leaves it once it goes off.
 const FIGURE_GROUP := "funko_figure"
@@ -128,10 +129,6 @@ var fuse := FUSE_TIME
 var redirected := false
 var knockback := Vector2.ZERO
 var blast_hit_jordan := false
-
-# Blasts can go off closer together than a shake lasts, so all figures share one: a new blast's shake
-# takes over from the last.
-static var shake: Tween
 
 
 # The nearest spot to `point` where a figure's body fits inside the ropes.
@@ -352,17 +349,8 @@ func _animate() -> void:
 		figure_sprite.rotation = spin_direction * TAU * TUMBLE_TURNS * (1.0 - unspun * unspun)
 
 
-# Offsets the canvas instead of moving nodes, so physics bodies and the UI layers stay put. It shakes about
-# the identity rather than the canvas as the blast found it, which could be mid-shake or mid-zoom and would
-# then be left behind. Bound to the figure, so the fight's time-stop holds it too.
+# Offsets the canvas instead of moving nodes, so physics bodies and the UI layers stay put. Through
+# ScreenView, so it adds to the finisher's zoom instead of snapping the view back to identity, and a new
+# blast's shake takes over from the last.
 func _shake_screen() -> void:
-	var viewport := get_viewport()
-	if shake and shake.is_valid():
-		shake.kill()
-	shake = create_tween()
-	for i in SHAKE_STEPS:
-		var strength := SHAKE_STRENGTH * (1.0 - float(i) / SHAKE_STEPS)
-		var offset := Vector2(randf_range(-strength, strength), randf_range(-strength, strength)).round()
-		shake.tween_callback(func(): viewport.canvas_transform = Transform2D.IDENTITY.translated(offset))
-		shake.tween_interval(SHAKE_STEP_TIME)
-	shake.tween_callback(func(): viewport.canvas_transform = Transform2D.IDENTITY)
+	ScreenView.shake(get_tree(), SHAKE_STRENGTH, SHAKE_STEPS, SHAKE_STEP_TIME)

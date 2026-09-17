@@ -134,6 +134,8 @@ func end_recovery(stagger_time: float) -> bool:
 		return false
 	state_machine.downed_state_timer.stop()
 	state_machine.start_chain(stagger_time)
+	# Idle raises his sword, as if he'd shrugged the uppercut off; he stays slumped through the stagger.
+	animationPlayer.play("downed")
 	return true
 
 

@@ -105,7 +105,8 @@ const FINAL_IMPACT := {
 	"hframes": 6,
 	# Played once.
 	"frame_times": [0.04, 0.06, 0.06, 0.07, 0.08, 0.09],
-	"scale": 3.0,
+	# The player's own scale: at the artist's 3x the burst hid smaller bosses and the rising player.
+	"scale": 2.0,
 	"pivot": Vector2(48, 48),
 }
 
