@@ -53,6 +53,7 @@ var fill_style: StyleBoxFlat
 @onready var gulp_sfx_player: AudioStreamPlayer = $GulpSfxPlayer
 @onready var glow_sfx_player: AudioStreamPlayer = $GlowSfxPlayer
 @onready var roar_sfx_player: AudioStreamPlayer = $RoarSfxPlayer
+@onready var blast_sfx_player: AudioStreamPlayer = $BlastSfxPlayer
 
 var defeated := false
 var hits_this_window := 0
@@ -108,7 +109,9 @@ func _ready() -> void:
 	growl_sfx_player.stream = load("res://Assets/Audio/SFX/wrestler_charge.ogg")
 	gulp_sfx_player.stream = load("res://Assets/Audio/SFX/wrestler_collision.ogg")
 	glow_sfx_player.stream = load("res://Assets/Audio/SFX/laser_charge.ogg")
-	roar_sfx_player.stream = load("res://Assets/Audio/SFX/earthquake_slam.ogg")
+	# His own voice: the blast he transforms on, and the roar he lands on.
+	blast_sfx_player.stream = load("res://Assets/Audio/SFX/bixby_roar_short.wav")
+	roar_sfx_player.stream = load("res://Assets/Audio/SFX/bixby_roar.wav")
 
 
 func start_music() -> void:
@@ -223,9 +226,10 @@ func fire_ground_contact() -> Rect2:
 
 #FLIGHT
 
-# The transformation: he appears standing where Bixby stood.
-func appear(feet: Vector2) -> void:
-	height = 0.0
+# The transformation: he appears where Bixby stood, hovering `at_height` px up if the last frame left him
+# in the air.
+func appear(feet: Vector2, at_height := 0.0) -> void:
+	height = at_height
 	var bounds := ground_bounds(height)
 	ground_position = feet.clamp(bounds.position, bounds.end)
 	fly_velocity = Vector2.ZERO

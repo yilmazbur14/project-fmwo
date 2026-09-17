@@ -60,11 +60,41 @@ const STORYBOARD_CENTRE := Vector2(84, -144)
 const STORYBOARD_FRAME_WIDTH := 128
 const BIXBY_SHADOW := [Vector2(0, -4), Vector2(28, 4)]
 const LIAM_SHADOW := [Vector2(156, -4), Vector2(22, 3.5)]
-# Corner of the 320x256 transform frames: the storyboard frame's corner moved (-124, -156) texels.
-const TRANSFORM_CORNER := Vector2(-480, -756)
 const FLASH_COLOR := Color(1, 250 / 255.0, 214 / 255.0)
-# How strongly the screen under the transform's flash frame is tinted with FLASH_COLOR.
-const FLASH_FRAME_TINT := 0.62
+
+#TRANSFORMATION
+# bixby_transform.png: 26 frames of 320x256 in a 13x2 grid, read left to right, with Bixby's feet at texel
+# (160, 251) in every one. bixby_transform_aura.png (4 frames) and bixby_transform_shockwave.png (5 frames
+# of 320x96, centred on the feet) are drawn on the same point. The beats, by frame: 0-2 he freezes,
+# 3-6 the cracks ignite, 7-9 he tears off the floor, 10-14 he swells and grows horns, 15-17 the wings tear
+# out and snap open, 18-19 it implodes and holds, 20 detonates, 21-22 the cold beast stands in the smoke,
+# 23-24 his eyes light, 25 holds. The frames draw him lifting off the floor themselves, from 7 up to the
+# beast's hover height by 15, so they are all drawn on the same point: the last one is the beast's hover
+# frame 0, HOVER_HEIGHT texels above it, where the beast takes over.
+const TRANSFORM_FRAME_SIZE := Vector2(320, 256)
+const TRANSFORM_ANCHOR := Vector2(160, 251)
+const TRANSFORM_TIMES: Array[float] = [
+	0.26, 0.12, 0.22, 0.15, 0.15, 0.13, 0.2, 0.09, 0.09, 0.11, 0.15, 0.15, 0.15,
+	0.15, 0.22, 0.09, 0.09, 0.24, 0.12, 0.26, 0.09, 0.11, 0.2, 0.18, 0.18, 0.4,
+]
+# The ember aura burns behind him from the cracks to the wings, and fades out over the implosion.
+const AURA_FRAME_TIME := 0.09
+# The ground ring, on the lift-off and again on the detonation.
+const SHOCKWAVE_FRAME_TIME := 0.06
+
+
+# How long frames `from` to `to` of the transformation take together.
+static func transform_time(from: int, to: int) -> float:
+	var total := 0.0
+	for index in range(from, to + 1):
+		total += TRANSFORM_TIMES[index]
+	return total
+
+
+# Where a 320x256 transformation frame is drawn from, with its feet anchor on the sprite's position. The
+# shockwave's own centre is that point, so it is drawn centred.
+static func transform_offset() -> Vector2:
+	return TRANSFORM_FRAME_SIZE / 2.0 - TRANSFORM_ANCHOR
 
 
 # A floor shadow as the mockups draw them: the texels whose centres fall inside an ellipse with these radii,

@@ -6,6 +6,8 @@ extends State
 
 const LiamEntranceLayout := preload("res://Scripts/LiamEntranceLayout.gd")
 const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
+const ScreenView := preload("res://Scripts/ScreenView.gd")
+const HitStop := preload("res://Scripts/HitStop.gd")
 const CARRIERS_TEXTURE := preload("res://Assets/Characters/Liam/Entrance/liam_carriers.png")
 # Storyboard strips of 128x96 frames with the lettering drawn in.
 const SLAP_KEYS := preload("res://Assets/Characters/Liam/Entrance/liam_slap_keys.png")
@@ -24,14 +26,18 @@ const SWALLOW_KEYS := preload("res://Assets/Characters/Liam/Entrance/bixby_swall
 @export var hop_bixby : Sprite2D
 @export var hop_liam : Sprite2D
 @export var storyboard : Sprite2D
-@export var tint : ColorRect
-@export var transform_keys : Sprite2D
+@export var transform_stage : Node2D
+@export var transform_body : Sprite2D
+@export var transform_aura : Sprite2D
+@export var transform_shockwave : Sprite2D
+@export var dim : ColorRect
 @export var flash : ColorRect
 @export var land_sfx_player : AudioStreamPlayer
 @export var slap_sfx_player : AudioStreamPlayer
 @export var growl_sfx_player : AudioStreamPlayer
 @export var gulp_sfx_player : AudioStreamPlayer
 @export var glow_sfx_player : AudioStreamPlayer
+@export var blast_sfx_player : AudioStreamPlayer
 @export var roar_sfx_player : AudioStreamPlayer
 
 @onready var state_machine = get_parent()
@@ -62,20 +68,43 @@ const HIT_SHAKE_STEP_TIME := 0.03
 const SMACK_CHEER := 0.8
 const CHOMP_CHEER := 1.2
 
-#TRANSFORM
-const GLOW_HOLD := 0.7
-const SWELL_HOLD := 0.5
-const FLASH_FRAME_HOLD := 0.35
-const FLASH_IN_TIME := 0.08
-const FLASH_OUT_TIME := 0.5
-const ROAR_SCREEN_SHAKE := 16.0
-const ROAR_SHAKE_STEP_TIME := 0.04
-const ROAR_CHEER := 2.5
+#TRANSFORM (every cue hangs off a frame of bixby_transform.png)
+const SHAKE_STEP_TIME := 0.04
+const CRACK_SHAKE := 4.0
+const LIFT_SHAKE := 11.0
+const SWELL_SHAKE := 4.0
+const WINGS_SHAKE := 14.0
+const WINGS_SNAP_SHAKE := 16.0
+const WINGS_SNAP_HIT_STOP := 0.07
+const BLAST_SHAKE := 26.0
+const BLAST_SHAKE_TIME := 0.4
+const BLAST_HIT_STOP := 0.12
+# How dark the arena goes for the implosion.
+const DIM_DEEPEST := 0.45
+# The view pushes in on him while he swells, eases back for the implosion and punches in on the blast.
+const SWELL_ZOOM := 1.07
+const BLAST_ZOOM := 1.12
+const BLAST_ZOOM_TIME := 0.06
+const ZOOM_FOCUS_RISE := 300.0
+const FLASH_OUT_TIME := 0.2
 const THRONE_FADE_TIME := 0.8
+
+#LANDING AND ROAR
+const LANDING_SHAKE := 12.0
+const LANDING_SHAKE_TIME := 0.14
+const ROAR_JOLT_SHAKE := 6.0
+const ROAR_JOLT_TIME := 0.12
+# [wait since the last one, strength, how long it shakes]: the roar builds to its peak 0.8s in, where the
+# sound peaks, and eases off from 1.1s.
+const ROAR_SHAKES := [[0.45, 12.0, 0.35], [0.35, 22.0, 0.3], [0.3, 12.0, 0.55]]
+# He holds the roar until the sound has decayed, before the fight starts.
+const ROAR_HOLD := 1.9
+const ROAR_CHEER := 2.5
 
 var carrier_rests := {}
 var bixby_shadow: Sprite2D
 var liam_shadow: Sprite2D
+var aura_loop: Tween
 
 
 func Enter() -> void:
@@ -84,7 +113,9 @@ func Enter() -> void:
 	_add_shadow(set_down_shadows, LiamEntranceLayout.SET_DOWN_SHADOW[0], LiamEntranceLayout.SET_DOWN_SHADOW[1])
 	bixby_shadow = _add_shadow(downstage, LiamEntranceLayout.BIXBY_SHADOW[0], LiamEntranceLayout.BIXBY_SHADOW[1])
 	liam_shadow = _add_shadow(downstage, LiamEntranceLayout.LIAM_SHADOW[0], LiamEntranceLayout.LIAM_SHADOW[1])
-	tint.color = Color(LiamEntranceLayout.FLASH_COLOR, 0.0)
+	transform_body.offset = LiamEntranceLayout.transform_offset()
+	transform_aura.offset = LiamEntranceLayout.transform_offset()
+	dim.color.a = 0.0
 	flash.color = Color(LiamEntranceLayout.FLASH_COLOR, 0.0)
 	_play()
 
@@ -212,44 +243,165 @@ func bixby_swallows_liam() -> void:
 	await _pause(GULP_HOLD)
 
 
-# Bixby glows and swells into the beast's silhouette, the screen flashes, and the beast stands in his place
-# and roars while the throne fades away.
+# Bixby freezes, cracks open, tears off the floor, swells into the beast and detonates, and the beast drops
+# out of the blast and roars. bixby_transform.png carries it; every cue below hangs off one of its frames.
 func bixby_transforms() -> void:
 	storyboard.hide()
-	transform_keys.position = downstage.global_position + LiamEntranceLayout.TRANSFORM_CORNER
-	transform_keys.frame = 0
-	transform_keys.show()
-	glow_sfx_player.play()
-	await _pause(GLOW_HOLD)
-	transform_keys.frame = 1
-	await _pause(SWELL_HOLD)
-	transform_keys.frame = 2
-	tint.color.a = LiamEntranceLayout.FLASH_FRAME_TINT
-	await _pause(FLASH_FRAME_HOLD)
+	transform_body.frame = 0
+	transform_stage.show()
+	var play := create_tween()
+	for index in LiamEntranceLayout.TRANSFORM_TIMES.size():
+		play.tween_callback(_transform_frame.bind(index))
+		play.tween_interval(LiamEntranceLayout.TRANSFORM_TIMES[index])
+	await play.finished
+	await _beast_lands()
+	await _beast_roars()
 
-	var flash_in := create_tween()
-	flash_in.tween_property(flash, "color:a", 1.0, FLASH_IN_TIME)
-	await flash_in.finished
-	transform_keys.hide()
-	tint.color.a = 0.0
+
+func _transform_frame(index: int) -> void:
+	transform_body.frame = index
+	var times := LiamEntranceLayout.TRANSFORM_TIMES
+	match index:
+		# 0-2: he freezes, and the crowd with him.
+		1:
+			get_tree().call_group("arena_crowd", "hush")
+		# 3-6: the cracks ignite and burn brighter.
+		3:
+			glow_sfx_player.play()
+			_start_aura()
+		5:
+			_shake(CRACK_SHAKE, times[5])
+		6:
+			_shake(CRACK_SHAKE, times[6])
+			get_tree().call_group("arena_crowd", "cheer", LiamEntranceLayout.transform_time(6, 7))
+		# 7-9: he tears off the floor.
+		7:
+			bixby_shadow.hide()
+			_shockwave()
+			_shake(LIFT_SHAKE, LiamEntranceLayout.transform_time(7, 8))
+		# 10-14: he swells and grows horns while the arena darkens and the view pushes in on him.
+		10:
+			_dim_to(DIM_DEEPEST, LiamEntranceLayout.transform_time(10, 17))
+			_zoom(SWELL_ZOOM, LiamEntranceLayout.transform_time(10, 14))
+			_shake(SWELL_SHAKE, times[10])
+			get_tree().call_group("arena_crowd", "cheer", LiamEntranceLayout.transform_time(10, 14))
+		11, 12, 13, 14:
+			_shake(SWELL_SHAKE, times[index])
+		# 15-17: the wings tear out and snap open.
+		15:
+			_shake(WINGS_SHAKE, LiamEntranceLayout.transform_time(15, 16))
+		17:
+			_shake(WINGS_SNAP_SHAKE, times[17])
+			HitStop.freeze(get_tree(), WINGS_SNAP_HIT_STOP)
+			get_tree().call_group("arena_crowd", "cheer", times[17])
+		# 18-19: it implodes and holds. Nothing shakes here: the stillness sells the blast.
+		18:
+			get_tree().call_group("arena_crowd", "hush")
+			_fade_aura(LiamEntranceLayout.transform_time(18, 19))
+			_zoom(1.0, LiamEntranceLayout.transform_time(18, 19))
+		# 20: it detonates.
+		20:
+			blast_sfx_player.play()
+			_shockwave()
+			_shake(BLAST_SHAKE, BLAST_SHAKE_TIME)
+			HitStop.freeze(get_tree(), BLAST_HIT_STOP)
+			_zoom(BLAST_ZOOM, BLAST_ZOOM_TIME)
+			_flash()
+			_fade_throne()
+			get_tree().call_group("arena_crowd", "cheer", LiamEntranceLayout.transform_time(20, 25))
+		# 21-25: the beast stands there cold, his eyes light, and the arena and the view come back.
+		21:
+			_dim_to(0.0, LiamEntranceLayout.transform_time(21, 23))
+			_zoom(1.0, LiamEntranceLayout.transform_time(21, 22))
+
+
+# The blast leaves the beast hovering where Bixby stood: he drops out of it and lands hard.
+func _beast_lands() -> void:
+	transform_stage.hide()
 	downstage.hide()
-	body.appear(downstage.global_position)
+	body.appear(downstage.global_position, BixbyBeastArtLayout.HOVER_HEIGHT * BixbyBeastArtLayout.SCALE)
+	body.play_anim(&"land")
+	var fall := create_tween()
+	fall.tween_method(_fall.bind(body.height), 0.0, 1.0, BixbyBeastArtLayout.time_to_step(&"land", 1))
+	await fall.finished
+	land_sfx_player.play()
+	_shake(LANDING_SHAKE, LANDING_SHAKE_TIME)
+	if not body.anim_done:
+		await body.anim_finished
+
+
+func _fall(weight: float, from_height: float) -> void:
+	body.height = from_height * (1.0 - weight * weight)
+	body.place()
+
+
+# The roar he lands on, held until the sound has decayed.
+func _beast_roars() -> void:
 	body.play_anim(&"roar")
-	create_tween().tween_property(flash, "color:a", 0.0, FLASH_OUT_TIME)
-	var fade := create_tween()
+	roar_sfx_player.play()
+	get_tree().call_group("arena_crowd", "cheer", ROAR_CHEER)
+	_shake(ROAR_JOLT_SHAKE, ROAR_JOLT_TIME)
+	var shakes := create_tween()
+	for cue in ROAR_SHAKES:
+		shakes.tween_interval(cue[0])
+		shakes.tween_callback(_shake.bind(cue[1], cue[2]))
+	await _pause(ROAR_HOLD)
+	if not body.anim_done:
+		await body.anim_finished
+
+
+func _shake(strength: float, seconds: float) -> void:
+	body.shake_screen(strength, maxi(roundi(seconds / SHAKE_STEP_TIME), 1), SHAKE_STEP_TIME)
+
+
+func _zoom(to_zoom: float, seconds: float) -> void:
+	var focus := transform_stage.global_position - Vector2(0, ZOOM_FOCUS_RISE)
+	ScreenView.zoom_to(get_tree(), to_zoom, focus, seconds)
+
+
+func _dim_to(alpha: float, seconds: float) -> void:
+	dim.create_tween().tween_property(dim, "color:a", alpha, seconds)
+
+
+func _flash() -> void:
+	flash.color.a = 1.0
+	# In real time, so the detonation's own frame is out from under the white while the hit-stop holds it.
+	var fade := flash.create_tween().set_ignore_time_scale(true)
+	fade.tween_property(flash, "color:a", 0.0, FLASH_OUT_TIME)
+
+
+func _fade_throne() -> void:
+	var fade := procession.create_tween()
 	fade.tween_property(procession, "modulate:a", 0.0, THRONE_FADE_TIME)
 	fade.tween_callback(procession.hide)
 
-	# The roar itself starts after the coil frame.
-	var coil := BixbyBeastArtLayout.time_to_step(&"roar", 1)
-	await _pause(coil)
-	roar_sfx_player.play()
-	var roar_frames: int = BixbyBeastArtLayout.ANIMS[&"roar"].frames.size()
-	var roar_time := BixbyBeastArtLayout.time_to_step(&"roar", roar_frames) - coil
-	body.shake_screen(ROAR_SCREEN_SHAKE, roundi(roar_time / ROAR_SHAKE_STEP_TIME), ROAR_SHAKE_STEP_TIME)
-	get_tree().call_group("arena_crowd", "cheer", ROAR_CHEER)
-	if not body.anim_done:
-		await body.anim_finished
+
+func _start_aura() -> void:
+	transform_aura.frame = 0
+	transform_aura.modulate.a = 1.0
+	transform_aura.show()
+	aura_loop = transform_aura.create_tween().set_loops()
+	aura_loop.tween_interval(LiamEntranceLayout.AURA_FRAME_TIME)
+	aura_loop.tween_callback(func() -> void:
+		transform_aura.frame = (transform_aura.frame + 1) % transform_aura.hframes)
+
+
+func _fade_aura(seconds: float) -> void:
+	var fade := transform_aura.create_tween()
+	fade.tween_property(transform_aura, "modulate:a", 0.0, seconds)
+	fade.tween_callback(transform_aura.hide)
+	fade.tween_callback(aura_loop.kill)
+
+
+func _shockwave() -> void:
+	transform_shockwave.frame = 0
+	transform_shockwave.show()
+	var wave := transform_shockwave.create_tween()
+	for frame in range(1, transform_shockwave.hframes):
+		wave.tween_interval(LiamEntranceLayout.SHOCKWAVE_FRAME_TIME)
+		wave.tween_callback(func() -> void: transform_shockwave.frame = frame)
+	wave.tween_interval(LiamEntranceLayout.SHOCKWAVE_FRAME_TIME)
+	wave.tween_callback(transform_shockwave.hide)
 
 
 func _show_storyboard(sheet: Texture2D, frame: int) -> void:

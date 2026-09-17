@@ -19,7 +19,9 @@
 [ext_resource type="Texture2D" uid="uid://cor4nb5lpd7u0" path="res://Assets/Characters/Liam/Entrance/liam_carrier_walk.png" id="17_carrier_walk"]
 [ext_resource type="Texture2D" uid="uid://bygxkir0f63ud" path="res://Assets/Characters/Liam/Entrance/liam_throne_seated.png" id="18_seated_liam"]
 [ext_resource type="Texture2D" uid="uid://dkkm0ejif7wws" path="res://Assets/Characters/Liam/Entrance/liam_slap_keys.png" id="19_slap_keys"]
-[ext_resource type="Texture2D" uid="uid://uo4heleiv15d" path="res://Assets/Characters/Liam/Entrance/bixby_transform_keys.png" id="20_transform_keys"]
+[ext_resource type="Texture2D" uid="uid://dvcusuf3345uh" path="res://Assets/Characters/Bixby/bixby_transform.png" id="20_transform"]
+[ext_resource type="Texture2D" uid="uid://bs5udwl04ildj" path="res://Assets/Characters/Bixby/bixby_transform_aura.png" id="21_transform_aura"]
+[ext_resource type="Texture2D" uid="uid://djqwkb4sybghu" path="res://Assets/Characters/Bixby/bixby_transform_shockwave.png" id="22_transform_shockwave"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_beast_hurtbox"]
 size = Vector2(534, 282)
@@ -124,6 +126,30 @@ scale = Vector2(3, 3)
 texture = ExtResource("19_slap_keys")
 hframes = 3
 
+[node name="Transform" type="Node2D" parent="."]
+visible = false
+position = Vector2(882, 770)
+
+[node name="Shockwave" type="Sprite2D" parent="Transform"]
+visible = false
+scale = Vector2(3, 3)
+texture = ExtResource("22_transform_shockwave")
+hframes = 5
+
+[node name="Aura" type="Sprite2D" parent="Transform"]
+visible = false
+scale = Vector2(3, 3)
+texture = ExtResource("21_transform_aura")
+offset = Vector2(0, -123)
+hframes = 4
+
+[node name="Body" type="Sprite2D" parent="Transform"]
+scale = Vector2(3, 3)
+texture = ExtResource("20_transform")
+offset = Vector2(0, -123)
+hframes = 13
+vframes = 2
+
 [node name="BixbyBeastCharacterBody" type="CharacterBody2D" parent="." node_paths=PackedStringArray("shadow")]
 position = Vector2(882, 770)
 collision_layer = 0
@@ -161,7 +187,7 @@ post_dialogue_pre_fight_timer = NodePath("../PostDialoguePreFightTimer")
 recover_timer = NodePath("../RecoverTimer")
 finisher_stagger_timer = NodePath("../FinisherStaggerTimer")
 
-[node name="Intro" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "procession", "marcher", "march_shadows", "set_down_shadows", "walking_carrier", "throne_bixby", "seated_liam", "downstage", "hop_bixby", "hop_liam", "storyboard", "tint", "transform_keys", "flash", "land_sfx_player", "slap_sfx_player", "growl_sfx_player", "gulp_sfx_player", "glow_sfx_player", "roar_sfx_player")]
+[node name="Intro" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "procession", "marcher", "march_shadows", "set_down_shadows", "walking_carrier", "throne_bixby", "seated_liam", "downstage", "hop_bixby", "hop_liam", "storyboard", "transform_stage", "transform_body", "transform_aura", "transform_shockwave", "dim", "flash", "land_sfx_player", "slap_sfx_player", "growl_sfx_player", "gulp_sfx_player", "glow_sfx_player", "blast_sfx_player", "roar_sfx_player")]
 script = ExtResource("8_intro")
 body = NodePath("../..")
 procession = NodePath("../../../Procession")
@@ -175,14 +201,18 @@ downstage = NodePath("../../../Downstage")
 hop_bixby = NodePath("../../../Downstage/HopBixby")
 hop_liam = NodePath("../../../Downstage/HopLiam")
 storyboard = NodePath("../../../Downstage/Storyboard")
-tint = NodePath("../../../FlashLayer/Tint")
-transform_keys = NodePath("../../../FlashLayer/TransformKeys")
+transform_stage = NodePath("../../../Transform")
+transform_body = NodePath("../../../Transform/Body")
+transform_aura = NodePath("../../../Transform/Aura")
+transform_shockwave = NodePath("../../../Transform/Shockwave")
+dim = NodePath("../../../DimLayer/Dim")
 flash = NodePath("../../../FlashLayer/Flash")
 land_sfx_player = NodePath("../../LandSfxPlayer")
 slap_sfx_player = NodePath("../../SlapSfxPlayer")
 growl_sfx_player = NodePath("../../GrowlSfxPlayer")
 gulp_sfx_player = NodePath("../../GulpSfxPlayer")
 glow_sfx_player = NodePath("../../GlowSfxPlayer")
+blast_sfx_player = NodePath("../../BlastSfxPlayer")
 roar_sfx_player = NodePath("../../RoarSfxPlayer")
 
 [node name="Hover" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body")]
@@ -262,27 +292,23 @@ pitch_scale = 1.4
 pitch_scale = 0.7
 
 [node name="RoarSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
-pitch_scale = 0.7
 
-[node name="FlashLayer" type="CanvasLayer" parent="."]
-layer = 10
+[node name="BlastSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
 
-[node name="Tint" type="ColorRect" parent="FlashLayer"]
+[node name="DimLayer" type="CanvasLayer" parent="."]
+layer = 0
+
+[node name="Dim" type="ColorRect" parent="DimLayer"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(1, 0.98, 0.84, 0)
+color = Color(0.02, 0, 0.04, 0)
 
-[node name="TransformKeys" type="Sprite2D" parent="FlashLayer"]
-visible = false
-position = Vector2(402, 14)
-scale = Vector2(3, 3)
-texture = ExtResource("20_transform_keys")
-centered = false
-hframes = 3
+[node name="FlashLayer" type="CanvasLayer" parent="."]
+layer = 10
 
 [node name="Flash" type="ColorRect" parent="FlashLayer"]
 anchors_preset = 15
