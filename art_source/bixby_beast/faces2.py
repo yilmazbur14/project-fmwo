@@ -344,3 +344,17 @@ def side_face(cv, ox, oy, side, jd, P, which):
     put2(cv, m, 3, 26, T)
     if tongue:
         side_tongue(cv, ox, oy, side, jd, tongue - 1, P.get('tongue_sway_' + which, 0))
+
+
+def _unlit(grid):
+    """dark socket version of an eye stamp (the beast before his eyes ignite)"""
+    return grid.replace('L', '5').replace('O', '4').replace('o', '4').replace('F', '5').replace('W', 'v')
+
+
+MID_EYE['unlit'] = _unlit(MID_EYE['angry'])
+SIDE_EYE_FAR['unlit'] = _unlit(SIDE_EYE_FAR['angry'])
+SIDE_EYE_NEAR['unlit'] = _unlit(SIDE_EYE_NEAR['angry'])
+SIDE_MOUTH['unlit'] = SIDE_MOUTH['shut']
+MID_MOUTH['unlit'] = MID_MOUTH['shut']
+SIDE_ROW['unlit'] = None
+MID_ROW['unlit'] = None

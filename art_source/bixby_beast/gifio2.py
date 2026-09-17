@@ -71,16 +71,22 @@ def lzw_encode(indices, mcs):
 
 
 def write_gif(path, frames, delays_cs, loop=0, verify=True, scale=1):
-    """frames: 1x frames (lists of RGB(A) rows); scale: integer upscale applied per frame while encoding"""
-    h = len(frames[0]) * scale
-    w = len(frames[0][0]) * scale
+    """frames: a list of 1x frames, or a callable frames(i) -> frame (only one frame is held in memory, which
+    matters for long previews). scale: integer upscale applied per frame while encoding."""
+    n_frames = len(delays_cs)
+    get = frames if callable(frames) else (lambda i: frames[i])
+    first = get(0)
+    h = len(first) * scale
+    w = len(first[0]) * scale
     pal = {}
-    for fr in frames:
+    for i in range(n_frames):
+        fr = first if i == 0 else get(i)
         for row in fr:
             for p in row:
                 k = (p[0], p[1], p[2])
                 if k not in pal:
                     pal[k] = len(pal)
+        del fr
     assert len(pal) <= 256, len(pal)
     bits_n = max(1, (len(pal) - 1).bit_length())
     size = 1 << bits_n
@@ -91,7 +97,8 @@ def write_gif(path, frames, delays_cs, loop=0, verify=True, scale=1):
     for c in colors:
         b += bytes(c)
     b += EXT_LOOP + struct.pack('<H', loop) + ZERO
-    for fr, d in zip(frames, delays_cs):
+    for i, d in enumerate(delays_cs):
+        fr = get(i)
         b += EXT_GCE + struct.pack('<H', d) + ZERO + ZERO
         b += IMG_SEP + struct.pack('<HHHHB', 0, 0, w, h, 0)
         idx = []
@@ -110,6 +117,7 @@ def write_gif(path, frames, delays_cs, loop=0, verify=True, scale=1):
             chunk = data[k:k + 255]
             b += bytes([len(chunk)]) + chunk
         b += ZERO
+        del fr, idx, data
     b += TRAILER
     open(path, 'wb').write(bytes(b))
     return len(b)

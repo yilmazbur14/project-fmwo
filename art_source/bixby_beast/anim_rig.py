@@ -249,7 +249,8 @@ def side_head2(cv, ox, oy, side, style, jaw_drop, P, which):
     base = HD.side_head_base(cv, ox, oy, side, jaw_drop)
     F2.side_face(cv, ox, oy, side, jaw_drop, P, which)
     HD.scorch(cv, base["ear"], oy + 38, seed=7 if side > 0 else 11)
-    base['horns'] = HD.side_horns(cv, ox, oy, side, style)
+    if P.get('horns_' + which, True):
+        base['horns'] = HD.side_horns(cv, ox, oy, side, style)
     return base
 
 
@@ -402,7 +403,8 @@ def mid_block(cv, P):
     if P.get('mc_show', True):
         CL.collar(cv, (77 + mdx, P['mc_top']), (115 + mdx, P['mc_top']), P['mc_h'], P['mc_sag'], n_spikes=4, spike_len=7.0,
                   spike_w=2.8, studs=3, light_c=(88 + mdx, P['mc_top'] - 2))
-    HD.middle_horns(cv, ox, oy, P)
+    if P.get('horns_mid', True):
+        HD.middle_horns(cv, ox, oy, P)
     middle_head2(cv, ox, oy, P)
 
 # ------------------------------------------------------------------ frame assembly

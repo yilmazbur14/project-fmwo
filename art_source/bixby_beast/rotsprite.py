@@ -80,3 +80,25 @@ def rot_pt(p, ang_deg, pivot):
     ca, sa = math.cos(a), math.sin(a)
     dx, dy = p[0] - pivot[0], p[1] - pivot[1]
     return (pivot[0] + dx * ca - dy * sa, pivot[1] + dx * sa + dy * ca)
+
+
+def resample(cv, f, pivot, out_w=None, out_h=None):
+    """RotSprite-style rescale of a canvas by factor f about pivot (Scale2x x3, then nearest sampling)"""
+    W = out_w or cv.w
+    Hh = out_h or cv.h
+    out = Canvas(W, Hh)
+    px = [row[:] for row in cv.px]
+    w, h = cv.w, cv.h
+    for _ in range(3):
+        px, w, h = scale2x(px, w, h)
+    px0, py0 = pivot
+    for y in range(Hh):
+        for x in range(W):
+            sx = (x + 0.5 - px0) / f + px0
+            sy = (y + 0.5 - py0) / f + py0
+            ix, iy = int(math.floor(sx * 8)), int(math.floor(sy * 8))
+            if 0 <= ix < w and 0 <= iy < h:
+                c = px[iy][ix]
+                if c is not None:
+                    out.px[y][x] = c
+    return out
