@@ -24,7 +24,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audio_voices"))
 
 from make_voices import (SR, PROJECT, samples, contour, oscillator, pulse, envelope, noise, lowpass, highpass,
-                         bandpass, mul, mix, delayed, normalized, saturate, loudness_db, write_wav)
+                         bandpass, mul, mix, delayed, normalized, saturate, loudness_db, read_wav, write_wav)
 # The struck metal and the chime are the parry sounds' own, so carter_parry_break is audibly the tinks' bigger
 # sibling and carter_finish resolves on the chord they ring.
 from make_parry_sfx import CHIME_MODES, TINK_MODES, ring, sparkle, strike, struck
@@ -345,12 +345,14 @@ SOUNDS = [
     ("carter_spent", build_spent, 90.0, 9000.0),
 ]
 
-# The round the preview plays: (when, which sound). Clones 1, 2 and 4 are parried, 3 lands, 5 is the bait.
+# The round the preview plays: (when, which sound). Clones 1, 2 and 4 are parried, 3 lands, 5 is the bait. The
+# primary parry hit belongs to make_parry_hit.py rather than to this file, and the preview reads it back out of
+# the SFX folder, so the round sounds like the fight instead of like this file's own contents.
 ROUND = [(0.0, "carter_eye_flash"), (520.0, "carter_warp"), (900.0, "carter_dark"),
-         (1500.0, "carter_rush_1"), (1640.0, "carter_parry_break"),
-         (2050.0, "carter_rush_2"), (2190.0, "carter_parry_break"),
+         (1500.0, "carter_rush_1"), (1640.0, "parry_hit_1"), (1640.0, "carter_parry_break"),
+         (2050.0, "carter_rush_2"), (2190.0, "parry_hit_2"), (2190.0, "carter_parry_break"),
          (2600.0, "carter_rush_3"), (2740.0, "carter_strike"),
-         (3150.0, "carter_rush_1"), (3290.0, "carter_parry_break"),
+         (3150.0, "carter_rush_1"), (3290.0, "parry_hit_3"), (3290.0, "carter_parry_break"),
          (3700.0, "carter_rush_2"), (3840.0, "carter_fake_punish"),
          (4400.0, "carter_finish"), (4780.0, "carter_spent")]
 
@@ -386,6 +388,10 @@ def main():
         os.makedirs(folder, exist_ok=True)
         for name, sound in sounds.items():
             write_wav(os.path.join(folder, "preview_%s.wav" % name), sound)
+
+        for _, name in ROUND:
+            if name not in sounds:
+                sounds[name] = read_wav(os.path.join(SFX_DIR, "%s.wav" % name))
 
         played = [0.0] * samples(ROUND[-1][0] + 1400.0)
         for start_ms, name in ROUND:

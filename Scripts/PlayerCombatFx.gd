@@ -18,13 +18,13 @@ const SHAKE_STEP_TIME := 0.03
 @onready var fx_layer: Node2D = player.get_parent().get_node("FinisherFx")
 @onready var sfx_player: AudioStreamPlayer = player.get_node("BlockSfxPlayer")
 @onready var hype_sfx_player: AudioStreamPlayer = player.get_node("HypeFullSfxPlayer")
-# The tinks ring on: parries in quick succession each need their own voice, and the sting its own.
-@onready var sting_player: AudioStreamPlayer = player.get_node("ParryStingPlayer")
-var parry_voices: Array[AudioStreamPlayer] = []
-var parry_voice := 0
+# One voice, restarted on every parry: a chain sounds like the parry it is, not like a pile-up.
+@onready var parry_sfx_player: AudioStreamPlayer = player.get_node("ParrySfxPlayer0")
 
 var flash: Tween
 var body_tint: Tween
+var window_rim: Sprite2D
+var window_clock := 0.0
 var stars: Sprite2D
 var stun_clock := 0.0
 # Only the newest zoom punch pulls the view back out.
@@ -32,8 +32,11 @@ var zoom_punch := 0
 
 
 func _ready() -> void:
-	for i in DefenseHypeArtLayout.PARRY_SFX_VOICES:
-		parry_voices.append(player.get_node("ParrySfxPlayer%d" % i))
+	# Loaded up front: the local sound is an MP3, and the first parry of a fight must not wait on a
+	# decoder to warm up.
+	var parry_sound := DefenseHypeArtLayout.parry_hit_sfx()
+	parry_sfx_player.stream = load(parry_sound.stream)
+	parry_sfx_player.volume_db = parry_sound.volume_db
 	defense.blocked.connect(_on_blocked)
 	defense.parried.connect(_on_parried)
 	defense.perfect_dodged.connect(_on_perfect_dodged)
@@ -46,6 +49,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_show_parry_window(delta)
 	if not defense.is_guard_broken:
 		return
 	stun_clock += delta
@@ -66,20 +70,61 @@ func _on_blocked(hit: RefCounted, point: Vector2) -> void:
 		HitStop.freeze(get_tree(), defense.heavy_block_hit_stop)
 
 
+# The rim that says a parry is armed. It follows the player's own frame, so it reads as him rather
+# than as an effect, and it is only ever up for the window's own length.
+func _show_parry_window(delta: float) -> void:
+	# A stunned player can't parry, whatever their last press was, so the rim mustn't promise one.
+	if not defense.is_parry_ready() or defense.is_guard_broken or player.is_finishing or player.fight_over:
+		_clear_parry_window()
+		return
+	var spec := DefenseHypeArtLayout.PARRY_WINDOW_RIM
+	if not is_instance_valid(window_rim):
+		window_rim = Sprite2D.new()
+		window_rim.centered = player.sprite.centered
+		# Added rather than drawn over: his own frame, blown out to a glow, so only the fringe around
+		# him shows and his dark pixels leave no shadow behind him.
+		var glow := CanvasItemMaterial.new()
+		glow.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		window_rim.material = glow
+		player.add_child(window_rim)
+		# Just before his own sprite in the draw order: behind the player, still over the arena floor,
+		# which is where a negative z_index would have put it.
+		player.move_child(window_rim, player.sprite.get_index())
+		window_clock = 0.0
+	# Real seconds: the flicker keeps its beat through a hit-stop.
+	window_clock += delta / maxf(Engine.time_scale, 0.001)
+	var source: Sprite2D = player.sprite
+	window_rim.texture = source.texture
+	window_rim.hframes = source.hframes
+	window_rim.vframes = source.vframes
+	window_rim.frame = source.frame
+	window_rim.flip_h = source.flip_h
+	window_rim.offset = source.offset
+	window_rim.position = source.position
+	window_rim.scale = source.scale * spec.grow
+	window_rim.modulate = spec.tint
+	if int(window_clock / spec.flicker_time) % 2 == 1:
+		window_rim.modulate.a *= spec.flicker_alpha
+
+
+func _clear_parry_window() -> void:
+	if is_instance_valid(window_rim):
+		window_rim.queue_free()
+	window_rim = null
+
+
 func _on_parried(hit: RefCounted, point: Vector2, _staggered: bool, streak: int) -> void:
 	var tier := clampi(streak - 1, 0, 2)
+	_clear_parry_window()
 	var spec := DefenseHypeArtLayout.parry_flash(tier)
 	var away: Vector2 = point - player.hurtBox.get_node("CollisionShape2D").global_position
 	_spawn_burst(spec, point + away.normalized() * spec.push, DefenseHypeArtLayout.PARRY_FLASH_SCALE[tier])
 	_flash_player(DefenseHypeArtLayout.PARRY_FLASH[tier], DefenseHypeArtLayout.PARRY_FLASH_TIME[tier])
 	_flick_attack(hit, away)
-	_play_on(parry_voices[parry_voice], DefenseHypeArtLayout.parry_sfx(tier))
-	parry_voice = (parry_voice + 1) % parry_voices.size()
-	if tier >= 2:
-		# After the tink, so the hit reads before the flourish.
-		var sting := get_tree().create_timer(DefenseHypeArtLayout.PARRY_STREAK_STING_DELAY, true, false, true)
-		sting.timeout.connect(func() -> void: _play_on(sting_player, DefenseHypeArtLayout.parry_streak_sting()))
-	HitStop.freeze(get_tree(), defense.parry_hit_stop)
+	# The same sound on every parry, on the same frame as the freeze it is meant to cause.
+	parry_sfx_player.play()
+	# The 3rd Strike beat: everything stops dead on the contact, then time crawls back to normal.
+	HitStop.freeze_then_slow(get_tree(), defense.parry_hit_stop, defense.parry_slow_time, defense.parry_slow_scale)
 	_parry_punch(tier, away)
 	get_tree().call_group("arena_crowd", "cheer", DefenseHypeArtLayout.PARRY_CHEER[tier])
 

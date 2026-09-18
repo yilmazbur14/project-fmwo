@@ -101,6 +101,5 @@ func _playing_sounds() -> Array:
 # A hit-stop or screen shake from the last blows must neither slow the lines and the fade nor carry
 # over into the next screen.
 func _settle_screen() -> void:
-	HitStop.release_timer = null
-	Engine.time_scale = 1.0
+	HitStop.clear()
 	ScreenView.reset(get_tree())

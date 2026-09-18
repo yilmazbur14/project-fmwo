@@ -9,9 +9,10 @@ Pure Python with fixed seeds, sharing the building blocks of make_voices.py. Not
 
 An imitation of the Street Fighter III parry, which is a clink and not a chime. Four things make it that:
 
-A hard broadband click at the very front. Three milliseconds of bright noise carrying most of the energy of the
-whole sound. This is what "crisp" is, and no stack of partials can produce it however fast they start: an earlier
-attempt at this sound was a pitched cluster with a fast attack and it came out pretty rather than sharp.
+A hard broadband click at the very front. Four milliseconds of bright noise carrying about two thirds of the
+energy of the first three. This is what "crisp" is, and no stack of partials can produce it however fast they
+start: an earlier attempt at this sound was a pitched cluster with a fast attack and it came out pretty and not
+sharp.
 
 A clangy cluster rather than a musical one. The ratios are deliberately irregular and avoid fifths and octaves,
 and the lowest three each carry a twin about one percent away, so they beat roughly once over the length of the
@@ -20,8 +21,9 @@ sound. That is what makes it read as a small piece of struck metal instead of a 
 A pitch drop across the first nine milliseconds. Struck metal goes slightly sharp on impact and falls into its
 note; without that it sounds plucked.
 
-Almost no sustain. The top of the cluster is gone in under ten milliseconds and the root inside fifty, so the
-whole thing is over before the ear files it as a note. It is dry: no room, no tail, nothing that blooms.
+Almost no sustain. The top of the cluster is gone in a few milliseconds, ninety-five percent of the energy is
+spent inside ten and the whole sound is twenty decibels down by twenty, so it is over before the ear files it as
+a note. It is dry: no room, no tail, nothing that blooms.
 
 It is pitched at F7, one octave over parry_tink_1 and two over carter_parry_break, so the parry family is one note
 across three octaves. The three variants are the same clink struck slightly differently, not three sounds.
@@ -34,8 +36,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from make_voices import (SR, PROJECT, samples, contour, noise, lowpass, highpass, mix, loudness_db, read_wav,
-                         write_wav)
+from make_voices import (SR, PROJECT, samples, contour, noise, lowpass, highpass, mix, normalized, saturate,
+                         loudness_db, read_wav, write_wav)
 
 SFX_DIR = os.path.join(PROJECT, "Assets", "Audio", "SFX")
 
@@ -92,12 +94,17 @@ def cluster(n, root, modes, tail_ms, fan, bend, glide_ms):
     return mix(*layers)
 
 
-def click(n, rng, low_hz, high_hz, decay_ms):
-    """The hard front: broadband noise, already at full level on the first sample and gone in a few milliseconds.
-    Broad on purpose rather than a narrow band, because a band is a pitch and this has to be a bang."""
+def click(n, rng, low_hz, high_hz, decay_ms, drive):
+    """The hard front: broadband noise, gone in a few milliseconds. Broad on purpose rather than a narrow band,
+    because a band is a pitch and this has to be a bang.
+
+    Soft-clipped after its envelope rather than before it. Raw noise peaks far above its own average, so
+    normalizing it spends the headroom on a couple of stray samples and leaves the click thin; clipping it once
+    it is already at full scale makes it ride the ceiling for its whole life instead, which is both louder for
+    the same peak and harder-sounding."""
     source = highpass(lowpass(noise(n, rng), high_hz), low_hz)
     decay = 6.908 / samples(decay_ms)
-    return [s * math.exp(-decay * i) for i, s in enumerate(source)]
+    return normalized(saturate(normalized([s * math.exp(-decay * i) for i, s in enumerate(source)]), drive))
 
 
 def knock(n, hz, decay_ms):
@@ -108,7 +115,7 @@ def knock(n, hz, decay_ms):
 def finish(x, peak_dbfs):
     """Keeps the bottom out of the way of the fight's impacts, takes the very top off, and silences the end only:
     the front is left exactly as it is, because any window there is an attack and this sound must not have one."""
-    x = lowpass(highpass(x, 220.0), 13000.0)
+    x = lowpass(highpass(x, 220.0), 12000.0)
     edge = samples(1.5)
     for i in range(edge):
         x[-1 - i] *= 0.5 - 0.5 * math.cos(math.pi * i / edge)
@@ -118,22 +125,22 @@ def finish(x, peak_dbfs):
 
 # ------------------------------------------------------------------------------------------------- the hits
 
-# One clink struck three slightly different ways: the seeds pick the grain of the click, and the rest moves by a
-# percent or two. The seeds are also chosen so the very first sample lands on the sound's peak, which a noise
-# front will not do on its own.
+# One clink struck three slightly different ways: the seed picks the grain of the click and the rest moves by a
+# percent or two. The seeds are searched rather than chosen, for the one property a noise front will not give on
+# its own: that the very first sample is the sound's peak, so there is no attack at all.
 VARIANTS = [
-    dict(seed=41, detune=1.000, tail_ms=48.0, fan=0.35, bend=1.070, glide_ms=9.0, click_hz=(1800.0, 11000.0),
-         top_hz=5000.0, knock_hz=520.0, knock=0.12),
-    dict(seed=17, detune=1.007, tail_ms=43.0, fan=0.33, bend=1.082, glide_ms=8.0, click_hz=(2000.0, 11500.0),
-         top_hz=5400.0, knock_hz=560.0, knock=0.10),
-    dict(seed=63, detune=0.993, tail_ms=53.0, fan=0.38, bend=1.060, glide_ms=10.5, click_hz=(1650.0, 10200.0),
-         top_hz=4600.0, knock_hz=478.0, knock=0.14),
+    dict(seed=95, detune=1.000, tail_ms=110.0, fan=0.35, bend=1.070, glide_ms=9.0, click_hz=(2000.0, 8800.0),
+         top_hz=5000.0, click_ms=4.0, drive=6.0, knock_hz=520.0, knock=0.12, clink=1.15),
+    dict(seed=177, detune=1.007, tail_ms=113.0, fan=0.33, bend=1.082, glide_ms=8.0, click_hz=(2200.0, 9500.0),
+         top_hz=5400.0, click_ms=3.9, drive=6.5, knock_hz=560.0, knock=0.10, clink=1.26),
+    dict(seed=153, detune=0.993, tail_ms=115.0, fan=0.38, bend=1.060, glide_ms=10.5, click_hz=(1800.0, 8300.0),
+         top_hz=4600.0, click_ms=4.6, drive=5.5, knock_hz=478.0, knock=0.14, clink=1.10),
 ]
 
-# The click carries the sound and the clink colours it, not the other way round.
-CLICK_GAIN = 1.15
-TOP_GAIN = 0.55
-CLUSTER_GAIN = 0.62
+# Every layer is normalized before it is mixed, so these gains mean what they say. Left unnormalized the cluster's
+# in-phase first sample sat about 25 dB over the click and the click may as well not have been there, which is
+# exactly how the previous version ended up sounding pretty instead of sharp.
+TOP_GAIN = 0.5
 
 
 def build_hit(spec):
@@ -141,13 +148,14 @@ def build_hit(spec):
     n = samples(LENGTH_MS)
     low_hz, high_hz = spec["click_hz"]
 
-    front = click(n, rng, low_hz, high_hz, 3.0)
-    top = click(n, rng, spec["top_hz"], 13000.0, 1.1)
-    metal = cluster(n, ROOT * spec["detune"], CLANG_MODES, spec["tail_ms"], spec["fan"], spec["bend"],
-                    spec["glide_ms"])
+    front = click(n, rng, low_hz, high_hz, spec["click_ms"], spec["drive"])
+    top = click(n, random.Random(spec["seed"] + 5000), spec["top_hz"], 12500.0, spec["click_ms"] * 0.37,
+                spec["drive"])
+    metal = normalized(cluster(n, ROOT * spec["detune"], CLANG_MODES, spec["tail_ms"], spec["fan"], spec["bend"],
+                               spec["glide_ms"]))
     body = knock(n, spec["knock_hz"], 14.0)
 
-    return mix((CLICK_GAIN, front), (TOP_GAIN, top), (CLUSTER_GAIN, metal), (spec["knock"], body))
+    return mix((1.0, front), (TOP_GAIN, top), (spec["clink"], metal), (spec["knock"], body))
 
 
 # ------------------------------------------------------------------------------------------------- output

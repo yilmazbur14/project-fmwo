@@ -245,12 +245,6 @@ script = ExtResource("17_combat_fx")
 
 [node name="ParrySfxPlayer0" type="AudioStreamPlayer" parent="CharacterBody2D"]
 
-[node name="ParrySfxPlayer1" type="AudioStreamPlayer" parent="CharacterBody2D"]
-
-[node name="ParrySfxPlayer2" type="AudioStreamPlayer" parent="CharacterBody2D"]
-
-[node name="ParryStingPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
-
 [node name="Hype" type="Node" parent="CharacterBody2D"]
 script = ExtResource("21_hype")
 

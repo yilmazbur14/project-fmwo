@@ -75,9 +75,15 @@ static var LOG_HITS := false
 @export var guard_break_ends_on_hit := true
 @export var guard_break_hit_stop := 0.12
 @export var guard_break_shake := 10.0
-@export var parry_window := 0.15
+# The read: how long after a credited press a guarded hit is parried instead of blocked. 12 frames
+# at 60: long enough to be a reaction rather than a guess, short enough that pressing early still
+# misses. PlayerCombatFx shows the window while it is open, so a miss teaches the timing.
+@export var parry_window := 0.2
 @export var parry_mash_lockout := 0.5
-@export var parry_hit_stop := 0.12
+# The dead stop on a parry, then a beat of slow motion at parry_slow_scale before normal speed.
+@export var parry_hit_stop := 0.13
+@export var parry_slow_time := 0.18
+@export var parry_slow_scale := 0.3
 # How long a parried boss that can be staggered stays open to punches.
 @export var parry_stagger_time := 1.2
 # Seconds without a parry before the streak lapses.
@@ -337,6 +343,11 @@ func _can_parry(hit: RefCounted) -> bool:
 
 func _parry_ready() -> bool:
 	return press_credited and clock - last_press_time <= parry_window
+
+
+# Whether a guarded hit right now would be parried: PlayerCombatFx shows the window with it.
+func is_parry_ready() -> bool:
+	return _parry_ready()
 
 
 # A boss whose attack a parry can stagger implements can_parry_stagger(hit) -> bool and
