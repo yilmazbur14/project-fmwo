@@ -74,6 +74,7 @@ var fill_style: StyleBoxFlat
 @onready var finish_sfx_player: AudioStreamPlayer = $FinishSfxPlayer
 @onready var recover_sfx_player: AudioStreamPlayer = $RecoverSfxPlayer
 @onready var land_sfx_player: AudioStreamPlayer = $LandSfxPlayer
+@onready var ko_sfx_player: AudioStreamPlayer = $KoSfxPlayer
 
 var defeated := false
 var hits_this_window := 0
@@ -126,6 +127,11 @@ func _ready() -> void:
 	finish_sfx_player.stream = load("res://Assets/Audio/SFX/carter_finish.wav")
 	recover_sfx_player.stream = load("res://Assets/Audio/SFX/carter_spent.wav")
 	land_sfx_player.stream = load("res://Assets/Audio/SFX/wrestler_collision.ogg")
+	# Loaded here rather than at the kill: it has to land on the exact frame the emblem lights, and
+	# an MP3 read from disk on first play would miss it.
+	var ko := CarterArtLayout.ko_ding()
+	ko_sfx_player.stream = load(ko.stream)
+	ko_sfx_player.volume_db = ko.volume_db
 
 
 func start_music() -> void:
@@ -293,6 +299,11 @@ func snap_music_level() -> void:
 		music_duck.kill()
 		music_duck = null
 	music_player.volume_db = music_base_db
+
+
+# The bell on the emblem catching. Nothing stops it afterwards - the ring is the point.
+func play_ko_ding() -> void:
+	ko_sfx_player.play()
 
 
 func play_rush(index: int, pitch := 1.0) -> void:

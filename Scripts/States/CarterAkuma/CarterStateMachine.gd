@@ -50,17 +50,20 @@ const ARENA_CENTRE := Vector2(959, 540)
 @export var darken_time := 0.45
 # Beat 3: the barrage. clone_show is the read, clone_dash the timing cue; splitting them is what
 # makes the parry window fair.
-# CLONE_SHOW IS THE ONE NUMBER HERE THAT MUST NOT COME DOWN. It is a red/yellow DISCRIMINATION
-# reaction, ~0.35-0.40 s, slower than a simple one; below it the barrage stops being a read and
-# becomes a coin flip. The gap is what was cut to make the barrage relentless.
-# The cadence is now clone_show + clone_dash + clone_gap = 0.70 s, which is BELOW
+# CLONE_SHOW IS AT ITS FLOOR AT 0.36 AND MUST NOT GO BELOW IT. Telling red from yellow is a
+# DISCRIMINATION reaction, about 0.35 s, which is slower than simply reacting to something appearing;
+# 0.36 is the last value at which a player can still make that decision at all. It came down from
+# 0.44 once, on the user's call, and there is nothing left to give. Anything under this and the
+# feints stop being readable and the whole mechanic is a coin flip. Cut somewhere else.
+# The cadence is clone_show + clone_dash + clone_gap = 0.62 s. That is well inside
 # PlayerDefense.parry_mash_lockout (0.5 s) plus the parry window, so the cadence is no longer its own
-# safety net: the rearm_parry() this fight makes as each light comes up is now load-bearing rather
-# than a nicety. Don't remove it, and don't shorten the gap further without re-reading that.
-# One clone lives clone_show + clone_dash = 0.62 s, under the 0.70 s cadence, so two lights are never
-# up at once - the player always knows which clone a press is answering.
+# safety net: the rearm_parry() this fight makes as each light comes up is what keeps consecutive
+# clones answerable. Don't remove it, and don't shorten anything here without re-reading that.
+# One clone lives clone_show + clone_dash = 0.54 s against that 0.62 s cadence, so two lights are
+# never up at once and the player always knows which clone a press is answering. CLONE_LIGHT_OUT is
+# what keeps a feint's light from being the second one on screen; it has 0.08 s to work in.
 @export var clone_count := 15
-@export var clone_show := 0.44
+@export var clone_show := 0.36
 @export var clone_dash := 0.18
 @export var clone_gap := 0.08
 @export var clone_radius := 420.0
@@ -347,9 +350,9 @@ func enter_defeated() -> void:
 	_end_fight("Defeated")
 
 
-# The player lost: he stops where he is.
+# The player lost: he turns his back on them and the emblem burns.
 func enter_player_defeated() -> void:
-	_end_fight("Idle")
+	_end_fight("Victory")
 	player_defeated = true
 
 

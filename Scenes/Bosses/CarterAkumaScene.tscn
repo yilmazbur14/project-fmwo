@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterRagingDemon.gd" id="6_raging_demon"]
 [ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterRecover.gd" id="7_recover"]
 [ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterDefeated.gd" id="8_defeated"]
+[ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterVictory.gd" id="9_victory"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_carter_hurtbox"]
 size = Vector2(192, 222)
@@ -98,6 +99,10 @@ recover_sfx_player = NodePath("../../RecoverSfxPlayer")
 script = ExtResource("8_defeated")
 body = NodePath("../..")
 
+[node name="Victory" type="Node" parent="CarterAkumaCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("9_victory")
+body = NodePath("../..")
+
 [node name="PostDialoguePreFightTimer" type="Timer" parent="CarterAkumaCharacterBody"]
 wait_time = 0.6
 one_shot = true
@@ -140,6 +145,8 @@ volume_db = -4.0
 volume_db = 4.0
 
 [node name="LandSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+
+[node name="KoSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
 
 [node name="FlashLayer" type="CanvasLayer" parent="."]
 layer = 10

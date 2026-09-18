@@ -17,11 +17,12 @@ const ANCHOR := Vector2(48, 95)
 const AKUMA_SHEET := "res://Assets/Characters/Carter/carter_akuma.png"
 
 # What the player can punch while he is down recovering: the mass of carter_spent, the pose he holds
-# through the punish window. It hunches, so the box sits well below the standing one.
-const RECOVER_BODY_BOX := Rect2(8, 22, 74, 74)
-# Where the finisher's daze stars circle, in px from the floor point he stands on: just over the head
-# of that same spent pose, whose crown sits at texel (47, 20).
-const DAZE_ANCHOR := Vector2(-3, -259)
+# through the punish window. He kneels, so the box sits well below the standing one - and he was
+# re-rasterised 16% smaller inside the same frame, which took another eleven rows off the top of it.
+const RECOVER_BODY_BOX := Rect2(18, 39, 53, 56)
+# Where the finisher's daze stars circle, in px from the floor point he stands on: a little over the
+# badge anchor of that same kneeling pose, which sits at texel (48, 31).
+const DAZE_ANCHOR := Vector2(0, -226)
 
 #ANIMATIONS
 # name: sheet, frames in order, seconds on each (the last value repeats) and whether it loops.
@@ -37,6 +38,8 @@ const USE_FINAL_ANIMS := {
 	&"recover": true,
 	&"hit": true,
 	&"defeat": true,
+	&"victory": true,
+	&"victory_hold": true,
 }
 
 const PLACEHOLDER_ANIMS := {
@@ -50,6 +53,10 @@ const PLACEHOLDER_ANIMS := {
 	&"recover": {sheet = AKUMA_SHEET, frames = [0], times = [1.0], loop = true},
 	&"hit": {sheet = AKUMA_SHEET, frames = [0], times = [0.22], loop = false},
 	&"defeat": {sheet = AKUMA_SHEET, frames = [0], times = [1.0], loop = false, turn = 90.0},
+	# He turns his back on them. The hand-over from victory to victory_hold IS the ignition, so the
+	# placeholder turn is one frame long and the back view is where the mark takes.
+	&"victory": {sheet = AKUMA_SHEET, frames = [0], times = [0.37], loop = false},
+	&"victory_hold": {sheet = AKUMA_SHEET, frames = [2], times = [1.0], loop = true},
 }
 
 const FINAL_ANIMS := {
@@ -84,6 +91,14 @@ const FINAL_ANIMS := {
 	# Never advances past frame 5.
 	&"defeat": {sheet = "res://Assets/Characters/Carter/carter_defeat.png",
 		frames = [0, 1, 2, 3, 4, 5], times = [0.11, 0.11, 0.10, 0.13, 0.18, 0.7], loop = false},
+	# Front, pivot, edge-on, then settled with the mark nearly out. These four sum to the generator's
+	# IGNITE_MS of 370 ms, which is what puts the bell on frame 4 and not a frame either side.
+	&"victory": {sheet = "res://Assets/Characters/Carter/carter_victory.png",
+		frames = [0, 1, 2, 3], times = [0.09, 0.07, 0.07, 0.14], loop = false},
+	# Frame 4 is the ignition and it is a SNAP, not a ramp: the jump from 3 to 4 is the moment, and
+	# smoothing it would steal the sound's cue. Then it burns on a loop under the defeat screen.
+	&"victory_hold": {sheet = "res://Assets/Characters/Carter/carter_victory.png",
+		frames = [4, 5, 6], times = [0.11, 0.13, 0.13], loop = true},
 }
 
 # carter_rush.png and carter_rush_pass.png are also drawn, and nothing here plays them: they are his
@@ -111,9 +126,10 @@ const USE_FINAL_MARK_GLOW := true
 const FINAL_MARK_GLOW := {
 	"texture": "res://Assets/Characters/Carter/carter_mark_glow.png",
 	"hframes": 6,
-	"frame_size": Vector2(70, 57),
-	# The glow's top-left texel, on his 96x96 frame.
-	"offset": Vector2(13, 23),
+	"frame_size": Vector2(64, 54),
+	# The glow's top-left texel, on his 96x96 frame. The emblem shrank with him but its bloom box
+	# grew, so this moved even though the frame didn't.
+	"offset": Vector2(16, 32),
 	"frame_time": 0.09,
 	"scale": 3.0,
 }
@@ -122,9 +138,9 @@ const FINAL_MARK_GLOW := {
 const USE_FINAL_INTRO_FLASH := true
 const FINAL_INTRO_FLASH := {
 	"texture": "res://Assets/Characters/Carter/carter_intro_flash.png",
-	"frame_size": Vector2(144, 52),
+	"frame_size": Vector2(120, 44),
 	# Its centre sits on his floor point.
-	"pivot": Vector2(72, 26),
+	"pivot": Vector2(60, 22),
 	"scale": 3.0,
 	"time": 0.45,
 }
@@ -266,10 +282,11 @@ const CLONE_LIGHT_GAP := 34.0
 # spawned high enough for this to leave the top of the view: a colour that can't be seen isn't a read.
 # The punish clone's light is bigger, so this allows for that one.
 const CLONE_LIGHT_REACH := 48.0
-# A clone that has gone past takes its light with it this fast - well inside clone_gap, so the next
-# clone's light is never the second one on screen. Two lights up at once and the player can't tell
-# which one a press is answering.
-const CLONE_LIGHT_OUT := 0.06
+# A clone that has gone past takes its light with it this fast. It has to be out before the next
+# clone's light comes up, and at a 0.62 s cadence against a 0.54 s clone there are only 0.08 s
+# between the two - so this is 0.05, leaving a couple of frames of margin. Two lights up at once and
+# the player can't tell which one a press is answering.
+const CLONE_LIGHT_OUT := 0.05
 
 # THE CLONE AFTER A FEINT THE PLAYER BIT ON. It cannot be parried or blocked, and the player has to
 # be able to see that coming or they will read it as their parry having failed. Until it has frames
@@ -360,6 +377,44 @@ const FINAL_FINISH := {
 	"at": Vector2(960, 540),
 	"flash": [0.15, 0.45, 0.8, 0.3, 0.06],
 }
+
+#HIS VICTORY POSE
+# The mirror of his entrance. He arrives with his back turned and the mark flaring, and he sends the
+# player off the same way: back turned, emblem burning between his shoulders, not even watching.
+# THE SOUND LANDS ON THE FRAME THE MARK TAKES, not one either side - that is the whole point of the
+# beat. That frame is the first of `victory_hold`, so the ignition is simply where `victory` hands
+# over, and CarterVictory reads it off the animation's own timing. Retiming the sheet retimes the
+# sound with it, with nothing here to keep in step by hand.
+# The mark takes hold: the room flares, jolts, and the music gets out of the way of the bell.
+const VICTORY_FLASH := 0.5
+const VICTORY_FLASH_OUT := 0.55
+const VICTORY_SHAKE := 12.0
+const VICTORY_SHAKE_STEPS := 5
+const VICTORY_SHAKE_STEP_TIME := 0.035
+const VICTORY_DUCK_DB := -14.0
+const VICTORY_DUCK_TIME := 0.25
+const VICTORY_CHEER := 3.0
+
+#THE KO
+# The user's own sound, kept out of the repo: Assets/Audio/SFX/local/ is gitignored, because those
+# rights aren't ours to redistribute and the repo is public. A fresh clone won't have it and still
+# has to have a cue, so the synthesised bell stands in.
+# Both are levelled to land around -3 dBFS, so swapping one for the other doesn't move the mix: the
+# local file is a mastered sample near full scale, the bell peaks at -6.
+# LET IT RING. The bell is 1.43 s and the user's file is longer; nothing may cut it short. The only
+# thing that touches it is FightOutro's fade at the end of the outro, which is a fade, not a stop.
+const KO_DING_LOCAL := "res://Assets/Audio/SFX/local/carter_ko_local.mp3"
+const KO_DING_FALLBACK := "res://Assets/Audio/SFX/carter_ko_ding.wav"
+const KO_DING_LOCAL_DB := -3.0
+const KO_DING_FALLBACK_DB := 3.0
+
+
+# The stream is the user's own when it is there, the synthesised bell when it isn't.
+static func ko_ding() -> Dictionary:
+	if ResourceLoader.exists(KO_DING_LOCAL):
+		return {"stream": KO_DING_LOCAL, "volume_db": KO_DING_LOCAL_DB}
+	return {"stream": KO_DING_FALLBACK, "volume_db": KO_DING_FALLBACK_DB}
+
 
 #THE YANK
 # The ghosts of the player dragged to the middle, and the dust where they land. PlayerCombatFx draws
