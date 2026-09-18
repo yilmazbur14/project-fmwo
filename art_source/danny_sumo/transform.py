@@ -21,7 +21,7 @@ from pngio import write_png, upscale, read_png       # noqa: E402
 from gifio import write_gif                          # noqa: E402
 from rig import to_pix                                # noqa: E402
 import danny_small as SM                              # noqa: E402
-import danny_sumo as SU                               # noqa: E402
+import danny_honda as SU                               # noqa: E402
 
 BW, BH = 176, 144            # the shared transformation frame
 SMALL_OX, SMALL_OY = 56, 80  # where the 64x64 small form sits inside it

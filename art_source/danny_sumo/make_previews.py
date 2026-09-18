@@ -17,7 +17,7 @@ sys.path.insert(0, HERE)
 from pngio import read_png, write_png, upscale     # noqa: E402
 from rig import to_pix                              # noqa: E402
 import danny_small as SM                            # noqa: E402
-import danny_sumo as SU                             # noqa: E402
+import danny_honda as SU                             # noqa: E402
 import transform as T                               # noqa: E402
 
 # --- where the sprites stand in the 1920x1080 arena --------------------------

@@ -41,6 +41,7 @@ LEVEL_LETTERS = {
     'boot':   ['B', 'b', 'k', 'k'],
     'mawashi': ['N', 'n', 'm', 'k'],
     'hair':   ['H', 'h', 'j', 'j'],
+    'rope':   ['W', 'G', 'g', 'q'],
 }
 
 # per material: (t0, t1, t2, rim_amount, rim_radius)
@@ -55,6 +56,7 @@ BANDS = {
     'hair':    (0.20, 0.55, 0.85, 0.35, 2.5),
     'bw':      (0.34, 0.62, 0.86, 0.30, 3.0),
     'bg':      (0.34, 0.62, 0.86, 0.30, 3.0),
+    'rope':    (0.18, 0.52, 0.84, 0.35, 2.5),
 }
 
 U = (0.62, 0.78)   # direction toward shadow (light from upper-left)

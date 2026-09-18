@@ -20,7 +20,7 @@ sys.path.insert(0, HERE)
 from pngio import write_png, upscale          # noqa: E402
 from rig import to_pix                         # noqa: E402
 import danny_small as SM                       # noqa: E402
-import danny_sumo as SU                        # noqa: E402
+import danny_honda as SU                        # noqa: E402
 
 SW = SH = 64                     # small-form frame
 BW, BH = SU.W, SU.H              # 176 x 144
@@ -48,8 +48,9 @@ SMALL_SHEETS = {
 
 # ======================================================== EVOLVED-FORM SHEETS
 AWAKE = dict(eye='awake', mouth='roar', bubble=0, knuck=False)
-GUARD = dict(AWAKE, arm='guard')
-COCK = dict(AWAKE, arm='cock')
+# the E. Honda ready stance: one arm extended low, one fist cocked back
+GUARD = dict(AWAKE, arm_l='low', arm_r='cock')
+COCK = dict(AWAKE, arm_l='cock', arm_r='cock')
 SLAP_LH = dict(AWAKE, arm_l='slap_hi', arm_r='cock')
 SLAP_RL = dict(AWAKE, arm_l='cock', arm_r='slap_lo')
 SLAP_LL = dict(AWAKE, arm_l='slap_lo', arm_r='cock')
@@ -87,15 +88,15 @@ SUMO_SHEETS = {
     # a heavy step in
     'danny_sumo_step': dict(frames=[
         (dict(arm='swingb', all_dy=-2, bubble=2), 140),
-        (dict(arm='swingf', all_dy=-3, dx=3, bubble=2), 90),
-        (dict(arm='swingb', all_dy=2, dx=4, belly_s=1.02, bubble=2), 110),
-        (dict(arm='hang', dx=2, bubble=2), 160),
-    ], loop='0-3 while he walks; ends 4px advanced'),
+        (dict(arm='swingf', all_dy=-3, dx=2, bubble=2), 90),
+        (dict(arm='swingb', all_dy=2, dx=3, belly_s=1.02, bubble=2), 110),
+        (dict(arm='hang', dx=1, bubble=2), 160),
+    ], loop='0-3 while he walks; ends 1px advanced in-frame'),
 
     # taking one
     'danny_sumo_hit': dict(frames=[
         (dict(eye='wide', mouth='ow', bubble=0, arm='flail',
-              dx=-4, head_dy=-2, knuck=False), 90),
+              dx=-2, head_dy=-2, knuck=False), 90),
         (dict(eye='wide', mouth='ow', bubble=0, arm='flail',
               dx=-1, head_dy=-1, knuck=False), 140),
     ], loop='once, then back to idle'),
