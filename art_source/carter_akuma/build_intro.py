@@ -11,6 +11,8 @@ Writes
 import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
+import carter_scale
+carter_scale.apply()          # draw him at his reduced size
 from lib import (W, H, Canvas, union, inter, sub, grow, erode, ell, poly,
                  empty, PALC, bayer, mirror)
 from pngio import write_png, read_png, blank, paste, crop
@@ -125,9 +127,14 @@ def build_aura():
 
 # ---------------------------------------------------------------- flash
 
-FLASH_W, FLASH_H = 144, 52
-FLASH_CX, FLASH_CY = 72.0, 26.0
-FLASH_RX, FLASH_RY = 60.0, 21.0
+# This one draws straight into its own canvas instead of going through lib's
+# rasterisers, so the scale transform does not reach it - the ring has to be
+# sized by hand or it stays a shockwave for the big Carter under the small one.
+_FS = carter_scale.SCALE
+FLASH_W = int(round(144 * _FS)) // 2 * 2
+FLASH_H = int(round(52 * _FS))
+FLASH_CX, FLASH_CY = FLASH_W / 2.0, FLASH_H / 2.0
+FLASH_RX, FLASH_RY = 60.0 * _FS, 21.0 * _FS
 
 
 def build_flash():

@@ -261,7 +261,7 @@ def draw_back(cv):
     # ear inner + the cross earring, now on the viewer's right
     seg(cv, [(62, 25), (62, 29)], 'w', mirror_too=False)
     seg(cv, [(34, 24), (33, 28), (34, 31)], 'w', mirror_too=False)
-    cv.stamp(F.EARRING, 59, 32, flip=True)
+    cv.stamp(F.EARRING, 59, 32, flip=True, small=F.EARRING_S)
     return cv
 
 

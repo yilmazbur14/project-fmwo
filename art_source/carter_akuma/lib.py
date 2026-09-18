@@ -7,6 +7,42 @@ from pngio import write_png, scale, read_png
 W = H = 96
 AX = 95  # mirror: x' = 95 - x
 
+# ---------------------------------------------------------------- scale
+# Carter shipped at 288px on screen - the same height as the redesigned
+# Greyson, who is meant to be the wall of the game.  Rather than change the
+# canvas, the scene scale or the anchor, every shape is re-rasterised smaller
+# INSIDE the 96x96 frame: design coordinates stay exactly as authored and this
+# transform maps them to pixels on the way out.  Because the geometry is
+# re-rasterised rather than the finished image being resampled, outlines stay
+# a crisp single pixel and nothing is blurred or dropped.
+#
+# The anchor is the floor plane on the mirror axis, so the feet stay on row 95
+# and x' = 95 - x keeps working; only the top of him comes down.
+SCALE = 1.0
+ANCHOR = (47.5, 96.0)
+
+
+def set_scale(s, anchor=(47.5, 96.0)):
+    global SCALE, ANCHOR
+    SCALE, ANCHOR = float(s), anchor
+
+
+def T(x, y):
+    """design space -> pixel space"""
+    ax, ay = ANCHOR
+    return ax + (x - ax) * SCALE, ay + (y - ay) * SCALE
+
+
+def Tp(x, y):
+    """design space -> integer pixel, for 1px lines and stamp anchors"""
+    fx, fy = T(x, y)
+    return int(round(fx)), int(round(fy))
+
+
+def Ty(y):
+    return ANCHOR[1] + (y - ANCHOR[1]) * SCALE
+
+
 
 def hexc(s):
     s = s.lstrip('#')
@@ -83,6 +119,8 @@ def empty():
 
 def poly(pts):
     m = empty()
+    if SCALE != 1.0:
+        pts = [T(x, y) for x, y in pts]
     n = len(pts)
     for y in range(H):
         cy = y + 0.5
@@ -101,6 +139,9 @@ def poly(pts):
 
 
 def ell(cx, cy, rx, ry, ang=0.0):
+    if SCALE != 1.0:
+        cx, cy = T(cx, cy)
+        rx, ry = rx * SCALE, ry * SCALE
     a = math.radians(ang)
     ca, sa = math.cos(a), math.sin(a)
     m = empty()
@@ -154,6 +195,8 @@ def sub(a, b):
 def halfplane(p0, p1, side=1):
     """pixels on one side of the infinite line p0->p1"""
     m = empty()
+    if SCALE != 1.0:
+        p0, p1 = T(*p0), T(*p1)
     (x0, y0), (x1, y1) = p0, p1
     for y in range(H):
         for x in range(W):
@@ -201,6 +244,9 @@ def normals(mask, model):
     if kind == 'sphere':
         _, cx, cy, rx, ry = model[:5]
         flat = model[5] if len(model) > 5 else 0.0
+        if SCALE != 1.0:
+            cx, cy = T(cx, cy)
+            rx, ry = rx * SCALE, ry * SCALE
         for y in range(H):
             for x in range(W):
                 if mask[y][x]:
@@ -213,7 +259,10 @@ def normals(mask, model):
                     nz = math.sqrt(1 - d) + flat
                     out[y][x] = (u, v, nz)
     elif kind == 'cyl':
-        _, (x0, y0), (x1, y1), r = model[:4]
+        _, _a, _b, r = model[:4]
+        if SCALE != 1.0:
+            _a, _b, r = T(*_a), T(*_b), r * SCALE
+        (x0, y0), (x1, y1) = _a, _b
         dx, dy = x1 - x0, y1 - y0
         L = math.hypot(dx, dy)
         px, py = -dy / L, dx / L  # perpendicular unit
@@ -225,7 +274,7 @@ def normals(mask, model):
                     nz = math.sqrt(1 - s * s)
                     out[y][x] = (s * px, s * py, nz)
     elif kind == 'dist':
-        R = model[1]
+        R = model[1] * SCALE
         hgt = _dist_height(mask, R)
 
         def g(xx, yy):
@@ -349,7 +398,24 @@ class Canvas:
                 if mask[y][x] and self.px[y][x] is not None:
                     self.px[y][x] = color
 
-    def stamp(self, grid, x0, y0, flip=False, over_only=False):
+    def stamp(self, grid, x0, y0, flip=False, over_only=False, small=None):
+        """x0, y0 is the DESIGN anchor of `grid`.
+
+        With a scale set, `small` - a grid hand-drawn at the reduced size - is
+        used instead and centred on the same design point, so the caller never
+        has to know which one it got.  Without one the grid is resampled, which
+        is fine for soft shapes and not fine for faces."""
+        if SCALE != 1.0:
+            rows0 = grid.strip(chr(10)).split(chr(10))
+            gw = max(len(r) for r in rows0)
+            gh = len(rows0)
+            ccx, ccy = T(x0 + gw / 2.0, y0 + gh / 2.0)
+            grid = small.strip(chr(10)) if small else resample_grid(grid, SCALE)
+            rows1 = grid.split(chr(10))
+            nw = max(len(r) for r in rows1)
+            nh = len(rows1)
+            x0 = int(round(ccx - nw / 2.0))
+            y0 = int(round(ccy - nh / 2.0))
         rows = grid.strip('\n').split('\n')
         wdt = max(len(r) for r in rows)
         for dy, row in enumerate(rows):
@@ -375,6 +441,8 @@ class Canvas:
                     self.px[y][x] = PALC[ch]
 
     def set(self, x, y, ch):
+        if SCALE != 1.0:
+            x, y = Tp(x, y)
         if 0 <= x < W and 0 <= y < H:
             self.px[y][x] = PALC[ch] if ch not in ('_',) else None
 
@@ -396,6 +464,28 @@ class Canvas:
 
     def mask_of(self):
         return [[p is not None for p in row] for row in self.px]
+
+
+def resample_grid(grid, s):
+    """Nearest-neighbour resample of a character grid.
+
+    The face stamps are 1px-precise, so whatever falls out of this is checked
+    by eye and the ones that carry the character - the eyes above all - are
+    hand-authored at the reduced size instead rather than being resampled."""
+    rows = grid.strip(chr(10)).split(chr(10))
+    h = len(rows)
+    w = max(len(r) for r in rows)
+    nh = max(1, int(round(h * s)))
+    nw = max(1, int(round(w * s)))
+    out = []
+    for y in range(nh):
+        r = rows[min(h - 1, int(round((y + 0.5) / s - 0.5)))]
+        line = []
+        for x in range(nw):
+            sx = min(w - 1, int(round((x + 0.5) / s - 0.5)))
+            line.append(r[sx] if sx < len(r) else '.')
+        out.append(''.join(line))
+    return chr(10).join(out)
 
 
 def shave_corners(cv, passes=1):
@@ -457,6 +547,8 @@ GI_STEPS = [[_lerp(GI_RAMP[i], GIP_RAMP[i], t) for i in range(6)]
 
 def gi_fade(cv, mask, y0, y1):
     """remap already-shaded navy pixels toward violet as y goes y0 -> y1"""
+    if SCALE != 1.0:
+        y0, y1 = Ty(y0), Ty(y1)
     idx_of = {c: i for i, c in enumerate(GI_RAMP)}
     for y in range(H):
         t = (y - y0) / max(1e-6, (y1 - y0))
@@ -507,6 +599,8 @@ def erode(mask, n=1):
 
 def band(y0, y1):
     m = empty()
+    if SCALE != 1.0:
+        y0, y1 = Ty(y0), Ty(y1)
     for y in range(H):
         if y0 <= y + 0.5 <= y1:
             for x in range(W):

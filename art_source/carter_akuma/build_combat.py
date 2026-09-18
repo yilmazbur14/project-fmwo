@@ -11,14 +11,18 @@ Writes, all 96x96 frames on a horizontal strip, feet plane on row 95:
   carter_spent.png       4 frames, loops
   carter_hit.png         2 frames, one shot
   carter_defeat.png      6 frames, one shot, holds on the last
+  carter_victory.png     7 frames, one shot into a loop from frame 4
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
+import carter_scale
+carter_scale.apply()          # draw him at his reduced size
 from lib import W, H
 from pngio import write_png, blank, paste
 import combat_poses as CP
 import combat_rush as CR
+import combat_victory as CVI
 
 OUT = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '..', '..', 'Assets', 'Characters', 'Carter'))
@@ -31,6 +35,7 @@ SHEETS = [
     ('carter_spent.png', CP.spent, 4),
     ('carter_hit.png', CP.hit, 2),
     ('carter_defeat.png', CP.defeat, 6),
+    ('carter_victory.png', CVI.frame, CVI.N),
 ]
 
 # milliseconds per frame, as quoted in the report
@@ -42,6 +47,7 @@ TIMINGS = {
     'carter_spent.png': [200, 170, 170, 200],
     'carter_hit.png': [70, 90],
     'carter_defeat.png': [110, 110, 100, 130, 180, 700],
+    'carter_victory.png': CVI.MS,
 }
 
 

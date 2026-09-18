@@ -104,11 +104,12 @@ def eye_flash(i):
         CL.ground_pool(cv, (lv - 0.5) * 1.5, 47.5, 94, 34.0)
     if i == 3:
         # spokes of light bursting off the peak, kept clear of the silhouette
+        px_, py_ = CL._T(ex, ey)
         for n in range(14):
             a = n * math.pi / 7 + 0.18
-            for r in range(16, 44):
-                x = int(round(ex + math.cos(a) * r * 1.05))
-                y = int(round(ey + math.sin(a) * r * 0.95))
+            for r in range(int(16 * CL._S()), int(44 * CL._S())):
+                x = int(round(px_ + math.cos(a) * r * 1.05))
+                y = int(round(py_ + math.sin(a) * r * 0.95))
                 if not (0 <= x < W and 0 <= y < H):
                     break
                 if bm[y][x] or (r + n) % 3:
@@ -126,7 +127,7 @@ def hit(i):
     dx = (-3, -1)[i]
     body = front_body(dx=dx - (1 - i), dy=(1, 0)[i],
                       expr=('glare', 'deadpan')[i], eye=(1, 0)[i])
-    body = CL.shift_canvas(body, dx, 0)
+    body = CL.shift_canvas(body, CL.dpx(dx), 0)
     bm = body.mask_of()
     if i == 0:
         # white bloom on the struck side, so the flinch has a cause
@@ -306,11 +307,12 @@ def defeat(i):
         IL.aura_heat(cv, grow(bm, 1), 0.95)
         CL.ground_pool(cv, 0.85, 47.0, 94, 40.0)
         CL.point_light(cv, bm, 47.5, 54.0, 0.55, reach=44.0)
+        bx_, by_ = CL._T(47.5, 54.0)
         for n in range(16):
             a = n * math.pi / 8 + 0.1
-            for r in range(18, 50):
-                x = int(round(47.5 + math.cos(a) * r))
-                y = int(round(54.0 + math.sin(a) * r * 0.9))
+            for r in range(int(18 * CL._S()), int(50 * CL._S())):
+                x = int(round(bx_ + math.cos(a) * r))
+                y = int(round(by_ + math.sin(a) * r * 0.9))
                 if not (0 <= x < W and 0 <= y < H):
                     break
                 if bm[y][x] or (r + n) % 3:

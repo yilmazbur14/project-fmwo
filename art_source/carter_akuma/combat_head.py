@@ -128,8 +128,8 @@ def _seg(cv, pts, ch, dx=0, dy=0, mirror_too=True, over_only=True):
         runs.append([(95 - x, y) for x, y in pts])
     for run in runs:
         for i in range(len(run) - 1):
-            x0, y0 = run[i][0] + dx, run[i][1] + dy
-            x1, y1 = run[i + 1][0] + dx, run[i + 1][1] + dy
+            x0, y0 = CL._Tp(run[i][0] + dx, run[i][1] + dy)
+            x1, y1 = CL._Tp(run[i + 1][0] + dx, run[i + 1][1] + dy)
             n = max(abs(x1 - x0), abs(y1 - y0))
             for s in range(n + 1):
                 t = s / max(1, n)
@@ -161,9 +161,13 @@ def neck(dy=0, lean=0.0):
 
 
 def head_masks(dx=0, dy=0):
-    hd = shift_mask(P.head(), dx, dy)
-    er = shift_mask(P.ears(), dx, dy)
-    bd = shift_mask(P.beard(), dx, dy)
+    """dx, dy are DESIGN offsets; the masks are already rasterised at scale, so
+    the shift has to be converted to whole pixels or the head drifts off the
+    body as soon as a scale is set."""
+    px, py = CL.dpx(dx), CL.dpx(dy)
+    hd = shift_mask(P.head(), px, py)
+    er = shift_mask(P.ears(), px, py)
+    bd = shift_mask(P.beard(), px, py)
     return hd, er, bd
 
 
@@ -223,8 +227,8 @@ def socket_glow(cv, dx, dy, level):
     if SKIN_SET is None:
         from lib import hexc, RAMPS
         SKIN_SET = set(hexc(c) for c in RAMPS['skin'] + RAMPS['skinr'])
-    r = 5.0 + 3.0 * level
-    for cx, cy in ((40.5 + dx, 28.5 + dy), (54.5 + dx, 28.5 + dy)):
+    r = (5.0 + 3.0 * level) * CL._S()
+    for cx, cy in (CL._T(40.5 + dx, 28.5 + dy), CL._T(54.5 + dx, 28.5 + dy)):
         for y in range(max(0, int(cy - r - 1)), min(H, int(cy + r + 2))):
             for x in range(max(0, int(cx - r - 1)), min(W, int(cx + r + 2))):
                 c = cv.px[y][x]
@@ -239,20 +243,27 @@ def socket_glow(cv, dx, dy, level):
 
 
 def faces_on(cv, dx=0, dy=0, expr='deadpan', eye=0):
-    brow = {'glare': (BROWS_GLARE, 23), 'flash': (BROWS_FLASH, 21),
-            'strain': (BROWS_GLARE, 23), 'beaten': (F.BROWS, 24)}.get(
-                expr, (F.BROWS, 23))
-    cv.stamp(brow[0], 36 + dx, brow[1] + dy, over_only=True)
+    brow = {'glare': (BROWS_GLARE, 23, 'BROWS_GLARE_S'),
+            'flash': (BROWS_FLASH, 23, 'BROWS_FLASH_S'),
+            'strain': (BROWS_GLARE, 23, 'BROWS_GLARE_S'),
+            'beaten': (F.BROWS, 24, None)}.get(expr, (F.BROWS, 23, None))
+    cv.stamp(brow[0], 36 + dx, brow[1] + dy, over_only=True,
+             small=(globals()[brow[2]] if brow[2] else F.BROWS_S))
 
-    eyes = {0: (F.EYES, 26), 1: (EYES_LIT, 26), 2: (EYES_HOT, 25),
-            3: (EYES_FLASH, 26), -1: (EYES_SPENT, 26), -2: (EYES_OUT, 26)}[eye]
-    cv.stamp(eyes[0], 36 + dx, eyes[1] + dy, over_only=True)
+    eyes = {0: (F.EYES, 26, F.EYES_S), 1: (EYES_LIT, 26, EYES_LIT_S),
+            2: (EYES_HOT, 25, EYES_HOT_S), 3: (EYES_FLASH, 26, EYES_FLASH_S),
+            -1: (EYES_SPENT, 26, EYES_SPENT_S),
+            -2: (EYES_OUT, 26, EYES_OUT_S)}[eye]
+    cv.stamp(eyes[0], 36 + dx, eyes[1] + dy, over_only=True, small=eyes[2])
 
-    cv.stamp(F.NOSE, 45 + dx, 27 + dy, over_only=True)
+    cv.stamp(F.NOSE, 45 + dx, 27 + dy, over_only=True, small=F.NOSE_S)
 
-    mouth = {'flash': (MOUTH_SNARL, 44, 34), 'strain': (MOUTH_GASP, 44, 35),
-             'beaten': (MOUTH_SLACK, 45, 36)}.get(expr, (F.MOUTH, 44, 35))
-    cv.stamp(mouth[0], mouth[1] + dx, mouth[2] + dy, over_only=True)
+    mouth = {'flash': (MOUTH_SNARL, 44, 34, MOUTH_SNARL_S),
+             'strain': (MOUTH_GASP, 44, 35, MOUTH_GASP_S),
+             'beaten': (MOUTH_SLACK, 45, 36, MOUTH_SLACK_S)}.get(
+                 expr, (F.MOUTH, 44, 35, F.MOUTH_S))
+    cv.stamp(mouth[0], mouth[1] + dx, mouth[2] + dy, over_only=True,
+             small=mouth[3])
 
     # the furrow between the brows - the cheapest anger tell there is
     if expr in ('glare', 'strain'):
@@ -262,14 +273,15 @@ def faces_on(cv, dx=0, dy=0, expr='deadpan', eye=0):
                 if 0 <= xx < W and 0 <= yy < H and cv.px[yy][xx] not in (None, BLACK):
                     cv.px[yy][xx] = PALC['w' if x in (47, 48) else 'v']
 
-    cv.stamp(F.EARRING, 30 + dx, 32 + dy)
+    cv.stamp(F.EARRING, 30 + dx, 32 + dy, small=F.EARRING_S)
 
 
 def eye_lances(cv, dx=0, dy=0, drop=0, reach=16, level=1.0):
     """Two bars of light punching sideways out of the sockets.  This is the
     frame where the player loses control, so the light has to leave his face."""
-    ey = 29 + dy + drop
-    for side, x0 in ((-1, 38 + dx), (1, 57 + dx)):
+    ey = int(round(CL._T(0.0, 29 + dy + drop)[1]))
+    reach = max(2, int(round(reach * CL._S())))
+    for side, x0 in ((-1, CL._Tp(38 + dx, 0)[0]), (1, CL._Tp(57 + dx, 0)[0])):
         for t in range(1, reach):
             f = t / float(reach)
             x = x0 + side * t
@@ -324,7 +336,7 @@ def draw_back_head(cv, dx=0, dy=0, shade=0):
     _seg(cv, [(36, 31), (37, 36), (40, 40)], '2', dx, dy)
     _seg(cv, [(62, 25), (62, 29)], 'w', dx, dy, False)
     _seg(cv, [(34, 24), (33, 28), (34, 31)], 'w', dx, dy, False)
-    cv.stamp(EARRING_R, 59 + dx, 32 + dy)
+    cv.stamp(EARRING_R, 59 + dx, 32 + dy, small=EARRING_R_S)
     return hd, er, jaw, nk
 
 
@@ -338,4 +350,90 @@ k##%##k
 kkk&kkk
 ..k&k..
 ..kkk..
+"""
+
+
+# ---------------------------------------------------------------- reduced
+# Companions at the 0.84 scale, on the same 20x5 / 20x3 / 8x3 templates as
+# face.py's, so every expression lines up with the approved one.
+
+BROWS_GLARE_S = """
+5555..........5555
+655555......555556
+.665555....555566.
+..26655....55662..
+"""
+
+BROWS_FLASH_S = BROWS_GLARE_S
+
+EYES_LIT_S = """
+.kkkkkkk....kkkkkkk.
+.kkkkkkk....kkkkkkk.
+.kOOOOOk....kOOOOOk.
+.kVVVVVk....kVVVVVk.
+..k777k......k777k..
+"""
+
+EYES_HOT_S = """
+.kkkkkkk....kkkkkkk.
+.kOOOOOk....kOOOOOk.
+.kMMMMMk....kMMMMMk.
+.kOOOOOk....kOOOOOk.
+..kVVVk......kVVVk..
+"""
+
+EYES_FLASH_S = """
+.kkkkkkk....kkkkkkk.
+.kOMMMOk....kOMMMOk.
+.kMMMMMk....kMMMMMk.
+.kMMMMMk....kMMMMMk.
+.kOOOOOk....kOOOOOk.
+..kVVVk......kVVVk..
+"""
+
+EYES_SPENT_S = """
+.kkkkkkk....kkkkkkk.
+.kkkkkkk....kkkkkkk.
+.kkkkkkk....kkkkkkk.
+.k98889k....k98889k.
+..kwwwk......kwwwk..
+"""
+
+EYES_OUT_S = """
+.kkkkkkk....kkkkkkk.
+.kkkkkkk....kkkkkkk.
+.kkkkkkk....kkkkkkk.
+.kk999kk....kk999kk.
+..kwwwk......kwwwk..
+"""
+
+MOUTH_SNARL_S = """
+.555555.
+kkkkkkkk
+k4NNNN4k
+.544445.
+"""
+
+MOUTH_GASP_S = """
+.555555.
+kkkkkkkk
+k4NNNN4k
+.544445.
+"""
+
+MOUTH_SLACK_S = """
+.5555.
+kkkkkk
+k4NN4k
+"""
+
+EARRING_R_S = """
+..k..
+.kkk.
+.k#k.
+kk#kk
+k#%#k
+kk#kk
+.k#k.
+.kkk.
 """

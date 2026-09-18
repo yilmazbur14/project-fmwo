@@ -15,6 +15,32 @@ import intro_lib as IL
 from intro_lib import mixc
 
 FEET = 95          # floor plane: bottom row of every frame
+
+
+def _S():
+    import lib
+    return lib.SCALE
+
+
+def _T(x, y):
+    import lib
+    return lib.T(x, y)
+
+
+def _Tp(x, y):
+    import lib
+    return lib.Tp(x, y)
+
+
+def _Tinv(x, y):
+    import lib
+    ax, ay = lib.ANCHOR
+    return ax + (x - ax) / lib.SCALE, ay + (y - ay) / lib.SCALE
+
+
+def dpx(v):
+    """a design-space delta as a whole number of pixels"""
+    return int(round(v * _S()))
 AXC = 47.5
 
 
@@ -95,6 +121,7 @@ def breathe(cv, d, seam=74):
     """Lift everything above `seam` by d rows; the seam row is what doubles."""
     if d <= 0:
         return cv.copy()
+    seam = int(round(_T(0.0, seam)[1]))
     return warp_rows(cv, lambda y: y + d if y < seam else
                      (seam if y < seam + d else y))
 
@@ -196,6 +223,8 @@ def point_light(cv, body, cx, cy, level, reach=26.0, hot='x'):
     intro_lib.rim_light does this only from the back mark."""
     if level <= 0.04:
         return
+    cx, cy = _T(cx, cy)
+    reach = reach * _S()
     edge = sub(body, erode(body, 1))
     inner = sub(erode(body, 1), erode(body, 2))
     for m, amt in ((edge, 1.0), (inner, 0.5)):
@@ -234,6 +263,9 @@ def ground_pool(cv, level, cx=47.5, row=94, span=30.0, hot='Y', cool='z'):
     """floor lit from above - wider and flatter than intro_lib.ground_glow."""
     if level <= 0.06:
         return
+    cx = _T(cx, 0.0)[0]
+    row = int(round(_T(0.0, row)[1]))
+    span = span * _S()
     for dy in range(0, 6):
         y = row - dy
         if not (0 <= y < H):
@@ -264,6 +296,8 @@ def streaks(cv, body, rows, back=-1, ln=(10, 26), seed=0,
     of the silhouette reads as tracer fire, not speed.  So each line starts
     solid right off his trailing edge, steps down the ember ramp as it goes,
     and only breaks up in its last third."""
+    rows = [int(round(_T(0.0, y)[1])) for y in rows]
+    ln = (ln[0] * _S(), ln[1] * _S())
     for i, y0 in enumerate(rows):
         if not (0 <= y0 < H):
             continue
@@ -271,7 +305,7 @@ def streaks(cv, body, rows, back=-1, ln=(10, 26), seed=0,
         if not xs or (max(xs) - min(xs)) < 4:
             continue
         x0 = min(xs) if back < 0 else max(xs)
-        L = ln[0] + (seed * 7 + i * 5) % max(1, ln[1] - ln[0])
+        L = int(ln[0] + (seed * 7 + i * 5) % max(1, int(ln[1] - ln[0])))
         for t in range(1, L):
             x = x0 + back * t
             if not (0 <= x < W) or cv.px[y0][x] is not None:
@@ -305,6 +339,9 @@ def dust(cv, cx, row, level, span=16.0, seed=0):
     """scuffed floor grit kicked up under a plant or a skid."""
     if level <= 0.05:
         return
+    cx = _T(cx, 0.0)[0]
+    row = int(round(_T(0.0, row)[1]))
+    span = span * _S()
     for i in range(26):
         ph = i * 2.39 + seed
         f = (i % 7) / 6.0
@@ -363,6 +400,9 @@ def roots_from(body, rows=None, out=1.0):
     ys = [y for y in range(H) if any(body[y])]
     if not ys:
         return []
+    # measured off the rasterised silhouette, so the seeds come back in PIXEL
+    # space; guttering feeds them to the tendril builder, which is design
+    # space, so they have to be mapped back or they get scaled twice
     y0, y1 = min(ys), max(ys)
     seeds = []
     for i, f in enumerate(rows):
@@ -374,9 +414,10 @@ def roots_from(body, rows=None, out=1.0):
         w0 = 3.2 + 3.4 * (1.0 - abs(f - 0.35))
         ln = (9.0 + 12.0 * (1.0 - f)) * out
         # left root points out and down, right root mirrors it
-        seeds.append((min(xs) + 0.5, y + 0.5, 170.0 + 18.0 * f, ln, w0))
-        seeds.append((max(xs) - 0.5, y + 0.5, 10.0 - 18.0 * f, ln * 0.92,
-                      w0 * 0.92))
+        lx, ly = _Tinv(min(xs) + 0.5, y + 0.5)
+        rx, ry = _Tinv(max(xs) - 0.5, y + 0.5)
+        seeds.append((lx, ly, 170.0 + 18.0 * f, ln, w0))
+        seeds.append((rx, ry, 10.0 - 18.0 * f, ln * 0.92, w0 * 0.92))
     return seeds
 
 

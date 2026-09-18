@@ -162,6 +162,16 @@ def arena(plate_path):
     write_png(os.path.join(SCRATCH, 'arena_rush_1920.png'), w, h, img)
     print('arena_rush_1920.png   %dx%d' % (w, h))
 
+    # ---- mockup 3: the victory pose at the moment the mark ignites
+    import combat_victory as CVI
+    img = [row[:] for row in plate]
+    vic = frames_of(os.path.join(OUT, 'carter_victory.png'))
+    stand(img, vic[CVI.IGNITE_FRAME], BOSS_SCALE, pcx + 300, pfloor)
+    tick(img, pcx + 300, pfloor - (95 - 20) * BOSS_SCALE - 26, COOL)
+    write_png(os.path.join(SCRATCH, 'arena_victory_1920.png'), w, h, img)
+    print('arena_victory_1920.png %dx%d  (ignition frame %d)'
+          % (w, h, CVI.IGNITE_FRAME))
+
 
 if __name__ == '__main__':
     gifs()
