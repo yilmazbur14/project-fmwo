@@ -2168,6 +2168,11 @@ const WINDUP_READS := {
 	# and 1.85x at none: 0.42 s of raised sword before the first wave exists, 0.36 s once he is
 	# enraged. The enraged one is the number here, because it is the one that can fall under the bar.
 	&"eric_quake_wave": 0.360,
+	# Each of beast Bixby's pounds cracks the floor where the player is standing, and the crack glows
+	# and throbs there for BixbyBeastStateMachine.quake_warning before it erupts, its beat tightening
+	# over the last 0.6 s. The two later cracks burn quake_stagger longer again, so the first one is
+	# the number here: it is the one that can fall under the bar.
+	&"bixby_quake_burst": 1.200,
 }
 
 

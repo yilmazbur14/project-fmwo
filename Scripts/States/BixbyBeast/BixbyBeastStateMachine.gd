@@ -72,7 +72,10 @@ const ATTACK_CYCLES := [["FireBreath"], ["Combined"], ["FireBreath", "FireBreath
 @export var combined_windup := 0.5
 @export var combined_pounds := 3
 @export var combined_pound_interval := 0.35
-# How long the first pound's crack glows before it erupts, and how fast its wave then travels out.
+# How long the first pound's crack glows before it erupts, and how fast its wave then travels out. The
+# eruption comes up out of the floor with no travel at all, so the throbbing crack is the whole of the
+# warning anyone standing on one gets: it has to stay well clear of PlayerDefense.parry_window, and the
+# defence suite's approach mode holds it to that.
 @export var quake_warning := 1.2
 @export var quake_speed := 700.0
 # Every crack after it burns this much longer than the one before, so the three go off further apart than
