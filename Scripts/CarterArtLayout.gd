@@ -407,8 +407,9 @@ const FINAL_FINISH := {
 const VICTORY_SHAKE := 12.0
 const VICTORY_SHAKE_STEPS := 5
 const VICTORY_SHAKE_STEP_TIME := 0.035
-const VICTORY_DUCK_DB := -14.0
-const VICTORY_DUCK_TIME := 0.25
+# The track fades out under the bell rather than ducking and coming back - this is the end of the
+# fight, and his lines land in the quiet after the ring.
+const VICTORY_MUSIC_FADE := 1.4
 const VICTORY_CHEER := 3.0
 
 # He doesn't walk to the middle, he is simply there: the Demon's own vanish and reappear, so it reads
@@ -427,6 +428,42 @@ const KO_MARK_Z := 40
 # this beat and no other it is drawn twice that, scaled about its own centre so it doesn't drift off
 # his back.
 const KO_MARK_SCALE := 2.0
+
+#HIS MUSIC
+# The user's own track, kept out of the repo for the same reason as the KO bell below. A fresh clone
+# gets the placeholder theme and still has music to fight to.
+# THE LEVEL IS MEASURED, NOT GUESSED (art_source/carter_fight/measure_theme.gd plays each one through
+# a capture bus): the track peaks at -1.1 dBFS and its busiest stretch runs -9.6 dBFS RMS, which is
+# 4.8 dB hotter than the placeholder it replaces. At -12 dB it sits about 2 dB under where the
+# placeholder sat, and that is where it has to be - this fight is a reaction test played over
+# constant sound, and the clone rushes (-25.7 RMS) and the parry break have to stay on top of it.
+# IT IS A TRACK, NOT A LOOP, AND IT OPENS ON FOUR SECONDS OF DIGITAL SILENCE. Measured: 0 s, 2 s and
+# 3 s are all -100 dBFS, a lead-in starts around 4 s and it is at full level by 5 s. Played from the
+# top, the fight would begin with four seconds of nothing, so it starts - and loops back to - the
+# lead-in instead. Both numbers are the same one on purpose.
+# The tail fades out from about 260 s into silence by 263 s, so the loop seam is a fade into a
+# lead-in rather than a stutter, and the encoder padding at the very end is inaudible inside it. The
+# file is 4:26 and a fight lasts 35-90 s, so that seam is almost never reached anyway.
+const MUSIC_LOCAL := {
+	"stream": "res://Assets/Audio/SFX/local/carter_theme_local.mp3",
+	"volume_db": -12.0,
+	"start": 3.9,
+	"loop_offset": 3.9,
+}
+const MUSIC_FALLBACK := {
+	"stream": "res://Assets/Audio/Music/boss3_theme.ogg",
+	"volume_db": -5.0,
+	"start": 0.0,
+	"loop_offset": 0.0,
+}
+
+
+# His own track when it is there, the placeholder theme when it isn't.
+static func theme() -> Dictionary:
+	if ResourceLoader.exists(MUSIC_LOCAL.stream):
+		return MUSIC_LOCAL
+	return MUSIC_FALLBACK
+
 
 #THE KO
 # The user's own sound, kept out of the repo: Assets/Audio/SFX/local/ is gitignored, because those

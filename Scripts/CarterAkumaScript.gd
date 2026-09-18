@@ -26,6 +26,8 @@ var boss_health := max_health
 const MAX_HITS_PER_WINDOW := 3
 const PHANTOM_HIT_WINDOW := 0.5
 const VIEW_SIZE := Vector2(1920, 1080)
+# Fading in decibels sounds even all the way down; by this level nothing can be heard.
+const SILENT_DB := -60.0
 
 # Three takes of one rush, rotated by clone, so five of them a round don't sound like one sound
 # played five times.
@@ -88,6 +90,7 @@ var last_contact_hit_time := -INF
 
 var sprite_base_position: Vector2
 var music_base_db := 0.0
+var music_start := 0.0
 var music_duck: Tween
 
 var aura_clock := 0.0
@@ -112,11 +115,18 @@ func _ready() -> void:
 	_build_health_bar()
 	_build_dark_stage()
 
-	# Placeholder: he has no theme of his own yet. The SFX are his own.
-	music_player.stream = load("res://Assets/Audio/Music/boss3_theme.ogg")
+	# Loaded here rather than when the fight starts: it is a 4 MB MP3 and reading it off disk on the
+	# first bar would hitch.
+	var theme := CarterArtLayout.theme()
+	music_player.stream = load(theme.stream)
 	if music_player.stream:
 		music_player.stream.loop = true
+		if theme.loop_offset > 0.0:
+			music_player.stream.loop_offset = theme.loop_offset
+	# Before music_base_db is taken, since every duck and fade in the fight is relative to it.
+	music_player.volume_db = theme.volume_db
 	music_base_db = music_player.volume_db
+	music_start = theme.start
 	hit_sfx_player.stream = load("res://Assets/Audio/SFX/hit_impact.ogg")
 	victory_sfx_player.stream = load("res://Assets/Audio/SFX/victory_fanfare.ogg")
 	flash_sfx_player.stream = load("res://Assets/Audio/SFX/carter_eye_flash.wav")
@@ -138,7 +148,9 @@ func _ready() -> void:
 
 func start_music() -> void:
 	if music_player and not music_player.playing:
-		music_player.play()
+		# Past the silence his track opens on, so the fight starts on the music and not on four
+		# seconds of nothing.
+		music_player.play(music_start)
 
 
 func get_health_ratio() -> float:
@@ -293,6 +305,17 @@ func duck_music(db: float, seconds: float) -> void:
 
 func restore_music(seconds: float) -> void:
 	duck_music(0.0, seconds)
+
+
+# All the way out, for the KO: the arena is black and the bell is the only thing left, so the track
+# bows out under it rather than ducking and coming back. Faded, never cut - a 4 minute mastered piece
+# stopping dead is its own kind of wrong.
+func fade_music_out(seconds: float) -> void:
+	if music_duck:
+		music_duck.kill()
+	music_duck = music_player.create_tween()
+	music_duck.tween_property(music_player, "volume_db", SILENT_DB, seconds)
+	music_duck.tween_callback(music_player.stop)
 
 
 # Nothing may be left holding the music down once the sequence is over, however it ended.

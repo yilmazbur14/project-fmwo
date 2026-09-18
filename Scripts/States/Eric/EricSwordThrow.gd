@@ -119,14 +119,22 @@ func reflect(stagger_duration: float) -> void:
 
 # The flung-back sword arrives. It never planted, so there is no ring; it is spent on him, and his
 # staggered frames draw him holding it again, ready for the next throw.
+# Reading his own sword back into his chest is the payoff move: the stagger it leaves him in opens a
+# finisher daze and the uppercut fires on its own. A reflect that kills him outright never gets
+# there, and the outro runs off take_punch as it always has.
 func _on_sword_struck_thrower() -> void:
 	if eric_state_machine.current_state != self:
 		return
 	sword.queue_free()
 	sword = null
 	character_body.take_punch(REFLECT_DAMAGE)
-	if character_body.boss_health > 0 and not eric_state_machine.defeated:
-		eric_state_machine.parry_stagger(pending_stagger, throw_spot)
+	if character_body.boss_health <= 0 or eric_state_machine.defeated:
+		return
+	# This window is its own daze, whatever an earlier Downed window spent.
+	character_body.daze_used = false
+	eric_state_machine.parry_stagger(pending_stagger, throw_spot, true)
+	if player.finisher.begin_auto(character_body):
+		eric_state_machine.states["ParryStaggered"].drive_player_in(player)
 
 
 func _on_sword_landed() -> void:

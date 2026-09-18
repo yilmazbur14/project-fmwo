@@ -56,7 +56,10 @@ const FLASH_SHAKE_STEP_TIME := 0.06
 const YANK_SHAKE := 11.0
 const YANK_SHAKE_STEPS := 4
 const YANK_SHAKE_STEP_TIME := 0.03
-const MUSIC_DUCK_DB := -8.0
+# The lights going out takes the music down with them. Deeper than the plan's -8 because his theme is
+# a real mastered track rather than the texture loop that stood in for it: measured, it runs 4.8 dB
+# hotter, and the fifteen clone rushes and their parries have to stay on top of it in the dark.
+const MUSIC_DUCK_DB := -10.0
 const MUSIC_DUCK_TIME := 0.2
 const MUSIC_BACK_TIME := 0.25
 # The clone that can't be answered arrives lower and heavier than the other fourteen.

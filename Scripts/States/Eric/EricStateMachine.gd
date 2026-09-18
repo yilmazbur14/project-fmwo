@@ -161,10 +161,12 @@ func enter_player_defeated() -> void:
 
 
 # Called by the boss after a parry: his attack stops and he's open to punches for `duration`, then he
-# picks himself up at `home`, where the attack started.
-func parry_stagger(duration: float, home: Vector2) -> void:
+# picks himself up at `home`, where the attack started. `from_reflect` marks the one his own sword
+# leaves him in, which is the only stagger the finisher can daze.
+func parry_stagger(duration: float, home: Vector2, from_reflect := false) -> void:
 	states["ParryStaggered"].duration = duration
 	states["ParryStaggered"].home = home
+	states["ParryStaggered"].from_reflect = from_reflect
 	on_child_transition(current_state, "ParryStaggered")
 
 

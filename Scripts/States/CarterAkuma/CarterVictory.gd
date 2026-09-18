@@ -96,8 +96,9 @@ func _ignite() -> void:
 	ignited = true
 	body.ignite_ko_mark()
 	body.play_ko_ding()
-	# The music gets out of the way of it rather than being stopped, so the ring has room.
-	body.duck_music(CarterArtLayout.VICTORY_DUCK_DB, CarterArtLayout.VICTORY_DUCK_TIME)
+	# The track bows out entirely rather than ducking: the arena is black, the bell is the only thing
+	# left, and his outro lines land in the quiet after it.
+	body.fade_music_out(CarterArtLayout.VICTORY_MUSIC_FADE)
 	body.shake_screen(CarterArtLayout.VICTORY_SHAKE, CarterArtLayout.VICTORY_SHAKE_STEPS,
 		CarterArtLayout.VICTORY_SHAKE_STEP_TIME)
 	get_tree().call_group("arena_crowd", "cheer", CarterArtLayout.VICTORY_CHEER)

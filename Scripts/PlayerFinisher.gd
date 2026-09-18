@@ -171,6 +171,9 @@ func _input(event: InputEvent) -> void:
 		action = &"dodge"
 	if action.is_empty() or (phase == Phase.OFF and not is_input_locked()):
 		return
+	# Before the event is marked handled: the autoload's device tracker sits below this node in the
+	# propagation order and would never see the presses that drive the mash.
+	InputSettings.note_device(event)
 	get_viewport().set_input_as_handled()
 	if (phase == Phase.DAZED and prompt_visible) or phase == Phase.CHARGING:
 		_press(action)

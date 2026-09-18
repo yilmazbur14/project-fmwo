@@ -959,6 +959,14 @@ func place_under(area: Area2D) -> void:
 	player.global_position = Vector2(shape.global_position.x - reach.x, shape.global_position.y + half.y - reach.y - 4.0)
 
 
+# PlayerFinisher.Phase, which a parried sword toss now drives on its own.
+const FINISHER_OFF := 0
+const FINISHER_SETTLE := 1
+const FINISHER_DAZED := 2
+const FINISHER_UPPERCUT := 4
+const FINISHER_FIZZLE := 5
+
+
 # Starts his sword throw with `chain` left to come and taps block as the diving blade reaches the
 # player. The parry does not stagger him on the spot: the sword is flung back and only staggers him
 # when it arrives, so this waits out its return flight and the parry's freeze.
@@ -988,6 +996,8 @@ func test_stagger() -> void:
 	var finisher: Node = player.get_node("Finisher")
 	var phases := {}
 	watch = func(): phases[finisher.phase] = true
+	var prompted := [false]
+	finisher.prompt_shown.connect(func(): prompted[0] = true)
 	var hurtbox: Area2D = boss.get_node("Hurtbox")
 	var full: int = boss.max_health
 	check(await parry_sword([]), "a parried sword flies back and staggers him (%s)" % sm.current_state.name)
@@ -1003,23 +1013,36 @@ func test_stagger() -> void:
 	check(not boss.get_node("WhirlwindArea2D").monitoring, "whirlwind area off")
 	check(not boss.get_node("WhirlwindSfxPlayer").playing, "whirlwind sound stopped")
 	check(boss.get_node("CollisionShape2D").disabled, "body collision still off")
-	check(not boss.can_be_dazed(), "no daze possible while staggered")
-	place_under(hurtbox)
-	await wait(4)
-	var dealt := []
-	for i in 3:
-		dealt.append(await swing())
-		await wait(6)
-	log_p("stagger punches dealt %s, health %d, hits %d" % [dealt, boss.boss_health, boss.parry_stagger_hits])
-	check(dealt[0] > 0 and dealt[1] > 0 and dealt[2] == 0, "two punches land, the third deals 0")
-	check(not phases.has(1) and finisher.phase == 0, "no finisher daze")
-	var home: Vector2 = sm.states["SwordThrow"].throw_spot
-	check(await wait_until(func(): return sm.current_state.name != "ParryStaggered", 300), "the stagger ends")
-	log_p("after the stagger: %s at %s (home %s)" % [sm.current_state.name, boss.global_position, home])
-	check(sm.current_state.name == "Downed" and boss.global_position == home, "glided home, then Downed as the last attack")
+	check(sm.states["ParryStaggered"].from_reflect, "the stagger is marked as his own sword's")
+
+	log_p("-- and the finisher takes it from there, with no mash")
+	check(phases.has(FINISHER_SETTLE) or phases.has(FINISHER_DAZED), "it started on its own")
+	check(await wait_until(func(): return boss.daze_used, 120), "the reflect's window owns the daze")
+	check(await wait_until(func(): return phases.has(FINISHER_UPPERCUT), 300), "the uppercut fires without a press (phase %d)" % finisher.phase)
+	check(not prompted[0], "the prompt never showed")
+	check(not phases.has(FINISHER_FIZZLE), "and it never fizzled out")
+	check(await wait_until(func(): return boss.boss_health < full - 1, 120), "it connects")
+	log_p("uppercut dealt %d, health %d of %d" % [full - 1 - boss.boss_health, boss.boss_health, full])
+	check(full - 1 - boss.boss_health == roundi(full * finisher.finisher_damage_ratio), "a normal uppercut's damage, past the stagger's hit cap")
+	check(await wait_until(func(): return finisher.phase == FINISHER_OFF, 300), "the finisher ends")
+	check(sm.current_state.name != "ParryStaggered", "it closed the window (%s)" % sm.current_state.name)
 	check(not boss.get_node("CollisionShape2D").disabled, "collision back on")
-	await wait(2)
-	check(hurtbox.monitoring, "Downed keeps its hurtbox open")
+	check(await wait_until(func(): return sm.current_state.name != "Idle", 400), "he gets up and attacks again")
+	log_p("he carries on with %s" % sm.current_state.name)
+
+	log_p("-- and again with a full hype meter, which supercharges it and is spent")
+	var hype: Node = player.get_node("Hype")
+	hype._set_hype(100.0)
+	boss.boss_health = full
+	parries.clear()
+	var before: int = boss.boss_health
+	check(await parry_sword([]), "parried again")
+	release(KEY_SHIFT)
+	check(await wait_until(func(): return boss.boss_health < before - 1, 400), "the supercharged uppercut connects")
+	log_p("supercharged uppercut dealt %d, hype %.0f" % [before - 1 - boss.boss_health, hype.hype])
+	check(before - 1 - boss.boss_health == roundi(full * finisher.supercharged_damage_ratio), "the supercharged damage")
+	check(not hype.is_full(), "it spent the meter (%.0f)" % hype.hype)
+	check(await wait_until(func(): return finisher.phase == FINISHER_OFF, 300), "and it ends the same way")
 	sm.downed_state_timer.stop()
 
 
@@ -1027,54 +1050,55 @@ func test_stagger_chain() -> void:
 	await load_eric()
 	health_ok()
 	track_parries()
+	var finisher: Node = player.get_node("Finisher")
 	check(await parry_sword(["Earthquake"]), "staggered")
 	release(KEY_SHIFT)
-	var start: float = defense.clock
 	var hurtbox: Area2D = boss.get_node("Hurtbox")
-	check(await wait_until(func(): return not hurtbox.monitoring, 240), "hurtbox closes when the window ends")
-	var window: float = defense.clock - start
-	# The sword's own bonus on top of parry_stagger_time: he is struck at throwing range, so the
-	# player has further to run than a parried grab leaves them.
-	var want: float = defense.parry_stagger_time + sm.states["SwordThrow"].reflect_stagger_bonus
-	log_p("punch window lasted %.3f s" % window)
-	check(absf(window - want) <= 0.05, "about %.1f s" % want)
-	check(sm.current_state.name == "ParryStaggered" and sm.states["ParryStaggered"].gliding, "gliding home")
+	# The uppercut ends the window rather than the stagger timer running out: end_recovery() starts
+	# his next chain, so the attack he had queued is still the one that comes.
+	check(await wait_until(func(): return finisher.phase == FINISHER_OFF and boss.boss_health < boss.max_health - 1, 400), "the finisher lands")
+	check(await wait_until(func(): return not hurtbox.monitoring, 240), "it closed the punish window")
+	check(sm.states["ParryStaggered"].stagger_timer.is_stopped(), "the stagger timer is done with")
 	check(await wait_until(func(): return sm.current_state.name == "Earthquake", 400), "the chain carries on with the next attack")
 	await wait_until(func(): return sm.current_state.name == "Downed", 900)
 	sm.downed_state_timer.stop()
 
 
+# The fight ending inside the finisher a parried sword toss fires: won by the uppercut itself, or
+# lost while it is winding up.
 func test_stagger_end(win: bool) -> void:
 	await load_eric()
-	if win:
-		health_ok()
-	else:
-		player.playerHealth = 1
+	health_ok()
 	track_parries()
+	var finisher: Node = player.get_node("Finisher")
 	check(await parry_sword([]), "staggered")
 	release(KEY_SHIFT)
-	await wait(3)
 	var hurtbox: Area2D = boss.get_node("Hurtbox")
 	var timer: Timer = sm.states["ParryStaggered"].stagger_timer
+	# Where he was struck: a killing uppercut must leave him there for his defeat and the outro.
+	var pos: Vector2 = boss.global_position
+	var sprite_rest: Vector2 = boss.sprite.offset
 	if win:
-		boss.boss_health = 1
-		place_under(hurtbox)
-		await wait(4)
-		var dealt := await swing()
-		check(dealt == 1, "the killing punch lands in the stagger")
-		await wait(5)
-		check(boss.defeated and sm.current_state.name == "Downed", "defeated, in Downed")
+		# Low enough that the uppercut is lethal, so the kill comes from the auto-finisher itself.
+		boss.boss_health = 2
+		check(await wait_until(func(): return boss.defeated, 400), "the auto-uppercut kills him")
+		check(await wait_until(func(): return finisher.phase == FINISHER_OFF, 200), "the finisher plays out past the kill")
+		check(sm.current_state.name == "Downed", "defeated, in Downed (%s)" % sm.current_state.name)
+		check(boss.global_position == pos and boss.sprite.offset == sprite_rest, "no shove: he dies where he was hit")
 	else:
-		player.receive_hit(load("res://Scripts/HitInfo.gd").make(&"untagged", dummy_source(), player.global_position))
-		await wait(5)
-		check(player.fight_over and sm.current_state.name == "Idle", "player lost, Eric idle (%s)" % sm.current_state.name)
+		# Nothing can hurt the player mid-finisher, so the loss is dealt straight to the counter.
+		check(await wait_until(func(): return finisher.phase != FINISHER_OFF, 200), "the finisher is up")
+		player.playerHealth = 0
+		check(await wait_until(func(): return player.fight_over, 200), "the player goes down")
+		check(await wait_until(func(): return finisher.phase == FINISHER_OFF, 200), "the finisher gives way to the loss")
+		check(sm.current_state.name == "Idle", "player lost, Eric idle (%s)" % sm.current_state.name)
 	check(timer.is_stopped(), "stagger timer stopped")
 	check(not hurtbox.monitoring, "hurtbox closed")
-	var pos: Vector2 = boss.global_position
+	var settled: Vector2 = boss.global_position
 	await wait(90)
-	check(boss.global_position == pos, "no glide after the fight ends")
+	check(boss.global_position == settled, "no glide after the fight ends")
 	check(sm.current_state.name == ("Downed" if win else "Idle"), "still %s" % sm.current_state.name)
-	check(root.has_node("FightOutro"), "the outro runs")
+	check(root.get_children().filter(func(n): return n.name == "FightOutro").size() == 1, "exactly one outro")
 
 
 # ------------------------------------------------------------------ step 5

@@ -175,7 +175,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		# Reversed while a status inverts the controls (PlayerStatus); the axes stay separate, so the
 		# diagonal is as fast as it has always been.
-		var steer: Vector2 = status.steer(Vector2(Input.get_axis("ui_left", "ui_right"), Input.get_axis("ui_up", "ui_down")))
+		var steer: Vector2 = status.steer(InputSettings.move_vector())
 		var directionHorz := steer.x
 		var directionVert := steer.y
 		var speed := SPEED
@@ -233,7 +233,7 @@ func _input(event: InputEvent) -> void:
 		if state_machine.current_state.name == "Blocking":
 			state_machine.on_child_transition(state_machine.current_state, "Idle")
 		is_dodging = true
-		direction = status.steer(Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down"))
+		direction = status.steer(InputSettings.move_vector())
 		previous_dodge_physics_frame = last_dodge_physics_frame
 		last_dodge_physics_frame = Engine.get_physics_frames()
 		defense.on_dash_started()
