@@ -453,6 +453,19 @@ class Canvas(object):
                 self.lvl[y][x] = lvl
                 self.prio[y][x] = 99
 
+    def ink_px(self, pts, color, mats=None):
+        """Ink pixels black ONLY where an existing material sits, so a garment
+        seam can never draw out over the background."""
+        c = _hex(color)
+        for (x, y) in pts:
+            x, y = int(round(x)), int(round(y))
+            if not (0 <= x < self.w and 0 <= y < self.h):
+                continue
+            m = self.mat[y][x]
+            if m is None or (mats and m not in mats):
+                continue
+            self.raw[y][x] = c
+
     def raw_px(self, pts, color):
         c = _hex(color)
         for (x, y) in pts:

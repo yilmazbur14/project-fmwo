@@ -1,10 +1,11 @@
 """Greyson - 96x96 frames, baseline row 95, meant for scale 3.
 
-Drawn in the flat cartoon style of Assets/Characters/Mason/mason_sheet.png:
-big simple masses, pure-black outlines all the way round, three flat tones per
-material (base + one highlight crescent + one shadow crescent) and no anatomy
-at all.  He reads as an enormous bodybuilder the way a cartoon does - by being
-huge and wide - not by having muscles drawn on him.
+Big simple masses, pure-black outlines all the way round, and six-tone ramps
+shaded smoothly across each mass so the volumes round off the way Computah's
+chassis does.  Deliberately NO anatomy: no pec separation, no ab grid, no
+obliques, serratus, striations or bicep peaks.  He reads as an enormous
+bodybuilder from the silhouette - an 82 px delt shelf tapering to 38 px - not
+from muscles drawn onto him.
 
 Identity kept from the portrait: long blonde mane, blue eyes, blonde moustache,
 the three red forehead furrows, purple trunks, white wrestling boots.
@@ -23,26 +24,29 @@ OUTLINE = "#000000"    # Mason uses pure black, and plenty of it
 
 # three flat tones per material: [highlight, base, shadow, deep]
 PAL = {
-    "skin":   ["#FFE0B2", "#F0BE86", "#CE9758", "#9E6C3A"],
-    "hair":   ["#FFF08A", "#F2DC52", "#C9B032", "#8E7A20"],
-    "trunk":  ["#C88CF0", "#A063DC", "#7331A8", "#4C1F74"],
-    "boot":   ["#FFFFFF", "#E8ECF6", "#BEC5D8", "#8C93AA"],
-    "rage":   ["#FFC0A0", "#F08050", "#C24E28", "#8A3018"],
-    "steel":  ["#E8EFF8", "#B8C6D6", "#7E8DA2", "#4E5A6C"],
+    "skin":   ["#FFF2E2", "#FFDCBE", "#F6CCA8", "#DCA57C", "#B07E58", "#835438"],
+    "hair":   ["#FFE6BC", "#FFC77E", "#F2A94E", "#CE8436", "#A16224", "#6E4116"],
+    "trunk":  ["#DEB8FA", "#C08CEE", "#A063DC", "#7E42B8", "#5A288A", "#3A1660"],
+    "boot":   ["#FFFFFF", "#F2F6FE", "#DCE2F0", "#BCC4DA", "#949CB8", "#6A7290"],
+    "rage":   ["#FFDCC2", "#FFB088", "#F08050", "#C85630", "#94381C", "#63220E"],
+    "steel":  ["#F2F8FF", "#D4E0EE", "#B8C6D6", "#94A4B8", "#6E7E94", "#4A5668"],
 }
-HI, BASE, SHA, DEEP = 0, 1, 2, 3
+HI, BASE, SHA, DEEP = 0, 2, 4, 5
 
 FACE_CH = {
-    "K": OUTLINE, "E": "#FFFFFF", "B": "#2F6BCC", "b": "#7FB6F5",
+    "K": OUTLINE, "E": "#FFFFFF", "B": "#4A6E9E", "b": "#8FB2D6",
     "r": "#C0392B", "t": "#FFFFFF", "o": "#3A0F16", "p": "#8E3B45",
-    "S": ("skin", 0), "s": ("skin", 1), "n": ("skin", 1), "m": ("skin", 2),
-    "w": ("skin", 2), "x": ("skin", 3),
-    "H": ("hair", 0), "h": ("hair", 1), "g": ("hair", 1), "d": ("hair", 2),
+    "G": "#F0CC5E", "g2": "#C9A02E",
+    "v": "#CE7A60", "V": "#FFD4BC",
+    "S": ("skin", 0), "s": ("skin", 1), "n": ("skin", 2), "m": ("skin", 3),
+    "w": ("skin", 4), "x": ("skin", 5),
+    "H": ("hair", 0), "h": ("hair", 1), "g": ("hair", 2), "d": ("hair", 3),
 }
 RAGE_CH = dict(FACE_CH)
-RAGE_CH.update({"S": ("rage", 0), "s": ("rage", 1), "n": ("rage", 1),
-                "m": ("rage", 2), "w": ("rage", 2), "x": ("rage", 3),
-                "B": "#FFFFFF", "b": "#FFF0B0", "E": "#FFE8C0"})
+RAGE_CH.update({"S": ("rage", 0), "s": ("rage", 1), "n": ("rage", 2),
+                "m": ("rage", 3), "w": ("rage", 4), "x": ("rage", 5),
+                "B": "#FFFFFF", "b": "#FFF0B0", "E": "#FFE8C0",
+                "v": "#C0392B", "V": "#FF8A6A"})
 
 # 27 wide; local column 13 is the mirror axis (= x 47).  Blank cells keep the
 # flat fill underneath - only the features are authored, Mason-style.
@@ -59,18 +63,18 @@ FACE = [
     "                           ",
     "                           ",
     "                           ",
-    "            rrr            ",   # 10  the three red furrows
-    "           rr rr           ",   # 11
-    "          rr   rr          ",   # 12
-    "                           ",   # 13
+    "         Vv     vV         ",   # 10  two popped forehead veins
+    "         Vv     vV         ",   # 11
+    "          Vv   vV          ",   # 12
+    "           Vv vV           ",   # 13
     "     dddd         dddd     ",   # 14  brows
-    "     KKKK         KKKK     ",   # 15  lash
-    "     EBBE         EBBE     ",   # 16  eyes
-    "     KKKK         KKKK     ",   # 17  lower lid
+    "    GKKKKG  GGG  GKKKKG    ",   # 15  lens top rim + bridge
+    "  GGGEBBEG       GEBBEGGG  ",   # 16  eyes behind the lenses + temples
+    "    GGGGGG       GGGGGG    ",   # 17  lens bottom rim
     "                           ",   # 18
     "            K K            ",   # 19  nostrils
-    "        ggggggggggg        ",   # 20  moustache
-    "       ggggggggggggg       ",   # 21
+    "                           ",   # 20
+    "        ddddddddddd        ",   # 21  thin blonde moustache
     "       gdKKKKKKKKKdg       ",   # 22  mouth
     "         KtttttttK         ",   # 23  teeth
     "         KKKKKKKKK         ",   # 24
@@ -100,6 +104,10 @@ for _c in "Ssnmwx":
     _CLASS[_c] = "skin"
 for _c in "Hhgd":
     _CLASS[_c] = "hair"
+for _c in "G":
+    _CLASS[_c] = "glass"
+for _c in "vV":
+    _CLASS[_c] = "vein"
 
 
 def _check_face():
@@ -481,39 +489,88 @@ def _rig(pose):
     return r
 
 
+def _physique(r, pose=""):
+    """Steroid build.  Flat shading cannot say "shredded", so the silhouette
+    has to: delts and biceps grown, forearms and legs leaner, hips pulled in.
+    The hard V taper itself lives in the torso masses in build()."""
+    # An arm the pose placed on purpose - punching, chambered, flung out in a
+    # flinch, or braced on the floor in a collapse - keeps its authored
+    # position and only gains bulk.  Only a genuinely hanging arm gets tucked
+    # in to make the V.
+    placed = pose.startswith("hit") or pose.startswith("defeat")
+    posed = (r["fore"],) + tuple(r["chamber"])
+    for k in ("armL", "armR"):
+        a = dict(r[k])
+        sgn = -1.0 if a["delt"][0] < AX else 1.0
+        d = a["delt"]
+        dx = 2.5 if placed else 4.5
+        dy = 1.5 if placed else 3.0
+        a["delt"] = (d[0] + dx * sgn, d[1] - dy, d[2] * 1.32, d[3] * 1.30)
+        b = a["bice"]
+        a["bice"] = (b[0] + (1.0 if placed else 2.0) * sgn,
+                     b[1] - (1.0 if placed else 3.0), b[2] * 1.24, b[3] * 1.22)
+        u = a["uarm"]
+        f = a["farm"]
+        fi = a["fist"]
+        if k in posed or placed:
+            # a punching or chambered arm keeps its authored geometry: the
+            # contact points are wired against it
+            lift = 1.5 if placed else 3.0
+            a["uarm"] = ((u[0][0] + (2.5 if placed else 4.5) * sgn, u[0][1] - lift),
+                         u[1], u[2] * 1.22, u[3] * 0.98)
+            a["farm"] = (f[0], f[1], f[2] * 0.96, f[3] * 0.94)
+            a["fist"] = fi
+        else:
+            # a hanging arm: shoulder out and high, forearm tucked hard in to
+            # the hip and ending above the trunks, so the whole outline is a V
+            a["uarm"] = ((u[0][0] + 4.5 * sgn, u[0][1] - 3.0),
+                         (u[1][0] + 0.5 * sgn, u[1][1] - 4.0), u[2] * 1.22, u[3] * 1.02)
+            a["farm"] = ((f[0][0] + 0.5 * sgn, f[0][1] - 4.0),
+                         (f[1][0] - 5.5 * sgn, f[1][1] - 5.5), f[2] * 1.0, f[3] * 0.92)
+            a["fist"] = (fi[0] - 8.0 * sgn, fi[1] - 5.5, fi[2] * 0.94, fi[3] * 0.94)
+        r[k] = a
+    for k in ("legL", "legR"):
+        g = dict(r[k])
+        t = g["thigh"]
+        g["thigh"] = ((t[0][0], t[0][1] + 3.0), t[1], t[2] * 0.78, t[3] * 0.84)
+        cf = g["calf"]
+        g["calf"] = (cf[0], cf[1], cf[2] * 0.82, cf[3] * 0.86)
+        r[k] = g
+    r["trunk_y"] = (r["trunk_y"][0] + 4.0, r["trunk_y"][1] + 4.0)
+    return r
+
+
 # ---------------------------------------------------------------------------
-def _mass(c, shape, mat, prio, lo=2.6, hi=2.0):
-    """One flat cartoon mass: base fill, a lit crescent up-left, a shadow
-    crescent down-right.  Three tones, no gradient, no modelling."""
-    c.add(shape, mat, prio=prio, flat=BASE)
-    if hi:
-        c.add(Sub(shape, Translate(shape, hi, hi)), mat, prio=prio, flat=HI)
-    if lo:
-        c.add(Sub(shape, Translate(shape, -lo, -lo)), mat, prio=prio, flat=SHA)
+def _mass(c, shape, mat, prio, lo=2.6, hi=2.0, wrap=0.56, amb=0.10):
+    """One big simple mass, shaded smoothly across its surface with the full
+    six-tone ramp.  The shape is still a plain blob - the tones turn it from
+    lit to shadow, and nothing is ever drawn ON it to suggest muscle."""
+    c.add(shape, mat, prio=prio, wrap=wrap, amb=amb)
 
 
 def build(pose="hero", hair=None):
     rage = pose == "phase2" or pose.startswith("p2_")
     mat = "rage" if rage else "skin"
     c = Canvas(W, H, PAL, OUTLINE)
-    r = _rig(pose)
+    r = _physique(_rig(pose), pose)
     if hair:
         r["hair"] = hair
     L = r["lean"]
     B = r["body_dy"]
     hx, hy, hrx, hry = r["head"]
-    hrx *= 1.17                                  # cartoon head: wider
+    hrx *= 1.10                                  # lean cartoon head
     hry *= 1.04
     ty0, ty1 = r["trunk_y"]
     ch = r.get("chest_ry", 0.0)
 
     # ---- one torso mass -------------------------------------------------
-    torso = Union([Ellipse(AX + L * .7, 41 + B, 21.5, 10.5 + ch),
-                   Ellipse(AX - 13.5 + L * .7, 48 + B, 11.5, 11.5),
-                   Ellipse(AX + 13.5 + L * .7, 48 + B, 11.5, 11.5),
-                   Ellipse(AX + L, 55 + B, 12.0, 9.5),
-                   Ellipse(AX + L, 61 + B, 9.5, 6.5),
-                   Ellipse(AX + L, 66 + B, 14.5, 8.5)], k=3.2)
+    # shoulders 54 px across, waist 16 - the taper IS the character
+    torso = Union([Ellipse(AX + L * .7, 42 + B, 22.0, 9.5 + ch),
+                   Ellipse(AX - 15.0 + L * .7, 46 + B, 12.0, 10.5),
+                   Ellipse(AX + 15.0 + L * .7, 46 + B, 12.0, 10.5),
+                   Ellipse(AX + L, 53 + B, 12.5, 8.0),
+                   Ellipse(AX + L, 60 + B, 7.5, 7.0),
+                   Ellipse(AX + L, 67 + B, 9.5, 8.0)], k=1.8)
     _mass(c, torso, mat, 1, lo=3.0, hi=2.4)
 
     tp = r["trap"]
@@ -541,7 +598,7 @@ def build(pose="hero", hair=None):
         (AX + 11, ty1 + 3), (AX + 7.0, ty1), (AX, ty1 + 2),
         (AX - 7.0, ty1), (AX - 11, ty1 + 3),
         (tx - 2, ty1 + 2), (tx - 2, ty0 + 5)], round_r=6)
-    trunks = Clip(Union([Ellipse(AX + L, 66 + B, 15.5, 9.0)] + legs, k=2.4), trunk_poly)
+    trunks = Clip(Union([Ellipse(AX + L, 67 + B, 10.5, 8.5)] + legs, k=2.4), trunk_poly)
     _mass(c, trunks, "trunk", 4, lo=3.0, hi=2.2)
 
     # ---- boots ----------------------------------------------------------
@@ -580,11 +637,11 @@ def build(pose="hero", hair=None):
     # ---- head + mane ----------------------------------------------------
     head = Union([Ellipse(hx, hy, hrx, hry),
                   Ellipse(hx, hy + 4.0, hrx - 2.2, hry - 3.0)], k=2.0)
-    _mass(c, head, mat, 16, lo=3.0, hi=2.4)
+    _mass(c, head, mat, 16, wrap=0.50, amb=0.16)
     crown, falls = _hair(r["hair"], hx, hy, hrx, hry)
     if falls is not None:
-        _mass(c, falls, "hair", 5, lo=3.0, hi=2.4)
-    _mass(c, crown, "hair", 18, lo=3.0, hi=2.4)
+        _mass(c, falls, "hair", 5, wrap=0.60, amb=0.10)
+    _mass(c, crown, "hair", 18, wrap=0.60, amb=0.10)
 
     # ---- black ink between overlapping masses ---------------------------
     for shp, prio in arm_shapes:
@@ -594,6 +651,10 @@ def build(pose="hero", hair=None):
         b = r[key]["boot"]
         c.contour(RoundRect(b[0], b[1], b[2], b[3], r=4.0, round_r=6.5), 1.2,
                   color=OUTLINE, below_prio=5)
+
+    c.occlude(strength=2, reach=1)
+    c.rim(1, mats=(mat, "hair", "trunk", "boot"))
+    c.despeckle()
 
     _details(c, r, L, mat, ty0, ty1, B)
     if rage:
@@ -634,8 +695,16 @@ def _details(c, r, L, mat, ty0, ty1, B=0.0):
     """The only internal lines Mason's style allows: a waistband, a sole, a
     couple of knuckles, one crease where a limb folds."""
     ty0, ty1 = int(round(ty0)), int(round(ty1))
-    c.raw_px([(x, ty0 + 1) for x in range(22, 74)], OUTLINE)
-    c.shade_px([(x, ty0 + 2) for x in range(22, 74)], -1, "trunk")
+    c.ink_px([(x, ty0 + 1) for x in range(18, 78)], OUTLINE, mats=("trunk",))
+    c.shade_px([(x, ty0 + 2) for x in range(18, 78)], -1, "trunk")
+
+    # the one concession to vascularity: a vein down each forearm
+    for key in ("armL", "armR"):
+        a = r[key]
+        (ex, ey), (fx2, fy2) = a["farm"][0], a["farm"][1]
+        vx0, vy0 = ex + (fx2 - ex) * 0.25, ey + (fy2 - ey) * 0.25
+        vx1, vy1 = ex + (fx2 - ex) * 0.80, ey + (fy2 - ey) * 0.80
+        c.shade_px(polyline([(vx0, vy0), (vx1 - 1.5, vy1)]), 1, mat)
 
     for key in ("legL", "legR"):
         b = r[key]["boot"]
@@ -685,13 +754,15 @@ def _out(face):
 
 
 def _rage_extras(c, r):
-    """Computah's snapped antenna clenched in his screen-left fist"""
-    rod = polyline([(13, 76), (9, 84), (7, 90)])
+    """Computah's snapped antenna, clenched in his screen-left fist"""
+    fx, fy = r["armL"]["fist"][0], r["armL"]["fist"][1]
+    rod = polyline([(fx - 4.5, fy + 4.0), (fx - 9.0, fy + 13.0), (fx - 11.5, fy + 20.0)])
     for (x, y) in rod:
-        c.set_px([(x, y)], "steel", 1)
-        c.set_px([(x + 1, y)], "steel", 2)
-    c.raw_px([(6, 91), (7, 91), (6, 92), (7, 92)], "#C0392B")
-    c.raw_px([(6, 91)], "#FF8A7A")
+        c.set_px([(x, y)], "steel", 2)
+        c.set_px([(x + 1, y)], "steel", 4)
+    bx, by = int(round(fx - 12.5)), int(round(fy + 22.0))
+    c.raw_px([(bx, by), (bx + 1, by), (bx, by + 1), (bx + 1, by + 1)], "#C0392B")
+    c.raw_px([(bx, by)], "#FF8A7A")
     c.raw_px([(int(AX) - 9, 28), (int(AX) - 9, 29)], "#9FE0FF")
 
 
