@@ -59,17 +59,19 @@ const VOICES := {
 		"every": 3,
 		"volume_db": -2.5,
 	},
-	# Deadpan and unimpressed: nearly monotone and unhurried.
+	# Deadpan: the deepest and slowest voice here, and flat enough to be a rumble rather than speech. The pitch
+	# drops his blip a fifth, to ~142 Hz, under Eric and over Jordan, and the range is a hair wide so it reads as
+	# a man who won't be moved rather than as a machine.
 	"carter": {
 		"streams": [
 			preload("res://Assets/Audio/SFX/Voices/voice_carter_1.wav"),
 			preload("res://Assets/Audio/SFX/Voices/voice_carter_2.wav"),
 		],
-		"pitch_min": 0.985,
-		"pitch_max": 1.015,
+		"pitch_min": 0.645,
+		"pitch_max": 0.655,
 		"melody": [1.0],
-		"every": 6,
-		"volume_db": 1.0,
+		"every": 9,
+		"volume_db": 1.5,
 	},
 	# A flashy show-off: bright, bouncy and quick, with the widest pitch swing.
 	"josh": {

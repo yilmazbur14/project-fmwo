@@ -5,10 +5,13 @@ extends State
 
 const NUGGET_METEOR_SCENE := "res://Scenes/Bosses/NuggetMeteorScene.tscn"
 const NuggetMeteor := preload("res://Scripts/NuggetMeteorScript.gd")
-const TARGET_EVERY := 3
-# No marker goes down this close to a nugget due to land after it appears. Nuggets already landing don't
-# count, or the aimed nugget after one that hit a player standing still would be pushed off them.
-const NUGGET_SPACING := 110.0
+
+# Every nth nugget of a shower is aimed at the player; the rest fall anywhere.
+@export var target_every := 3
+# No marker goes down this close to a nugget due to land after it appears: with the sky this busy it
+# is what keeps gaps between the markers to stand in. Nuggets already landing don't count, or the
+# aimed nugget after one that hit a player standing still would be pushed off them.
+@export var nugget_spacing := 110.0
 # How deep an aimed nugget moved off the player has to reach into their hurtbox, so the hit registers
 # reliably rather than by a hair.
 const MIN_PLAYER_OVERLAP := 4.0
@@ -45,14 +48,14 @@ func Enter() -> void:
 # Called by the nugget_toss animation on its heave frame, as the nuggets leave the bucket.
 func start_shower() -> void:
 	var phase: int = state_machine.cycle_phase
-	var count: int = state_machine.NUGGET_COUNT[phase]
-	var interval: float = state_machine.NUGGET_SHOWER_TIME[phase] / count
+	var count: int = state_machine.nugget_count[phase]
+	var interval: float = state_machine.nugget_shower_time[phase] / count
 	# One tween runs the whole shower, so leaving the state stops it in one go.
 	shower = create_tween()
 	for i in count:
 		if i > 0:
 			shower.tween_interval(interval)
-		shower.tween_callback(_drop_nugget.bind((i + 1) % TARGET_EVERY == 0, i * interval))
+		shower.tween_callback(_drop_nugget.bind((i + 1) % target_every == 0, i * interval))
 	shower.tween_callback(func(): shower_done = true)
 
 
@@ -79,7 +82,7 @@ func _drop_nugget(aimed: bool, drop_time: float) -> void:
 		spot = _aimed_spot(player.global_position, hurtbox_shape.global_transform * hurtbox_shape.shape.get_rect(), drop_time)
 	else:
 		spot = _random_open_spot(drop_time)
-	var warning: float = state_machine.NUGGET_WARNING[state_machine.cycle_phase]
+	var warning: float = state_machine.nugget_warning[state_machine.cycle_phase]
 	var nugget = state_machine.spawn_hazard(NUGGET_METEOR_SCENE, spot)
 	nugget.drop(warning, keep_out.has_point(spot))
 	nuggets.append(nugget)
@@ -149,6 +152,6 @@ func _is_open(spot: Vector2, drop_time: float) -> bool:
 
 func _clear_of_nuggets(spot: Vector2, drop_time: float) -> bool:
 	for i in landing_spots.size():
-		if landing_times[i] > drop_time and landing_spots[i].distance_to(spot) < NUGGET_SPACING:
+		if landing_times[i] > drop_time and landing_spots[i].distance_to(spot) < nugget_spacing:
 			return false
 	return true

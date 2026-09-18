@@ -56,3 +56,50 @@ kkk&kkk
 ..k&k..
 ..kkk..
 """
+
+
+# ---------------------------------------------------------------- reduced
+# Hand-drawn companions for the 0.84 scale.  Resampling these cost the eyes the
+# black rim that makes them eyes and reduced the cross earring to a white dash,
+# so the shapes are re-drawn rather than re-sampled.  Canvas.stamp centres each
+# one on the same design point as its full-size partner.
+
+BROWS_S = """
+55555..........55555
+655555........555556
+.6655555....5555566.
+"""
+
+EYES_S = """
+.kkkkkkk....kkkkkkk.
+.kkkkkkk....kkkkkkk.
+.kVOOOVk....kVOOOVk.
+.k77777k....k77777k.
+..kwwwk......kwwwk..
+"""
+
+NOSE_S = """
+..tuv.
+..tuv.
+.stuvw
+.sttvw
+.wkkwv
+..vww.
+"""
+
+MOUTH_S = """
+.555555.
+kkkkkkkk
+.566665.
+"""
+
+EARRING_S = """
+..k..
+.kkk.
+.k#k.
+kk#kk
+k#%#k
+kk#kk
+.k#k.
+.kkk.
+"""

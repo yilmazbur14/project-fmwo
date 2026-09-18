@@ -29,8 +29,8 @@ IV_TH = [0.0, 0.13, 0.32, 0.58, 0.87]
 # 79 and the figure is still centred on x=40.
 BASE = dict(BD.POSE0)
 BASE.update(
-    neck=[(37, 46), (43, 46), (44, 53), (36, 53)],
-    neck_axis=((40, 46), (40, 54), 3.6, 3.2),
+    neck=[(35, 46), (45, 46), (46, 53), (34, 53)],
+    neck_axis=((40, 46), (40, 54), 4.5, 4.0),
     torso=[(37, 47), (35, 49), (32, 51), (31, 55), (32, 59), (31, 62), (30, 67),
            (34, 66), (40, 64), (46, 66), (50, 67), (49, 62), (48, 59), (49, 55),
            (48, 51), (45, 49), (43, 47)],
@@ -52,6 +52,7 @@ BASE.update(
     r_shoe=[(42, 75), (51, 75), (53, 77), (52, 79), (42, 79), (41, 77)],
 )
 
+BULK = 1.0                         # >1 puts weight back into the chest and shoulders
 SLIM_W = 0.80                      # trunk narrowing factor for per-frame pose overrides
 LIMB = 0.76                        # limb thickness factor
 
@@ -346,8 +347,22 @@ def cloth(c, poly, ramp=TAIL_RAMP, th=IV_TH, root=None, lining=True):
     return m
 
 
+def bulk(P, k):
+    """Candidate B: widen the trunk and thicken the arms so the fuller head sits on a body that
+    can carry it, without losing the lean gambler line in the legs."""
+    if k == 1.0:
+        return P
+    Q = trunk(P, k=k)
+    for key in ARM_KEYS:
+        if P.get(key):
+            a = Q[key]
+            Q[key] = a[:4] + (a[4] * k, a[5] * k, a[6] * k, a[7])
+    return Q
+
+
 def build(c, P):
     """body.build_body's exact sequence, with the pose's own neck plus optional coat tails."""
+    P = bulk(P, BULK)
     for poly in P.get('tail_back', []) or []:
         cloth(c, poly, root=max(poly, key=lambda p: p[0]))
     BD.leg(c, *P['l_leg'])

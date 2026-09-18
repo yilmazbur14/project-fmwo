@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/PooLineStartScript.gd" id="1_linestart"]
+
+[node name="PooLineStart" type="Node2D" node_paths=PackedStringArray("ring", "ring_outline", "path", "path_outline", "runner", "hold_timer") groups=["mason_hazard"]]
+script = ExtResource("1_linestart")
+ring = NodePath("Ring")
+ring_outline = NodePath("RingOutline")
+path = NodePath("Path")
+path_outline = NodePath("PathOutline")
+runner = NodePath("Runner")
+hold_timer = NodePath("HoldTimer")
+
+[node name="PathOutline" type="Line2D" parent="."]
+width = 18.0
+default_color = Color(0, 0, 0, 0.55)
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="Path" type="Line2D" parent="."]
+width = 12.0
+default_color = Color(0.98431373, 0.94901961, 0.21176471, 0.55)
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="Runner" type="Line2D" parent="."]
+width = 12.0
+default_color = Color(0.98431373, 0.94901961, 0.21176471, 1)
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="RingOutline" type="Line2D" parent="."]
+width = 13.0
+default_color = Color(0, 0, 0, 0.75)
+joint_mode = 2
+
+[node name="Ring" type="Line2D" parent="."]
+width = 7.0
+default_color = Color(0.98431373, 0.94901961, 0.21176471, 1)
+joint_mode = 2
+
+[node name="HoldTimer" type="Timer" parent="."]
+one_shot = true

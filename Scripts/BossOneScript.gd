@@ -118,6 +118,10 @@ func take_punch(amount: int) -> int:
 		if parry_stagger_hits >= PARRY_STAGGER_HIT_CAP:
 			return 0
 		parry_stagger_hits += 1
+	return _take_damage(amount)
+
+
+func _take_damage(amount: int) -> int:
 	var dealt := mini(amount, boss_health)
 	boss_health -= dealt
 	print("Boss health: ", boss_health)
@@ -129,7 +133,7 @@ func take_punch(amount: int) -> int:
 
 # The attacks a parry (PlayerDefense) can stagger him out of, and the state each runs in.
 const PARRY_STAGGER_STATES := {
-	&"eric_whirlwind": "Whirlwind",
+	&"eric_thrown_sword": "SwordThrow",
 	&"eric_bear_hug_grab": "BearHug",
 }
 
@@ -147,16 +151,23 @@ func parry_stagger(duration: float) -> void:
 	if defeated or boss_health <= 0 or state_machine.defeated:
 		return
 	var state = state_machine.current_state
-	if state == state_machine.states.get("Whirlwind"):
-		state_machine.parry_stagger(duration, state.eric_original_position)
+	if state == state_machine.states.get("SwordThrow"):
+		# The parried sword flies back first: it staggers him when it reaches him, not now.
+		state.reflect(duration)
 	elif state == state_machine.states.get("BearHug"):
 		state_machine.parry_stagger(duration, state.plant_spot)
 
 
-# The player's finisher (PlayerFinisher). Only the Downed window can be dazed: the bear hug's stumble
-# is too short for a three-punch combo.
+# The player's finisher (PlayerFinisher). The Downed window, and the stagger his own sword leaves him
+# in when a parry sends it back through him: that one fires the uppercut on its own. A parried bear
+# hug isn't one, its stumble is too short.
 func can_be_dazed() -> bool:
-	return not defeated and boss_health > 0 and not daze_used and state_machine.current_state == state_machine.states.get("Downed")
+	if defeated or boss_health <= 0 or daze_used:
+		return false
+	var state = state_machine.current_state
+	if state == state_machine.states.get("Downed"):
+		return true
+	return state == state_machine.states.get("ParryStaggered") and state.from_reflect
 
 
 func enter_daze() -> void:
@@ -177,8 +188,10 @@ func end_recovery(stagger_time: float) -> bool:
 	return true
 
 
+# Past the hit cap, as PlayerFinisher's contract says: that cap is for punches thrown in the window,
+# and the uppercut the reflect fires is what the window is for.
 func take_finisher(amount: int) -> int:
-	return take_punch(amount)
+	return _take_damage(amount)
 
 
 func get_max_health() -> int:

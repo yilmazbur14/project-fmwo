@@ -7,6 +7,8 @@ Frames: 0 = idle, 1 = arms-crossed signature pose, 2 = back view.
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
+import carter_scale
+carter_scale.apply()          # draw him at his reduced size
 from lib import W, H, Canvas
 from pngio import write_png, blank, paste
 import render as R, parts as P, aura as AU, poses as PO

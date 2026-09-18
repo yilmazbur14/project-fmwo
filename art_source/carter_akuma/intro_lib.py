@@ -272,12 +272,19 @@ def wrap_bands_both(cv, mask, a, b, **kw):
     wrap_bands(cv, right, (95.0 - a[0], a[1]), (95.0 - b[0], b[1]), **kw)
 
 
+def _sc():
+    import lib
+    return lib.SCALE
+
+
 def rim_light(cv, body, level, seed_mask=None, reach=30.0):
     """warm bounce on the silhouette edge nearest the mark - sells the fact
     that the glow is a real light source sitting on his back."""
     if level <= 0.05:
         return
-    cx, cy = MARK_C
+    import lib
+    cx, cy = lib.T(*MARK_C)
+    reach = reach * _sc()
     edge = sub(body, erode(body, 1))
     inner = sub(erode(body, 1), erode(body, 2))
     for m, amt in ((edge, 1.0), (inner, 0.45)):
@@ -298,6 +305,10 @@ def ground_glow(cv, level, cx=47.5, row=94, span=30.0):
     """the floor catching the flare, kept inside the frame."""
     if level <= 0.25:
         return
+    import lib
+    cx = lib.T(cx, 0.0)[0]
+    row = int(round(lib.T(0.0, row)[1]))
+    span = span * _sc()
     t = (level - 0.25) / 0.75
     for dy in range(0, 5):
         y = row - dy
@@ -545,6 +556,12 @@ def aura_heat(cv, body, level):
 
 # ---------------------------------------------------------------- transforms
 
+def head_rows():
+    """rows where the skull hands over to the shoulders, at whatever scale"""
+    import lib
+    return int(round(lib.T(0.0, 40)[1])), int(round(lib.T(0.0, 50)[1]))
+
+
 HEAD_LO, HEAD_HI = 40, 50        # rows the skull hands over to the shoulders
 
 
@@ -558,13 +575,14 @@ def turn_scale(s, keep_head=True):
     if not keep_head:
         return lambda y: s
     sh = min(1.0, 0.92 + 0.08 * s)
+    lo, hi = head_rows()
 
     def f(y):
-        if y <= HEAD_LO:
+        if y <= lo:
             return sh
-        if y >= HEAD_HI:
+        if y >= hi:
             return s
-        t = (y - HEAD_LO) / float(HEAD_HI - HEAD_LO)
+        t = (y - lo) / float(hi - lo)
         return sh * (1.0 - t) + s * t
     return f
 

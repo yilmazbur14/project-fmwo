@@ -5,12 +5,10 @@ signal finished
 const HitInfo := preload("res://Scripts/HitInfo.gd")
 
 const DIVE_FRAME_INTERVAL := 0.08
-const HITBOX_ACTIVE_TIME := 0.15
-const LANDED_TIME := 0.2
 
-# The damage area: elbow_target_v2.png's oval, 72x40 texels at 3x with its outline on the resting frame,
-# so a player just outside the drawn marker is never hit. A polygon rather than a capsule, which would
-# bulge past the oval's shoulders.
+# The damage area at hit_scale 1: elbow_target_v2.png's oval, 72x40 texels at 3x with its outline on
+# the resting frame, so a player just outside the drawn marker is never hit. A polygon rather than a
+# capsule, which would bulge past the oval's shoulders.
 const HITBOX_SIZE := Vector2(216, 120)
 const HITBOX_OVAL_POINTS := 32
 # How deep a landing moved off Mason has to reach into the hurtbox of a player standing by him, so the
@@ -42,6 +40,17 @@ const IMPACT_FRAMES := 4
 @export var animation_player: AnimationPlayer
 @export var slam_sfx: AudioStreamPlayer
 
+# How long the slam hurts, and how long he lies in it before sitting up.
+@export var hitbox_active_time := 0.15
+@export var landed_time := 0.14
+# Mason's elbow_hit_scale, set on the drop before anything is measured off it. The marker, the dust
+# and the oval hit area grow together on it, so the hit is always exactly what the marker showed.
+@export var hit_scale := 1.0:
+	set(value):
+		hit_scale = value
+		if is_node_ready():
+			_apply_hit_scale()
+
 # Set by Mason for the current phase before begin().
 var telegraph_time: float
 var dive_time: float
@@ -53,6 +62,12 @@ var target_player: Node2D
 var arena_bounds: Rect2
 var keep_out: Rect2
 var over_mason := false
+# What the marker and dust art are authored at, before hit_scale grows them. Their positions grow
+# with them: both are drawn from a texture offset that scales, and only the two together keep the
+# oval they draw centred on the landing spot.
+var art_scale := Vector2.ONE
+var target_art_position := Vector2.ZERO
+var impact_art_position := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -62,10 +77,28 @@ func _ready() -> void:
 	target_sprite.hframes = TARGET_FRAMES
 	impact_sprite.texture = IMPACT_TEXTURE
 	impact_sprite.hframes = IMPACT_FRAMES
+	art_scale = target_sprite.scale
+	target_art_position = target_sprite.position
+	impact_art_position = impact_sprite.position
+	# The shape resource is shared by every drop that comes out of this scene, so each one sizes its
+	# own copy.
+	hitbox_shape.shape = hitbox_shape.shape.duplicate()
+	_apply_hit_scale()
+
+
+func _apply_hit_scale() -> void:
 	var oval := PackedVector2Array()
 	for i in HITBOX_OVAL_POINTS:
-		oval.append(Vector2.from_angle(TAU * i / HITBOX_OVAL_POINTS) * HITBOX_SIZE / 2.0)
+		oval.append(Vector2.from_angle(TAU * i / HITBOX_OVAL_POINTS) * hit_size() / 2.0)
 	(hitbox_shape.shape as ConvexPolygonShape2D).points = oval
+	target_sprite.scale = art_scale * hit_scale
+	target_sprite.position = target_art_position * hit_scale
+	impact_sprite.scale = art_scale * hit_scale
+	impact_sprite.position = impact_art_position * hit_scale
+
+
+func hit_size() -> Vector2:
+	return HITBOX_SIZE * hit_scale
 
 
 # Everything a drop covers around its landing spot: Carter's pose, the marker, the dust burst and the
@@ -108,9 +141,9 @@ func begin(drop_count: int, player: Node2D, bounds: Rect2, avoid: Rect2) -> void
 		sequence.tween_property(carter_sprite, "position", Vector2.ZERO, dive_time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		sequence.parallel().tween_method(_set_dive_frame, 0.0, dive_time, dive_time)
 		sequence.tween_callback(_land)
-		sequence.tween_interval(HITBOX_ACTIVE_TIME)
+		sequence.tween_interval(hitbox_active_time)
 		sequence.tween_callback(_disable_hitbox)
-		sequence.tween_interval(LANDED_TIME - HITBOX_ACTIVE_TIME)
+		sequence.tween_interval(maxf(landed_time - hitbox_active_time, 0.0))
 		sequence.tween_callback(carter_sprite.set_frame.bind(SIT_UP_FRAME))
 		sequence.tween_interval(sit_up_time)
 		sequence.tween_callback(_leap_out)
@@ -139,7 +172,7 @@ func _landing_spot(target: Vector2, hurtbox: Rect2) -> Vector2:
 		return spot
 	# Measured in semi-axes of the oval, shrunk by the overlap it needs: a landing reaches the player when
 	# their hurtbox comes within 1 of it.
-	var semi_axes := HITBOX_SIZE / 2.0 - Vector2.ONE * MIN_PLAYER_OVERLAP
+	var semi_axes := hit_size() / 2.0 - Vector2.ONE * MIN_PLAYER_OVERLAP
 	var pushed := Vector2.INF
 	var reaching := Vector2.INF
 	for axis in 2:

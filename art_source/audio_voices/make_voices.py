@@ -409,7 +409,7 @@ PREVIEW_LINES = [
     ("burak", "Burak", "(Another server ghosted me... nobody wants a newcomer.)"),
     ("eric", "Eric", "Ha! The server stays pure for another day. Log off, and don't come back."),
     ("computah", "Computah", "Target neutralised. Bzzzt. Shall I remove another heart, sir?"),
-    ("carter", "Carter", "Just don't run into me like Tulsa again. Born ready. Let's dance."),
+    ("carter", "Carter", "You got past Josh. Fine. I only have one move. You won't see it twice."),
     ("josh", "Josh", "Alright Carter, this one's got fresh legs. Let's give him the full show."),
     ("liam", "Liam", "Well, well! Welcome to my arena, newcomer. Nobody gets this far by accident."),
     ("jordan", "Jordan", "So you're the newcomer everyone keeps pinging me about. I run this server."),

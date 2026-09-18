@@ -14,7 +14,7 @@ func Enter() -> void:
 
 
 func Physics_Update(delta: float) -> void:
-	var speed: float = state_machine.WADDLE_SPEED[state_machine.cycle_phase]
+	var speed: float = state_machine.waddle_speed[state_machine.cycle_phase]
 	distance = minf(distance + delta * speed, state_machine.line_length)
 	body.global_position = state_machine.walk_position(distance)
 	state_machine.drop_bombs_up_to(distance)

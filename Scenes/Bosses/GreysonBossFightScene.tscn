@@ -1,17 +1,28 @@
 [gd_scene format=3 uid="uid://b4ko583hikhxt"]
 
 [ext_resource type="PackedScene" uid="uid://4pqund3nukl7" path="res://Scenes/Core/ArenaScene.tscn" id="1_hjs1c"]
-[ext_resource type="PackedScene" uid="uid://jcx0ll34f3je" path="res://Scenes/Bosses/BossTwoScene.tscn" id="2_o248v"]
-[ext_resource type="PackedScene" path="res://Scenes/Bosses/GreysonMechScene.tscn" id="3_mech"]
+[ext_resource type="PackedScene" path="res://Scenes/Bosses/GreysonComputahScene.tscn" id="2_pair"]
 
 [node name="GreysonBossFightScene" type="Node2D" unique_id=1520311214]
+y_sort_enabled = true
 
 [node name="Arena" parent="." unique_id=991001701 instance=ExtResource("1_hjs1c")]
+y_sort_enabled = true
 
-[node name="BossTwoScene" parent="Arena" unique_id=1932473095 instance=ExtResource("2_o248v")]
-position = Vector2(965, 183)
+[node name="MainPlayer" parent="Arena" index="6"]
+y_sort_enabled = true
 
-[node name="GreysonMechScene" parent="Arena" node_paths=PackedStringArray("computah", "greyson") instance=ExtResource("3_mech")]
-position = Vector2(960, 406)
-computah = NodePath("../BossTwoScene/ComputahCharacterBody")
-greyson = NodePath("../BossTwoScene/Greyson")
+[node name="CharacterBody2D" parent="Arena/MainPlayer" index="0"]
+y_sort_enabled = true
+
+[node name="Sprite2D" parent="Arena/MainPlayer/CharacterBody2D" index="1"]
+position = Vector2(0, 13)
+offset = Vector2(0, -13)
+
+[node name="wallBoundaries" parent="Arena" index="7"]
+z_index = 1
+
+[node name="GreysonComputahScene" parent="Arena" instance=ExtResource("2_pair")]
+
+[editable path="Arena"]
+[editable path="Arena/MainPlayer"]

@@ -18,7 +18,7 @@ func Enter() -> void:
 	# outside a physics flush, where direct monitoring changes are rejected.
 	hurtbox.set_deferred("monitoring", true)
 	hurtbox.set_deferred("monitorable", true)
-	eat_timer.start(state_machine.EAT_WINDOW[state_machine.cycle_phase])
+	eat_timer.start(state_machine.eat_window[state_machine.cycle_phase])
 
 
 func Exit() -> void:

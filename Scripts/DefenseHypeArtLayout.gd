@@ -197,6 +197,21 @@ const PARRY_GLOW := {
 	"scale": 2.0,
 }
 
+#PARRY WINDOW
+# While a press has a parry armed (PlayerDefense.parry_window), a bright copy of the player's own
+# frame is drawn a shade larger behind him: a rim that says the window is open, distinct from the
+# block pose, and gone the moment the window lapses. A miss reads as "too early" or "too late"
+# instead of looking like a plain block.
+const PARRY_WINDOW_RIM := {
+	# Blown well past white so every colour in his frame clips to the same gold: the copy reads as a
+	# glow rather than as a second, darker player.
+	"tint": Color(6.0, 5.0, 2.2, 0.9),
+	"grow": 1.14,
+	# Real seconds per frame of its flicker, and the alpha it drops to on the off frame.
+	"flicker_time": 0.04,
+	"flicker_alpha": 0.5,
+}
+
 #PLAYER FLASHES
 # On the player's sprite self_modulate, fading back to white.
 const BLOCK_FLASH := Color(1.5, 1.8, 2.2)
@@ -298,6 +313,15 @@ const FINAL_PERFECT_DODGE_TRAIL := {
 	"frame_times": [0.05, 0.06, 0.07, 0.08],
 	"scale": 2.0,
 }
+
+#LOCKED SEQUENCE
+# A fight holding the player for a parry-only sequence (Carter's clones). The blink that puts them in
+# place leaves the dash's own ghosts along the way, and a held player is tinted a shade so being
+# unable to move doesn't read as a bug. The tint is on the body, so the sprite's own block, parry and
+# hurt flashes still show through it.
+const WARP_GHOST_COUNT := 5
+const LOCKED_TINT := Color(0.78, 0.82, 1.0)
+const LOCKED_TINT_TIME := 0.15
 
 #PARRY STREAK COUNTER
 # A running count while a streak is alive, over the hype meter, fading out when it lapses.
@@ -417,27 +441,18 @@ const FINAL_POPUPS := {
 #SOUNDS
 # Placeholders from the existing sounds until final ones arrive.
 const BLOCK_SFX := {"stream": "res://Assets/Audio/SFX/hit_impact.ogg", "pitch": 1.6, "volume_db": -8.0}
-# A bright tink per streak tier, plus a sting when a streak reaches tier 3. Placeholders from the
-# existing sounds until the audio coder's parry_tink_1..3 and streak sting land; the flag swaps them.
-const USE_FINAL_PARRY_SFX := true
-const PLACEHOLDER_PARRY_SFX := [
-	{"stream": "res://Assets/Audio/SFX/hit_impact.ogg", "pitch": 2.2},
-	{"stream": "res://Assets/Audio/SFX/hit_impact.ogg", "pitch": 2.5},
-	{"stream": "res://Assets/Audio/SFX/hit_impact.ogg", "pitch": 2.8},
-]
-# A major triad climbing with the tier. Their peaks match by design, so `volume_db` is the knob if a
-# later tier should also feel heavier.
-const FINAL_PARRY_SFX = [
-	{"stream": "res://Assets/Audio/SFX/parry_tink_1.wav", "pitch": 1.0, "volume_db": 0.0},
-	{"stream": "res://Assets/Audio/SFX/parry_tink_2.wav", "pitch": 1.0, "volume_db": 0.0},
-	{"stream": "res://Assets/Audio/SFX/parry_tink_3.wav", "pitch": 1.0, "volume_db": 0.0},
-]
-# Tails overlap when parries come quickly, so the tinks round-robin through a few players.
-const PARRY_SFX_VOICES := 3
-# The sting lands just after the third tink, so the hit itself reads first.
-const PARRY_STREAK_STING_DELAY := 0.04
-const PLACEHOLDER_PARRY_STREAK_STING := {"stream": "res://Assets/Audio/SFX/downed_stinger.ogg", "pitch": 1.5}
-const FINAL_PARRY_STREAK_STING := {"stream": "res://Assets/Audio/SFX/parry_streak.wav", "pitch": 1.0}
+# The parry's one sound. Every parry plays it at the same level, first of the fight or fifth of a
+# chain: the streak escalates in the art, never in the ears. The user's own file is kept out of the
+# repo, so anyone without it gets the synthesised hit instead and still has a parry cue.
+const PARRY_HIT_LOCAL := "res://Assets/Audio/SFX/local/parry_local.mp3"
+const PARRY_HIT_FALLBACK := "res://Assets/Audio/SFX/parry_hit_1.wav"
+# The local file is a finished sample mastered near full scale; the synthesised one peaks at
+# -3 dBFS with far less behind it, so each has its own level to sit in the mix at.
+const PARRY_HIT_LOCAL_DB := -6.0
+const PARRY_HIT_FALLBACK_DB := 0.0
+# parry_tink_1..3 and parry_streak.wav stay in the repo but nothing plays them: the streak used to
+# layer and climb through them, which is exactly the escalation that was cut.
+
 const GUARD_BREAK_SFX := {"stream": "res://Assets/Audio/SFX/wrestler_collision.ogg", "pitch": 0.8}
 const PERFECT_DODGE_SFX := {"stream": "res://Assets/Audio/SFX/whirlwind_whoosh.ogg", "pitch": 1.5}
 const HYPE_FULL_SFX := {"stream": "res://Assets/Audio/SFX/downed_stinger.ogg", "pitch": 1.3}
@@ -494,13 +509,11 @@ static func popup(kind: StringName) -> Dictionary:
 	return PLACEHOLDER_POPUPS[kind]
 
 
-static func parry_sfx(tier: int) -> Dictionary:
-	var sounds: Array = FINAL_PARRY_SFX if USE_FINAL_PARRY_SFX else PLACEHOLDER_PARRY_SFX
-	return sounds[clampi(tier, 0, sounds.size() - 1)]
-
-
-static func parry_streak_sting() -> Dictionary:
-	return FINAL_PARRY_STREAK_STING if USE_FINAL_PARRY_SFX else PLACEHOLDER_PARRY_STREAK_STING
+# The stream is the user's own when it is there, the synthesised hit when it isn't.
+static func parry_hit_sfx() -> Dictionary:
+	if ResourceLoader.exists(PARRY_HIT_LOCAL):
+		return {"stream": PARRY_HIT_LOCAL, "pitch": 1.0, "volume_db": PARRY_HIT_LOCAL_DB}
+	return {"stream": PARRY_HIT_FALLBACK, "pitch": 1.0, "volume_db": PARRY_HIT_FALLBACK_DB}
 
 
 static func streak_counter() -> Dictionary:

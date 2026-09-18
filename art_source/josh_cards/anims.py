@@ -22,24 +22,39 @@ B = PS.BASE
 
 
 # ---------------------------------------------------------------- card helpers
-def fan(c, pivot, angles, radius=11.0, w=6, h=12, grip=True):
-    """Cards fanned about a fist (frames.fan, with the grip made optional)."""
+def tcard(c, cx, cy, ang, w=8, h=13, pip='spade', glow=0.0):
+    """One trading card, drawn so it still reads as a CARD at 3x: a hard black edge, a bone face,
+    a one-pixel inset border inside it, and a bold suit pip.  The old 6x12 blanks turned into a
+    pale clump the moment two of them overlapped."""
+    if glow:
+        CD.card_glow(c, cx, cy, w, h, ang, amp=glow, reach=3.0)
+    CD.draw_card(c, cx, cy, w, h, ang, face='n', shade='N', dark='u', outline='#')
+    if w >= 7 and h >= 11:
+        CD.draw_card(c, cx, cy, w - 3, h - 4, ang, face='n', shade='n', dark='n',
+                     pip=(CD.SPADE5 if pip == 'spade' else CD.DIAMOND5),
+                     pip_col=('#' if pip == 'spade' else 'Q'), outline='U')
+    else:                                       # ribbon cards: too small for a pip, keep an edge
+        CD.draw_card(c, cx, cy, w - 2, h - 2, ang, face='n', shade='n', dark='n', outline='U')
+
+
+def fan(c, pivot, angles, radius=12.5, w=8, h=13, grip=True, spread=1.4):
+    """Cards fanned about a fist.  `spread` opens the fan wider than it was authored so you can
+    count the cards, and every card gets its own pip instead of only the front one."""
     px, py = pivot
-    n = len(angles)
-    for i, a in enumerate(angles):
+    mean = sum(angles) / float(len(angles))
+    for i, a0 in enumerate(angles):
+        a = mean + (a0 - mean) * spread
         r = math.radians(a)
-        CD.draw_card(c, px + radius * math.sin(r), py - radius * math.cos(r), w, h, a,
-                     pip=(CD.DIAMOND3 if i == n - 1 else None), pip_col='Q')
+        tcard(c, px + radius * math.sin(r), py - radius * math.cos(r), a, w, h,
+              pip='spade' if i % 2 == 0 else 'diamond')
     if grip:
         for (dx, dy) in ((-1, 1), (0, 1), (1, 1), (-1, 2), (0, 2), (1, 2), (0, 0)):
             if c[py + dy][px + dx] not in '.':
                 put(c, px + dx, py + dy, 'Q' if (dx + dy) % 2 == 0 else 'q')
 
 
-def spinner(c, cx, cy, ang, w=5, h=9, glow_amp=0.42):
-    if glow_amp:
-        CD.card_glow(c, cx, cy, w, h, ang, amp=glow_amp, reach=2.0)
-    CD.draw_card(c, cx, cy, w, h, ang, pip=CD.DIAMOND3, pip_col='Q')
+def spinner(c, cx, cy, ang, w=7, h=11, glow_amp=0.42):
+    tcard(c, cx, cy, ang, w, h, pip='diamond', glow=glow_amp)
 
 
 def hot_card(c, cx, cy, ang, w=8, h=14, amp=1.0, reach=7.0, ray=1.0, pip=None):
@@ -98,7 +113,7 @@ def idle(i):
 
 
 # ================================================================== 2. INTRO
-def _cascade(c, hi, lo, n, sag=1.0, w=5, h=9):
+def _cascade(c, hi, lo, n, sag=1.0, w=6, h=10):
     """Waterfall shuffle: a ribbon of cards falling from the high hand into the low one.  The
     ribbon sags under gravity and runs from beside his head down across his chest, so it never
     crosses his face."""
@@ -109,7 +124,7 @@ def _cascade(c, hi, lo, n, sag=1.0, w=5, h=9):
         t = k / float(max(1, n - 1))
         x = hx + (lx - hx) * t
         y = hy + (ly - hy) * t + 7.0 * sag * math.sin(math.pi * t)
-        CD.draw_card(c, x, y, w, h, ang0 + 90 - 34 * (1 - t), pip=None)
+        tcard(c, x, y, ang0 + 90 - 34 * (1 - t), w, h, pip='spade' if k % 2 else 'diamond')
 
 
 def intro(i):
@@ -122,7 +137,7 @@ def intro(i):
         PS.build(c, P)
         JH.build(c, turn=2, eyes='squint', mouth='smirk')
         _cascade(c, (60, 47), (26, 61), 6, sag=0.45)
-        CD.draw_card(c, 64, 42, 8, 14, -14, pip=CD.DIAMOND3, pip_col='Q')
+        tcard(c, 64, 42, -14, 8, 14, pip='diamond')
         CD.glow(c, [(62, 35, 0.30), (34, 55, 0.22)], 8.0)
     elif i == 1:
         # full waterfall: the ribbon pours from the high hand down across his chest
@@ -131,8 +146,8 @@ def intro(i):
                  back=A((51, 51), (59, 48), (63, 42), (64, 38), 5.0, 3.8, 3.1, 3.8))
         PS.build(c, P)
         JH.build(c, dy=-1, turn=2, eyes='squint', mouth='smirk')
-        _cascade(c, (64, 41), (23, 64), 11, sag=1.25)
-        CD.draw_card(c, 65, 36, 7, 12, -20, pip=CD.DIAMOND3, pip_col='Q')
+        _cascade(c, (64, 41), (23, 64), 8, sag=1.25)
+        tcard(c, 65, 36, -20, 8, 13, pip='diamond')
         CD.glow(c, [(62, 30, 0.32), (52, 48, 0.24), (30, 60, 0.26)], 9.0)
         sparks(c, [(70, 28, 2), (56, 40, 1), (17, 58, 1)])
     elif i == 2:
@@ -143,7 +158,7 @@ def intro(i):
         PS.build(c, P)
         JH.build(c, turn=2, eyes='squint', mouth='smirk')
         _cascade(c, (58, 50), (26, 61), 6, sag=0.7)
-        CD.draw_card(c, 25, 62, 8, 13, 8, pip=CD.DIAMOND3, pip_col='Q')
+        tcard(c, 25, 62, 8, 8, 13, pip='diamond')
         CD.glow(c, [(42, 56, 0.26), (30, 58, 0.24)], 8.0)
     elif i == 3:
         # cap tip: glove on the brim, cap lifted and canted, head dipped, wink
@@ -201,7 +216,7 @@ def lay_card(i):
         PS.build(c, P)
         JH.build(c, dy=3, rot=4, turn=3, eyes='squint', mouth='smirk')
         fan(c, (27, 68), [-72, -46, -20], radius=9.5)
-        CD.draw_card(c, 62, 70, 8, 12, 54, pip=CD.DIAMOND3, pip_col='Q')
+        tcard(c, 62, 70, 54, 8, 13, pip='diamond')
         CD.card_glow(c, 62, 70, 8, 12, 54, amp=0.55, reach=4.0)
     elif i == 1:
         # deep crouch, the card set flat on the floor under his fingers
@@ -299,7 +314,7 @@ def throw(i):
         PS.build(c, P)
         JH.build(c, turn=2, eyes='squint', mouth='smirk')
         fan(c, (26, 66), [-76, -50, -24], radius=11.0)
-        CD.draw_card(c, 60, 60, 7, 11, -46, pip=CD.DIAMOND3, pip_col='Q')
+        tcard(c, 60, 60, -46, 8, 13, pip='diamond')
         CD.card_glow(c, 60, 60, 7, 11, -46, amp=0.55, reach=3.5)
         sparks(c, [(67, 51, 1), (20, 52, 1)])
     return c
@@ -342,7 +357,7 @@ def hit(i):
         JH.build(c, dx=-5, dy=2, rot=-15, turn=-2, eyes='wide', mouth='open', brows='pain',
                  cap_dx=-2, cap_dy=-2, cap_rot=-7)
         for (cx, cy, ang) in ((13, 40, -54), (24, 30, 34), (64, 44, 70), (70, 60, 16)):
-            CD.draw_card(c, cx, cy, 5, 9, ang, pip=None)
+            tcard(c, cx, cy, ang, 7, 11, pip='spade')
         sparks(c, [(19, 34, 2), (58, 36, 1), (33, 24, 1)])
     else:
         # settling back, still reeling, eyes screwed shut
@@ -358,7 +373,7 @@ def hit(i):
         JH.build(c, dx=-3, dy=3, rot=-8, turn=-1, eyes='shut', mouth='open', brows='pain',
                  cap_dx=-1, cap_dy=-1, cap_rot=-4, sweat=1)
         for (cx, cy, ang) in ((12, 50, -40), (27, 36, 22), (66, 52, 58), (72, 66, 8)):
-            CD.draw_card(c, cx, cy, 5, 9, ang, pip=None)
+            tcard(c, cx, cy, ang, 7, 11, pip='spade')
         sparks(c, [(20, 42, 1), (59, 44, 1)])
     return c
 
@@ -638,7 +653,7 @@ def recovery(i):
     for (cx, cy, ang) in [((64, 56, 22), (68, 66, 46), (61, 72, 8)),
                           ((65, 59, 30), (69, 69, 54), (62, 75, 14)),
                           ((66, 62, 38), (70, 72, 62), (63, 77, 20))][phase]:
-        CD.draw_card(c, cx, cy, 5, 9, ang, pip=None)
+        tcard(c, cx, cy, ang, 7, 11, pip='spade')
     CD.draw_card(c, 15, 77, 11, 4, 0, pip=None)
     CD.draw_card(c, 22, 74, 9, 4, -12, pip=None)
     for (sx, sy) in [(58, 48), (12, 52)][: 1 + (phase > 1)]:
@@ -664,7 +679,7 @@ def defeat(i):
         JH.build(c, dx=-5, dy=1, rot=-13, eyes='wide', mouth='open', brows='pain',
                  cap_dx=-3, cap_dy=-2, cap_rot=-8)
         for (cx, cy, ang) in ((66, 58, 40), (71, 48, 14), (20, 62, -30)):
-            CD.draw_card(c, cx, cy, 5, 9, ang, pip=None)
+            tcard(c, cx, cy, ang, 7, 11, pip='spade')
         sparks(c, [(16, 36, 2), (62, 36, 1)])
     elif i == 1:
         # the deck bursts: cards spraying up out of the coat
@@ -681,7 +696,7 @@ def defeat(i):
                  cap_dx=-2, cap_dy=-3, cap_rot=-7, sweat=1)
         for (cx, cy, ang) in ((22, 26, -34), (33, 16, -12), (46, 14, 16), (58, 22, 40),
                               (68, 34, 62), (12, 38, -56), (70, 58, 82)):
-            CD.draw_card(c, cx, cy, 5, 9, ang, pip=None)
+            tcard(c, cx, cy, ang, 7, 11, pip='spade')
         CD.glow(c, [(40, 20, 0.30), (24, 28, 0.26), (58, 26, 0.26)], 10.0)
         sparks(c, [(40, 8, 2), (16, 20, 1), (64, 16, 1)])
     elif i == 2:
@@ -699,7 +714,7 @@ def defeat(i):
                  cap_dx=-2, cap_dy=-4, cap_rot=-9, sweat=2)
         for (cx, cy, ang) in ((18, 18, -40), (30, 10, -16), (44, 8, 12), (56, 14, 34),
                               (66, 24, 58), (10, 30, -60), (72, 42, 78), (38, 26, 4)):
-            CD.draw_card(c, cx, cy, 5, 9, ang, pip=None)
+            tcard(c, cx, cy, ang, 7, 11, pip='spade')
         sparks(c, [(24, 6, 1), (60, 4, 1)])
     else:
         # down on his knees, cards raining; i=5 is the hold
@@ -743,7 +758,7 @@ def defeat(i):
                 ((16, 34, -28), (30, 28, -6), (46, 30, 20), (60, 38, 44), (70, 52, 68), (10, 56, -52)),
                 ((18, 48, -22), (32, 44, -2), (48, 46, 24), (62, 54, 48), (72, 66, 70), (12, 68, -46))][k]
         for (cx, cy, ang) in rain:
-            CD.draw_card(c, cx, cy, 5, 9, ang, pip=None)
+            tcard(c, cx, cy, ang, 7, 11, pip='spade')
         if k == 2:
             CD.glow(c, [(40, 74, 0.26), (26, 76, 0.22), (56, 76, 0.22)], 8.0)
     return c

@@ -5,3 +5,6 @@
 # Python bytecode from the art generators
 __pycache__/
 *.pyc
+
+# Locally-supplied audio that must never enter the public repo (rights not ours).
+Assets/Audio/SFX/local/

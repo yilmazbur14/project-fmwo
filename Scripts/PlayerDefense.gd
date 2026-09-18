@@ -33,6 +33,9 @@ signal blocked(hit: RefCounted, contact_point: Vector2)
 # `streak` counts this parry: 1 for the first, then up while they keep landing.
 signal parried(hit: RefCounted, contact_point: Vector2, staggered: bool, streak: int)
 signal parry_streak_changed(streak: int)
+# Every block press, with whether it was credited toward a parry: a fight watching for a parry that
+# has nothing to parry (Carter's feints) reads this.
+signal block_pressed(credited: bool)
 signal guard_broken
 signal guard_recovered
 signal perfect_dodged(hit: RefCounted)
@@ -72,9 +75,17 @@ static var LOG_HITS := false
 @export var guard_break_ends_on_hit := true
 @export var guard_break_hit_stop := 0.12
 @export var guard_break_shake := 10.0
-@export var parry_window := 0.15
+# The read: how long after a credited press a guarded hit is parried instead of blocked. About 14
+# frames at 60, long enough to be a reaction rather than a guess. The ceiling is the shortest thing
+# worth parrying: Eric's sword dive lasts 0.217-0.267 s, so a window past that would make it
+# parryable on sight rather than on a read. PlayerCombatFx shows the window while it is open, so a
+# miss teaches the timing. art_source/defense_tests, mode=approach, checks every attack against it.
+@export var parry_window := 0.24
 @export var parry_mash_lockout := 0.5
-@export var parry_hit_stop := 0.12
+# The dead stop on a parry, then a beat of slow motion at parry_slow_scale before normal speed.
+@export var parry_hit_stop := 0.13
+@export var parry_slow_time := 0.18
+@export var parry_slow_scale := 0.3
 # How long a parried boss that can be staggered stays open to punches.
 @export var parry_stagger_time := 1.2
 # Seconds without a parry before the streak lapses.
@@ -145,7 +156,7 @@ func _physics_process(delta: float) -> void:
 	clock += delta
 	_regen(delta)
 	if parry_streak > 0 and clock - last_parry_time > parry_streak_timeout:
-		_end_parry_streak()
+		end_parry_streak()
 	if ghost_active and clock - dash_start_time > perfect_dodge_window:
 		clear_dodge_ghost()
 
@@ -249,6 +260,15 @@ func on_block_pressed() -> void:
 	press_credited = last_press_parried or clock - last_press_time >= parry_mash_lockout
 	last_press_time = clock
 	last_press_parried = false
+	block_pressed.emit(press_credited)
+
+
+# The next press counts toward a parry however recently the last one was made. A fight calls it as
+# each attack it wants read becomes readable (Carter's clones), so a whiff at the last one can't
+# carry over. Only that next press is excused: it still sets the mash lockout, so pressing again
+# inside the same window still whiffs.
+func rearm_parry() -> void:
+	last_press_time = -INF
 
 
 func clear_guard_break() -> void:
@@ -256,7 +276,7 @@ func clear_guard_break() -> void:
 
 
 func on_fight_over() -> void:
-	_end_parry_streak()
+	end_parry_streak()
 	clear_guard_break()
 	clear_dodge_ghost()
 	clear_dash_recovery()
@@ -327,6 +347,11 @@ func _parry_ready() -> bool:
 	return press_credited and clock - last_press_time <= parry_window
 
 
+# Whether a guarded hit right now would be parried: PlayerCombatFx shows the window with it.
+func is_parry_ready() -> bool:
+	return _parry_ready()
+
+
 # A boss whose attack a parry can stagger implements can_parry_stagger(hit) -> bool and
 # parry_stagger(duration).
 func _parry(hit: RefCounted, record: Dictionary) -> int:
@@ -349,7 +374,7 @@ func _streak_stagger_bonus() -> float:
 	return clampf((parry_streak - 2) * parry_stagger_streak_bonus, 0.0, parry_stagger_streak_bonus_max)
 
 
-func _end_parry_streak() -> void:
+func end_parry_streak() -> void:
 	if parry_streak == 0:
 		return
 	parry_streak = 0
@@ -381,7 +406,7 @@ func _try_award_perfect_dodge(hit: RefCounted) -> void:
 
 func _take_hit(hit: RefCounted) -> int:
 	hit_during_window = true
-	_end_parry_streak()
+	end_parry_streak()
 	hit_taken.emit(hit)
 	if is_guard_broken and guard_break_ends_on_hit:
 		_end_guard_break.call_deferred()
@@ -391,7 +416,7 @@ func _take_hit(hit: RefCounted) -> int:
 func _start_guard_break() -> void:
 	is_guard_broken = true
 	clear_dash_recovery()
-	_end_parry_streak()
+	end_parry_streak()
 	_set_stamina(0.0)
 	guard_break_timer.start(guard_break_time)
 	player.combo.reset()

@@ -27,6 +27,9 @@ def cyl(a, b, r0, r1=None):
     """tapered capsule from a to b"""
     if r1 is None:
         r1 = r0
+    from lib import SCALE as _S, T as _T
+    if _S != 1.0:
+        a, b, r0, r1 = _T(*a), _T(*b), r0 * _S, r1 * _S
     m = empty()
     (x0, y0), (x1, y1) = a, b
     dx, dy = x1 - x0, y1 - y0

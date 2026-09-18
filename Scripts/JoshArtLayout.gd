@@ -184,11 +184,13 @@ const FINAL_GIANT_CARD := {
 	"shadow": "res://Assets/Characters/Josh/Cards/card_giant_shadow.png",
 	"frame_size": Vector2(191, 293),
 	"scale": 3.0,
-	# Only the third that is about to fall shows its shadow, and it runs light: the art is a 50% black
-	# checker, so at full strength the player disappears into it and the gold dashed border does the
-	# work of marking the edge.
-	"shadow_alpha": 0.32,
-	"shadow_throb": [0.6, 1.0],
+	# All three laid thirds show their shadow, so the arena reads as "three of these are coming", but
+	# queued runs faint enough to see the floor and the player through. The one that commits is
+	# unmistakable: several times darker, throbbing between these two, and tinted so its gold border
+	# burns red. The art is a 50% black checker, so alpha is the whole lever.
+	"shadow_queued_alpha": 0.16,
+	"shadow_commit_alpha": [0.45, 0.85],
+	"shadow_commit_tint": Color(1.0, 0.48, 0.4),
 	# The phase-two cards: faces 0-2, the shared back 3, a shuffle blur 5-8 and the reveal burst 10-14,
 	# on a 5x3 sheet where frame = row * 5 + column. The faces are drawn as a badge over the card the
 	# player is standing on, at 6x. The skid-blur frames are unused: a third-sized card sliding is its
@@ -222,9 +224,11 @@ const FINAL_GIANT_IMPACT := {
 	"offset": Vector2(-60, 642),
 }
 
-# The placeholder card's floor shadow, and how it reads while it hangs.
+# The placeholder card's floor shadow. It is solid black rather than a checker, so the same reading
+# needs lower numbers than the final art.
 const GIANT_CARD_SHADOW_COLOR := Color(0, 0, 0)
-const GIANT_CARD_SHADOW_ALPHA := 0.55
+const GIANT_CARD_QUEUED_ALPHA := 0.1
+const GIANT_CARD_COMMIT_ALPHA := [0.28, 0.55]
 # How much smaller a placeholder card reads at its hovering height than lying on the floor.
 const GIANT_CARD_HOVER_SCALE := 0.55
 # The warning blink, in seconds a beat takes at the start of the fall and at the end of it.
@@ -259,7 +263,7 @@ const FINAL_BOMB := {
 	# The explosion is drawn twice the size of the card that carried it, so the fireball is a real
 	# reason to move. The blast centre is this many texels above the card's centre, and it only hurts
 	# while the fireball is drawn: the first two boom frames.
-	"blast_scale": 6.0,
+	"blast_scale": 9.0,
 	"blast_rise_texels": 4.0,
 	"blast_damage_frames": 2,
 }

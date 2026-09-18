@@ -38,16 +38,32 @@ const DEFAULTS := {
 
 const ATTACKS := {
 	&"eric_quake_wave": {"blockable": true, "weight": Weight.LIGHT},
-	&"eric_whirlwind": {"blockable": true, "weight": Weight.HEAVY, "parry_stagger": true, "tell": true},
-	&"eric_thrown_sword": {"blockable": true, "weight": Weight.HEAVY},
+	&"eric_whirlwind": {"blockable": true, "weight": Weight.HEAVY},
+	# A parry flings the sword back at him, and it staggers him where he threw it when it arrives.
+	&"eric_thrown_sword": {"blockable": true, "weight": Weight.HEAVY, "parry_stagger": true, "tell": true},
 	&"eric_quake_ring": {"dash_through": true},
 	# A guard doesn't stop the grab, but a parry does, and it staggers him.
 	&"eric_bear_hug_grab": {"damage": 0, "dash_through": true, "grab": true, "parryable": true, "parry_stagger": true, "tell": true},
 	# The player is held and can't defend; the grab already cost the hype.
 	&"eric_bear_hug_squeeze": {"bypass_invincibility": true, "hype_loss": false},
-	&"computah_rocket": {"blockable": true, "weight": Weight.LIGHT},
 	&"computah_laser": {"dash_through": true},
-	&"mech_shockwave": {"dash_through": true},
+	# Boss 2. Computah's pounce is the grab at the end of his chase: a held guard does not stop it,
+	# a parry does and sparks him out early, and a dash through it is a perfect dodge.
+	&"computah_chase": {"damage": 0, "grab": true, "parryable": true, "parry_stagger": true, "tell": true, "dash_through": true},
+	# The junk Greyson throws over the chase, and the phase-two burst that costs more to block. A
+	# parry negates either but never staggers him - he is standing still to begin with, Josh's rule.
+	&"greyson_throw": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
+	&"greyson_throw_hard": {"blockable": true, "weight": Weight.HEAVY, "tell": true},
+	# The five-hit combo a caught player is put through. It is unblockable BY CONSTRUCTION rather
+	# than by a new kind of lock: the player keeps the parry-only lock, and with nothing blockable or
+	# parryable there is nothing for the guard to answer. The first four deal nothing and the fifth
+	# launches. Neither costs hype - the pounce that caught them already did, exactly as Eric's
+	# squeeze leaves the cost on his grab.
+	&"greyson_combo_jab": {"damage": 0, "bypass_invincibility": true, "hype_loss": false},
+	&"greyson_combo_finish": {"damage": 3, "bypass_invincibility": true, "hype_loss": false},
+	# Phase two with Greyson gone: a landed pounce has nobody to hand the player to, so Computah
+	# slams them himself for what the fifth punch would have dealt.
+	&"computah_slam": {"damage": 3, "bypass_invincibility": true, "hype_loss": false},
 	&"wrestler_charge": {"blockable": true, "weight": Weight.HEAVY},
 	# Punching Carter or Josh hurts the player by design.
 	&"wrestler_punish": {},
@@ -66,6 +82,16 @@ const ATTACKS := {
 	&"josh_card_bomb": {"blockable": true, "weight": Weight.LIGHT, "from_above": true},
 	# Three in a row, each with its own tell; a parry negates but never staggers him.
 	&"josh_card_throw": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
+	# Carter's Raging Demon. One clone rush: a held guard absorbs it heavily, a fresh press parries it.
+	# Its origin is the player's own hurtbox centre, inside PlayerDefense.block_omni_radius, so any
+	# facing can answer it - the check is timing, not aim. The yellow feints never reach here at all,
+	# and the lights are drawn by the clone, not ParryTell, so `tell` stays false.
+	# It lands inside the i-frames on purpose: fifteen of these come 0.70 s apart, and being hit must
+	# never hand the player the clones behind it for free. Every one of them counts.
+	&"carter_clone_rush": {"blockable": true, "weight": Weight.HEAVY, "bypass_invincibility": true},
+	# The clone right after a feint the player bit on. Nothing answers it - that is the whole point -
+	# so it is neither blockable nor parryable. The bait was the mistake; this is the bill.
+	&"carter_clone_punish": {"weight": Weight.HEAVY, "bypass_invincibility": true},
 	# Anything that hits without an id: exactly the old behaviour.
 	&"untagged": {},
 }

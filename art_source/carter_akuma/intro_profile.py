@@ -443,7 +443,7 @@ def draw_profile(mark_lv=0.62, eye_lv=0.55):
     cv.outline(er)
     seg(cv, [(51, 26), (50, 29), (51, 31)], 'w', mirror_too=False)
     seg(cv, [(52, 27), (51, 29)], 'v', mirror_too=False)
-    cv.stamp(F.EARRING, 48, 32)
+    cv.stamp(F.EARRING, 48, 32, small=F.EARRING_S)
 
     face_p(cv, eye_lv)
     return cv

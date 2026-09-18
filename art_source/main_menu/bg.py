@@ -1,4 +1,4 @@
-"""Main-menu background 'The Ladder' (seven tiers). 640x360, DB32 only, built as separate layers.
+"""Main-menu background 'The Ladder' (ten tiers). 640x360, DB32 only, built as separate layers.
 
 Night. A tower of stacked boxing-ring tiers; each tier is one rank of the server, lit in its role
 colour, with that rank's member(s) standing on it as rim-lit silhouettes. A red-carpet stair climbs
@@ -34,23 +34,33 @@ os.makedirs(OUT, exist_ok=True)
 W, H = 640, 360
 CX = 440
 BASE_Y = 316                 # bottom row of tier 1's apron
-GLOW = (CX, 34)
-CARD_X, CARD_Y = CX - 38, 8  # invite canvas origin (card rect at +3..+72, +4..+44)
+# Ten tiers need the top of the frame, so the invite hangs in the sky up-left of the summit
+# instead of over it: clear of the menu's UI column (x < 273) and of tier 10 (x > 392).
+CARD_X, CARD_Y = 296, 6      # invite canvas origin (card rect at +3..+72, +4..+44)
+GLOW = (CARD_X + 38, CARD_Y + 26)
 
-# role colour ramps (hi, base, lo) per tier, bottom (1) to top (7)
+# role colour ramps (hi, base, lo) per tier, bottom (1) to top (10)
 ROLE = {
-    1: (LG, GR, OG),        # green   - Eric
-    2: (WH2, CY, BL),       # cyan    - Greyson & Computah
-    3: (WH2, MG, PU),       # pink    - Mason
-    4: (SK, OR, BR),        # orange  - Josh
-    5: (SB, RB, IN),        # blurple - Carter
-    6: (SK, PK, RD),        # red     - Liam & Bixby
-    7: (WH, YL, TN),        # gold    - Jordan (final boss)
+    1: (WH2, G5, G3),       # grey    - Burak
+    2: (LG, GR, OG),        # green   - Eric
+    3: (WH2, CY, BL),       # cyan    - Greyson & Computah
+    4: (SK, TN, BR),        # tan     - Matt
+    5: (WH2, MG, PU),       # pink    - Mason
+    6: (SK, OR, BR),        # orange  - Josh
+    7: (WH2, TE, OG),       # teal    - Danny
+    8: (SB, RB, IN),        # blurple - Carter
+    9: (SK, PK, RD),        # red     - Liam & Bixby
+    10: (WH, YL, TN),       # gold    - Jordan (final boss)
 }
+
+# lib's 3x5 font is single-digit, and the pennant is only 9px wide: tier 10 gets a narrow
+# two-digit glyph that still leaves a pixel clear of the pennant's lit edges.
+GLYPH_10 = ['#.###', '#.#.#', '#.#.#', '#.#.#', '#.###']
 
 
 def _tiers():
-    spec = [(32, 7, 150), (29, 6, 128), (27, 6, 108), (25, 5, 90), (23, 5, 74), (21, 4, 60), (19, 4, 46)]   # (face, strip, half-width)
+    spec = [(26, 6, 150), (25, 6, 138), (24, 6, 127), (24, 5, 116), (23, 5, 106),
+            (22, 5, 96), (21, 5, 86), (20, 4, 74), (19, 4, 61), (18, 4, 48)]   # (face, strip, half-width)
     out, fb = [], BASE_Y
     for face, strip, hw in spec:
         ft = fb - face + 1
@@ -240,13 +250,14 @@ def draw_tier(c, k):
                 c.set(bx + i, ft + 3 + j, col)
         c.hline(bx - 1, bx + 9, ft + 2, K)
         c.hline(bx, bx + 8, ft + 3, K)
-        # tier number (Arena #1 at the bottom .. #6 at the top)
-        g = F35[str(k)]
-        ex, ey = bx + 3, ft + 3 + (ph - 3) // 2 - 2
+        # tier number (Arena #1 at the bottom .. #10 at the top)
+        g = GLYPH_10 if k >= 10 else F35[str(k)]
+        ex, ey = bx + (9 - len(g[0])) // 2, ft + 3 + (ph - 3) // 2 - 2
         for j, row in enumerate(g):
             for i, v in enumerate(row):
                 if v == '#':
-                    c.set(ex + i, ey + j, K if k in (2, N_TIERS) else lo)
+                    # black where the pennant's own shade is too close to its base to read
+                    c.set(ex + i, ey + j, K if k in (1, 3, N_TIERS) else lo)
 
 
 LANTERN = ['..KKK..', '.KhbbK.', 'KhbbbbK', 'KbbbblK', 'KbbbllK', '.KbllK.', '..KKK..']
@@ -363,18 +374,22 @@ def layer_floor():
 
 # ------------------------------------------------------------------ members
 MASKS = load_masks(os.path.join(HERE, 'masks_clean.txt'))
-# Tiers 3, 4 and 5 each hold one member, so they alternate off the carpet: at this pitch two
-# centred members on neighbouring tiers would stand on each other's heads.
+# The tiers are ~27px apart and the members are 24-42 tall, so every one of them overlaps the
+# apron above. Neighbouring tiers therefore never share a column: the solo bosses step left,
+# centre and right in turn, and the two duo tiers leave the carpet clear for the tier above.
 PLACE = [  # name, tier, x of anchor column, anchor column
-    ('eric', 1, CX, 23),
-    ('computah', 2, CX - 44, 7),
-    ('greyson', 2, CX + 44, 11),
-    ('mason', 3, CX, 14),
-    ('josh', 4, CX - 42, 13),
-    ('carter', 5, CX, 12),
-    ('liam', 6, CX - 38, 14),
-    ('bixby', 6, CX + 38, 14),
-    ('jordan', 7, CX, 8),
+    ('burak', 1, CX - 40, 8),
+    ('eric', 2, CX, 23),
+    ('computah', 3, CX - 46, 7),
+    ('greyson', 3, CX + 46, 11),
+    ('matt', 4, CX, 7),
+    ('mason', 5, CX + 44, 14),
+    ('josh', 6, CX, 12),
+    ('danny', 7, CX - 44, 15),
+    ('carter', 8, CX, 12),
+    ('liam', 9, CX - 38, 14),
+    ('bixby', 9, CX + 38, 14),
+    ('jordan', 10, CX, 8),
 ]
 
 

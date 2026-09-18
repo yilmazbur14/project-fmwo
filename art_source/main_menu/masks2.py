@@ -1,3 +1,5 @@
+# SUPERSEDED: the tower's live silhouettes are masks_clean.txt, which bg.py reads directly.
+# Nothing imports this file; its sprite paths are several redesigns out of date.
 import sys, json
 from pngio import read_png, write_png
 P="C:/Users/theyi/OneDrive/Documents/new-game-project/Assets/Characters/"

@@ -27,7 +27,10 @@ def seg(cv, pts, ch, mirror_too=True, over_only=True):
         runs = [pts, [(95 - x, y) for x, y in pts]]
     else:
         runs = [pts]
+    from lib import SCALE as _S, Tp as _Tp
     for run in runs:
+        if _S != 1.0:
+            run = [_Tp(x, y) for x, y in run]
         for i in range(len(run) - 1):
             x0, y0 = run[i]
             x1, y1 = run[i + 1]
@@ -45,6 +48,9 @@ def seg(cv, pts, ch, mirror_too=True, over_only=True):
 
 
 def dot(cv, x, y, ch):
+    from lib import SCALE as _S, Tp as _Tp
+    if _S != 1.0:
+        x, y = _Tp(x, y)
     if 0 <= x < W and 0 <= y < H and cv.px[y][x] is not None:
         cv.px[y][x] = PALC[ch]
 
@@ -222,11 +228,11 @@ def beads_on(cv):
 
 
 def faces_on(cv):
-    cv.stamp(F.BROWS, 36, 23, over_only=True)
-    cv.stamp(F.EYES, 36, 26, over_only=True)
-    cv.stamp(F.NOSE, 45, 27, over_only=True)
-    cv.stamp(F.MOUTH, 44, 35, over_only=True)
-    cv.stamp(F.EARRING, 30, 32)
+    cv.stamp(F.BROWS, 36, 23, over_only=True, small=F.BROWS_S)
+    cv.stamp(F.EYES, 36, 26, over_only=True, small=F.EYES_S)
+    cv.stamp(F.NOSE, 45, 27, over_only=True, small=F.NOSE_S)
+    cv.stamp(F.MOUTH, 44, 35, over_only=True, small=F.MOUTH_S)
+    cv.stamp(F.EARRING, 30, 32, small=F.EARRING_S)
 
 
 def body(cv):

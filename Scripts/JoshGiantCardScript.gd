@@ -69,7 +69,11 @@ var height := 0.0
 var draw_scale := 1.0
 var flip_scale := 1.0
 var shadow_alpha := 0.0
-var shadow_base_alpha := 1.0
+var shadow_tint := Color(1, 1, 1)
+# How its third reads while it waits its turn, and the two it throbs between once it commits.
+var shadow_queued := 0.0
+var shadow_commit: Array = [0.0, 0.0]
+var shadow_commit_tint := Color(1, 1, 1)
 
 var slide_from := Vector2.ZERO
 var slide_to_point := Vector2.ZERO
@@ -101,9 +105,10 @@ func lay(at_third: int, at_mode: int, at_kind: int) -> void:
 	global_position = rect.get_center().round()
 	_build(rect.size)
 	(hitbox_shape.shape as RectangleShape2D).size = rect.size
-	# No shadow until this is the third that is coming down: three dark thirds would swallow the mat,
-	# and the warning is what tells the player where the danger is.
-	shadow_alpha = 0.0
+	# Every laid third is marked, faintly, so all three read as threats; only the one that commits
+	# turns dark and red, which is the tell the player escapes on.
+	shadow_alpha = shadow_queued if mode == Mode.AIRBORNE else 0.0
+	shadow_tint = Color(1, 1, 1)
 	if mode == Mode.AIRBORNE:
 		# Off the top of the screen: three of these hanging in view would hide the whole fight.
 		height = hover_height
@@ -243,10 +248,12 @@ func _run_warn(delta: float) -> void:
 		draw_scale = lerpf(JoshArtLayout.GIANT_CARD_HOVER_SCALE, 1.0, along * along)
 	var left := 1.0 - along
 	warn_pulse += delta / lerpf(JoshArtLayout.GIANT_CARD_PULSE_LAST, JoshArtLayout.GIANT_CARD_PULSE_FIRST, left)
-	var throb: Array = JoshArtLayout.FINAL_GIANT_CARD.shadow_throb
-	var beat: float = throb[1] if int(warn_pulse) % 2 == 0 else throb[0]
-	# It fades in over the first moment of the warning, throbs, and is gone once the card has landed.
-	shadow_alpha = shadow_base_alpha * beat * clampf(along / 0.15, 0.0, 1.0)
+	# It swells out of the faint queued mark over the first moment of the warning, then throbs between
+	# the two committing strengths on a beat that tightens as impact nears.
+	var beat: float = 1.0 if int(warn_pulse) % 2 == 0 else 0.0
+	var ramp := clampf(along / 0.15, 0.0, 1.0)
+	shadow_alpha = lerpf(shadow_queued, lerpf(shadow_commit[0], shadow_commit[1], beat), ramp)
+	shadow_tint = Color(1, 1, 1).lerp(shadow_commit_tint, ramp)
 	_place()
 
 
@@ -255,7 +262,8 @@ func _slam() -> void:
 	clock = 0.0
 	height = 0.0
 	draw_scale = 1.0
-	shadow_alpha = shadow_base_alpha
+	shadow_alpha = shadow_commit[1]
+	shadow_tint = shadow_commit_tint
 	_place()
 	hitbox_shape.set_deferred("disabled", false)
 	slammed.emit()
@@ -368,7 +376,7 @@ func _place() -> void:
 			specials_sprite.scale = Vector2(badge * flip_scale, badge)
 	else:
 		card.scale = Vector2(draw_scale * flip_scale, draw_scale)
-	shadow.modulate.a = shadow_alpha
+	shadow.modulate = Color(shadow_tint.r, shadow_tint.g, shadow_tint.b, shadow_alpha)
 
 
 func _final() -> bool:
@@ -386,7 +394,9 @@ func _build(size: Vector2) -> void:
 # card they can see. Phase one adds the floor shadow it falls out of; phase two adds the face badge.
 func _build_final() -> void:
 	var spec := JoshArtLayout.FINAL_GIANT_CARD
-	shadow_base_alpha = spec.shadow_alpha
+	shadow_queued = spec.shadow_queued_alpha
+	shadow_commit = spec.shadow_commit_alpha
+	shadow_commit_tint = spec.shadow_commit_tint
 	var drawn: Vector2 = spec.frame_size * spec.scale
 	card_rest = (-drawn / 2.0).round()
 
@@ -424,7 +434,9 @@ func _badge(spec: Dictionary) -> Sprite2D:
 
 func _build_placeholder(size: Vector2) -> void:
 	var spec := JoshArtLayout.PLACEHOLDER_GIANT_CARD
-	shadow_base_alpha = JoshArtLayout.GIANT_CARD_SHADOW_ALPHA
+	shadow_queued = JoshArtLayout.GIANT_CARD_QUEUED_ALPHA
+	shadow_commit = JoshArtLayout.GIANT_CARD_COMMIT_ALPHA
+	shadow_commit_tint = JoshArtLayout.FINAL_GIANT_CARD.shadow_commit_tint
 
 	var floor_mark := Polygon2D.new()
 	floor_mark.polygon = JoshArtLayout.centred_rect(size)

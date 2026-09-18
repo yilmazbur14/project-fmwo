@@ -1,0 +1,166 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/CarterAkumaScript.gd" id="1_body"]
+[ext_resource type="Texture2D" path="res://Assets/Characters/Carter/carter_akuma.png" id="2_akuma"]
+[ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterStateMachine.gd" id="3_state_machine"]
+[ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterIntro.gd" id="4_intro"]
+[ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterIdle.gd" id="5_idle"]
+[ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterRagingDemon.gd" id="6_raging_demon"]
+[ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterRecover.gd" id="7_recover"]
+[ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterDefeated.gd" id="8_defeated"]
+[ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterVictory.gd" id="9_victory"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_carter_hurtbox"]
+size = Vector2(192, 222)
+
+[node name="CarterAkumaScene" type="Node2D"]
+y_sort_enabled = true
+
+[node name="FloorLayer" type="Node2D" parent="."]
+position = Vector2(0, 101)
+
+[node name="CloneLayer" type="Node2D" parent="."]
+
+[node name="DarkStage" type="Node2D" parent="."]
+visible = false
+z_index = 50
+
+[node name="Curtain" type="Node2D" parent="DarkStage"]
+
+[node name="Pool" type="Node2D" parent="DarkStage"]
+z_index = 1
+
+[node name="CarterAkumaCharacterBody" type="CharacterBody2D" parent="." node_paths=PackedStringArray("floor_layer", "clone_layer", "dark_stage", "curtain", "pool", "flash_layer", "flash")]
+position = Vector2(959, 700)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_body")
+floor_layer = NodePath("../FloorLayer")
+clone_layer = NodePath("../CloneLayer")
+dark_stage = NodePath("../DarkStage")
+curtain = NodePath("../DarkStage/Curtain")
+pool = NodePath("../DarkStage/Pool")
+flash_layer = NodePath("../FlashLayer")
+flash = NodePath("../FlashLayer/Flash")
+
+[node name="Aura" type="Sprite2D" parent="CarterAkumaCharacterBody"]
+visible = false
+scale = Vector2(3, 3)
+
+[node name="Sprite2D" type="Sprite2D" parent="CarterAkumaCharacterBody"]
+scale = Vector2(3, 3)
+texture = ExtResource("2_akuma")
+offset = Vector2(0, -47)
+hframes = 3
+
+[node name="MarkGlow" type="Sprite2D" parent="CarterAkumaCharacterBody"]
+visible = false
+scale = Vector2(3, 3)
+
+[node name="Hurtbox" type="Area2D" parent="CarterAkumaCharacterBody" groups=["enemy", "boss_target"]]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CarterAkumaCharacterBody/Hurtbox"]
+position = Vector2(-48, -108)
+shape = SubResource("RectangleShape2D_carter_hurtbox")
+
+[node name="StateManager" type="Node" parent="CarterAkumaCharacterBody" node_paths=PackedStringArray("initial_state", "CarterAkumaCharacterBody", "post_dialogue_pre_fight_timer", "recover_timer", "finisher_stagger_timer", "beat_timer")]
+script = ExtResource("3_state_machine")
+initial_state = NodePath("Intro")
+CarterAkumaCharacterBody = NodePath("..")
+post_dialogue_pre_fight_timer = NodePath("../PostDialoguePreFightTimer")
+recover_timer = NodePath("../RecoverTimer")
+finisher_stagger_timer = NodePath("../FinisherStaggerTimer")
+beat_timer = NodePath("../BeatTimer")
+
+[node name="Intro" type="Node" parent="CarterAkumaCharacterBody/StateManager" node_paths=PackedStringArray("body", "flash", "land_sfx_player")]
+script = ExtResource("4_intro")
+body = NodePath("../..")
+flash = NodePath("../../../FlashLayer/Flash")
+land_sfx_player = NodePath("../../LandSfxPlayer")
+
+[node name="Idle" type="Node" parent="CarterAkumaCharacterBody/StateManager" node_paths=PackedStringArray("body", "beat_timer")]
+script = ExtResource("5_idle")
+body = NodePath("../..")
+beat_timer = NodePath("../../BeatTimer")
+
+[node name="RagingDemon" type="Node" parent="CarterAkumaCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("6_raging_demon")
+body = NodePath("../..")
+
+[node name="Recover" type="Node" parent="CarterAkumaCharacterBody/StateManager" node_paths=PackedStringArray("body", "recover_timer", "recover_sfx_player")]
+script = ExtResource("7_recover")
+body = NodePath("../..")
+recover_timer = NodePath("../../RecoverTimer")
+recover_sfx_player = NodePath("../../RecoverSfxPlayer")
+
+[node name="Defeated" type="Node" parent="CarterAkumaCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("8_defeated")
+body = NodePath("../..")
+
+[node name="Victory" type="Node" parent="CarterAkumaCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("9_victory")
+body = NodePath("../..")
+
+[node name="PostDialoguePreFightTimer" type="Timer" parent="CarterAkumaCharacterBody"]
+wait_time = 0.6
+one_shot = true
+
+[node name="RecoverTimer" type="Timer" parent="CarterAkumaCharacterBody"]
+one_shot = true
+
+[node name="FinisherStaggerTimer" type="Timer" parent="CarterAkumaCharacterBody"]
+one_shot = true
+
+[node name="BeatTimer" type="Timer" parent="CarterAkumaCharacterBody"]
+one_shot = true
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+volume_db = -5.0
+
+[node name="HitSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+
+[node name="VictorySfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+
+[node name="FlashSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+
+[node name="YankSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+
+[node name="DarkSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+
+[node name="RushSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+volume_db = -2.0
+
+[node name="StrikeSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+
+[node name="BreakSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+volume_db = -4.0
+
+[node name="FeintSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+
+[node name="FinishSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+
+[node name="RecoverSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+volume_db = 4.0
+
+[node name="LandSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+
+[node name="KoSfxPlayer" type="AudioStreamPlayer" parent="CarterAkumaCharacterBody"]
+
+[node name="FlashLayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="Flash" type="ColorRect" parent="FlashLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.86, 0.72, 0)
+
+[connection signal="timeout" from="CarterAkumaCharacterBody/PostDialoguePreFightTimer" to="CarterAkumaCharacterBody/StateManager" method="_on_post_dialogue_pre_fight_timer_timeout"]
+[connection signal="timeout" from="CarterAkumaCharacterBody/RecoverTimer" to="CarterAkumaCharacterBody/StateManager/Recover" method="_on_recover_timer_timeout"]
+[connection signal="timeout" from="CarterAkumaCharacterBody/FinisherStaggerTimer" to="CarterAkumaCharacterBody/StateManager" method="_on_finisher_stagger_timer_timeout"]
+[connection signal="timeout" from="CarterAkumaCharacterBody/BeatTimer" to="CarterAkumaCharacterBody/StateManager/Idle" method="_on_beat_timer_timeout"]
