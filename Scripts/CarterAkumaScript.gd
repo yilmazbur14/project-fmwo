@@ -51,6 +51,8 @@ var fill_style: StyleBoxFlat
 @export var dark_stage: Node2D
 @export var curtain: Node2D
 @export var pool: Node2D
+# Pure black over the whole world, for the KO only. Built in code, hidden until then.
+var blackout: Polygon2D
 @export var flash_layer: CanvasLayer
 @export var flash: ColorRect
 
@@ -326,6 +328,19 @@ func _build_dark_stage() -> void:
 	pool.modulate.a = 0.0
 	_build_pool()
 	_build_curtain()
+	_build_blackout()
+
+
+# Over every fighter, hazard and burst in the world, which the Demon's darkness deliberately is not.
+# Only the KO ever shows it.
+func _build_blackout() -> void:
+	blackout = Polygon2D.new()
+	blackout.polygon = CarterArtLayout.rect_polygon(CarterArtLayout.DARK_BORDER)
+	blackout.color = Color(0, 0, 0)
+	blackout.z_index = CarterArtLayout.KO_BLACK_Z
+	blackout.modulate.a = 0.0
+	blackout.hide()
+	dark_stage.add_child(blackout)
 
 
 func _build_pool() -> void:
@@ -406,8 +421,36 @@ func snap_dark_clear() -> void:
 	curtain.modulate.a = 0.0
 	pool.modulate.a = 0.0
 	pool.scale = Vector2.ONE * CarterArtLayout.POOL_OPEN_FROM
+	blackout.modulate.a = 0.0
+	blackout.hide()
 	dark_stage.hide()
 	flash.color.a = 0.0
+
+
+# The KO: the arena goes all the way to black, spotlight and all. Nothing in the world survives it
+# except the emblem, which is drawn above it.
+func ko_blackout(seconds: float) -> void:
+	curtain.modulate.a = 0.0
+	pool.modulate.a = 0.0
+	dark_stage.show()
+	blackout.show()
+	var fade := blackout.create_tween()
+	fade.tween_property(blackout, "modulate:a", 1.0, seconds)
+
+
+# The one lit thing left. Lifted above the blackout and drawn at twice its size, scaled about its own
+# centre so it stays between his shoulders rather than sliding up off them.
+func ignite_ko_mark() -> void:
+	show_mark_glow(true)
+	# Straight in at the brightest frame of the cycle: this is a snap to full burn, and the bell is
+	# landing on this exact frame.
+	var spec := CarterArtLayout.FINAL_MARK_GLOW
+	mark_clock = spec.peak_frame * spec.frame_time
+	mark_glow.frame = spec.peak_frame
+	mark_glow.z_index = CarterArtLayout.KO_MARK_Z
+	var scaled: float = CarterArtLayout.KO_MARK_SCALE
+	mark_glow.scale = Vector2.ONE * CarterArtLayout.FINAL_MARK_GLOW.scale * scaled
+	mark_glow.position = CarterArtLayout.mark_centre() * (1.0 - scaled)
 
 
 func place_pool(at: Vector2) -> void:

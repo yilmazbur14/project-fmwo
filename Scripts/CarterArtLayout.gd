@@ -40,6 +40,8 @@ const USE_FINAL_ANIMS := {
 	&"defeat": true,
 	&"victory": true,
 	&"victory_hold": true,
+	&"ko_vanish": true,
+	&"ko_reappear": true,
 }
 
 const PLACEHOLDER_ANIMS := {
@@ -57,6 +59,8 @@ const PLACEHOLDER_ANIMS := {
 	# placeholder turn is one frame long and the back view is where the mark takes.
 	&"victory": {sheet = AKUMA_SHEET, frames = [0], times = [0.37], loop = false},
 	&"victory_hold": {sheet = AKUMA_SHEET, frames = [2], times = [1.0], loop = true},
+	&"ko_vanish": {sheet = AKUMA_SHEET, frames = [2], times = [0.28], loop = false},
+	&"ko_reappear": {sheet = AKUMA_SHEET, frames = [2], times = [0.30], loop = false},
 }
 
 const FINAL_ANIMS := {
@@ -83,6 +87,14 @@ const FINAL_ANIMS := {
 	# And the same five forwards for him reforming, retimed to the length of the lights coming up.
 	&"reappear": {sheet = "res://Assets/Characters/Carter/carter_intro.png",
 		frames = [0, 1, 2, 3, 4], times = [0.09, 0.09, 0.10, 0.10, 0.10], loop = false},
+	# The same two again, run fast, for the KO's teleport to the middle of the ring. They are their
+	# own entries rather than the Demon's beats played short, because a dissolve cut off part-way
+	# through looks like a dropped frame. Together they are 0.58 s, which with the 0.37 s turn after
+	# them puts the bell 0.95 s after the player goes down.
+	&"ko_vanish": {sheet = "res://Assets/Characters/Carter/carter_intro.png",
+		frames = [4, 3, 2, 1, 0], times = [0.07, 0.06, 0.05, 0.05, 0.05], loop = false},
+	&"ko_reappear": {sheet = "res://Assets/Characters/Carter/carter_intro.png",
+		frames = [0, 1, 2, 3, 4], times = [0.05, 0.05, 0.06, 0.06, 0.08], loop = false},
 	# The punish window's pose: hunched and blowing, the one the player punches.
 	&"recover": {sheet = "res://Assets/Characters/Carter/carter_spent.png",
 		frames = [0, 1, 2, 3], times = [0.2, 0.17, 0.17, 0.2], loop = true},
@@ -132,6 +144,10 @@ const FINAL_MARK_GLOW := {
 	"offset": Vector2(16, 32),
 	"frame_time": 0.09,
 	"scale": 3.0,
+	# The brightest frame of the cycle, by a factor of six over the dimmest: 709 lit texels against
+	# 250. The KO starts the cycle here so the ignition IS the peak, on the same frame as the bell,
+	# instead of snapping on at its faintest and brightening a third of a second later.
+	"peak_frame": 3,
 }
 
 #THE GROUND RING HIS ENTRANCE LANDS ON
@@ -385,15 +401,32 @@ const FINAL_FINISH := {
 # beat. That frame is the first of `victory_hold`, so the ignition is simply where `victory` hands
 # over, and CarterVictory reads it off the animation's own timing. Retiming the sheet retimes the
 # sound with it, with nothing here to keep in step by hand.
-# The mark takes hold: the room flares, jolts, and the music gets out of the way of the bell.
-const VICTORY_FLASH := 0.5
-const VICTORY_FLASH_OUT := 0.55
+# The mark takes hold: the room jolts and the music gets out of the way of the bell. There is no
+# screen flash any more - against a fully black arena a white wash reads as a glitch, and the user
+# asked for the emblem to be the only thing showing.
 const VICTORY_SHAKE := 12.0
 const VICTORY_SHAKE_STEPS := 5
 const VICTORY_SHAKE_STEP_TIME := 0.035
 const VICTORY_DUCK_DB := -14.0
 const VICTORY_DUCK_TIME := 0.25
 const VICTORY_CHEER := 3.0
+
+# He doesn't walk to the middle, he is simply there: the Demon's own vanish and reappear, so it reads
+# as his technique rather than as the fight repositioning him.
+# Then the arena goes ALL the way down - no spotlight, no dithered bands, just black. It is its own
+# quad rather than the darkness sheet turned up, because that sheet's alpha is baked per band and
+# tops out at 0.93, and "nearly black" with the crowd faintly showing is not what was asked for.
+# The blackout finishes exactly on the ignition, so the world darkens around him while he turns and
+# the mark lights the instant he is gone into it.
+const KO_BLACKOUT_TIME := 0.5
+# Relative to DarkStage, so the blackout ends up over every fighter, hazard and burst in the world.
+const KO_BLACK_Z := 30
+# Absolute, and above that: the emblem has to be the one lit thing left on screen.
+const KO_MARK_Z := 40
+# At its usual size the emblem is 192x162 px alone in a 1920x1080 frame, which reads as a speck. For
+# this beat and no other it is drawn twice that, scaled about its own centre so it doesn't drift off
+# his back.
+const KO_MARK_SCALE := 2.0
 
 #THE KO
 # The user's own sound, kept out of the repo: Assets/Audio/SFX/local/ is gitignored, because those
@@ -484,6 +517,12 @@ static func local_rect(rect: Rect2) -> Rect2:
 # Sprite offset, in texels, for an effect sheet drawn at `offset` inside his 96x96 frame.
 static func inset_offset(frame_size: Vector2, offset: Vector2) -> Vector2:
 	return frame_size / 2.0 - (ANCHOR - offset)
+
+
+# Where the emblem is actually drawn, in px from his feet. Scaling it for the KO has to happen about
+# this point or it slides off his back.
+static func mark_centre() -> Vector2:
+	return local(FINAL_MARK_GLOW.offset + FINAL_MARK_GLOW.frame_size / 2.0)
 
 
 # Sprite offset, in texels, that puts CLONE_ANCHOR on a clone's origin.
