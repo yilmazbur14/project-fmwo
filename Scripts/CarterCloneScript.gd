@@ -1,8 +1,9 @@
 extends Node2D
 
-# One of the five shapes that rush the player during Carter's Raging Demon. It materialises out of
+# One of the fifteen shapes that rush the player during Carter's Raging Demon. It materialises out of
 # the dark at the edge of the spotlight with a light over its head - RED to parry, YELLOW a feint
-# that punishes a parry - holds while the player reads it, then covers the gap and strikes.
+# that punishes a parry, or the hot white PUNISH that only ever follows a feint the player bit on and
+# that nothing answers - holds while the player reads it, then covers the gap and strikes.
 # It is much smaller than Carter, forms and dissolves rather than appearing and vanishing, and every
 # bit of that happens at the START of the read window: a clone still resolving when the player has to
 # decide would eat the reaction time the whole mechanic depends on.
@@ -14,8 +15,9 @@ extends Node2D
 # centre, inside PlayerDefense.block_omni_radius, so a clone arriving from behind is as answerable as
 # one from the front. This is a timing check, not an aiming one.
 # Each clone is its own node and so its own hit source: PlayerDefense keeps absorbed_until per source
-# for blocked_rehit_interval (1.0 s) and the clones come 0.92 s apart, so sharing one source would
-# make every clone after a parried one free.
+# for blocked_rehit_interval (1.0 s) and the clones come 0.70 s apart, so sharing one source would
+# make every clone after a blocked or parried one free - which is exactly what the barrage is not
+# allowed to do.
 
 const CarterArtLayout := preload("res://Scripts/CarterArtLayout.gd")
 const HitInfo := preload("res://Scripts/HitInfo.gd")
@@ -23,8 +25,10 @@ const HitInfo := preload("res://Scripts/HitInfo.gd")
 @export var sprite: Sprite2D
 @export var light: Node2D
 
-# Set by the sequence before it enters the tree.
+# Set by the sequence before it enters the tree. A clone is a red, a feint, or - only ever directly
+# after a feint the player bit on - a punish, which nothing can answer.
 var is_feint := false
+var is_punish := false
 var from_point := Vector2.ZERO
 var to_point := Vector2.ZERO
 var player: Node2D
@@ -89,6 +93,10 @@ func _animate(delta: float) -> void:
 	light_clock += delta
 	if light_sprite:
 		light_sprite.frame = _light_frame()
+	if is_punish:
+		var spec := CarterArtLayout.PUNISH_CLONE
+		var beat := 0.5 + 0.5 * sin(TAU * light_clock / (spec.beat_time * 2.0))
+		light.scale = Vector2.ONE * spec.light_scale * lerpf(spec.beat[0], spec.beat[1], beat)
 
 
 # Gathers out of nothing, holds full strength while it commits and travels, then scatters away.
@@ -137,6 +145,7 @@ func launch(seconds: float) -> void:
 
 # Red: the hit is built from the player's own hurtbox centre, so any facing can answer it.
 # Yellow: never reaches the player at all - it passes through and dissolves.
+# Punish: the same hit under an id nothing can block or parry.
 func strike() -> int:
 	if spent:
 		return HitInfo.Result.IGNORED
@@ -150,7 +159,8 @@ func strike() -> int:
 	# No dodge-ghost branch: the origin IS the player's hurtbox centre, so the clone can never reach
 	# the spot a dash left without reaching the player, and a locked player can't dash anyway.
 	var contact := _player_hurtbox_centre()
-	var result: int = player.receive_hit(HitInfo.make(&"carter_clone_rush", self, contact, body))
+	var attack: StringName = &"carter_clone_punish" if is_punish else &"carter_clone_rush"
+	var result: int = player.receive_hit(HitInfo.make(attack, self, contact, body))
 	dissipate(result == HitInfo.Result.PARRIED or result == HitInfo.Result.BLOCKED, contact)
 	return result
 
@@ -166,10 +176,10 @@ func _begin_pass() -> void:
 	pass_clock = 0.0
 	var direction := (to_point - from_point).normalized()
 	pass_step = direction * (to_point.distance_to(from_point) / maxf(travel_time, 0.0001))
-	# The light goes out with it. This is the light's own node, not the clone art, whose fade is
-	# authored into its frames.
+	# The light goes out fast - faster than the body scatters - so it is gone before the next clone's
+	# light comes up. This is the light's own node, not the clone art, whose fade is authored in.
 	var dim := light.create_tween()
-	dim.tween_property(light, "modulate:a", 0.0, CarterArtLayout.CLONE_PASS_TIME)
+	dim.tween_property(light, "modulate:a", 0.0, CarterArtLayout.CLONE_LIGHT_OUT)
 	if not CarterArtLayout.USE_FINAL_CLONE:
 		var fade := create_tween()
 		fade.tween_property(self, "modulate:a", 0.0, CarterArtLayout.CLONE_PASS_TIME)
@@ -251,6 +261,8 @@ func _build_body() -> void:
 	sprite.frame = art.appear[0]
 	sprite.flip_h = facing_left
 	modulate.a = CarterArtLayout.CLONE_ALPHA
+	if is_punish:
+		sprite.modulate = CarterArtLayout.PUNISH_CLONE.tint
 
 
 # Purely the tail: it erases the clone's own footprint, and the clone drawn on top of it provides the
@@ -273,6 +285,8 @@ func _build_ghost() -> void:
 func _build_light() -> void:
 	light.position = CarterArtLayout.clone_light_anchor()
 	light.z_index = CarterArtLayout.CLONE_LIGHT_Z
+	if is_punish:
+		light.scale = Vector2.ONE * CarterArtLayout.PUNISH_CLONE.light_scale
 	var sheet := CarterArtLayout.clone_light()
 	if sheet.has("texture"):
 		light_sprite = Sprite2D.new()
@@ -280,6 +294,8 @@ func _build_light() -> void:
 		light_sprite.hframes = sheet.hframes
 		light_sprite.scale = Vector2.ONE * sheet.scale
 		light_sprite.offset = sheet.frame_size / 2.0 - sheet.pivot
+		if is_punish:
+			light_sprite.modulate = CarterArtLayout.PUNISH_CLONE.light_tint
 		light.add_child(light_sprite)
 		return
 

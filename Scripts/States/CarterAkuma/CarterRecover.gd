@@ -37,13 +37,14 @@ func Exit() -> void:
 	body.set_hurtbox_active(false)
 
 
-# Three parries is a round read well; every red stopped with no feint bitten on is a perfect one.
+# One half-heart per bank_per_parries reds stopped, and a bonus on top for a barrage with every red
+# stopped and no feint bitten on. Fifteen clones is roughly ten seconds of standing still, so a
+# barrage read well is worth several times what the old five-clone one was.
 func banked_damage() -> int:
-	if reds_parried < 2:
-		return 0
+	var banked := reds_parried / maxi(state_machine.bank_per_parries, 1)
 	if reds_total > 0 and reds_parried >= reds_total and feints_parried == 0:
-		return 2
-	return 1
+		banked += state_machine.bank_perfect_bonus
+	return banked
 
 
 func flinch() -> void:

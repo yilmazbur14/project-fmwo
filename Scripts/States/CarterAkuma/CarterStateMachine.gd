@@ -4,7 +4,7 @@ extends Node
 # RagingDemon for as long as he is standing. It is shaped so a second attack slots in beside
 # RagingDemon without any of this changing.
 #
-# THE DIFFICULTY AXIS IS THE NUMBER OF YELLOWS, AND NOTHING ELSE. Five clones, identical rhythm,
+# THE DIFFICULTY AXIS IS THE NUMBER OF YELLOWS, AND NOTHING ELSE. Fifteen clones, identical rhythm,
 # every round forever - that is what makes the fight learnable. To make it harder, raise what
 # yellow_count() returns. Never shorten clone_show: 0.44 s is a red/yellow DISCRIMINATION reaction
 # (~0.35-0.40 s), which is slower than a simple one, and cutting it makes the move a coin flip
@@ -48,23 +48,38 @@ const ARENA_CENTRE := Vector2(959, 540)
 @export var yank_hold := 0.15
 # Beat 2: the lights go out.
 @export var darken_time := 0.45
-# Beat 3: the five rushes. clone_show is the read, clone_dash the timing cue; splitting them is what
-# makes a 0.15 s parry window fair. Their sum plus clone_gap is the interval between clones, which
-# must stay above PlayerDefense.parry_mash_lockout (0.5 s) - see rearm_parry() below.
-@export var clone_count := 5
+# Beat 3: the barrage. clone_show is the read, clone_dash the timing cue; splitting them is what
+# makes the parry window fair.
+# CLONE_SHOW IS THE ONE NUMBER HERE THAT MUST NOT COME DOWN. It is a red/yellow DISCRIMINATION
+# reaction, ~0.35-0.40 s, slower than a simple one; below it the barrage stops being a read and
+# becomes a coin flip. The gap is what was cut to make the barrage relentless.
+# The cadence is now clone_show + clone_dash + clone_gap = 0.70 s, which is BELOW
+# PlayerDefense.parry_mash_lockout (0.5 s) plus the parry window, so the cadence is no longer its own
+# safety net: the rearm_parry() this fight makes as each light comes up is now load-bearing rather
+# than a nicety. Don't remove it, and don't shorten the gap further without re-reading that.
+# One clone lives clone_show + clone_dash = 0.62 s, under the 0.70 s cadence, so two lights are never
+# up at once - the player always knows which clone a press is answering.
+@export var clone_count := 15
 @export var clone_show := 0.44
 @export var clone_dash := 0.18
-@export var clone_gap := 0.30
+@export var clone_gap := 0.08
 @export var clone_radius := 420.0
 # Beat 4: the lights come up and he is standing there.
 @export var clear_time := 0.50
 @export var recover_offset := 340.0
-# Beat 5: the punish window, longer for a round read well and shorter for one blown.
+# Beat 5: the punish window, longer for a barrage read well and shorter for one blown. The per-parry
+# numbers are small because there are fifteen clones to earn them on, not five; the cap is what a
+# perfect barrage is worth.
 @export var recover_base := 3.0
-@export var recover_parry_bonus := 0.5
-@export var recover_miss_penalty := 0.6
+@export var recover_parry_bonus := 0.2
+@export var recover_miss_penalty := 0.25
 @export var recover_min := 1.5
-@export var recover_max := 5.0
+@export var recover_max := 6.0
+# The banked damage a barrage earns: one half-heart per this many reds parried, plus the bonus for a
+# barrage with every red parried and no feint bitten. Scaled to fifteen clones, so a barrage read
+# well is worth proportionally what the five-clone version was.
+@export var bank_per_parries := 3
+@export var bank_perfect_bonus := 2
 # Beat 6: the breath before he starts again.
 @export var beat_time := 0.60
 # What parrying a yellow costs. More than any block in the game: if it empties the bar the existing
@@ -145,21 +160,23 @@ func start_cycle() -> void:
 
 
 # The one difficulty dial. Cycle 1 is all red - it teaches the rhythm - and after that it is his
-# health that decides how many of the five lie.
+# health that decides how many of the fifteen lie. The cap is 6 rather than the proportional 9: no
+# two feints may be adjacent (CarterRagingDemon._build_pattern), and above 6 in fourteen slots the
+# only arrangements left are near-forced ones the player would learn as a fixed pattern.
 func yellow_count() -> int:
 	if cycles_started <= 1:
 		return 0
 	var ratio: float = CarterAkumaCharacterBody.get_health_ratio()
 	if ratio > 0.66:
-		return 1
+		return 3
 	if ratio > 0.33:
-		return 2
-	return 3
+		return 5
+	return 6
 
 
-# Release to release, and the safety net under rearm_parry(): even with no re-arm at all, a player
-# who whiffs on one clone has this long before the next one's window, which has to stay above
-# PlayerDefense.parry_mash_lockout (0.5 s).
+# Light to light. At 0.70 s this is inside PlayerDefense.parry_mash_lockout's reach, so a press that
+# whiffs late on one clone WOULD lock the guard out of the next one if the fight didn't re-arm the
+# parry as each light comes up.
 func clone_interval() -> float:
 	return clone_show + clone_dash + clone_gap
 

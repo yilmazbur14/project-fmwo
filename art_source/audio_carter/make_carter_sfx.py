@@ -48,6 +48,8 @@ PEAK_DBFS = {
     "carter_fake_punish": -8.5,
     "carter_finish": -6.0,
     "carter_spent": -7.0,
+    # It lands in silence with the fight already over, so it does not have to shout to be heard.
+    "carter_ko_ding": -6.0,
 }
 
 # Tritones stacked on tritones: a metal cluster in which no interval resolves.
@@ -329,6 +331,50 @@ def build_spent():
     return mix((1.0, breath), (0.34, voiced), (0.16, settle), (0.12, rustle))
 
 
+# A real tuned bell, which is the only pitched thing in this set that is allowed to ring. The partial that decides
+# how it feels is the tierce at 1.2, a minor third over the prime: with the quint at 1.5 the bell spells a minor
+# triad, which is why church bells sound like a verdict and why there is no 1.25 major third anywhere in here.
+# The hum an octave under the prime rings longest, so the sound sinks as it dies rather than thinning out.
+BELL_MODES = [
+    # The hum sits five cents under a true octave and the tierce a shade over a tempered minor third, so the bell
+    # is very slightly sour against itself. Tuned exactly it comes out sad; tuned like this it comes out wrong.
+    (0.4985, 0.42, 1.30),
+    (1.00, 1.00, 1.00),
+    (1.193, 0.88, 0.86),
+    (1.50, 0.38, 0.64),
+    (2.00, 0.60, 0.55),
+    (2.50, 0.26, 0.40),
+    (3.01, 0.32, 0.33),
+    (4.02, 0.20, 0.23),
+    (5.43, 0.12, 0.16),
+    (6.79, 0.07, 0.11),
+]
+
+# Three to choose between, since nobody here can hear the reference. None of them is in the key of the parry
+# sounds: the outer two are B, a tritone from their F, and the middle one is E, a semitone under it. The note the
+# player dies to is one that will not resolve against the note they win to, whichever gets picked.
+# KO_DING is the index that ships as carter_ko_ding.wav; the preview writes all three to choose from.
+KO_DING_CANDIDATES = [
+    dict(name="low_long", prime=1975.5, tail_ms=1550.0, length_ms=1750.0, seed=1301),
+    dict(name="mid", prime=2637.0, tail_ms=1250.0, length_ms=1430.0, seed=1302),
+    dict(name="very_high", prime=3951.1, tail_ms=950.0, length_ms=1120.0, seed=1303),
+]
+KO_DING = 1
+
+
+def build_ko_ding(spec):
+    """The emblem on his back lights. One struck bell, nothing else: no noise crack, no cluster, no room. It has
+    to land on a single frame, so it starts at full level with only enough of an edge on it not to click."""
+    rng = random.Random(spec["seed"])
+    n = samples(spec["length_ms"])
+
+    bell = struck(n, spec["prime"], BELL_MODES, spec["tail_ms"], 1.0, rng, shimmer=5)
+    # The mallet, kept narrow and high so it reads as part of the bell rather than as a separate tick.
+    contact = strike(n, rng, spec["prime"] * 3.2, 4.0, q=1.6)
+
+    return mix((1.0, bell), (0.09, contact))
+
+
 # (build, how far to thin the bottom, where to stop the top). The rushes lose everything above 6.8 kHz because
 # they play five times in a round; the reward keeps its shards.
 SOUNDS = [
@@ -343,6 +389,7 @@ SOUNDS = [
     ("carter_fake_punish", build_fake_punish, 70.0, 7000.0),
     ("carter_finish", build_finish, 55.0, 13000.0),
     ("carter_spent", build_spent, 90.0, 9000.0),
+    ("carter_ko_ding", lambda: build_ko_ding(KO_DING_CANDIDATES[KO_DING]), 200.0, 15000.0),
 ]
 
 # The round the preview plays: (when, which sound). Clones 1, 2 and 4 are parried, 3 lands, 5 is the bait. The
@@ -388,6 +435,12 @@ def main():
         os.makedirs(folder, exist_ok=True)
         for name, sound in sounds.items():
             write_wav(os.path.join(folder, "preview_%s.wav" % name), sound)
+
+        # All three ko_ding candidates, so the one that ships can be chosen by ear.
+        for number, spec in enumerate(KO_DING_CANDIDATES, 1):
+            candidate = finish(build_ko_ding(spec), PEAK_DBFS["carter_ko_ding"], 200.0, 15000.0)
+            write_wav(os.path.join(folder, "preview_carter_ko_ding_%d_%s.wav" % (number, spec["name"])), candidate)
+            report("carter_ko_ding %d %s" % (number, spec["name"]), candidate)
 
         for _, name in ROUND:
             if name not in sounds:

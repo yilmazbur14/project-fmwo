@@ -7,7 +7,7 @@ const NAMES := [
 	"parry_hit_1", "parry_hit_2", "parry_hit_3",
 	"parry_tink_1", "parry_tink_2", "parry_tink_3", "parry_streak",
 	"carter_eye_flash", "carter_warp", "carter_dark", "carter_rush_1", "carter_rush_2", "carter_rush_3",
-	"carter_strike", "carter_parry_break", "carter_fake_punish", "carter_finish", "carter_spent",
+	"carter_strike", "carter_parry_break", "carter_fake_punish", "carter_finish", "carter_spent", "carter_ko_ding",
 ]
 
 var _players: Array[AudioStreamPlayer] = []

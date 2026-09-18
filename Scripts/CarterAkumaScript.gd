@@ -295,8 +295,9 @@ func snap_music_level() -> void:
 	music_player.volume_db = music_base_db
 
 
-func play_rush(index: int) -> void:
+func play_rush(index: int, pitch := 1.0) -> void:
 	rush_sfx_player.stream = load(RUSH_SFX[index % RUSH_SFX.size()])
+	rush_sfx_player.pitch_scale = pitch
 	rush_sfx_player.play()
 
 

@@ -7,9 +7,13 @@ extends State
 #                  ghosts behind it are what make it read as him grabbing you rather than as a bug.
 #   DARKEN 0.45 s  the crowd hushes, the music ducks, the dark comes in, a pool opens under them and
 #                  he is swallowed by it.
-#   RUSH   4.60 s  five clones, one at a time, each with a RED light (parry it) or a YELLOW one (a
-#                  feint - parrying it punishes you). Identical timing either way; only the colour
-#                  and the outcome differ, or the player would read the timing and the move would die.
+#   RUSH  10.50 s  fifteen clones, one at a time and 0.70 s apart, each with a RED light (parry it)
+#                  or a YELLOW one (a feint - parrying it punishes you). Identical timing either way;
+#                  only the colour and the outcome differ, or the player would read the timing
+#                  instead of the colour and the move would die. Bite on a feint and the clone after
+#                  it comes in as a PUNISH, which nothing answers.
+#                  None of them stop at the i-frames: being hit never hands the player the clones
+#                  behind it for free.
 #   CLEAR  0.50 s  the lights come up and he is standing there, open.
 #
 # IT IS ONE STATE ON PURPOSE. The lock, the player's draw order and the darkness have to be taken and
@@ -55,6 +59,8 @@ const YANK_SHAKE_STEP_TIME := 0.03
 const MUSIC_DUCK_DB := -8.0
 const MUSIC_DUCK_TIME := 0.2
 const MUSIC_BACK_TIME := 0.25
+# The clone that can't be answered arrives lower and heavier than the other fourteen.
+const PUNISH_RUSH_PITCH := 0.78
 
 var beat := Beat.FLASH
 var beat_clock := 0.0
@@ -75,10 +81,16 @@ var clone: Node2D
 var clone_launched := false
 var clone_struck := false
 var clone_punished := false
+# What the live clone actually is. A feint the player bites on turns the NEXT one into a punish,
+# whatever the pattern had planned for it, so this can't be read off `feints` alone.
+var clone_is_feint := false
+var clone_is_punish := false
+var punish_next := false
 
 var reds_parried := 0
 var reds_missed := 0
 var feints_parried := 0
+var punishes_landed := 0
 
 var yank_from := Vector2.ZERO
 var yank_landed := false
@@ -94,9 +106,13 @@ func Enter() -> void:
 	clone_index = -1
 	clone_clock = 0.0
 	clone = null
+	clone_is_feint = false
+	clone_is_punish = false
+	punish_next = false
 	reds_parried = 0
 	reds_missed = 0
 	feints_parried = 0
+	punishes_landed = 0
 	_build_pattern()
 	listening = state_machine.connect_block_presses(_on_block_pressed)
 	# On the first frame of the eye flash, not at the end of it.
@@ -181,7 +197,7 @@ func _build_pattern() -> void:
 	feints.clear()
 	feints.resize(count)
 	feints.fill(false)
-	# Clone 1 is never a feint: it teaches the rhythm at the top of every round.
+	# Clone 1 is never a feint: it teaches the rhythm at the top of every barrage.
 	var slots: Array[int] = []
 	for i in range(1, count):
 		slots.append(i)
@@ -189,22 +205,29 @@ func _build_pattern() -> void:
 	for attempt in PATTERN_TRIES:
 		slots.shuffle()
 		pick = slots.slice(0, yellows)
-		# Above two the no-two-adjacent rule is unsatisfiable, and that pressure is the point.
-		if yellows > 2 or not _adjacent(pick):
+		# No two feints adjacent, at every tier. At a 0.70 s cadence two lies back to back are
+		# unreadable rather than hard, and a bitten feint turns the clone after it into a punish -
+		# which would eat the second feint and waste it. yellow_count() is capped so this always has
+		# an answer.
+		if not _adjacent(pick):
 			break
 	for index in pick:
 		feints[index] = true
 
-	# Five of the eight compass points, so no two clones in a round share a direction, and the first
-	# one always comes from the left or the right - the reading the player already has.
+	# The first clone always comes from the left or the right - the reading the player already has.
+	# After that: eight compass points and fifteen clones, so the deck is shuffled, dealt out and
+	# shuffled again. The rule that survives the repeats is the one that matters, which is that no
+	# two clones in a row ever come from the same side.
 	var first: Vector2 = Vector2.LEFT if randi() % 2 == 0 else Vector2.RIGHT
-	var rest: Array[Vector2] = []
-	for point in COMPASS:
-		if point != first:
-			rest.append(point)
-	rest.shuffle()
 	directions = [first]
-	directions.append_array(rest.slice(0, count - 1))
+	var deck: Array[Vector2] = []
+	while directions.size() < count:
+		if deck.is_empty():
+			deck = COMPASS.duplicate()
+			deck.shuffle()
+			if deck[0] == directions[-1]:
+				deck.push_back(deck.pop_front())
+		directions.append(deck.pop_front())
 
 
 func _adjacent(picked: Array) -> bool:
@@ -317,7 +340,8 @@ func _advance_rush(delta: float) -> void:
 		clone_launched = true
 		if is_instance_valid(clone):
 			clone.launch(state_machine.clone_dash)
-		body.play_rush(clone_index)
+		# The one that can't be answered comes in heavier than the rest.
+		body.play_rush(clone_index, PUNISH_RUSH_PITCH if clone_is_punish else 1.0)
 	if not clone_struck and clone_clock >= state_machine.clone_show + state_machine.clone_dash:
 		clone_struck = true
 		_strike()
@@ -335,6 +359,10 @@ func _next_clone() -> void:
 	clone_launched = false
 	clone_struck = false
 	clone_punished = false
+	# A feint bitten on the clone before overrides whatever this one was going to be.
+	clone_is_punish = punish_next
+	punish_next = false
+	clone_is_feint = feints[clone_index] and not clone_is_punish
 
 	var player: Node2D = state_machine.get_player()
 	var to_point: Vector2 = player.global_position if is_instance_valid(player) else state_machine.ARENA_CENTRE
@@ -342,7 +370,8 @@ func _next_clone() -> void:
 	var from_point := _spawn_point(to_point, last_direction)
 
 	var rush := CLONE_SCENE.instantiate()
-	rush.is_feint = feints[clone_index]
+	rush.is_feint = clone_is_feint
+	rush.is_punish = clone_is_punish
 	rush.from_point = from_point
 	rush.to_point = to_point
 	rush.player = player
@@ -387,7 +416,14 @@ func _strike() -> void:
 		return
 	var result: int = clone.strike()
 	clone = null
-	if feints[clone_index]:
+	if clone_is_feint:
+		return
+	# A punish clone was always going to land: it isn't a read the player failed, it is the bill for
+	# the bait they already paid for, so it doesn't shorten the punish window on top.
+	if clone_is_punish:
+		if result == HitInfo.Result.HIT:
+			punishes_landed += 1
+		body.strike_sfx_player.play()
 		return
 	match result:
 		HitInfo.Result.PARRIED:
@@ -405,15 +441,19 @@ func _strike() -> void:
 # A block press while a yellow's light is up: the colour was read wrong. It costs stamina and the
 # streak and never health - they were never touched - and 40 stamina is more than any block in the
 # game, so a player who keeps biting guard-breaks themselves.
+# AND IT ARMS THE NEXT CLONE. Whatever that one was going to be, it comes in as a punish: hot, white
+# and beating, and nothing the player does answers it. The bait is the mistake; the clone after it is
+# the bill. It is drawn differently on purpose, so this never reads as a parry that failed.
 func _on_block_pressed(_credited := false) -> void:
 	if beat != Beat.RUSH or clone_index < 0 or clone_punished:
 		return
-	if not feints[clone_index]:
+	if not clone_is_feint:
 		return
 	if clone_clock > state_machine.clone_show + state_machine.clone_dash:
 		return
 	clone_punished = true
 	feints_parried += 1
+	punish_next = true
 	state_machine.drain_stamina(state_machine.feint_stamina)
 	state_machine.end_parry_streak()
 	body.show_word("FEINT!")

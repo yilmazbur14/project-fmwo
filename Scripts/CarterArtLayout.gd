@@ -264,7 +264,25 @@ const FINAL_CLONE_GHOST := {
 const CLONE_LIGHT_GAP := 34.0
 # How far the light reaches above its anchor, which is half its own drawn height. A clone is never
 # spawned high enough for this to leave the top of the view: a colour that can't be seen isn't a read.
-const CLONE_LIGHT_REACH := 36.0
+# The punish clone's light is bigger, so this allows for that one.
+const CLONE_LIGHT_REACH := 48.0
+# A clone that has gone past takes its light with it this fast - well inside clone_gap, so the next
+# clone's light is never the second one on screen. Two lights up at once and the player can't tell
+# which one a press is answering.
+const CLONE_LIGHT_OUT := 0.06
+
+# THE CLONE AFTER A FEINT THE PLAYER BIT ON. It cannot be parried or blocked, and the player has to
+# be able to see that coming or they will read it as their parry having failed. Until it has frames
+# of its own it is the same shape run hot and white, with a light a third bigger that BEATS instead
+# of holding steady - the one tell in this fight allowed to move, because it is not a decision, it is
+# a sentence already passed.
+const PUNISH_CLONE := {
+	"tint": Color(2.2, 0.8, 0.85),
+	"light_tint": Color(2.4, 1.0, 1.0),
+	"light_scale": 1.35,
+	"beat": [0.82, 1.18],
+	"beat_time": 0.07,
+}
 const USE_FINAL_CLONE_LIGHT := true
 const PLACEHOLDER_CLONE_LIGHT := {
 	"red": {"shape": "diamond", "radius": 46.0, "color": Color(1.0, 0.16, 0.2)},

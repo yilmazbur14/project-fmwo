@@ -71,7 +71,12 @@ const ATTACKS := {
 	# Its origin is the player's own hurtbox centre, inside PlayerDefense.block_omni_radius, so any
 	# facing can answer it - the check is timing, not aim. The yellow feints never reach here at all,
 	# and the lights are drawn by the clone, not ParryTell, so `tell` stays false.
-	&"carter_clone_rush": {"blockable": true, "weight": Weight.HEAVY},
+	# It lands inside the i-frames on purpose: fifteen of these come 0.70 s apart, and being hit must
+	# never hand the player the clones behind it for free. Every one of them counts.
+	&"carter_clone_rush": {"blockable": true, "weight": Weight.HEAVY, "bypass_invincibility": true},
+	# The clone right after a feint the player bit on. Nothing answers it - that is the whole point -
+	# so it is neither blockable nor parryable. The bait was the mistake; this is the bill.
+	&"carter_clone_punish": {"weight": Weight.HEAVY, "bypass_invincibility": true},
 	# Anything that hits without an id: exactly the old behaviour.
 	&"untagged": {},
 }
