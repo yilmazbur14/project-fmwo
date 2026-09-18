@@ -57,14 +57,19 @@ const THIRD_WIDTH := 564.0
 @export var card_hover_height := 900.0
 # Phase two: how long he holds each card up face-out before laying it flat.
 @export var face_show_time := 0.8
-# A bomb every this many px of travel, except over the third that is warning or slamming.
-@export var bomb_spacing := 480.0
-@export var monte_bomb_spacing := 380.0
-@export var fast_bomb_spacing := 260.0
+# A bomb every this many px of travel, except on the third that is warning or slamming.
+@export var bomb_spacing := 320.0
+@export var monte_bomb_spacing := 250.0
+@export var fast_bomb_spacing := 180.0
 @export var fast_bomb_time := 3.0
 @export var bomb_fuse := 1.1
-# The drawn fireball's radius: the blast hurts exactly as far as it reads.
-@export var bomb_blast_radius := 75.0
+# The drawn fireball's radius: the blast hurts exactly as far as it reads, so the art is scaled to
+# match it (JoshArtLayout.FINAL_BOMB.blast_scale).
+@export var bomb_blast_radius := 112.0
+# How far each drop leans from where he is toward where the player is, and how far it then scatters.
+# A lean, never a lock: a bomb has to be walkable out of, so it must never land on the player.
+@export var bomb_player_lean := 0.6
+@export var bomb_scatter := 200.0
 # The falling cards, strictly one at a time: the warning each gets, and the beat after it lands.
 @export var card_warning := 1.4
 @export var card_gap := 0.5
@@ -269,17 +274,32 @@ func advance_pass(delta: float, spacing: float, keep_out_third: int) -> void:
 
 func drop_bomb(keep_out_third: int) -> void:
 	var body := JoshCardsCharacterBody
-	var point: Vector2 = body.ground_position
-	if not ROPES.has_point(point) or third_at(point.x) == keep_out_third:
+	# Only while he is over the arena himself: nothing appears out of an off-screen turn.
+	if not ROPES.has_point(body.ground_position):
+		return
+	var point := bomb_point(body.ground_position)
+	# The keep-out rule is judged on where it lands, not on where he was standing.
+	if third_at(point.x) == keep_out_third:
 		return
 	var bomb := CARD_BOMB_SCENE.instantiate()
 	bomb.fuse = bomb_fuse
 	bomb.blast_radius = bomb_blast_radius
-	# From his hand on the drop frame, down to the floor point he is over.
-	bomb.fall_offset = (JoshArtLayout.local(JoshArtLayout.HAND_BOMB, body.sprite.flip_h)
-		- Vector2(0, body.height))
+	# It still leaves his hand on the drop frame, wherever it is aimed.
+	var hand: Vector2 = body.air.global_position + JoshArtLayout.local(JoshArtLayout.HAND_BOMB, body.sprite.flip_h)
+	bomb.fall_offset = hand - point
 	add_hazard(bomb, point, body.floor_layer)
 	body.play_anim(&"bomb", &"glide")
+
+
+# Where a bomb goes: leaned from him toward the player and then scattered, so the floor he is working
+# crowds up without any single bomb being aimed at the player.
+func bomb_point(from: Vector2) -> Vector2:
+	var point := from
+	var player := get_player()
+	if player:
+		point = from.lerp(player.global_position, bomb_player_lean)
+	point += Vector2(randf_range(-bomb_scatter, bomb_scatter), randf_range(-bomb_scatter, bomb_scatter))
+	return point.clamp(ROPES.position, ROPES.end)
 
 
 # The monte's prize. The defence coder owns apply_status; until it lands the reveal still reads and
