@@ -12,32 +12,20 @@ bg_color = Color(1, 0.19607843, 0.105882354, 0.47058824)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_y32ns"]
 size = Vector2(1720, 10)
 
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_1pi56"]
-load_path = "res://.godot/imported/pole.png-af1bfdde19ce67a749afc68a60c61ebf.ctex"
-
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wtcfe"]
 size = Vector2(10, 880)
-
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_o7u4c"]
-load_path = "res://.godot/imported/boundaries.png-af4b834f67b7086416b38f5260e6e398.ctex"
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_0e48y"]
 size = Vector2(10, 880)
 
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_8o1qv"]
-load_path = "res://.godot/imported/boundaries.png-af4b834f67b7086416b38f5260e6e398.ctex"
-
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_epypp"]
 size = Vector2(1720, 10)
-
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_dulu2"]
-load_path = "res://.godot/imported/boundaries.png-af4b834f67b7086416b38f5260e6e398.ctex"
 
 [node name="Arena" type="Node2D" unique_id=991001701]
 
 [node name="ColorRect" type="ColorRect" parent="." unique_id=317890913]
-offset_right = 1921.0
-offset_bottom = 1077.0
+offset_right = 1920.0
+offset_bottom = 1080.0
 color = Color(0, 0, 0, 1)
 
 [node name="ColorRect2" type="ColorRect" parent="." unique_id=760899020]
@@ -106,7 +94,7 @@ texture = ExtResource("4_2uq8x")
 [node name="topRightPole" type="Sprite2D" parent="wallBoundaries/topWall" unique_id=1229754495]
 position = Vector2(846.99994, 9.000004)
 scale = Vector2(1.5859377, 2.03125)
-texture = SubResource("CompressedTexture2D_1pi56")
+texture = ExtResource("4_2uq8x")
 flip_h = true
 
 [node name="leftWall" type="CollisionShape2D" parent="wallBoundaries" unique_id=2013955483]
@@ -118,7 +106,7 @@ debug_color = Color(0.94097954, 0.23209533, 0.2029345, 0.41960785)
 position = Vector2(-7.999981, 31.41027)
 rotation = 1.5707964
 scale = Vector2(3.9833364, 6.9375)
-texture = SubResource("CompressedTexture2D_o7u4c")
+texture = ExtResource("3_fnbqh")
 
 [node name="rightWall" type="CollisionShape2D" parent="wallBoundaries" unique_id=2014825227]
 position = Vector2(1820, 540)
@@ -129,7 +117,7 @@ debug_color = Color(0.8305962, 0.39350197, 0, 0.41960785)
 position = Vector2(-14.99998, 27.50096)
 rotation = 1.5707964
 scale = Vector2(3.9273026, 6.9375)
-texture = SubResource("CompressedTexture2D_8o1qv")
+texture = ExtResource("3_fnbqh")
 
 [node name="bottomWall" type="CollisionShape2D" parent="wallBoundaries" unique_id=354189786]
 position = Vector2(960, 980)
@@ -139,7 +127,7 @@ debug_color = Color(0.9514479, 0.21990731, 0.08271069, 0.41960785)
 [node name="wall" type="Sprite2D" parent="wallBoundaries/bottomWall" unique_id=1173701576]
 position = Vector2(57, 8)
 scale = Vector2(7.783335, 6.9375)
-texture = SubResource("CompressedTexture2D_dulu2")
+texture = ExtResource("3_fnbqh")
 
 [node name="topLeftPole2" type="Sprite2D" parent="wallBoundaries/bottomWall" unique_id=1137104301]
 position = Vector2(-847, -16.000021)
