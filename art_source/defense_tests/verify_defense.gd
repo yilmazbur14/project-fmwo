@@ -197,6 +197,8 @@ func _main() -> void:
 		"parry_cue": await test_parry_cue()
 		"approach": await test_approach()
 		"clone_cadence": await test_clone_cadence()
+		"auto_finisher": await test_auto_finisher()
+		"auto_kill": await test_auto_kill()
 		"tells": await test_tells()
 		_: log_p("unknown mode " + mode)
 	log_p("RESULT mode=%s fails=%d" % [mode, fails])
@@ -2046,6 +2048,107 @@ func test_kill_shove() -> void:
 	if supercharged:
 		check(hype_spent, "%s: a killing supercharge still spends the hype" % tier)
 	await wait(30)
+
+
+# ------------------------------------------------------------------ the handed-out finisher
+
+# A fight handing the player the whole finisher (PlayerFinisher.begin_auto): the daze, no prompt, and
+# the uppercut firing itself. tier=super runs it with a full hype meter.
+func test_auto_finisher() -> void:
+	await load_eric()
+	health_ok()
+	park_eric()
+	var finisher: Node = player.get_node("Finisher")
+	var hype: Node = player.get_node("Hype")
+	var sound: AudioStreamPlayer = player.get_node("SuperUppercutSfxPlayer")
+	var supercharged := tier == "super"
+	var prompts := [0]
+	finisher.prompt_shown.connect(func(): prompts[0] += 1)
+	log_p("-- the sound the supercharged uppercut has and the normal one doesn't")
+	check(sound.stream != null, "its stream is loaded up front (%s)" % (sound.stream.resource_path if sound.stream else "none"))
+	log_p("  %s at %.1f dB, pitch %.2f" % [sound.stream.resource_path.get_file(), sound.volume_db, sound.pitch_scale])
+
+	log_p("-- it will not start on a boss that cannot be dazed")
+	check(not finisher.begin_auto(boss), "refused while he is not in a punish window")
+	check(not player.is_finishing and finisher.phase == 0, "and nothing was started")
+
+	log_p("-- opened up, it takes")
+	sm.downed_state_timer.start(60.0)
+	sm.on_child_transition(sm.current_state, "Downed")
+	await wait(5)
+	boss.daze_used = false
+	boss.boss_health = 24
+	hype._set_hype(100.0 if supercharged else 0.0)
+	place_under(boss.get_node("Hurtbox"))
+	await wait(4)
+	var health: int = boss.boss_health
+	var boss_at: Vector2 = boss.global_position
+	var started: float = defense.clock
+	check(finisher.begin_auto(boss), "begin_auto took")
+	check(not finisher.begin_auto(boss), "and refuses to start a second one over it")
+	check(await wait_until(func(): return finisher.dazed, 60), "he is dazed")
+	check(finisher.supercharged == supercharged, "the meter was read at the daze (%s)" % finisher.supercharged)
+
+	log_p("-- no prompt, and presses do nothing")
+	tap(KEY_Q)
+	tap(KEY_W)
+	await wait(4)
+	check(not finisher.prompt_visible and prompts[0] == 0, "the prompt never shows")
+	check(finisher.meter < 1.0 or finisher.phase >= 4, "a press never filled the meter")
+
+	log_p("-- the uppercut fires itself")
+	check(await wait_until(func(): return boss.boss_health < health, 180), "it lands")
+	var to_contact: float = defense.clock - started
+	var dealt: int = health - boss.boss_health
+	log_p("contact %.2f s after the call, dealt %d of %d, sound playing %s at pitch %.2f" % [to_contact, dealt, boss.max_health, sound.playing, sound.pitch_scale])
+	check(to_contact >= 0.35, "the dazed beat is held before it (%.2f s)" % to_contact)
+	check(dealt == (10 if supercharged else 6), "it deals what the hand-driven one deals (%d)" % dealt)
+	check(sound.playing == supercharged, "the supercharged sound plays only for the supercharged one (%s)" % sound.playing)
+	check(is_equal_approx(sound.pitch_scale, 1.0 if supercharged else sound.pitch_scale), "the hit-stop does not bend its pitch (%.2f)" % sound.pitch_scale)
+	if supercharged:
+		check(hype.hype == 0.0, "the meter was spent (%.0f)" % hype.hype)
+		# The freeze is 0.35 s of real time and the sound is longer, so it has to ring through it.
+		await wait(30)
+		check(sound.playing, "and it rings on through the freeze")
+	else:
+		check(hype.hype == 0.0 or not hype.is_full(), "nothing to spend")
+	log_p("-- and it puts the player back")
+	check(await wait_until(func(): return finisher.phase == 0, 180), "the finisher ends")
+	check(not player.is_finishing, "the player is his own again")
+	check(finisher.is_input_locked(), "with the usual beat of swallowed input after it")
+	check(await wait_until(func(): return not finisher.is_input_locked(), 90), "which passes")
+	check(not finisher.auto, "and the handed-out flag is cleared")
+	# The shove is a game-time tween, so it plays out slowly through the contact's hit-stop.
+	await wait(45)
+	check(boss.global_position.distance_to(boss_at) > 50.0, "he is knocked back like any other uppercut (%.0f px)" % boss.global_position.distance_to(boss_at))
+
+
+# A handed-out finisher that kills: the same rules as a mashed one.
+func test_auto_kill() -> void:
+	await load_eric()
+	health_ok()
+	park_eric()
+	var finisher: Node = player.get_node("Finisher")
+	player.get_node("Hype")._set_hype(0.0)
+	sm.downed_state_timer.start(60.0)
+	sm.on_child_transition(sm.current_state, "Downed")
+	await wait(5)
+	boss.daze_used = false
+	# Exactly what a normal uppercut deals, so it kills.
+	boss.boss_health = 6
+	place_under(boss.get_node("Hurtbox"))
+	await wait(4)
+	var boss_at: Vector2 = boss.global_position
+	check(finisher.begin_auto(boss), "it took")
+	check(await wait_until(func(): return boss.boss_health <= 0, 240), "the boss died")
+	await wait(60)
+	var outros: int = root.get_children().filter(func(c): return c.name == "FightOutro").size()
+	log_p("killed: moved %.0f px, outros %d, state %s" % [boss_at.distance_to(boss.global_position), outros, sm.current_state.name])
+	check(boss_at.distance_to(boss.global_position) < 1.0, "a killing blow still leaves him where he was hit")
+	check(outros == 1, "one outro (%d)" % outros)
+	check(player.fight_over, "and the fight is over")
+	check(not finisher.begin_auto(boss), "and nothing can be handed out after it")
+	check(not player.is_finishing and finisher.phase == 0, "nothing was started (%d)" % finisher.phase)
 
 
 # ------------------------------------------------------------------ a barrage's cadence

@@ -3,6 +3,8 @@ extends Node
 # The finisher. A charged combo punch that lands in a boss's punish window dazes the boss and stops
 # the fight around the player. Alternating punch and dodge fills a meter while the camera closes in,
 # and a full meter fires a rising uppercut that takes a chunk of the boss's health and ends the window.
+# A fight can also hand the whole thing out at once with begin_auto(), for a read the player has
+# already earned: the same daze, no prompt, and the uppercut fires itself.
 # A boss takes part by implementing:
 #     can_be_dazed() -> bool             alive, in its punish window, not dazed in it yet, and the
 #                                        finisher could still deal damage past any phase floor
@@ -101,6 +103,7 @@ const STEP_TOLERANCE := 0.001
 
 @onready var player: CharacterBody2D = get_parent()
 @onready var fx_layer: Node2D = player.get_parent().get_node("FinisherFx")
+@onready var super_sfx_player: AudioStreamPlayer = player.get_node("SuperUppercutSfxPlayer")
 
 var phase := Phase.OFF
 var boss: Node
@@ -120,6 +123,10 @@ var flipped := false
 var stars: Sprite2D
 var stars_clock := 0.0
 var input_lock_left := 0.0
+# Set by begin_auto(): the charge is already made, so the dazed beat runs on its own clock and no
+# press is ever counted.
+var auto := false
+var auto_hold := 0.0
 # Decided when the daze starts: nothing can hit the player during the finisher, so the hype it needs
 # can't drain in between. PlayerFinishing reads it for the recoloured sheet.
 var supercharged := false
@@ -127,6 +134,12 @@ var supercharged := false
 
 func _ready() -> void:
 	player.get_node("Combo").charged_hit_landed.connect(_on_charged_hit_landed)
+	# Loaded up front: the local sound is an MP3, and the first supercharged uppercut of a fight must
+	# not wait on a decoder to warm up.
+	var impact := FinisherArtLayout.super_impact_sfx()
+	super_sfx_player.stream = load(impact.stream)
+	super_sfx_player.pitch_scale = impact.pitch
+	super_sfx_player.volume_db = impact.volume_db
 
 
 func is_active() -> bool:
@@ -182,6 +195,23 @@ func _try_begin(target: Node) -> void:
 	_set_phase(Phase.SETTLE)
 
 
+# A fight hands the player the finisher outright, for something they have already earned: the boss is
+# dazed, the prompt never shows and the uppercut fires on its own after `hold` seconds of the dazed
+# pose, which is the beat that makes it read as "he is reeling, and then you hit him". Everything
+# else is the hand-driven path: the same entry guards, the freeze, the supercharge decision, the
+# contact, the knockback, the kill rule and the outro. Returns whether it started.
+func begin_auto(target: Node, hold := 0.35) -> bool:
+	if phase != Phase.OFF:
+		return false
+	auto = true
+	auto_hold = maxf(hold, 0.0)
+	_try_begin(target)
+	if phase == Phase.OFF:
+		auto = false
+		return false
+	return true
+
+
 func _process(delta: float) -> void:
 	if phase == Phase.OFF:
 		input_lock_left = maxf(input_lock_left - delta, 0.0)
@@ -197,10 +227,16 @@ func _process(delta: float) -> void:
 				_begin_daze()
 		Phase.DAZED:
 			daze_time += delta
-			if not prompt_visible and daze_time >= prompt_delay:
+			if auto:
+				# No prompt, no presses and no time limit: the beat is the boss reeling, and then the
+				# uppercut, which the charging phase fires on the next frame from a full meter.
+				if daze_time >= auto_hold:
+					meter = 1.0
+					_start_charging()
+			elif not prompt_visible and daze_time >= prompt_delay:
 				prompt_visible = true
 				prompt_shown.emit()
-			if daze_time >= prompt_delay + charge_time_limit:
+			elif daze_time >= prompt_delay + charge_time_limit:
 				_start_fizzle()
 		Phase.CHARGING:
 			# Before the drain, so the press that filled the meter counts.
@@ -250,6 +286,11 @@ func _begin_daze() -> void:
 	last_action = &""
 	last_press_usec = 0
 	_set_phase(Phase.DAZED)
+	if auto:
+		# The view closes in over the held beat instead of over a mash, so the uppercut lands on a
+		# camera that has already arrived.
+		zoomed = true
+		ScreenView.zoom_to(get_tree(), zoom, player.global_position.lerp(boss.get_daze_anchor(), focus_boss_weight), zoom_in_time)
 
 
 func _press(action: StringName) -> void:
@@ -332,6 +373,9 @@ func _contact() -> void:
 				_hop(boss.sprite)
 		_spawn_impact(box, super_applied)
 		if super_applied:
+			# On the contact frame with the freeze, the shake and the burst, so the hit is one event.
+			# Audio runs on its own clock, so the hit-stop neither chops it nor bends its pitch.
+			super_sfx_player.play()
 			_super_contact_extras(box)
 		HitStop.freeze(get_tree(), super_impact_hit_stop if super_applied else impact_hit_stop)
 		ScreenView.shake(get_tree(), super_impact_shake if super_applied else impact_shake, super_impact_shake_steps if super_applied else IMPACT_SHAKE_STEPS, IMPACT_SHAKE_STEP_TIME)
@@ -512,6 +556,7 @@ func _abort() -> void:
 func _finish() -> void:
 	phase = Phase.OFF
 	boss = null
+	auto = false
 	dazed = false
 	supercharged = false
 	prompt_visible = false

@@ -27,6 +27,7 @@ DEFAULT_MODES=(
 	"knockback_boss fight=mason" "knockback_boss fight=jordan"
 	"knockback_boss fight=liam"
 	"kill_shove fight=eric tier=normal" "kill_shove fight=eric tier=super"
+	"auto_finisher tier=normal" "auto_finisher tier=super" auto_kill clone_cadence
 	status "status_end tier=death" "status_end tier=fight_over" status_dialogue
 	locked "locked_end tier=death" "locked_end tier=fight_over"
 	"smoke fight=eric" "smoke fight=greyson" "smoke fight=carter"

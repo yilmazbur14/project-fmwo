@@ -112,6 +112,8 @@ the player's rules; if his fight changes, these are the ones to reconcile.
 | `knockback_computah` | real time | a boss anchored to his own cycle rocks back on his sprite instead, and boss 2's near-death clamp clips the uppercut without spending the hype |
 | `knockback_boss` | real time, `fight=mason\|jordan\|liam` | the same for the rest of the roster |
 | `kill_shove` | real time, `fight=eric`, `tier=normal\|super` | a killing uppercut does not shove: the boss dies where he was hit, one outro, his defeat plays |
+| `auto_finisher` | `tier=normal\|super` | a fight handing the player the finisher (`begin_auto`): the entry guards, the daze, no prompt and no presses counted, the held beat, the same damage and hype spend as a mashed one, the knockback, the supercharged sound, and the input lock afterwards |
+| `auto_kill` | | a handed-out finisher that kills: no shove, one outro, and nothing can be handed out after the fight is over |
 
 ### Status effects and the lock
 

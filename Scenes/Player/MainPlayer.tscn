@@ -253,6 +253,8 @@ script = ExtResource("24_status")
 
 [node name="HypeFullSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
 
+[node name="SuperUppercutSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=547045528]
 
 [node name="Control" parent="CanvasLayer" unique_id=1519141297 instance=ExtResource("8_jsrhp")]

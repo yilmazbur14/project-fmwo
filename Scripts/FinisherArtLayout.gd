@@ -168,6 +168,27 @@ const FINAL_SUPER_SPEEDLINES := {
 	"pivot": Vector2(320, 180),
 }
 
+#SUPERCHARGED IMPACT SOUND
+# The one sound the supercharged uppercut has that the normal one doesn't: the user's own power
+# punch, kept out of the repo, so a fresh clone falls back to the hit every punch in the game makes,
+# pitched down into something heavier. The normal uppercut is left alone either way, which is the
+# point: spending a full meter should be the loudest thing the player can do.
+const SUPER_IMPACT_LOCAL := "res://Assets/Audio/SFX/local/super_uppercut_local.mp3"
+const SUPER_IMPACT_FALLBACK := "res://Assets/Audio/SFX/hit_impact.ogg"
+# Loud on purpose, and the loudest cue the player has: the parry sits at -6 and a block at -8. It
+# lands inside the contact's hit-stop, where the fight is silent apart from the music and the crowd,
+# so it has room to be the biggest hit in the game without fighting anything for it.
+const SUPER_IMPACT_LOCAL_DB := 0.0
+const SUPER_IMPACT_FALLBACK_DB := 0.0
+const SUPER_IMPACT_FALLBACK_PITCH := 0.7
+
+
+static func super_impact_sfx() -> Dictionary:
+	if ResourceLoader.exists(SUPER_IMPACT_LOCAL):
+		return {"stream": SUPER_IMPACT_LOCAL, "pitch": 1.0, "volume_db": SUPER_IMPACT_LOCAL_DB}
+	return {"stream": SUPER_IMPACT_FALLBACK, "pitch": SUPER_IMPACT_FALLBACK_PITCH, "volume_db": SUPER_IMPACT_FALLBACK_DB}
+
+
 #SUPERCHARGED PLAYER SHEET
 # The same frames as the finisher sheet with the energy recoloured, swapped in for the whole
 # supercharged finisher so the charge reads as loaded.
