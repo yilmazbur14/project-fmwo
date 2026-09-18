@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/CarterCloneScript.gd" id="1_clone"]
+
+[node name="CarterCloneScene" type="Node2D" node_paths=PackedStringArray("sprite", "light")]
+script = ExtResource("1_clone")
+sprite = NodePath("Sprite2D")
+light = NodePath("Light")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(3, 3)
+
+[node name="Light" type="Node2D" parent="."]
+z_index = 1

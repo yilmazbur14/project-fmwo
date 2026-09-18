@@ -2,16 +2,18 @@
 Built from the approved sprites' heads (1:1 pixels, remapped to DB32 by hand-checked tables),
 duo slots as diagonal tag-team splits, plus an original INVITE envelope icon.
 Frame order (approved boss order):
-0 Eric, 1 Greyson & Computah (mech), 2 Mason, 3 Josh, 4 Carter, 5 Liam & Bixby,
-6 Jordan (final boss), 7 Invite.
+0 Burak, 1 Eric, 2 Greyson & Computah (mech), 3 Matt (placeholder - no art yet), 4 Mason,
+5 Josh, 6 Danny, 7 Carter, 8 Liam & Bixby, 9 Jordan (final boss), 10 Invite.
 python icons.py outdir"""
 import sys, math
 from cv import *
 import slots
 
-CHAR = "C:/Users/theyi/OneDrive/Documents/new-game-project/Assets/Characters/"
+ASSETS = "C:/Users/theyi/OneDrive/Documents/new-game-project/Assets/"
+CHAR = ASSETS + "Characters/"
 S = 40
-ORDER = ['eric', 'mech', 'mason', 'josh', 'carter', 'liam_bixby', 'jordan', 'invite']
+ORDER = ['burak', 'eric', 'mech', 'matt', 'mason', 'josh', 'danny', 'carter', 'liam_bixby',
+         'jordan', 'invite']
 
 
 def rgb(h):
@@ -41,6 +43,14 @@ SKIN_MAP = {'f0b98e': SKIN, 'fbd6b0': SKIN, 'db976c': TAN, 'b86c4e': RUST, '8441
             'f09c86': PINK, 'b58773': TAN, 'd9ab93': SKIN, 'fadcb8': SKIN, 'd6aa7c': TAN}
 
 REMAP = {
+    # Burak is cut from his cutscene sheet, the only art of him with his face to camera.
+    'burak': dict(SKIN_MAP, **{'120c10': K, '17111a': K, '181920': NAVY, '24212a': NAVY,
+                               '292b39': NAVY, '2e2430': PLUM, '3b3e50': SLATE, '3e3944': SLATE,
+                               '515569': DASH, '6a6470': ASH, '6c7187': ASH, '8e93a8': DGREY,
+                               '9a98a6': DGREY, 'aab2c0': GREY, 'c9d2df': PALE, 'eef2f7': WHITE,
+                               '112660': INDIGO, '252a42': NAVY, '373e60': INDIGO, '4c5782': INDIGO,
+                               '6a76a6': GREY, '1b3f8e': STEEL, '2a62c4': BLURPLE, '4a8ae6': SKY,
+                               '8cc0ff': PALE, '5a3524': BROWN, '6a2a2a': BROWN}),
     'eric': dict(SKIN_MAP, **{'ffb45e': TAN, 'f58a38': ORANGE, 'df6c22': ORANGE, 'b04c16': RUST,
                               '7a3010': BROWN, '4a1c08': PLUM, 'f3c9a2': SKIN, 'fde6cc': SKIN,
                               'dca27a': TAN, 'b8795a': RUST, '8a5040': BROWN, 'a3b1c2': GREY,
@@ -182,16 +192,45 @@ def invite_icon():
     return cv
 
 
+QUESTION = [
+    "..MMMM..",
+    ".MM..MM.",
+    "MM....MM",
+    "......MM",
+    ".....MM.",
+    "....MM..",
+    "...MM...",
+    "...MM...",
+    "........",
+    "...MM...",
+]
+
+
+def placeholder_icon(col, shade):
+    """A boss with no art yet: a blank disc with a question mark, so the slot reads as 'to be
+    designed' instead of pretending to be a portrait."""
+    cv = Canvas(S, S)
+    bg_disc(cv, col, shade)
+    cv.grid(QUESTION, {'M': K}, 16, 15)
+    return cv
+
+
 def build():
     ic = {}
+    ic['burak'] = crop_icon('burak', ASSETS + "Cutscenes/Intro/burak_cutscene.png", 166, 26)
+    bg_disc(ic['burak'], CYAN, STEEL)
+    ic['matt'] = placeholder_icon(GREY, DASH)
+    ic['danny'] = crop_icon('danny', CHAR + "Danny/danny.png", 38, 16)
+    bg_disc(ic['danny'], KHAKI, MUD)
     ic['eric'] = crop_icon('eric', CHAR + "Eric/eric_redesign_sheet.png", 64, 53)
     bg_disc(ic['eric'], STEEL, NAVY)
     ic['mech'] = crop_icon('mech', CHAR + "GreysonMech/greyson_mech.png", 48, 24)
     bg_disc(ic['mech'], PURPLE, PLUM)
     # Their own slots each now, off their final solo sheets: Josh's idle, whose head is drawn for
-    # this crop (fedora band and brim over the shades), and Carter's crossed-arms pose, framed on
-    # the glare and the beard like the other portraits.
-    ic['josh'] = crop_icon('josh', CHAR + "Josh/josh_cards.png", 40, 29)
+    # this crop - low enough to keep the hair he's identified by and the goatee, which costs the
+    # top of the spade - and Carter's crossed-arms pose, framed on the glare and the beard like
+    # the other portraits.
+    ic['josh'] = crop_icon('josh', CHAR + "Josh/josh_cards.png", 40, 31)
     bg_disc(ic['josh'], ORANGE, RUST)
     ic['carter'] = crop_icon('carter', CHAR + "Carter/carter_akuma.png", 143, 26)
     bg_disc(ic['carter'], BLURPLE, INDIGO)

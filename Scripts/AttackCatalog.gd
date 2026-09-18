@@ -38,8 +38,9 @@ const DEFAULTS := {
 
 const ATTACKS := {
 	&"eric_quake_wave": {"blockable": true, "weight": Weight.LIGHT},
-	&"eric_whirlwind": {"blockable": true, "weight": Weight.HEAVY, "parry_stagger": true, "tell": true},
-	&"eric_thrown_sword": {"blockable": true, "weight": Weight.HEAVY},
+	&"eric_whirlwind": {"blockable": true, "weight": Weight.HEAVY},
+	# A parry flings the sword back at him, and it staggers him where he threw it when it arrives.
+	&"eric_thrown_sword": {"blockable": true, "weight": Weight.HEAVY, "parry_stagger": true, "tell": true},
 	&"eric_quake_ring": {"dash_through": true},
 	# A guard doesn't stop the grab, but a parry does, and it staggers him.
 	&"eric_bear_hug_grab": {"damage": 0, "dash_through": true, "grab": true, "parryable": true, "parry_stagger": true, "tell": true},
@@ -66,6 +67,11 @@ const ATTACKS := {
 	&"josh_card_bomb": {"blockable": true, "weight": Weight.LIGHT, "from_above": true},
 	# Three in a row, each with its own tell; a parry negates but never staggers him.
 	&"josh_card_throw": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
+	# Carter's Raging Demon. One clone rush: a held guard absorbs it heavily, a fresh press parries it.
+	# Its origin is the player's own hurtbox centre, inside PlayerDefense.block_omni_radius, so any
+	# facing can answer it - the check is timing, not aim. The yellow feints never reach here at all,
+	# and the lights are drawn by the clone, not ParryTell, so `tell` stays false.
+	&"carter_clone_rush": {"blockable": true, "weight": Weight.HEAVY},
 	# Anything that hits without an id: exactly the old behaviour.
 	&"untagged": {},
 }

@@ -12,10 +12,13 @@ var next_boss_scene: String = ""
 # Fights whose scene hasn't been built yet stay in the table - next_fight_after()
 # skips them until their scene exists, so the ladder can show the whole order.
 const BOSSES: Array[Dictionary] = [
-	{"scene": "res://Scenes/Bosses/EricBossFightScene.tscn", "name": "ERIC", "rank": "@member"},
-	{"scene": "res://Scenes/Bosses/GreysonBossFightScene.tscn", "name": "GREYSON & COMPUTAH", "rank": "@regular"},
-	{"scene": "res://Scenes/Bosses/MasonBossFightScene.tscn", "name": "MASON", "rank": "@veteran"},
-	{"scene": "res://Scenes/Bosses/JoshBossFightScene.tscn", "name": "JOSH", "rank": "@trusted"},
+	{"scene": "res://Scenes/Bosses/BurakBossFightScene.tscn", "name": "BURAK", "rank": "@member"},
+	{"scene": "res://Scenes/Bosses/EricBossFightScene.tscn", "name": "ERIC", "rank": "@regular"},
+	{"scene": "res://Scenes/Bosses/GreysonBossFightScene.tscn", "name": "GREYSON & COMPUTAH", "rank": "@active"},
+	{"scene": "res://Scenes/Bosses/MattBossFightScene.tscn", "name": "MATT", "rank": "@veteran"},
+	{"scene": "res://Scenes/Bosses/MasonBossFightScene.tscn", "name": "MASON", "rank": "@trusted"},
+	{"scene": "res://Scenes/Bosses/JoshBossFightScene.tscn", "name": "JOSH", "rank": "@vip"},
+	{"scene": "res://Scenes/Bosses/DannyBossFightScene.tscn", "name": "DANNY", "rank": "@helper"},
 	{"scene": "res://Scenes/Bosses/CarterBossFightScene.tscn", "name": "CARTER", "rank": "@moderator"},
 	{"scene": "res://Scenes/Bosses/LiamBossFightScene.tscn", "name": "LIAM & BIXBY", "rank": "@admin"},
 	{"scene": "res://Scenes/Bosses/JordanBossFightScene.tscn", "name": "JORDAN", "rank": ""},

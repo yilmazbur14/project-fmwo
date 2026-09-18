@@ -5,8 +5,10 @@ extends Control
 # no keyboard focus.
 const SHOW_BOSS_SELECT := true
 
-# Under the volume slider, inside the column the menu art keeps clear of the boss tower.
-const BOSS_SELECT_RECT := Rect2(156, 714, 480, 350)
+# Under the volume slider, inside the column the menu art keeps clear of the boss tower. Two
+# columns, because ten rows in one would run off the bottom of the screen.
+const BOSS_SELECT_RECT := Rect2(156, 714, 664, 272)
+const BOSS_SELECT_COLUMNS := 2
 const BOSS_SELECT_FONT_SIZE := 22
 const BOSS_SELECT_BUTTON_HEIGHT := 40
 
@@ -74,7 +76,20 @@ func _build_boss_select() -> void:
 	title.add_theme_color_override("font_color", Color(0.65, 0.68, 0.74))
 	rows.add_child(title)
 
-	for i in GameProgress.BOSSES.size():
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override("separation", 8)
+	rows.add_child(columns)
+
+	var count := GameProgress.BOSSES.size()
+	var per_column := ceili(float(count) / BOSS_SELECT_COLUMNS)
+	var column: VBoxContainer = null
+	var chain: Array[Button] = []
+	for i in count:
+		if i % per_column == 0:
+			column = VBoxContainer.new()
+			column.add_theme_constant_override("separation", 4)
+			column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			columns.add_child(column)
 		var boss: Dictionary = GameProgress.BOSSES[i]
 		var scene: String = boss["scene"]
 		var built: bool = ResourceLoader.exists(scene)
@@ -82,6 +97,7 @@ func _build_boss_select() -> void:
 		button.text = "%d  %s" % [i + 1, boss["name"]]
 		button.custom_minimum_size = Vector2(0, BOSS_SELECT_BUTTON_HEIGHT)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.clip_text = true
 		button.add_theme_font_size_override("font_size", BOSS_SELECT_FONT_SIZE)
 		for style_name in ["normal", "hover", "pressed", "disabled", "focus"]:
 			button.add_theme_stylebox_override(style_name, _boss_select_button_style(style_name))
@@ -89,13 +105,24 @@ func _build_boss_select() -> void:
 		button.add_theme_color_override("font_hover_color", Color(1, 1, 1))
 		button.add_theme_color_override("font_disabled_color", Color(0.42, 0.44, 0.48))
 		button.disabled = not built
-		# A disabled row must not swallow a keyboard step on its way down the list.
 		button.focus_mode = Control.FOCUS_ALL if built else Control.FOCUS_NONE
 		if built:
 			button.pressed.connect(_on_boss_select_pressed.bind(scene))
+			chain.append(button)
 		else:
 			button.tooltip_text = "%s hasn't been built yet" % scene
-		rows.add_child(button)
+		column.add_child(button)
+
+	# Walk the list in table order whichever key is used, stepping over the fights that aren't
+	# built yet and over the break between the two columns, which neither Godot's geometric
+	# navigation nor tree order would follow on its own.
+	for i in chain.size():
+		var previous := chain[i - 1].get_path() if i > 0 else NodePath()
+		var next := chain[i + 1].get_path() if i < chain.size() - 1 else NodePath()
+		chain[i].focus_previous = previous
+		chain[i].focus_neighbor_top = previous
+		chain[i].focus_next = next
+		chain[i].focus_neighbor_bottom = next
 
 	# The panel is added after the menu's own controls, but make sure it can never be what the
 	# keyboard lands on first.
