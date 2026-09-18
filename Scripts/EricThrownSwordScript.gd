@@ -3,12 +3,18 @@ extends Node2D
 # Eric's thrown greatsword. The node sits on the ground under the sword, where the shadow is
 # drawn; the spinning sword is drawn `height` px above that. Planted, the node is where the
 # blade enters the ground.
+# It reports its own hits rather than letting the player's hurtbox find it, because the throw needs
+# the result: a parried sword stops dead and is flung back at Eric instead of finishing its arc. The
+# dodge-ghost branch is mandatory, or the sword would silently eat perfect dodges.
 
 signal landed
 signal returned
+# The flung-back sword reaching Eric.
+signal struck_thrower
 
 const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
 const HitInfo := preload("res://Scripts/HitInfo.gd")
+const DefenseHypeArtLayout := preload("res://Scripts/DefenseHypeArtLayout.gd")
 
 const SPIN_FRAME_TIME := 0.05
 # Flights end or start with the spinning sword's centre where the planted sword's centre is, so
@@ -20,13 +26,23 @@ const MIN_FLIGHT_TIME := 0.15
 # it's drawn on already matches his catch frame, which replaces it on arrival. Shorter than
 # MIN_FLIGHT_TIME.
 const CATCH_SETTLE_TIME := 0.1
+# The throw is lobbed this far above the straight line between his hand and the landing spot, and
+# gives all of it back over the last DIVE_DISTANCE px: the sword cruises in high, then comes down
+# into the ground instead of sliding in flat.
+const THROW_LOB := 110.0
+const DIVE_DISTANCE := 330.0
 # Height above planted height per step of the shadow shrinking; frame 0 is low, frame 2 high.
 const SHADOW_STEP := 70.0
 const SHADOW_FRAMES := 3
 const PLANTED_DUST_TIME := 0.1
+# A flung-back sword is lit in the parry's own colour, so it reads as the player's the whole way in.
+const REFLECT_TINT: Color = DefenseHypeArtLayout.PARRY_FLASH[0]
 
 # Along its drawn path, in px/s; set by the throw.
 var speed := 1400.0
+# Both set by the throw, before the sword is added to the tree.
+var player: Node2D
+var thrower: Node2D
 
 @onready var shadow: Sprite2D = $Shadow
 @onready var sword: Sprite2D = $Sword
@@ -42,6 +58,7 @@ var elapsed := 0.0
 var arrival_frame := 0
 var flying := false
 var returning := false
+var reflecting := false
 var catch_lean := 0.0
 var planted_time := -1.0
 
@@ -72,6 +89,19 @@ func recall(centre: Vector2, ground_y: float, lean: float, mirrored: bool) -> vo
 	_fly(global_position, PLANTED_HEIGHT, Vector2(centre.x, ground_y), ground_y - centre.y, EricArtLayout.SPIN_CATCH_FRAME)
 
 
+# Flung back at Eric after a parry: from where the player stopped it, spinning the other way and lit
+# up, straight at `centre` on his body. It never plants and can't touch the player on the way.
+# Either leg of the throw can be parried, so the catch's ease and lean are dropped here.
+func reflect(centre: Vector2, ground_y: float, back_speed: float) -> void:
+	reflecting = true
+	returning = false
+	speed = back_speed
+	sword.flip_h = not sword.flip_h
+	sword.rotation = 0.0
+	sword.modulate = REFLECT_TINT
+	_fly(global_position, -sword.position.y, Vector2(centre.x, ground_y), ground_y - centre.y, EricArtLayout.SPIN_LANDING_FRAME)
+
+
 func _fly(start_ground: Vector2, start_height: float, end_ground: Vector2, end_height: float, end_frame: int) -> void:
 	from_ground = start_ground
 	to_ground = end_ground
@@ -86,7 +116,8 @@ func _fly(start_ground: Vector2, start_height: float, end_ground: Vector2, end_h
 	sword.visible = true
 	shadow.visible = true
 	planted.visible = false
-	hitbox.monitorable = true
+	# A flung-back sword is the player's: it mustn't hurt them on its way out.
+	hitbox.monitoring = not reflecting
 	_place()
 
 
@@ -94,10 +125,15 @@ func _physics_process(delta: float) -> void:
 	if flying:
 		elapsed = minf(elapsed + delta, duration)
 		_place()
-		if elapsed >= duration:
+		if hitbox.monitoring:
+			_resolve_hits()
+		# A parry stops it where it was caught, so it may not be flying any more.
+		if flying and elapsed >= duration:
 			flying = false
-			hitbox.monitorable = false
-			if returning:
+			hitbox.monitoring = false
+			if reflecting:
+				struck_thrower.emit()
+			elif returning:
 				returned.emit()
 			else:
 				_plant()
@@ -106,12 +142,45 @@ func _physics_process(delta: float) -> void:
 		planted.frame = 0 if planted_time < PLANTED_DUST_TIME else 1
 
 
+func _resolve_hits() -> void:
+	if not is_instance_valid(player):
+		return
+	var near_miss := false
+	for area in hitbox.get_overlapping_areas():
+		if area == player.hurtBox:
+			# A parry catches the sword in the air; the throw flings it back from there.
+			if player.receive_hit(_hit()) == HitInfo.Result.PARRIED:
+				flying = false
+				hitbox.monitoring = false
+			return
+		if player.is_dodge_ghost(area):
+			near_miss = true
+	# Only where the player isn't: the sword passing the spot a dash left is a perfect dodge.
+	if near_miss:
+		player.receive_near_miss(_hit())
+
+
+func _hit() -> RefCounted:
+	return HitInfo.make(&"eric_thrown_sword", hitbox, hitbox.global_position, thrower)
+
+
 func _place() -> void:
 	var t := _progress()
 	global_position = from_ground.lerp(to_ground, t)
-	var height := lerpf(from_height, to_height, t) + ARC_HEIGHT * 4.0 * t * (1.0 - t)
+	# Only the outward throw dives: a recall is a catch and a flung-back sword is aimed at Eric's
+	# body, so both keep the plain lob.
+	var diving := not returning and not reflecting
+	var dive := _dive_progress() if diving else 0.0
+	var height := lerpf(from_height, to_height, t)
+	if diving:
+		height += THROW_LOB * sqrt(t) * (1.0 - dive)
+	else:
+		height += ARC_HEIGHT * 4.0 * t * (1.0 - t)
 	sword.position = Vector2(0, -height)
-	hitbox.position = sword.position
+	# The blade goes in tip first, so on the way down the hitbox rides from the sword's centre to
+	# where that tip enters the ground. It is the only part of the dive that reaches a player
+	# standing on the landing spot: the sword's own centre passes PLANTED_HEIGHT over their head.
+	hitbox.position = Vector2(0, -(height - PLANTED_HEIGHT * dive))
 	var spin_left := duration - elapsed
 	if returning:
 		var settle := clampf(1.0 - spin_left / CATCH_SETTLE_TIME, 0.0, 1.0)
@@ -120,6 +189,11 @@ func _place() -> void:
 	# Counted back from the arrival, so the last spin frame drawn is the one it lands or is caught on.
 	sword.frame = posmod(arrival_frame + 1 - maxi(ceili(spin_left / SPIN_FRAME_TIME), 1), EricArtLayout.SPIN_FRAMES)
 	shadow.frame = clampi(int((height - PLANTED_HEIGHT) / SHADOW_STEP), 0, SHADOW_FRAMES - 1)
+
+
+# How far into the dive the throw is: 0 while it is still cruising, 1 as it plants.
+func _dive_progress() -> float:
+	return clampf(1.0 - global_position.distance_to(to_ground) / DIVE_DISTANCE, 0.0, 1.0)
 
 
 # Fraction of the path covered. A catch eases out over the settle, so the rest of that flight runs

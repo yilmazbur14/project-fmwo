@@ -9,7 +9,7 @@ extends Node2D
 # strong look. It's purely a picture: it never touches hitboxes or timing. It lives beside the boss in
 # the fight scene, so it freezes with a finisher and goes away with the fight.
 # ParryTell.glow() puts the matching aura behind a parryable projectile in flight; nothing calls it
-# yet, since only Eric's whirlwind and grab tell.
+# yet, since only Eric's sword toss and grab tell.
 
 const AttackCatalog := preload("res://Scripts/AttackCatalog.gd")
 const DefenseHypeArtLayout := preload("res://Scripts/DefenseHypeArtLayout.gd")

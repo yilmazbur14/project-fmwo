@@ -129,7 +129,7 @@ func take_punch(amount: int) -> int:
 
 # The attacks a parry (PlayerDefense) can stagger him out of, and the state each runs in.
 const PARRY_STAGGER_STATES := {
-	&"eric_whirlwind": "Whirlwind",
+	&"eric_thrown_sword": "SwordThrow",
 	&"eric_bear_hug_grab": "BearHug",
 }
 
@@ -147,8 +147,9 @@ func parry_stagger(duration: float) -> void:
 	if defeated or boss_health <= 0 or state_machine.defeated:
 		return
 	var state = state_machine.current_state
-	if state == state_machine.states.get("Whirlwind"):
-		state_machine.parry_stagger(duration, state.eric_original_position)
+	if state == state_machine.states.get("SwordThrow"):
+		# The parried sword flies back first: it staggers him when it reaches him, not now.
+		state.reflect(duration)
 	elif state == state_machine.states.get("BearHug"):
 		state_machine.parry_stagger(duration, state.plant_spot)
 

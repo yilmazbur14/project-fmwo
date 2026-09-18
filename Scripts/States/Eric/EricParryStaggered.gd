@@ -1,8 +1,9 @@
 extends State
 
-# Eric after the player parries his whirlwind or his bear-hug grab: the attack stops and he's open to
-# punches, up to BossOneScript.PARRY_STAGGER_HIT_CAP of them, then he glides back to where that attack
-# started and carries on with his chain. It never opens a finisher daze: can_be_dazed() is Downed-only.
+# Eric after his own sword is parried back into him, or the player parries his bear-hug grab: the
+# attack stops and he's open to punches, up to BossOneScript.PARRY_STAGGER_HIT_CAP of them, then he
+# glides back to where that attack started and carries on with his chain. It never opens a finisher
+# daze: can_be_dazed() is Downed-only.
 
 @export var animation_player : AnimationPlayer
 @export var character_body : CharacterBody2D
