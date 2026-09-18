@@ -22,6 +22,11 @@ const SPIN_FRAME_TIME := 0.05
 const PLANTED_HEIGHT := -EricArtLayout.PLANTED_OFFSET.y * EricArtLayout.SCALE
 const ARC_HEIGHT := 60.0
 const MIN_FLIGHT_TIME := 0.15
+# A throw at someone almost on top of him covers so little ground that it would otherwise arrive in
+# MIN_FLIGHT_TIME, before they could answer it. This floor keeps a short throw hanging in the air
+# instead, so the toss is always something to read. A recall and a flung-back sword keep
+# MIN_FLIGHT_TIME: neither is the player's problem.
+const THROW_MIN_FLIGHT := 0.72
 # A caught sword stops spinning and eases to a stop in his hand over this long, so the last frame
 # it's drawn on already matches his catch frame, which replaces it on arrival. Shorter than
 # MIN_FLIGHT_TIME.
@@ -111,7 +116,8 @@ func _fly(start_ground: Vector2, start_height: float, end_ground: Vector2, end_h
 	from_height = start_height
 	to_height = end_height
 	var path_length := (start_ground - Vector2(0, start_height)).distance_to(end_ground - Vector2(0, end_height))
-	duration = maxf(path_length / speed, MIN_FLIGHT_TIME)
+	var floor_time := MIN_FLIGHT_TIME if returning or reflecting else THROW_MIN_FLIGHT
+	duration = maxf(path_length / speed, floor_time)
 	arrival_frame = end_frame
 	elapsed = 0.0
 	flying = true

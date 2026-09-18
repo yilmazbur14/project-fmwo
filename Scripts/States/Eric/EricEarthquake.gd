@@ -13,7 +13,11 @@ const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
 @export var slams := 2
 @export var rage_slams := 3
 @export var animation_speed := 1.6
-@export var rage_animation_speed := 2.1
+# Capped so the raised sword is up long enough to be read: his waves radiate from where he stands,
+# so anyone in the slam is hit with no travel at all and the animation is the only warning they get.
+# `earthquake` calls enable_hitbox 0.667 s in, which at 1.85x leaves 0.36 s of wind-up, comfortably
+# past PlayerDefense.parry_window. Raising this back toward 2.1 takes that below it.
+@export var rage_animation_speed := 1.85
 # On-screen projectile speed in px/s.
 @export var projectile_speed := 1150.0
 @export var rage_projectile_speed := 1400.0

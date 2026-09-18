@@ -81,13 +81,13 @@ the player's rules; if his fight changes, these are the ones to reconcile.
 | `parry_freeze` | | the parry's dead stop and its slow-motion tail, a three-parry chain at 0.90 s and 0.62 s cadences, and a parry landing on the frame the fight ends |
 | `parry_rearm` | | every press is reported through `block_pressed(credited)`, and `rearm_parry()` excuses exactly one press and never a mash inside the same window |
 | `parry_streak` | | streaks count, pay 25 / 30 / 35 hype, climb through the popups and the badge, sound identical every time, end on a hit or a guard break, lapse on their own, and lengthen the stagger window by 0.2 per tier over 2, capped at 0.4 |
-| `parry_projectiles` | | **(Eric)** parrying his real projectiles on their way in |
+| `parry_projectiles` | | **(Eric)** parrying his real projectiles on their way in, including a standing player parrying the sword as it dives into its landing spot: it is flung back, takes 1 off him, dazes him, and never plants, so there is no ring |
 | `grab_parry` | | **(Eric)** his grab can only be answered with a parry: a held guard is still grabbed |
-| `stagger` | | **(Eric)** the parry stagger: what it opens, the hit cap, where he picks himself up |
-| `stagger_chain` | | **(Eric)** his chain carries on correctly after a parry stagger |
+| `stagger` | | **(Eric)** the parry stagger, reached by parrying his sword toss: the reflect's damage, what the window opens, the hit cap, where he picks himself up |
+| `stagger_chain` | | **(Eric)** his chain carries on correctly after a parry stagger, whose length is `parry_stagger_time` plus the throw's own `reflect_stagger_bonus` |
 | `stagger_win` | | **(Eric)** the fight won during a parry stagger |
 | `stagger_lose` | | **(Eric)** the fight lost during a parry stagger |
-| `tells` | | **(Eric)** the red tell over his head during the wind-up of a parryable attack |
+| `tells` | | **(Eric)** the red tell over his head during the wind-up of a parryable attack: his sword toss and his bear hug show one, his spin and his slam do not |
 
 ### Dodging
 
@@ -128,7 +128,7 @@ the player's rules; if his fight changes, these are the ones to reconcile.
 | mode | arguments | what it asserts |
 | --- | --- | --- |
 | `smoke` | `fight=eric\|greyson\|carter\|mason\|jordan\|liam` | 45 s of a fight with the player standing still: every attack that lands is tagged, one half-heart per damaging hit, a second of i-frames after each, and nothing blocked, parried or dodged without input |
-| `approach` | `fight=<as above>` | how long each attack is in the air before it lands, against `parry_window`. Anything whose flight is not clearly longer than the window can be parried by pressing the moment it appears, which is not a read; the mode fails and names them |
+| `approach` | `fight=<as above>` | how long each attack is in the air before it lands, against `parry_window`. Anything whose flight is not clearly longer than the window can be parried by pressing the moment it appears, which is not a read; the mode fails and names them. `WINDUP_READS` holds the ones that radiate from the boss and so have no flight to give: they are judged on the wind-up before the hitbox exists, which only has to outlast the window itself |
 | `clone_cadence` | | Carter's clone barrage against the parry window, modelled rather than run: pressing as a light comes up is too early, pressing on the dash parries, a bitten clone is only blocked, and a press at a feint costs the next clone unless `rearm_parry()` gives it back |
 
 ## Notes for whoever runs this next
