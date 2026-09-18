@@ -106,13 +106,17 @@ HAIR = [
 
 # ---------------------------------------------------------------- expressions
 GOATEE = [
+    # ONE SOLID MASS from the moustache down around the mouth into the chin beard.  It used to be
+    # a ring with his upper lip showing through the middle, which at 3x split the goatee into two
+    # disconnected dark blobs.  The moustache half is a step lighter than the chin beard, so the
+    # two still read apart without any skin between them.
     (34, 37, ["hkkkkkkkkkkkh"]),
-    (34, 38, ["kk.........kk"]),
-    (34, 39, ["k...........k"]),
-    (34, 40, ["k...........k"]),
-    (34, 41, ["k...........k"]),
-    (34, 42, ["k...........k"]),
-    (34, 43, ["kk.........kk"]),
+    (34, 38, ["kHHHHHHHHHHHk"]),
+    (34, 39, ["kHHHHHHHHHHHk"]),
+    (34, 40, ["khhhhhhhhhhhk"]),
+    (34, 41, ["khhhhhhhhhhhk"]),
+    (34, 42, ["khhhhhhhhhhhk"]),
+    (34, 43, ["kkhhhhhhhhhkk"]),
     (35, 44, ["hkkkkHkkkkh"]),
     (36, 45, ["hkkkkkkkh"]),
     (38, 46, ["hkkkh"]),
@@ -120,25 +124,26 @@ GOATEE = [
 MOUSTACHE = []
 SOULPATCH = []
 
+# The mouth sits inside that mass now, so it has to read by CONTRAST rather than by a skin gap:
+# a black slit with bright teeth in it.  Checked at 3x - the teeth are what carries each one.
 MOUTHS = {
     'smirk': [
-        (43, 39, ["##"]),
-        (40, 40, ["####"]),
-        (36, 41, ["#####ww#"]),
-        (36, 42, ["########"]),
+        (37, 40, ["#######"]),
+        (37, 41, ["#mwWwm#"]),
+        (37, 42, ["#######"]),
     ],
     'open': [
         (36, 39, ["#########"]),
-        (35, 40, ["#wwWwwWww#"]),
-        (35, 41, ["#mmmMmmmm#"]),
+        (36, 40, ["#wwWwwWw#"]),
+        (36, 41, ["#mmmMmmm#"]),
         (36, 42, ["#########"]),
     ],
     'pant': [
         (37, 39, ["#######"]),
-        (36, 40, ["#wwWww#"]),
-        (36, 41, ["#mMMmm#"]),
-        (36, 42, ["#mmmmm#"]),
-        (37, 43, ["#####"]),
+        (37, 40, ["#wwWww#"]),
+        (37, 41, ["#mMMmm#"]),
+        (37, 42, ["#mmmmm#"]),
+        (38, 43, ["#####"]),
     ],
     'grit': [
         (36, 39, ["#########"]),
@@ -148,12 +153,12 @@ MOUTHS = {
     ],
     'slack': [
         (37, 40, ["#######"]),
-        (36, 41, ["#mmmmmm#"]),
+        (37, 41, ["#WmmmW#"]),
         (37, 42, ["#######"]),
     ],
     'flat': [
-        (36, 41, ["#########"]),
-        (37, 42, ["ddddddd"]),
+        (37, 41, ["#######"]),
+        (37, 42, ["#WWWWW#"]),
     ],
 }
 

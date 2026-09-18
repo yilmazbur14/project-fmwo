@@ -109,24 +109,28 @@ EYES = [
 NOSE = [(31, 40, ["sd"]), (30, 41, ["asdf"]), (30, 42, ["asdf"]), (31, 43, ["ff"])]
 BLUSH = [(23, 42, ["rrr"]), (39, 42, ["rr"])]
 
-# full dark goatee: moustache curving into a chin beard, soul patch under the lip
+# Full dark goatee, drawn as ONE SOLID MASS - the moustache runs unbroken down around the mouth
+# into the chin beard.  It used to be a ring with the skin of his upper lip showing through the
+# middle, which at portrait scale read as a bald patch in the beard rather than as separation.
+# The moustache half is a step lighter than the chin beard so the two still read apart.
 GOATEE = [
     (26, 44, ["hkkkkkkkkkkkh"]),
-    (26, 45, ["kkh.......hkk"]),
-    (26, 46, ["kk.........kk"]),
-    (26, 47, ["kk.........kk"]),
-    (26, 48, ["kk.........kk"]),
-    (26, 49, ["kkh.......hkk"]),
-    (27, 50, ["hkkkHHkkkkkh"]),
+    (26, 45, ["kHHHHHHHHHHHk"]),
+    (26, 46, ["kHHHHHHHHHHHk"]),
+    (26, 47, ["khhhhhhhhhhhk"]),
+    (26, 48, ["khhhhhhhhhhhk"]),
+    (26, 49, ["kkhhhhhhhhhkk"]),
+    (27, 50, ["hkkHHkkkkkkh"]),
     (28, 51, ["hkkkkkkkkh"]),
     (29, 52, ["hkkkkkkh"]),
     (31, 53, ["hkkh"]),
 ]
+# The mouth now sits inside that mass, so it reads by CONTRAST instead of by a skin gap: a black
+# slit with a dark interior and a glint of tooth.
 MOUTH = [
-    (35, 46, ["##"]),
-    (32, 47, ["####"]),
-    (28, 48, ["#####ww#"]),
-    (28, 49, ["########"]),
+    (29, 47, ["#######"]),
+    (29, 48, ["#mmwWm#"]),
+    (29, 49, ["#######"]),
 ]
 
 # ---------------------------------------------------------------- hat
