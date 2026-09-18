@@ -384,7 +384,7 @@ PLACE = [  # name, tier, x of anchor column, anchor column
     ('greyson', 3, CX + 46, 11),
     ('matt', 4, CX, 7),
     ('mason', 5, CX + 44, 14),
-    ('josh', 6, CX, 11),
+    ('josh', 6, CX, 12),
     ('danny', 7, CX - 44, 15),
     ('carter', 8, CX, 12),
     ('liam', 9, CX - 38, 14),

@@ -78,13 +78,14 @@ REMAP = {
                                 'a07c46': BRASS, '74562e': MUD, '6e5230': MUD, '50381c': BROWN}),
     # His deepened palette: bone duster (WHITE..DASH), wine fedora crown (PLUM/RED, one PINK
     # highlight - the mid wine shares RED so the crown doesn't read pink at portrait size), gold
-    # band and spade rim on DB32's own gold ramp, and lenses dark enough for the PALE streak to
-    # stay the glint.
+    # band and spade rim on DB32's own gold ramp, hair on BROWN/RUST and a PLUM iris in a WHITE
+    # eye now that the shades are off. The lens blues are still here for the rest of the sheet.
     'josh': dict(SKIN_MAP, **{'0d0d13': K, '130b09': K, '1f1d17': K, '1c1c24': NAVY, '24160f': PLUM,
                               '2b0a12': PLUM, '3d261a': PLUM, '5f3c29': BROWN, 'b58773': TAN,
                               'e0917c': PINK, 'd9ab93': SKIN, 'f4ead6': WHITE, 'fff0dc': WHITE,
                               'e8e2ce': PALE, 'c6bfa4': GREY, '918b72': DGREY, '5e5a48': DASH,
-                              '39362b': SLATE, '4d1420': PLUM, '7a2032': RED, 'a63b4b': RED,
+                              '39362b': SLATE, '8a5b3d': RUST, '3a2014': PLUM,
+                              '4d1420': PLUM, '7a2032': RED, 'a63b4b': RED,
                               'c96c74': PINK, '7a5216': MUD, 'b07d22': BRASS, 'e0ab35': TAN,
                               'f5d94e': YEL, 'fff3b0': WHITE, '0d1f4a': NAVY, '20203c': NAVY,
                               '32335c': INDIGO, '45487f': INDIGO, '1b3f86': STEEL, 'bde0ff': PALE,
@@ -230,7 +231,7 @@ def build():
     # this crop - low enough to keep the hair he's identified by and the goatee, which costs the
     # top of the spade - and Carter's crossed-arms pose, framed on the glare and the beard like
     # the other portraits.
-    ic['josh'] = crop_icon('josh', CHAR + "Josh/josh_cards.png", 40, 31)
+    ic['josh'] = crop_icon('josh', CHAR + "Josh/josh_cards.png", 40, 29)
     bg_disc(ic['josh'], ORANGE, RUST)
     ic['carter'] = crop_icon('carter', CHAR + "Carter/carter_akuma.png", 143, 26)
     bg_disc(ic['carter'], BLURPLE, INDIGO)
