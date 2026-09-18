@@ -37,17 +37,21 @@ def off(blocks, dx, dy=0):
 
 
 # ---------------------------------------------------------------- skull
-# Fuller and rounder than the first lean pass: the reference photo is a full, soft face with
-# heavy cheeks and a weighty jaw.  Narrower at the temples (the hairline is receding there),
-# widest across the cheeks, and the jaw only starts to taper at y44.
+# The hat now sits further back so a mass of his hair shows across the top of his head, and the
+# shades are gone entirely - his eyes are back, which is where most of the likeness lives.
+#     y12..19  hat crown          y17..19  gold band, black spade over it
+#     y19..22  gambler brim       y23..47  head skin, x30..50, centre x40
+#     y23..26  hair on top        y28..29  brow      y30..33  eyes
+#     y34..36  nose               y37..46  goatee    y47      chin
 HEAD_ROWS = {}
-for _y in range(25, 29):
+for _y in range(23, 27):
     HEAD_ROWS[_y] = (31, 49)
-for _y in range(29, 44):
+for _y in range(27, 44):
     HEAD_ROWS[_y] = (30, 50)
 HEAD_ROWS[44] = (31, 49)
 HEAD_ROWS[45] = (33, 47)
-HEAD_ROWS[46] = (36, 44)
+HEAD_ROWS[46] = (35, 45)
+HEAD_ROWS[47] = (37, 43)
 
 
 def head_mask():
@@ -59,25 +63,31 @@ def head_mask():
 
 
 def face_h(px, py):
-    h = hdome(px, py, 40.0, 35.0, 11.0, 11.0, 6.0)
+    h = hdome(px, py, 40.0, 35.0, 11.0, 12.5, 6.0)
     h += hbump(px, py, 34.5, 37.0, 5.5, 5.5, 5.5, 6.0, 1.5)     # near cheek, fleshy
     h += hbump(px, py, 46.0, 37.0, 5.0, 5.0, 5.0, 5.5, 1.1)     # far cheek
     h += hbump(px, py, 40.0, 43.5, 6.5, 6.5, 4.5, 3.5, 1.3)     # heavy jaw / chin
     h += hbump(px, py, 40.5, 35.0, 2.2, 2.2, 3.5, 2.5, 1.4)     # nose bridge
-    h += hbump(px, py, 40.0, 28.0, 9.5, 9.5, 3.5, 3.0, 0.7)     # broad forehead
+    h += hbump(px, py, 40.0, 28.0, 9.5, 9.5, 3.5, 3.0, 0.7)     # brow ridge
     return h
 
 
-EAR = (27, 32, [".##.", "#sd#", "#df#", "#dd#", ".##."])
+EAR = (28, 32, [".##.", "#sd#", "#df#", "#dd#", ".##."])
 FOREHEAD = []
 
-# ---------------------------------------------------------------- long hair, pulled back
-# The biggest likeness cue: dark brown-black hair swept straight back off a broad forehead and
-# gathered at the nape.  From the front you read it as a dark band down both temples, past the
-# ears, meeting in a bunched mass under the jaw.  Nothing on the forehead - his hairline is
-# receding there and the brim covers the rest.
+# ---------------------------------------------------------------- hair
+# Top mass under the brim - the hat used to eat the whole crown.  Ragged hairline so a little
+# forehead still shows, swept back with the light catching the upper left.
+HAIR_TOP = [
+    (31, 23, ["khHjJJjHHHHHHhhhhhk"]),
+    (31, 24, ["kjJJJJJjHHHHHHhhHhk"]),
+    (31, 25, ["khjJJjHHHHHhhhhHhhk"]),
+    (31, 26, ["kkhHHhh.h.k..k.hHhk"]),
+    (31, 27, ["..kh...........hk.."]),
+]
+
+# Long hair swept back down both temples, past the ears, bunching beside the jaw.
 HAIR = [
-    # left temple, swept back past the ear, flaring into the gathered bunch beside the jaw
     (29, 27, ["j"]), (28, 28, ["jH"]), (28, 29, ["hH"]),
     (27, 30, ["#hH"]), (27, 31, ["#hH"]), (27, 32, ["#kh"]),
     (27, 33, ["#kh"]), (27, 34, ["#kh"]), (28, 35, ["#kh"]),
@@ -85,7 +95,6 @@ HAIR = [
     (29, 39, ["#kh"]), (29, 40, ["#kh"]),
     (29, 41, ["#kHh"]), (29, 42, ["#kHhh"]), (30, 43, ["#kHhh"]),
     (31, 44, ["#kHh"]), (32, 45, ["#kh"]),
-    # right temple, mirrored about x=40
     (51, 27, ["j"]), (51, 28, ["Hj"]), (51, 29, ["Hh"]),
     (51, 30, ["Hh#"]), (51, 31, ["Hh#"]), (51, 32, ["hk#"]),
     (51, 33, ["hk#"]), (51, 34, ["hk#"]), (50, 35, ["hk#"]),
@@ -96,9 +105,6 @@ HAIR = [
 ]
 
 # ---------------------------------------------------------------- expressions
-# A full dark goatee: a heavy moustache curving down either side of the mouth into a chin beard
-# with a soul patch.  Replaces the pencil moustache, which was far too light for him.  Kept to a
-# ring one pixel thick at the sides so his cheeks stay open and the face still reads as a face.
 GOATEE = [
     (34, 37, ["hkkkkkkkkkkkh"]),
     (34, 38, ["kk.........kk"]),
@@ -114,68 +120,73 @@ GOATEE = [
 MOUSTACHE = []
 SOULPATCH = []
 
-# The beard ring leaves an opening of x35..45 / y39..43.  The distress mouths need most of it:
-# at 3x a dark spot inside a dark beard reads as nothing, so `open`, `pant`, `grit` and `slack`
-# are as wide and as tall as the ring allows.
 MOUTHS = {
-    # DEFAULT everywhere he is in control: closed lips hitched up on one side, a glint of tooth
     'smirk': [
         (43, 39, ["##"]),
         (40, 40, ["####"]),
         (36, 41, ["#####ww#"]),
         (36, 42, ["########"]),
     ],
-    'open': [                                  # shouting / shocked
+    'open': [
         (36, 39, ["#########"]),
         (35, 40, ["#wwWwwWww#"]),
         (35, 41, ["#mmmMmmmm#"]),
         (36, 42, ["#########"]),
     ],
-    'pant': [                                  # winded: hanging open, tongue showing
+    'pant': [
         (37, 39, ["#######"]),
         (36, 40, ["#wwWww#"]),
         (36, 41, ["#mMMmm#"]),
         (36, 42, ["#mmmmm#"]),
         (37, 43, ["#####"]),
     ],
-    'grit': [                                  # clenched
+    'grit': [
         (36, 39, ["#########"]),
         (36, 40, ["#w#wWw#w#"]),
         (36, 41, ["#W#ww#w#"]),
         (36, 42, ["#########"]),
     ],
-    'slack': [                                 # beaten
+    'slack': [
         (37, 40, ["#######"]),
         (36, 41, ["#mmmmmm#"]),
         (37, 42, ["#######"]),
     ],
-    'flat': [                                  # the deadpan between tricks
+    'flat': [
         (36, 41, ["#########"]),
         (37, 42, ["ddddddd"]),
     ],
 }
 
-# Thick, dark, straight brows - with the lenses on, these and the beard carry the likeness as
-# well as the whole performance, so they are heavier than the first pass.
+# Thick, dark, straight brows over the eyes.
 BROWS = {
-    'flat': [(31, 26, ["hkkkkkkk", "kkkkkkkk"]), (42, 26, ["kkkkkkkh", "kkkkkkkk"])],
-    'cocky': [(31, 27, ["hkkkkkkk", "kkkkkkkk"]), (42, 26, ["kkkkkkkh", "kkkkkkkk"])],
-    'angry': [(31, 26, ["hkkk"]), (34, 27, ["kkkkk", "kkkkk"]),
-              (41, 27, ["kkkkk", "kkkkk"]), (46, 26, ["kkkh"])],
-    'pain': [(31, 27, ["hkkk", "kkkk"]), (35, 26, ["kkkkk"]),
-             (41, 26, ["kkkkk"]), (46, 27, ["kkkh", "kkkk"])],
-    'up': [(31, 25, ["hkkkkkkk", "kkkkkkkk"]), (42, 25, ["kkkkkkkh", "kkkkkkkk"])],
+    'flat': [(31, 28, ["hkkkkkkk", "kkkkkkkk"]), (42, 28, ["kkkkkkkh", "kkkkkkkk"])],
+    'cocky': [(31, 29, ["hkkkkkkk"]), (42, 28, ["kkkkkkkh", "kkkkkkkk"])],
+    'angry': [(31, 28, ["hkkk"]), (34, 29, ["kkkkk", "kkkkk"]),
+              (41, 29, ["kkkkk", "kkkkk"]), (46, 28, ["kkkh"])],
+    'pain': [(31, 29, ["hkkk", "kkkk"]), (35, 28, ["kkkkk"]),
+             (41, 28, ["kkkkk"]), (46, 29, ["kkkh", "kkkk"])],
+    'up': [(31, 27, ["hkkkkkkk", "kkkkkkkk"]), (42, 27, ["kkkkkkkh", "kkkkkkkk"])],
 }
 
-# ---------------------------------------------------------------- shades, ON his eyes
-SHADES = [
-    (29, 29, ["#######################"]),
-    (29, 30, ["#CCBBbbbbb#X#CCBBbbbbb#"]),
-    (29, 31, ["#CBBbbbbbb#X#CBBbbbbbb#"]),
-    (29, 32, ["#BBbbbbbbb#X#BBbbbbbbb#"]),
-    (29, 33, ["#######################"]),
-]
-TEMPLES = [(27, 31, ["XX"]), (52, 31, ["XX"])]
+# ---------------------------------------------------------------- eyes
+# The shades are gone, so these are back and doing likeness work: calm brown eyes, neutral set,
+# heavy upper lid under the brow.  Left x33..38, right x42..47, mirrored about x=40.
+EYES = {
+    'open': [(33, 30, ["######", "#weew#", "#weew#", ".####."]),
+             (42, 30, ["######", "#weew#", "#weew#", ".####."])],
+    'squint': [(33, 31, ["######", "#eeee#", ".####."]),
+               (42, 31, ["######", "#eeee#", ".####."])],
+    'wink': [(33, 31, ["######", ".dddd."]),
+             (42, 30, ["######", "#weew#", "#weew#", ".####."])],
+    'shut': [(33, 31, ["######", ".dddd."]),
+             (42, 31, ["######", ".dddd."])],
+    'wide': [(33, 29, [".####.", "#wwww#", "#weew#", "#wwww#", ".####."]),
+             (42, 29, [".####.", "#wwww#", "#weew#", "#wwww#", ".####."])],
+    'weary': [(33, 30, ["######", "#eeee#", "#wee.#", ".####."]),
+              (42, 30, ["######", "#eeee#", "#.eew#", ".####."])],
+    'beat': [(33, 32, ["######", ".dddd."]),
+             (42, 32, ["######", ".dddd."])],
+}
 
 NOSE = [(39, 34, ["sd"]), (38, 35, ["asdf"]), (39, 36, ["ff"])]
 BLUSH = [(32, 36, ["rrr"]), (46, 36, ["rr"])]
@@ -191,33 +202,33 @@ SWEATS = {
 
 
 # ---------------------------------------------------------------- gambler's hat
-CROWN = [(34, 17), (36, 15), (44, 15), (46, 17), (48, 19), (49, 22), (31, 22), (32, 19)]
+CROWN = [(34, 13), (36, 11), (44, 11), (46, 13), (48, 15), (49, 19), (31, 19), (32, 15)]
 
 
 def crown_h(px, py):
-    h = hdome(px, py, 40.0, 24.0, 10.0, 11.0, 7.0)
-    h += hbump(px, py, 35.5, 18.5, 5.0, 5.0, 3.0, 5.0, 1.3)
-    h -= hbump(px, py, 40.0, 16.0, 3.0, 3.0, 2.0, 3.5, 2.2)     # fedora pinch
+    h = hdome(px, py, 40.0, 20.0, 10.0, 10.5, 7.0)
+    h += hbump(px, py, 35.5, 14.0, 5.0, 5.0, 3.0, 5.0, 1.3)
+    h -= hbump(px, py, 40.0, 11.0, 3.0, 3.0, 2.0, 3.5, 2.2)     # fedora pinch
     return h
 
 
-BAND_ROWS = {21: (31, 49), 22: (31, 49)}
-BAND_TONE = {21: 'F', 22: 'D'}
+BAND_ROWS = {17: (31, 49), 18: (31, 49), 19: (31, 49)}
+BAND_TONE = {17: 'F', 18: 'D', 19: 'A'}
 
-# his mark, kept from the approved design: a black spade over the gold hat band
 SPADE = [
-    (40, 14, ["D"]),
-    (39, 15, ["D#D"]),
-    (38, 16, ["D###D"]),
-    (37, 17, ["D#####D"]),
-    (37, 18, ["D#####D"]),
-    (37, 19, ["DD###DD"]),
-    (39, 20, ["D#D"]),
-    (38, 21, ["DD#DD"]),
+    (40, 11, ["D"]),
+    (39, 12, ["D#D"]),
+    (38, 13, ["D###D"]),
+    (37, 14, ["D#####D"]),
+    (37, 15, ["D#####D"]),
+    (37, 16, ["D#####D"]),
+    (37, 17, ["DD###DD"]),
+    (39, 18, ["D#D"]),
+    (38, 19, ["DD#DD"]),
 ]
 
-BRIM_ROWS = {22: (28, 52), 23: (23, 57), 24: (23, 57), 25: (27, 53)}
-BRIM_TONE = {22: 'V', 23: 'X', 24: 'x', 25: 'x'}
+BRIM_ROWS = {19: (28, 52), 20: (23, 57), 21: (23, 57), 22: (27, 53)}
+BRIM_TONE = {19: 'V', 20: 'X', 21: 'x', 22: 'x'}
 
 
 def build_brim(c):
@@ -228,23 +239,23 @@ def build_brim(c):
     for y, (lo, hi) in BRIM_ROWS.items():
         for x in range(lo, hi + 1):
             ch = BRIM_TONE[y]
-            if y == 23 and lo + 2 <= x <= lo + 16:
+            if y == 20 and lo + 2 <= x <= lo + 16:
                 ch = 'z'                        # specular skim along the lit side
-            if y == 23 and x > hi - 12:
+            if y == 20 and x > hi - 12:
                 ch = 'X'
-            if y == 24 and x < lo + 5:
+            if y == 21 and x < lo + 5:
                 ch = 'V'
             c[y][x] = ch
     ol, _ = outline_pixels(m, prune=False)
     for y in range(H):
         for x in range(W):
-            if ol[y][x] and y != 22:
+            if ol[y][x] and y != 19:
                 c[y][x] = '#'
     return c
 
 
 # ---------------------------------------------------------------- layers
-def face_layer(turn=0, mouth='smirk', brows='cocky', sweat=0, ear=True, shades=True, shades_dy=0):
+def face_layer(turn=0, mouth='smirk', brows='cocky', eyes='open', sweat=0, ear=True, **kw):
     c = blank()
     m = head_mask()
     t = int(round(turn))
@@ -259,11 +270,15 @@ def face_layer(turn=0, mouth='smirk', brows='cocky', sweat=0, ear=True, shades=T
         block(c, ex + int(round(turn * 0.45)), ey, rows)
 
     fx = blank()                                 # features, clipped to the skull
+    for (x, y, rows) in off(HAIR_TOP, int(round(turn * 0.4))):
+        block(fx, x, y, rows)
     for (x, y, rows) in off(NOSE, t) + off(BLUSH, t) + off(STUBBLE, int(round(turn * 0.5))):
         block(fx, x, y, rows)
     for (x, y, rows) in off(GOATEE, t):
         block(fx, x, y, rows)
     for (x, y, rows) in off(MOUTHS[mouth], t):
+        block(fx, x, y, rows)
+    for (x, y, rows) in off(EYES[eyes], t):
         block(fx, x, y, rows)
     for (x, y, rows) in off(BROWS[brows], t):
         block(fx, x, y, rows)
@@ -274,9 +289,6 @@ def face_layer(turn=0, mouth='smirk', brows='cocky', sweat=0, ear=True, shades=T
 
     for (x, y, rows) in off(HAIR, int(round(turn * 0.4))):
         block(c, x, y, rows)
-    if shades:
-        for (x, y, rows) in off(TEMPLES + SHADES, t, shades_dy):
-            block(c, x, y, rows)
     for (x, y, rows) in SWEATS.get(sweat, []):
         block(c, x, y, rows)
     return c
@@ -285,7 +297,7 @@ def face_layer(turn=0, mouth='smirk', brows='cocky', sweat=0, ear=True, shades=T
 def cap_layer(turn=0, band_card=True):
     c = blank()
     if band_card:
-        CD.draw_card(c, 53, 13, 7, 13, -34, pip=CD.DIAMOND3, pip_col='Q')
+        CD.draw_card(c, 53, 11, 7, 13, -34, pip=CD.DIAMOND3, pip_col='Q')
     cm = poly_mask(CROWN)
     hf_shade(c, cm, crown_h, rig.RED, [0.16, 0.42, 0.70, 0.94], zscale=0.85)
     for y, (lo, hi) in BAND_ROWS.items():        # gold hat band
@@ -299,20 +311,18 @@ def cap_layer(turn=0, band_card=True):
     return c
 
 
-def build(c, dx=0, dy=0, rot=0, turn=0, mouth='smirk', brows='cocky',
-          sweat=0, cap=True, cap_dx=0, cap_dy=0, cap_rot=0, band_card=True, shades=True,
-          shades_dy=0, ear=True, extra=None, **kw):
+def build(c, dx=0, dy=0, rot=0, turn=0, mouth='smirk', brows='cocky', eyes='open',
+          sweat=0, cap=True, cap_dx=0, cap_dy=0, cap_rot=0, band_card=True,
+          ear=True, extra=None, **kw):
     """Composite a posed head onto canvas `c`.
 
     dx/dy      translate the whole head (chin normally at y47, centre x40)
-    rot        tilt, degrees clockwise on screen, about (40, 35)
+    rot        tilt, degrees clockwise on screen, about (40, 34)
     turn       3/4 turn: +px slides the features toward OUR right
-    shades_dy  slide the lenses down his nose (the winded / staggered frames)
     cap_*      knock the hat askew independently of the head
-    `eyes=` is accepted and ignored - his eyes are behind glass now.
+    The shades are gone, so `shades` / `shades_dy` are accepted and ignored.
     """
-    f = face_layer(turn=turn, mouth=mouth, brows=brows, sweat=sweat, ear=ear,
-                   shades=shades, shades_dy=shades_dy)
+    f = face_layer(turn=turn, mouth=mouth, brows=brows, eyes=eyes, sweat=sweat, ear=ear)
     f = rotate(f, rot, (CX, CY), (dx, dy))
     composite(c, f)
     if cap:
