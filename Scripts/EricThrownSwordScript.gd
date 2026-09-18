@@ -27,10 +27,13 @@ const MIN_FLIGHT_TIME := 0.15
 # MIN_FLIGHT_TIME.
 const CATCH_SETTLE_TIME := 0.1
 # The throw is lobbed this far above the straight line between his hand and the landing spot, and
-# gives all of it back over the last DIVE_DISTANCE px: the sword cruises in high, then comes down
-# into the ground instead of sliding in flat.
-const THROW_LOB := 110.0
-const DIVE_DISTANCE := 330.0
+# gives all of it back over the last DIVE_TIME of the flight: the sword cruises in high, then comes
+# down into the ground instead of sliding in flat.
+# The dive is a duration, not a distance, so it keeps its length as his throws speed up with his
+# rage. It has to outlast PlayerDefense.parry_window, or the window would open while the sword was
+# still cruising and the parry could be pressed before there was anything to read.
+const THROW_LOB := 130.0
+const DIVE_TIME := 0.32
 # Height above planted height per step of the shadow shrinking; frame 0 is low, frame 2 high.
 const SHADOW_STEP := 70.0
 const SHADOW_FRAMES := 3
@@ -193,7 +196,7 @@ func _place() -> void:
 
 # How far into the dive the throw is: 0 while it is still cruising, 1 as it plants.
 func _dive_progress() -> float:
-	return clampf(1.0 - global_position.distance_to(to_ground) / DIVE_DISTANCE, 0.0, 1.0)
+	return clampf(1.0 - global_position.distance_to(to_ground) / (DIVE_TIME * speed), 0.0, 1.0)
 
 
 # Fraction of the path covered. A catch eases out over the settle, so the rest of that flight runs
