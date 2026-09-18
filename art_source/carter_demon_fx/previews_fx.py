@@ -241,6 +241,12 @@ def arena_mockup(light_frame, name):
     lg = crop(li, light_frame * 24, 0, 24, 24)
     over(mock, scale(lg, 3), hx - 36, hy - 84)
 
+    # ---- 5b. Carter himself, out at the edge, purely so the clone can be
+    #          judged against the man it is a shadow of
+    _, _, ci = read_png(os.path.join(CHARS, 'Carter', 'carter_idle.png'))
+    over(mock, scale(crop(ci, 0, 0, 96, 96), 3),
+         CENTRE[0] + 420, CENTRE[1] + 32 - 96 * 3)
+
     # ---- 6. the cone, in the air in FRONT of the fighters
     _, _, cone = read_png(d('demon_spotlight_cone.png'))
     add(mock, scale(cone, 3), spx, spy)
