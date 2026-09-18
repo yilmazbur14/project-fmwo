@@ -96,7 +96,7 @@ the player's rules; if his fight changes, these are the ones to reconcile.
 | `dodge_ring` | | a perfect dodge off a dash-through attack during dash immunity |
 | `dodge_near` | | a perfect dodge off an attack that reaches the spot the dash started from, through the dodge ghost |
 | `dodge_bosses` | | the dodge ghost's near-miss reporting across the roster's attacks |
-| `dodge_rollout` | `fight=greyson\|carter` | dashing out of the way of a real attack in a real fight. Only these two fights have a readable approach for the bot; greyson's rockets home onto the player, so that one is expected to fail |
+| `dodge_rollout` | `fight=greyson\|carter` | dashing out of the way of a real attack in a real fight. Only these two fights have a readable approach for the bot; the greyson case still watches for the rockets boss 2 no longer has and needs repointing at Computah's pounce, so it is expected to fail |
 | `dash_recovery` | | the lockout after a dash: no move, punch or dash, the guard may still go up, a parry cancels it, a plain block does not |
 | `dash_spam` | | mashing dash covers less ground than walking |
 
@@ -109,9 +109,9 @@ the player's rules; if his fight changes, these are the ones to reconcile.
 | `super_uppercut` | real time | the supercharged finisher: damage, the hype spend, a whiff and a fizzle keeping the hype, and the kill paths |
 | `prompt_overlap` | | the hype meter gets out of the finisher prompt's way and comes back |
 | `knockback` | real time | **(Eric)** the uppercut shoves him: distance per tier, always away from the player, never out of his bounds, and the longer pause before his next attack |
-| `knockback_computah` | real time | a boss anchored to his own cycle rocks back on his sprite instead, and his phase floor and morph still work |
-| `knockback_boss` | real time, `fight=mason\|jordan\|liam\|greyson_mech` | the same for the rest of the roster |
-| `kill_shove` | real time, `fight=eric\|greyson_mech`, `tier=normal\|super` | a killing uppercut does not shove: the boss dies where he was hit, one outro, his defeat plays |
+| `knockback_computah` | real time | a boss anchored to his own cycle rocks back on his sprite instead, and boss 2's near-death clamp clips the uppercut without spending the hype |
+| `knockback_boss` | real time, `fight=mason\|jordan\|liam` | the same for the rest of the roster |
+| `kill_shove` | real time, `fight=eric`, `tier=normal\|super` | a killing uppercut does not shove: the boss dies where he was hit, one outro, his defeat plays |
 
 ### Status effects and the lock
 

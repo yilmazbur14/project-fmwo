@@ -25,9 +25,8 @@ DEFAULT_MODES=(
 	hype hype_inert super_uppercut prompt_overlap
 	knockback knockback_computah
 	"knockback_boss fight=mason" "knockback_boss fight=jordan"
-	"knockback_boss fight=liam" "knockback_boss fight=greyson_mech"
+	"knockback_boss fight=liam"
 	"kill_shove fight=eric tier=normal" "kill_shove fight=eric tier=super"
-	"kill_shove fight=greyson_mech tier=normal" "kill_shove fight=greyson_mech tier=super"
 	status "status_end tier=death" "status_end tier=fight_over" status_dialogue
 	locked "locked_end tier=death" "locked_end tier=fight_over"
 	"smoke fight=eric" "smoke fight=greyson" "smoke fight=carter"

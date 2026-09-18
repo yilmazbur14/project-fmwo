@@ -1,5 +1,14 @@
 extends State
 
+# THE DASH-THROUGH RULE LIVES HERE AND NOWHERE ELSE. The beams stay out of the "enemy projectile"
+# group and report their own hits, which is what lets PlayerDefense apply `dash_through` to them.
+# The sweep maths, hitbox_thickness, BEAM_BACK_LENGTH and _damage_players_in_beams() are the fight's
+# identity move; changing any of them changes its core read.
+#
+# The rig has two owners. Computah fires it while he lives, and Greyson hauls it up when he doesn't,
+# so the body it is drawn on is set by the caller rather than fixed to a scene. Either an
+# AnimationPlayer or a body with play_anim() can drive the firing poses, and both are optional.
+
 # Emitter origins are wherever these two LaserBeamProjectileScene instances
 # are placed; their parent's scale sets the on-screen beam thickness.
 @export var laser_beam_left : Area2D
@@ -7,6 +16,10 @@ extends State
 @export var animation_player : AnimationPlayer
 @export var charge_animation := &"laserCharge"
 @export var fire_animation := &"laserBeam"
+# Whoever is holding the rig, and the poses they charge and fire in.
+@export var body : Node
+@export var charge_anim := &""
+@export var fire_anim := &""
 @export var laser_sfx_player : AudioStreamPlayer
 
 @export var telegraph_duration := 0.5
@@ -55,7 +68,7 @@ func get_total_duration() -> float:
 func Enter():
 	elapsed = 0.0
 	phase = Phase.TELEGRAPH
-	animation_player.play(charge_animation)
+	_play_pose(charge_animation, charge_anim)
 	beam_length = ceilf(laser_beam_left.get_viewport_rect().size.length() / absf(laser_beam_left.global_scale.x))
 
 	for beam in _beams():
@@ -113,7 +126,7 @@ func Physics_Update(_delta: float):
 
 func _start_sweep() -> void:
 	phase = Phase.SWEEP
-	animation_player.play(fire_animation)
+	_play_pose(fire_animation, fire_anim)
 	for beam in _beams():
 		beam.get_node("AimLine").visible = false
 		beam.get_node("Beam").visible = true
@@ -142,6 +155,14 @@ func _damage_players_in_beams() -> void:
 
 func _beams() -> Array[Area2D]:
 	return [laser_beam_left, laser_beam_right]
+
+
+# Either driver, or neither: the beams are the attack, and a rig with no pose behind it still works.
+func _play_pose(track: StringName, pose: StringName) -> void:
+	if animation_player:
+		animation_player.play(track)
+	if body and pose != &"" and body.has_method("play_anim"):
+		body.play_anim(pose)
 
 
 func _set_sweep(amount: float) -> void:

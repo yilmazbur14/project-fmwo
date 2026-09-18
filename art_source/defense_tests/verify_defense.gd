@@ -1628,6 +1628,13 @@ func test_super_uppercut() -> void:
 
 # ------------------------------------------------------------------ step 8: every fight, no Shift, no W
 
+# Hits that deal nothing: they start a hold rather than hurting.
+const NO_DAMAGE_HITS := [&"eric_bear_hug_grab", &"computah_chase", &"greyson_combo_jab"]
+# Hits worth more than one half-heart.
+const BIG_HITS := {&"greyson_combo_finish": 3, &"computah_slam": 3}
+# Hits that land inside the i-frames on purpose, because the player is held and cannot dodge.
+const IGNORES_IFRAMES := [&"eric_bear_hug_squeeze", &"greyson_combo_jab", &"greyson_combo_finish", &"computah_slam"]
+
 const SMOKE_SPOTS := {
 	"eric": Vector2(972, 700),
 	"greyson": Vector2(960, 700),
@@ -1667,11 +1674,6 @@ func test_smoke() -> void:
 	while defense.clock - start < 45.0:
 		# The player never moves, blocks or dashes: the fight should play out exactly as before.
 		player.global_position = spot
-		if fight == "greyson" and not staged and defense.clock - start > 6.0:
-			staged = true
-			var computah: Node = current_scene.get_node("Arena/BossTwoScene/ComputahCharacterBody")
-			computah.take_punch(5)
-			log_p("punched Computah into his morph")
 		if fight == "carter" and not punished and defense.clock - start > 8.0:
 			punished = true
 			var carter: Node = current_scene.get_node_or_null("Arena/CarterAndJoshScene/Carter")
@@ -1689,14 +1691,19 @@ func test_smoke() -> void:
 	check(hits.size() > 0, "the fight connects at all")
 	check(events_of("BLOCKED").is_empty() and parries.is_empty() and dodges.is_empty(), "nothing blocked, parried or dodged without Shift or W")
 	check(not ids.has(&"untagged"), "no untagged attacks (%s)" % [ids.keys()])
-	# The bear hug's grab is the one hit that deals no damage; it only starts the hold.
-	var damaging: int = hits.filter(func(e): return e.id != &"eric_bear_hug_grab").size()
-	check(player.playerHealth == health - damaging, "one half-heart per damaging hit (%d of %d hits, %d health lost)" % [damaging, hits.size(), health - player.playerHealth])
+	# Grabs deal nothing; they only start the hold. Boss 2's five-hit combo is four of those and one
+	# launching blow worth three, which is the shape of Eric's bear hug.
+	var expected := 0
+	for e in hits:
+		if e.id in NO_DAMAGE_HITS:
+			continue
+		expected += BIG_HITS.get(e.id, 1)
+	check(player.playerHealth == health - expected, "the catalogued damage per hit (%d expected of %d hits, %d health lost)" % [expected, hits.size(), health - player.playerHealth])
 	var bad_gaps := []
 	for i in range(1, hits.size()):
 		var gap: float = hits[i].t - hits[i - 1].t
-		# The bear hug's squeezes are the one attack that ignores the i-frames.
-		if gap < 1.0 - 0.001 and hits[i].id != &"eric_bear_hug_squeeze":
+		# A held player can't dodge, so every blow of a hold lands inside the last one's i-frames.
+		if gap < 1.0 - 0.001 and not IGNORES_IFRAMES.has(hits[i].id):
 			bad_gaps.append("%s after %.3f s" % [hits[i].id, gap])
 	check(bad_gaps.is_empty(), "every hit is followed by a second of i-frames (%s)" % [bad_gaps])
 	if fight == "eric":
@@ -1707,7 +1714,8 @@ func test_smoke() -> void:
 
 # What each attack should cost the guard, and what should never be blockable at all.
 const BLOCK_COSTS := {
-	&"computah_rocket": 20.0,
+	&"greyson_throw": 20.0,
+	&"greyson_throw_hard": 35.0,
 	&"wrestler_charge": 35.0,
 	&"mason_poo_blast": 20.0,
 	&"mason_nugget": 20.0,
@@ -1716,7 +1724,7 @@ const BLOCK_COSTS := {
 	&"bixby_fire_breath": 20.0,
 	&"bixby_quake_burst": 20.0,
 }
-const UNBLOCKABLE := [&"computah_laser", &"mech_shockwave", &"wrestler_punish", &"eric_quake_ring", &"eric_bear_hug_squeeze"]
+const UNBLOCKABLE := [&"computah_laser", &"computah_chase", &"greyson_combo_jab", &"greyson_combo_finish", &"computah_slam", &"wrestler_punish", &"eric_quake_ring", &"eric_bear_hug_squeeze"]
 
 
 func test_blocks() -> void:
@@ -1748,9 +1756,6 @@ func test_blocks() -> void:
 			guarded_frames += 1
 		# Topped up, so a long run can't break the guard and change what the next hit does.
 		defense.stamina = defense.max_stamina
-		if fight == "greyson" and not staged and defense.clock - start > 6.0:
-			staged = true
-			current_scene.get_node("Arena/BossTwoScene/ComputahCharacterBody").take_punch(5)
 		await physics_frame
 	release(KEY_SHIFT)
 	var blocks := events_of("BLOCKED")
@@ -1781,7 +1786,7 @@ func test_blocks() -> void:
 	await past_window()
 	clear_iframes()
 	defense.stamina = defense.max_stamina
-	var front := front_hit(&"computah_rocket", dummy_source())
+	var front := front_hit(&"greyson_throw", dummy_source())
 	clear_iframes()
 	defense.stamina = defense.max_stamina
 	var side := side_hit(&"wrestler_charge", dummy_source())
@@ -1861,22 +1866,27 @@ func test_knockback() -> void:
 
 
 # A boss anchored to his own cycle rocks back on his sprite instead, and his body stays put.
+# Boss 2's Computah, whose near-death clamp is the floor that clips the uppercut: he cannot be
+# killed while Greyson is above GreysonComputahScript.SWAP_GUARD_RATIO, so the blow lands on 1 and
+# the supercharge, having added nothing, is not spent.
 func test_knockback_computah() -> void:
 	await load_fight("greyson")
 	player.playerHealth = 100
-	var computah: Node = current_scene.get_node("Arena/BossTwoScene/ComputahCharacterBody")
-	var computah_sm: Node = computah.get_node("StateManager")
+	var pair: Node = current_scene.get_node("Arena/GreysonComputahScene")
+	var computah: Node = pair.computah
+	var machine: Node = pair.get_node("StateManager")
 	# swing() reads the boss's health to report what it dealt.
 	boss = computah
 	var hype: Node = player.get_node("Hype")
 	var finisher: Node = player.get_node("Finisher")
-	computah_sm.post_dialogue_pre_fight_timer.stop()
+	machine.post_dialogue_pre_fight_timer.stop()
 	hype._set_hype(100.0)
-	# Full: the three daze punches take him to 6, one above his phase floor, so the uppercut lands
-	# and is then clipped by the floor.
-	computah.boss_health = 10
-	computah_sm.downed_state_timer.start(60.0)
-	computah_sm.on_child_transition(computah_sm.current_state, "Downed")
+	# Greyson untouched, so the clamp holds Computah at 1. Six leaves the three daze punches - the
+	# third is charged and worth two - taking him to 2, one above the clamp, so the uppercut lands
+	# and is then clipped by it.
+	computah.boss_health = 6
+	pair.on_body_damaged(computah)
+	machine.open_window(computah, 60.0, computah.MAX_HITS_PER_WINDOW, &"collapse", &"down", &"reboot")
 	await wait(5)
 	place_under(computah.get_node("Hurtbox"))
 	await wait(6)
@@ -1892,11 +1902,11 @@ func test_knockback_computah() -> void:
 	check(await wait_until(func(): return computah.boss_health < health, 90), "the uppercut lands")
 	await wait(8)
 	log_p("computah %d -> %d, body moved %.1f px, sprite offset %s -> %s" % [health, computah.boss_health, body_at.distance_to(computah.global_position), rest, computah.sprite.offset])
-	check(computah.boss_health == 5, "it stops at his phase floor (%d)" % computah.boss_health)
-	check(hype.is_full(), "no hype spent: the supercharge added nothing past the floor")
+	check(computah.boss_health == 1, "it stops at the near-death clamp (%d)" % computah.boss_health)
+	check(hype.is_full(), "no hype spent: the supercharge added nothing past the clamp")
 	check(body_at.distance_to(computah.global_position) < 1.0, "his body stays where his fight expects it")
 	check(computah.sprite.offset != rest, "he rocks back on his sprite")
-	check(await wait_until(func(): return computah.phase_two, 300), "the morph still starts at the floor")
+	check(computah.on_brink, "and the clamp puts him visibly on the brink")
 	await wait(120)
 	check(computah.sprite.offset.distance_to(rest) < 1.0, "the recoil settles back (%s)" % computah.sprite.offset)
 
@@ -1906,7 +1916,6 @@ const PUNISH_WINDOWS := {
 	"mason": ["Arena/MasonScene/MasonCharacterBody", "Eat"],
 	"jordan": ["Arena/JordanScene/JordanCharacterBody", "Taunt"],
 	"liam": ["Arena/BixbyBeastScene/BixbyBeastCharacterBody", "Recover"],
-	"greyson_mech": ["Arena/GreysonMechScene", "Vulnerable"],
 }
 # The ring floor, from ArenaScene's wallBoundaries.
 const ROPES := Rect2(105, 105, 1710, 870)
@@ -1914,7 +1923,7 @@ const ROPES := Rect2(105, 105, 1710, 870)
 
 func test_knockback_boss() -> void:
 	var key := fight
-	await load_fight("greyson" if key == "greyson_mech" else key, key == "liam")
+	await load_fight(key, key == "liam")
 	if key == "liam":
 		var intro_sm: Node = current_scene.get_node("Arena/BixbyBeastScene/BixbyBeastCharacterBody/StateManager")
 		for i in 3000:
@@ -1926,12 +1935,6 @@ func test_knockback_boss() -> void:
 	player.playerHealth = 1000
 	var hype: Node = player.get_node("Hype")
 	var finisher: Node = player.get_node("Finisher")
-	if key == "greyson_mech":
-		var computah: Node = current_scene.get_node("Arena/BossTwoScene/ComputahCharacterBody")
-		computah.get_node("StateManager").post_dialogue_pre_fight_timer.stop()
-		computah.take_punch(computah.boss_health)
-		check(await wait_until(func(): return current_scene.get_node_or_null(PUNISH_WINDOWS[key][0]) != null and computah.phase_two, 900), "the mech is out")
-		await wait(120)
 	boss = current_scene.get_node(PUNISH_WINDOWS[key][0])
 	var bsm: Node = boss.state_machine
 	hype._set_hype(100.0)
@@ -1950,8 +1953,7 @@ func test_knockback_boss() -> void:
 	check(await wait_until(func(): return finisher.phase == 2 and finisher.prompt_visible, 120), "dazed")
 	# The three daze punches can leave him inside a phase floor, which would clip the supercharged
 	# uppercut back to the normal one. Topped up, the full 40% lands.
-	var health_on: Node = boss if "boss_health" in boss else current_scene.get_node("Arena/BossTwoScene/ComputahCharacterBody")
-	health_on.boss_health = health_on.max_health
+	boss.boss_health = boss.max_health
 	var body_at: Vector2 = boss.global_position
 	var player_at: Vector2 = player.global_position
 	var rest: Vector2 = boss.sprite.offset
@@ -1988,7 +1990,6 @@ func test_knockback_boss() -> void:
 # spot he was hit on, and the outro runs once.
 const KILL_WINDOWS := {
 	"eric": ["Arena/EricBossScene/CharacterBody2D", "Downed"],
-	"greyson_mech": ["Arena/GreysonMechScene", "Vulnerable"],
 }
 
 
@@ -1997,19 +1998,12 @@ const KILL_WINDOWS := {
 func test_kill_shove() -> void:
 	var key := fight
 	var supercharged := tier == "super"
-	await load_fight("greyson" if key == "greyson_mech" else key)
+	await load_fight(key)
 	player.playerHealth = 1000
 	var hype: Node = player.get_node("Hype")
 	var finisher: Node = player.get_node("Finisher")
 	var health_on: Node = null
-	if key == "greyson_mech":
-		var computah: Node = current_scene.get_node("Arena/BossTwoScene/ComputahCharacterBody")
-		computah.get_node("StateManager").post_dialogue_pre_fight_timer.stop()
-		computah.take_punch(computah.boss_health)
-		await wait_until(func(): return computah.phase_two and current_scene.get_node_or_null(KILL_WINDOWS[key][0]) != null, 900)
-		await wait(120)
-		health_on = computah
-	else:
+	if true:
 		current_scene.get_node("Arena/EricBossScene/CharacterBody2D").state_machine.post_dialogue_pre_fight_timer.stop()
 	boss = current_scene.get_node(KILL_WINDOWS[key][0])
 	sm = boss.state_machine
@@ -2173,6 +2167,13 @@ const WINDUP_READS := {
 	# over the last 0.6 s. The two later cracks burn quake_stagger longer again, so the first one is
 	# the number here: it is the one that can fall under the bar.
 	&"bixby_quake_burst": 1.200,
+	# Computah's pounce, the grab at the end of his chase. GcStateMachine.pounce_tell is 0.45, but
+	# the second lunge of a high-power double pounce runs on double_pounce_tell, and that is the one
+	# that can fall under the bar. Both are floored at POUNCE_TELL_FLOOR.
+	&"computah_chase": 0.320,
+	# The twin sweep's aim lines, GcStateMachine.laser_telegraph. It never scales with the surge or
+	# with `power`, so this is the number in every phase.
+	&"computah_laser": 0.500,
 }
 
 
@@ -2226,7 +2227,16 @@ func test_approach() -> void:
 		var times: Array = approaches[id]
 		var spawned: Array = times.filter(func(t): return t >= 0.0 and t < 5.0)
 		if spawned.is_empty():
-			log_p("  %-26s hitbox lives with the boss, so its read is its wind-up" % id)
+			# The hitbox never appears on its own: it lives with the boss, so the wind-up is the only
+			# read there is. Registered in WINDUP_READS it is held to the bar; unregistered - a blow
+			# landing on a player already held, which they could not answer anyway - it is only logged.
+			if WINDUP_READS.has(id):
+				var held: float = WINDUP_READS[id]
+				log_p("  %-26s %d landed off the boss, read on a %.2f s wind-up" % [id, times.size(), held])
+				if held <= window:
+					tight.append("%s (%.2f s wind-up)" % [id, held])
+			else:
+				log_p("  %-26s hitbox lives with the boss, so its read is its wind-up" % id)
 			continue
 		var shortest: float = spawned.min()
 		if WINDUP_READS.has(id):
