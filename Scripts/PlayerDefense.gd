@@ -75,10 +75,12 @@ static var LOG_HITS := false
 @export var guard_break_ends_on_hit := true
 @export var guard_break_hit_stop := 0.12
 @export var guard_break_shake := 10.0
-# The read: how long after a credited press a guarded hit is parried instead of blocked. 12 frames
-# at 60: long enough to be a reaction rather than a guess, short enough that pressing early still
-# misses. PlayerCombatFx shows the window while it is open, so a miss teaches the timing.
-@export var parry_window := 0.2
+# The read: how long after a credited press a guarded hit is parried instead of blocked. About 14
+# frames at 60, long enough to be a reaction rather than a guess. The ceiling is the shortest thing
+# worth parrying: Eric's sword dive lasts 0.217-0.267 s, so a window past that would make it
+# parryable on sight rather than on a read. PlayerCombatFx shows the window while it is open, so a
+# miss teaches the timing. art_source/defense_tests, mode=approach, checks every attack against it.
+@export var parry_window := 0.24
 @export var parry_mash_lockout := 0.5
 # The dead stop on a parry, then a beat of slow motion at parry_slow_scale before normal speed.
 @export var parry_hit_stop := 0.13
