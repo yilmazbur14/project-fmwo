@@ -38,10 +38,10 @@ SMALL_SHEETS = {
         frames=[('reach', 140), ('grip', 280), ('strain', 90)],
         loop='1-2 ping-pong while he strains'),
     'danny_tear': dict(
-        frames=[('tear', 260), ('tear_wide', 120), ('shirt_off', 340)],
+        frames=[('tear', 200), ('tear_wide', 60), ('shirt_off', 340)],
         loop='once'),
     'danny_flex': dict(
-        frames=[('flex_rise', 120), ('flex', 420),
+        frames=[('flex_rise', 120), ('flex', 300),
                 ('flex_in', 300), ('flex_out', 300)],
         loop='2-3 (the breathing hold); frame 2 is the hand-over frame'),
 }

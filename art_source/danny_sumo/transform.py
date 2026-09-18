@@ -80,37 +80,43 @@ FLASH_HOLDS = [340, 300, 260, 220, 180, 145, 115, 90, 70, 60, 55, 50, 50, 50]
 
 
 def beats():
+    """The approved beat list, now driven by the PRODUCTION sheets.
+    Durations are the ones baked into sheets.py, and the pre-flash beats still
+    total exactly what was approved -- the extra in-between frames subdivide
+    those beats rather than lengthening them."""
     B = []
-    # 1. walk-in: he strolls in from the left at his training-room size
-    steps = 8
-    for i in range(steps):
-        key = 'walk_a' if i % 2 == 0 else 'walk_b'
-        B.append(('walk %d' % i, small_in_big(key, dx=-72 + i * 9), 160,
-                  dict(stage='ring')))
-    # 2. arrives and looks up at the player
-    B.append(('arrive', small_in_big('arrive'), 500, dict(stage='ring')))
-    # 3-4. grips the collar and strains
-    B.append(('grip', small_in_big('grip'), 420, dict(stage='ring')))
-    for i in range(3):
-        B.append(('strain %d' % i, small_in_big('grip', dx=(1 if i % 2 else -1)),
-                  90, dict(stage='ring')))
-    # 5. RIP
-    B.append(('tear', small_in_big('tear'), 260, dict(stage='ring', shake=2)))
-    B.append(('shirt off', small_in_big('shirt_off'), 340, dict(stage='ring')))
-    # 6. the flex, and he is extremely pleased with himself
-    B.append(('flex', small_in_big('flex'), 420, dict(stage='ring')))
-    B.append(('flex hold', small_in_big('flex_hold'), 600, dict(stage='ring')))
+    # 1. walk-in: danny_walk looped twice, 8 frames at 160 ms
+    walk = ['walk_a', 'walk_pass', 'walk_b', 'walk_pass2']
+    for i in range(8):
+        B.append(('walk %d' % i, small_in_big(walk[i % 4], dx=-72 + i * 9),
+                  160, dict(stage='ring')))
+    # 2. arrives: hold danny_walk frame 1 (both feet down, arms at his sides)
+    B.append(('arrive', small_in_big('walk_pass'), 500, dict(stage='ring')))
+    # 3-4. danny_grip: reach, grip, then strain ping-ponging
+    B.append(('grip 0 reach', small_in_big('reach'), 140, dict(stage='ring')))
+    B.append(('grip 1 grip', small_in_big('grip'), 280, dict(stage='ring')))
+    for i, k in enumerate(('strain', 'grip', 'strain')):
+        B.append(('grip 2 %s' % k, small_in_big(k), 90, dict(stage='ring')))
+    # 5. danny_tear
+    B.append(('tear 0', small_in_big('tear'), 200, dict(stage='ring', shake=2)))
+    B.append(('tear 1', small_in_big('tear_wide'), 60, dict(stage='ring',
+                                                            shake=2)))
+    B.append(('tear 2', small_in_big('shirt_off'), 340, dict(stage='ring')))
+    # 6. danny_flex
+    B.append(('flex 0', small_in_big('flex_rise'), 120, dict(stage='ring')))
+    B.append(('flex 1', small_in_big('flex'), 300, dict(stage='ring')))
+    B.append(('flex 2', small_in_big('flex_in'), 300, dict(stage='ring')))
+    B.append(('flex 3', small_in_big('flex_out'), 300, dict(stage='ring')))
     # 7. the crowd goes quiet, the arena drops away, the colour drains
-    base = small_in_big('flex_hold')
+    base = small_in_big('flex_in')          # = danny_sumo_evolve frame 0
     for i, t in enumerate((0.35, 0.7, 1.0)):
         B.append(('drain %d' % i, drain(base, t), 110,
                   dict(stage='dark', dim=(i + 1) / 3.0)))
-    # 8. THE FLASH: small <-> big white silhouettes, accelerating
-    small_sil = silhouette(small_in_big('flex_hold'))
+    # 8. THE FLASH: evolve frames 0 and 1 as flat white, accelerating
+    small_sil = silhouette(base)
     big_sil = silhouette(sumo_in_big('awake'))
     for i, ms in enumerate(FLASH_HOLDS):
-        f = small_sil if i % 2 == 0 else big_sil
-        B.append(('flash %d' % i, f, ms,
+        B.append(('flash %d' % i, small_sil if i % 2 == 0 else big_sil, ms,
                   dict(stage='dark', dim=1.0, burst=min(1.0, 0.25 + i * 0.09))))
     # 9. white-out, then he lands
     B.append(('white out', silhouette(sumo_in_big('awake')), 120,
@@ -125,11 +131,11 @@ def beats():
 def flash_beats():
     """Just the flash, for the second GIF."""
     B = []
-    base = small_in_big('flex_hold')
+    base = small_in_big('flex_in')
     for i, t in enumerate((0.35, 0.7, 1.0)):
         B.append(('drain %d' % i, drain(base, t), 110,
                   dict(stage='dark', dim=(i + 1) / 3.0)))
-    small_sil = silhouette(small_in_big('flex_hold'))
+    small_sil = silhouette(small_in_big('flex_in'))
     big_sil = silhouette(sumo_in_big('awake'))
     for i, ms in enumerate(FLASH_HOLDS):
         B.append(('flash %d' % i, small_sil if i % 2 == 0 else big_sil, ms,
