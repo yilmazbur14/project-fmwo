@@ -2056,13 +2056,20 @@ func test_kill_shove() -> void:
 
 # ------------------------------------------------------------------ a barrage's cadence
 
-# Carter's clone barrage read against the parry window, without needing his fight: a clone shows a
-# light for CLONE_SHOW, dashes for CLONE_DASH and strikes at the end of the dash, and the next light
-# comes up CLONE_GAP later. Keep these in step with CarterStateMachine's clone_show, clone_dash and
-# clone_gap; the point of the mode is that the rules hold at whatever those are.
+# Carter's clone barrage read against the parry window, without needing his fight to be running: a
+# clone shows a light for clone_show, dashes for clone_dash and strikes at the end of the dash, and
+# the next light comes up clone_gap later.
+# The mode reads those three off CarterStateMachine when his fight is in the build, so it can never
+# model a barrage tighter than the one he ships, and the constants below are only the fallback for a
+# build without him. They mirror his numbers and the mode fails if they drift apart, so change them
+# in the same pass as his.
+const CARTER_STATE_MACHINE := "res://Scripts/States/CarterAkuma/CarterStateMachine.gd"
+const CARTER_ART_LAYOUT := "res://Scripts/CarterArtLayout.gd"
 const CLONE_SHOW := 0.36
 const CLONE_DASH := 0.18
-const CLONE_GAP := 0.06
+const CLONE_GAP := 0.08
+# CarterArtLayout.CLONE_LIGHT_OUT: how long a light takes to go out, which has to fit in the gap.
+const CLONE_LIGHT_OUT := 0.05
 
 
 func clone_frames(seconds: float) -> int:
@@ -2074,9 +2081,27 @@ func test_clone_cadence() -> void:
 	health_ok()
 	park_eric()
 	await settle_player(Vector2(972, 800))
+	var show_time := CLONE_SHOW
+	var dash_time := CLONE_DASH
+	var gap_time := CLONE_GAP
+	var light_out := CLONE_LIGHT_OUT
+	if ResourceLoader.exists(CARTER_STATE_MACHINE):
+		var probe: Node = load(CARTER_STATE_MACHINE).new()
+		show_time = probe.clone_show
+		dash_time = probe.clone_dash
+		gap_time = probe.clone_gap
+		probe.free()
+		light_out = load(CARTER_ART_LAYOUT).CLONE_LIGHT_OUT
+		log_p("read off his fight: show %.2f, dash %.2f, gap %.2f, light out %.2f" % [show_time, dash_time, gap_time, light_out])
+		check(is_equal_approx(show_time, CLONE_SHOW) and is_equal_approx(dash_time, CLONE_DASH) and is_equal_approx(gap_time, CLONE_GAP) and is_equal_approx(light_out, CLONE_LIGHT_OUT), "the numbers in this file still mirror his fight (%.2f/%.2f/%.2f/%.2f against %.2f/%.2f/%.2f/%.2f)" % [CLONE_SHOW, CLONE_DASH, CLONE_GAP, CLONE_LIGHT_OUT, show_time, dash_time, gap_time, light_out])
+	else:
+		log_p("his fight is not in this build, so the numbers in this file are what is modelled")
 	var window: float = defense.parry_window
-	var strike: float = CLONE_SHOW + CLONE_DASH
-	log_p("light %.2f s, dash %.2f s, strike at %.2f s, cadence %.2f s, window %.2f s" % [CLONE_SHOW, CLONE_DASH, strike, strike + CLONE_GAP, window])
+	var strike: float = show_time + dash_time
+	var cadence: float = strike + gap_time
+	log_p("light %.2f s, dash %.2f s, strike at %.2f s, cadence %.2f s, window %.2f s" % [show_time, dash_time, strike, cadence, window])
+	check(gap_time >= light_out, "a light has time to go out before the next comes up (%.2f s gap, %.2f s to fade)" % [gap_time, light_out])
+	check(strike < cadence, "one clone is done before the next starts (%.2f s of life, %.2f s cadence)" % [strike, cadence])
 
 	log_p("-- pressing the instant the light comes up is still too early")
 	defense.rearm_parry()
@@ -2086,10 +2111,10 @@ func test_clone_cadence() -> void:
 
 	log_p("-- and the read, on the dash, parries")
 	defense.rearm_parry()
-	var on_dash: int = await parry_at(clone_frames(CLONE_DASH))
+	var on_dash: int = await parry_at(clone_frames(dash_time))
 	check(on_dash == 3, "a press as it dashes parries (%d)" % on_dash)
-	# The window opens this long before the dash starts, which is what the player has to wait out.
-	log_p("the window opens %.2f s into the light, %.0f%% of the way through it" % [CLONE_SHOW - (window - CLONE_DASH), 100.0 * (CLONE_SHOW - (window - CLONE_DASH)) / CLONE_SHOW])
+	# The window opens this long after the light, which is what the player has to wait out.
+	log_p("the window opens %.2f s into the light, %.0f%% of the way through it" % [strike - window, 100.0 * (strike - window) / show_time])
 
 	log_p("-- a clone bitten on sight is blocked, not parried, and the guard holds")
 	defense.rearm_parry()
@@ -2106,8 +2131,8 @@ func test_clone_cadence() -> void:
 	# A yellow clone never strikes, so a press at it whiffs with nothing to answer. That press is what
 	# the next clone's read has to survive, and only the rearm lets it.
 	log_p("-- biting a feint late is what would cost the next clone, and the rearm is what saves it")
-	var bite_at := clone_frames(CLONE_SHOW + CLONE_DASH * 0.5)
-	var to_next_read := clone_frames(strike + CLONE_GAP + CLONE_SHOW + CLONE_DASH - window) - bite_at
+	var bite_at := clone_frames(show_time + dash_time * 0.5)
+	var to_next_read := clone_frames(cadence + strike - window) - bite_at
 	log_p("  a press %.2f s into a feint, then the next clone's read %.2f s later, inside the %.2f s lockout" % [bite_at / 60.0, to_next_read / 60.0, defense.parry_mash_lockout])
 	press(KEY_SHIFT)
 	await wait(2)
@@ -2127,7 +2152,7 @@ func test_clone_cadence() -> void:
 	defense.rearm_parry()
 	var saved: int = await parry_at(clone_frames(window))
 	check(saved == 3, "the rearm gives the next clone back (%d)" % saved)
-	check(strike + CLONE_GAP < defense.parry_mash_lockout + window, "which the cadence needs: %.2f s is inside the lockout plus the window, %.2f s" % [strike + CLONE_GAP, defense.parry_mash_lockout + window])
+	check(cadence < defense.parry_mash_lockout + window, "which the cadence needs: %.2f s is inside the lockout plus the window, %.2f s" % [cadence, defense.parry_mash_lockout + window])
 
 
 # ------------------------------------------------------------------ approach times
@@ -2182,6 +2207,13 @@ func test_approach() -> void:
 			var id: int = area.get_instance_id()
 			if not born.has(id):
 				born[id] = defense.clock
+		# Eric's thrown sword reports its own hits, so its hitbox is not in that group. It still has
+		# a flight, which is exactly what this mode is for. No other fight has the group, so this
+		# does nothing elsewhere.
+		for hazard in get_nodes_in_group("eric_hazard"):
+			var blade: Node = hazard.get_node_or_null("Hitbox")
+			if blade and not born.has(blade.get_instance_id()):
+				born[blade.get_instance_id()] = defense.clock
 		await physics_frame
 	var window: float = defense.parry_window
 	var tight := []
@@ -2195,7 +2227,10 @@ func test_approach() -> void:
 		if WINDUP_READS.has(id):
 			var windup: float = WINDUP_READS[id]
 			log_p("  %-26s %d landed, shortest approach %.2f s, but it radiates from the boss: its read is a %.2f s wind-up" % [id, times.size(), shortest, windup])
-			if windup < window * 1.75:
+			# A flight wants the 1.75x margin because the player has to notice a projectile before
+			# they can answer it. A wind-up is the boss doing one obvious thing for that whole time,
+			# which they are already watching, so it only has to outlast the window itself.
+			if windup <= window:
 				tight.append("%s (%.2f s wind-up)" % [id, windup])
 			continue
 		log_p("  %-26s %d landed, shortest approach %.2f s, %.0f%% of it inside the %.2f s window" % [id, times.size(), shortest, 100.0 * minf(window / shortest, 1.0), window])

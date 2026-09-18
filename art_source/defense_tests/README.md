@@ -129,6 +129,7 @@ the player's rules; if his fight changes, these are the ones to reconcile.
 | --- | --- | --- |
 | `smoke` | `fight=eric\|greyson\|carter\|mason\|jordan\|liam` | 45 s of a fight with the player standing still: every attack that lands is tagged, one half-heart per damaging hit, a second of i-frames after each, and nothing blocked, parried or dodged without input |
 | `approach` | `fight=<as above>` | how long each attack is in the air before it lands, against `parry_window`. Anything whose flight is not clearly longer than the window can be parried by pressing the moment it appears, which is not a read; the mode fails and names them |
+| `clone_cadence` | | Carter's clone barrage against the parry window, modelled rather than run: pressing as a light comes up is too early, pressing on the dash parries, a bitten clone is only blocked, and a press at a feint costs the next clone unless `rearm_parry()` gives it back |
 
 ## Notes for whoever runs this next
 
@@ -143,6 +144,12 @@ the player's rules; if his fight changes, these are the ones to reconcile.
   not park him.
 - **A temporary driver node** named `ScratchEricDriver` in his fight scene is freed on load, so a
   debugging aid left in the scene cannot steer these runs.
+- **`clone_cadence` mirrors Carter.** Its `CLONE_SHOW`, `CLONE_DASH`, `CLONE_GAP` and
+  `CLONE_LIGHT_OUT` are copies of `CarterStateMachine`'s `clone_show`, `clone_dash` and `clone_gap`
+  and of `CarterArtLayout.CLONE_LIGHT_OUT`, **and must be changed in the same pass as those**. The
+  mode reads the real values off his fight when it is in the build and fails if the copies have
+  drifted, so a model of a tighter barrage than he ships cannot hide a problem; the copies are only
+  what it falls back to in a build without him.
 - **Adding a fight:** append it to `SCENES` at the top and give it a spot in `SMOKE_SPOTS`; `smoke`
   and `blocks` then work on it. New attack ids need their block cost in `BLOCK_COSTS` or their id in
   `UNBLOCKABLE`, or `blocks` will report them as unexpected.
