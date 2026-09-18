@@ -1,8 +1,13 @@
-"""Greyson redesign - 96x96 frames, baseline row 95, meant for scale 3.
+"""Greyson - 96x96 frames, baseline row 95, meant for scale 3.
 
-Kept from the old sprite + portrait: blonde crew-cut cap, blue eyes, the red
-furrowed-brow marks on the forehead, blonde moustache, bronzed tan, purple
-trunks, white wrestling boots, front-on bodybuilder stance.
+Drawn in the flat cartoon style of Assets/Characters/Mason/mason_sheet.png:
+big simple masses, pure-black outlines all the way round, three flat tones per
+material (base + one highlight crescent + one shadow crescent) and no anatomy
+at all.  He reads as an enormous bodybuilder the way a cartoon does - by being
+huge and wide - not by having muscles drawn on him.
+
+Identity kept from the portrait: long blonde mane, blue eyes, blonde moustache,
+the three red forehead furrows, purple trunks, white wrestling boots.
 """
 
 import os
@@ -10,67 +15,69 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pixlib import (Canvas, Ellipse, Capsule, Poly, RoundRect, Union, Clip,
-                    Sub, HalfPlane, polyline)
+                    Sub, Translate, HalfPlane, polyline)
 
 W = H = 96
 AX = 47.0              # mirror axis (x' = 94 - x)
-OUTLINE = "#150b11"
+OUTLINE = "#000000"    # Mason uses pure black, and plenty of it
 
+# three flat tones per material: [highlight, base, shadow, deep]
 PAL = {
-    "skin":   ["#FFEDC0", "#F9C587", "#E29B56", "#BD753A", "#8E4B26", "#5C2A1A"],
-    "hair":   ["#FFF8C0", "#F6DE68", "#D6B833", "#A0871A", "#6A560E"],
-    "trunk":  ["#D09CF6", "#A567E0", "#7F3DB8", "#5A278A", "#381356"],
-    "boot":   ["#FFFFFF", "#E9EDF7", "#C4CADD", "#969DB6", "#5F6582"],
-    "rage":   ["#FFC7A0", "#FF9668", "#EA6A42", "#BF4227", "#8B2718", "#5A140E"],
-    "steel":  ["#E7EFF7", "#BDCCDA", "#93A6B9", "#6B7B90", "#4A5668", "#2C3442"],
+    "skin":   ["#FFE0B2", "#F0BE86", "#CE9758", "#9E6C3A"],
+    "hair":   ["#FFF08A", "#F2DC52", "#C9B032", "#8E7A20"],
+    "trunk":  ["#C88CF0", "#A063DC", "#7331A8", "#4C1F74"],
+    "boot":   ["#FFFFFF", "#E8ECF6", "#BEC5D8", "#8C93AA"],
+    "rage":   ["#FFC0A0", "#F08050", "#C24E28", "#8A3018"],
+    "steel":  ["#E8EFF8", "#B8C6D6", "#7E8DA2", "#4E5A6C"],
 }
+HI, BASE, SHA, DEEP = 0, 1, 2, 3
 
 FACE_CH = {
     "K": OUTLINE, "E": "#FFFFFF", "B": "#2F6BCC", "b": "#7FB6F5",
-    "r": "#BE3427", "t": "#F7F3E6", "o": "#40121A", "p": "#8E3B45",
-    "S": ("skin", 0), "s": ("skin", 1), "n": ("skin", 2), "m": ("skin", 3),
-    "w": ("skin", 4), "x": ("skin", 5),
-    "H": ("hair", 0), "h": ("hair", 1), "g": ("hair", 2), "d": ("hair", 3),
+    "r": "#C0392B", "t": "#FFFFFF", "o": "#3A0F16", "p": "#8E3B45",
+    "S": ("skin", 0), "s": ("skin", 1), "n": ("skin", 1), "m": ("skin", 2),
+    "w": ("skin", 2), "x": ("skin", 3),
+    "H": ("hair", 0), "h": ("hair", 1), "g": ("hair", 1), "d": ("hair", 2),
 }
 RAGE_CH = dict(FACE_CH)
-RAGE_CH.update({"S": ("rage", 0), "s": ("rage", 1), "n": ("rage", 2),
-                "m": ("rage", 3), "w": ("rage", 4), "x": ("rage", 5),
+RAGE_CH.update({"S": ("rage", 0), "s": ("rage", 1), "n": ("rage", 1),
+                "m": ("rage", 2), "w": ("rage", 2), "x": ("rage", 3),
                 "B": "#FFFFFF", "b": "#FFF0B0", "E": "#FFE8C0"})
 
 # 27 wide; local column 13 is the mirror axis (= x 47).  Blank cells keep the
-# procedural skull/hair shading underneath, so only the FEATURES are authored.
+# flat fill underneath - only the features are authored, Mason-style.
 #         0    5   10   15   20   25
 #         |    |    |    |    |    |
 FACE = [
-    "                           ",   # 0   rows 0-9 are the hair cap: left to
-    "                           ",   # 1   the shader so the skull stays round
-    "                           ",   # 2
-    "                           ",   # 3
-    "                           ",   # 4
-    "                           ",   # 5
-    "                           ",   # 6
-    "                           ",   # 7
-    "                           ",   # 8
-    "                           ",   # 9
-    "            rrr            ",   # 10  red furrow marks (from the portrait)
+    "                           ",   # 0   rows 0-9 are mane / bare forehead
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "            rrr            ",   # 10  the three red furrows
     "           rr rr           ",   # 11
     "          rr   rr          ",   # 12
-    "   SdggSSSSSSSssnnnmggdw   ",   # 13  brow, outer end high
-    "  nsSSgggddSSSsnddgggnmmw  ",   # 14  brow, inner end low = angry
-    "  nsSKKKKKSsSSsnnKKKKKmmw  ",   # 15  lash line
-    "  nsSEEBBESSSSsnnEBBEEmmw  ",   # 16  eyes
-    "  nswEbBBEsSSsnnmEbBBEmmw  ",   # 17
-    "  nsnwwwwnsSSsnmnwwwwnmmw  ",   # 18  lower lid + nose bridge
-    "   sSSssnnnSSsnmnnmmmmww   ",   # 19  nose
-    "   sSssnnnxnSsnmxmmmmwww   ",   # 20  nostrils
-    "   sSsnnmmnnnnnmmmmmwwww   ",   # 21  philtrum
-    "    SsngghHHhhhhhgggmww    ",   # 22  blonde moustache
-    "    Ssngdooooooooodgmww    ",   # 23  moustache droop + mouth
-    "    Ssnnmototttotomnmww    ",   # 24  gritted teeth
-    "     snnmpppppppppmnmw     ",   # 25  lower lip
-    "      nSSssnnnnmmmmww      ",   # 26  chin
-    "        nSssnnnmmmw        ",   # 27
-    "         nssnnnmmw         ",   # 28  jaw
+    "                           ",   # 13
+    "     dddd         dddd     ",   # 14  brows
+    "     KKKK         KKKK     ",   # 15  lash
+    "     EBBE         EBBE     ",   # 16  eyes
+    "     KKKK         KKKK     ",   # 17  lower lid
+    "                           ",   # 18
+    "            K K            ",   # 19  nostrils
+    "        ggggggggggg        ",   # 20  moustache
+    "       ggggggggggggg       ",   # 21
+    "       gdKKKKKKKKKdg       ",   # 22  mouth
+    "         KtttttttK         ",   # 23  teeth
+    "         KKKKKKKKK         ",   # 24
+    "                           ",   # 25
+    "                           ",   # 26
+    "                           ",   # 27
+    "                           ",   # 28
 ]
 FACE_Y = 1
 FACE_X = 34
@@ -107,8 +114,6 @@ def _check_face():
             if a != b:
                 bad.append("row %d col %d/%d %r/%r" % (j, i, 26 - i, row[i], row[26 - i]))
     return bad
-
-# ---------------------------------------------------------------------------
 
 
 def _mir(p):
@@ -477,6 +482,16 @@ def _rig(pose):
 
 
 # ---------------------------------------------------------------------------
+def _mass(c, shape, mat, prio, lo=2.6, hi=2.0):
+    """One flat cartoon mass: base fill, a lit crescent up-left, a shadow
+    crescent down-right.  Three tones, no gradient, no modelling."""
+    c.add(shape, mat, prio=prio, flat=BASE)
+    if hi:
+        c.add(Sub(shape, Translate(shape, hi, hi)), mat, prio=prio, flat=HI)
+    if lo:
+        c.add(Sub(shape, Translate(shape, -lo, -lo)), mat, prio=prio, flat=SHA)
+
+
 def build(pose="hero", hair=None):
     rage = pose == "phase2" or pose.startswith("p2_")
     mat = "rage" if rage else "skin"
@@ -487,105 +502,100 @@ def build(pose="hero", hair=None):
     L = r["lean"]
     B = r["body_dy"]
     hx, hy, hrx, hry = r["head"]
+    hrx *= 1.17                                  # cartoon head: wider
+    hry *= 1.04
     ty0, ty1 = r["trunk_y"]
     ch = r.get("chest_ry", 0.0)
 
-    # ---- torso ---------------------------------------------------------
-    chest = Ellipse(AX + L * .7, 41 + B, 20.5, 10.0 + ch)
-    latL = Ellipse(AX - 13.0 + L * .7, 48 + B, 11.0, 11.0)
-    latR = Ellipse(AX + 13.0 + L * .7, 48 + B, 11.0, 11.0)
-    belly = Ellipse(AX + L, 55 + B, 11.8, 9.5)
-    waist = Ellipse(AX + L, 61 + B, 9.8, 6.5)
-    torso = Union([chest, latL, latR, belly, waist], k=2.4)
-    c.add(torso, mat, prio=1)
-
-    hips = Ellipse(AX + L, 66 + B, 14.5, 8.5)
-    c.add(hips, mat, prio=1)
+    # ---- one torso mass -------------------------------------------------
+    torso = Union([Ellipse(AX + L * .7, 41 + B, 21.5, 10.5 + ch),
+                   Ellipse(AX - 13.5 + L * .7, 48 + B, 11.5, 11.5),
+                   Ellipse(AX + 13.5 + L * .7, 48 + B, 11.5, 11.5),
+                   Ellipse(AX + L, 55 + B, 12.0, 9.5),
+                   Ellipse(AX + L, 61 + B, 9.5, 6.5),
+                   Ellipse(AX + L, 66 + B, 14.5, 8.5)], k=3.2)
+    _mass(c, torso, mat, 1, lo=3.0, hi=2.4)
 
     tp = r["trap"]
-    c.add(Capsule(tp[0], tp[1], tp[2], tp[3]), mat, prio=2)
-    c.add(Capsule(_mir(tp[0]), _mir(tp[1]), tp[2], tp[3]), mat, prio=2)
-    n = r["neck"]
-    c.add(Capsule(n[0], n[1], n[2], n[3]), mat, prio=2)
+    neck = Union([Capsule(tp[0], tp[1], tp[2], tp[3]),
+                  Capsule(_mir(tp[0]), _mir(tp[1]), tp[2], tp[3]),
+                  Capsule(r["neck"][0], r["neck"][1], r["neck"][2], r["neck"][3])],
+                 k=2.4)
+    _mass(c, neck, mat, 2, lo=2.4, hi=0)
 
-    pecL = Ellipse(AX - 9.0 + L * .7, 41 + B, 10.2, 7.0 + ch)
-    pecR = Ellipse(AX + 9.0 + L * .7, 41 + B, 10.2, 7.0 + ch)
-    c.add(pecL, mat, prio=3)
-    c.add(pecR, mat, prio=3)
-
-    # ---- legs ----------------------------------------------------------
+    # ---- legs -----------------------------------------------------------
     legs = []
     for key in ("legL", "legR"):
         g = r[key]
-        th = Capsule(g["thigh"][0], g["thigh"][1], g["thigh"][2], g["thigh"][3])
-        c.add(th, mat, prio=2)
-        c.add(Capsule(g["calf"][0], g["calf"][1], g["calf"][2], g["calf"][3]),
-              mat, prio=2)
-        legs.append(th)
+        leg = Union([Capsule(g["thigh"][0], g["thigh"][1], g["thigh"][2], g["thigh"][3]),
+                     Capsule(g["calf"][0], g["calf"][1], g["calf"][2], g["calf"][3])],
+                    k=1.8)
+        _mass(c, leg, mat, 3, lo=2.4, hi=1.8)
+        legs.append(leg)
 
-    # ---- trunks --------------------------------------------------------
+    # ---- trunks ---------------------------------------------------------
     tx = AX - 19 + L
     trunk_poly = Poly([
         (tx + 1, ty0 - 2), (2 * AX - tx - 1, ty0 - 2),
         (2 * AX - tx + 2, ty0 + 5), (2 * AX - tx + 2, ty1 + 2),
-        (AX + 11, ty1 + 3), (AX + 8.0, ty1 - 2), (AX, ty1 + 1),
-        (AX - 8.0, ty1 - 2), (AX - 11, ty1 + 3),
+        (AX + 11, ty1 + 3), (AX + 7.0, ty1), (AX, ty1 + 2),
+        (AX - 7.0, ty1), (AX - 11, ty1 + 3),
         (tx - 2, ty1 + 2), (tx - 2, ty0 + 5)], round_r=6)
-    c.add(Clip(Union([hips] + legs, k=2.2), trunk_poly), "trunk", prio=4)
+    trunks = Clip(Union([Ellipse(AX + L, 66 + B, 15.5, 9.0)] + legs, k=2.4), trunk_poly)
+    _mass(c, trunks, "trunk", 4, lo=3.0, hi=2.2)
 
-    # ---- boots ---------------------------------------------------------
+    # ---- boots ----------------------------------------------------------
     for key in ("legL", "legR"):
         b = r[key]["boot"]
-        c.add(RoundRect(b[0], b[1], b[2], b[3], r=4.0, round_r=6.5), "boot", prio=5)
+        _mass(c, RoundRect(b[0], b[1], b[2], b[3], r=4.0, round_r=6.5),
+              "boot", 5, lo=2.6, hi=2.0)
 
-    # ---- arms ----------------------------------------------------------
+    # ---- arms, each a single tapered mass -------------------------------
     order = ["armL", "armR"]
     if r["fore"]:
         order = [k for k in order if k != r["fore"]] + [r["fore"]]
+    arm_shapes = []
     for i, key in enumerate(order):
         a = r[key]
-        p = 6 + i * 4
-        c.add(Ellipse(*a["delt"]), mat, prio=p)
-        c.add(Capsule(a["uarm"][0], a["uarm"][1], a["uarm"][2], a["uarm"][3]),
-              mat, prio=p)
-        c.add(Ellipse(*a["bice"]), mat, prio=p + 1)
-        c.add(Capsule(a["farm"][0], a["farm"][1], a["farm"][2], a["farm"][3]),
-              mat, prio=p + 2)
-        c.add(Ellipse(*a["fist"]), mat, prio=p + 3)
+        prio = 6 + i * 4
+        upper = Union([Ellipse(*a["delt"]),
+                       Capsule(a["uarm"][0], a["uarm"][1], a["uarm"][2], a["uarm"][3]),
+                       Ellipse(*a["bice"])], k=2.6)
+        _mass(c, upper, mat, prio, lo=2.6, hi=2.0)
+        arm_shapes.append((upper, prio))
+        solo = key in (r["fore"],) + tuple(r["chamber"])
+        if solo:
+            fore = Capsule(a["farm"][0], a["farm"][1], a["farm"][2], a["farm"][3])
+            fist = Ellipse(*a["fist"])
+            _mass(c, fore, mat, prio + 1, lo=2.4, hi=1.8)
+            _mass(c, fist, mat, prio + 2, lo=2.6, hi=2.2)
+            arm_shapes.append((fore, prio + 1))
+            arm_shapes.append((fist, prio + 2))
+        else:
+            lower = Union([Capsule(a["farm"][0], a["farm"][1], a["farm"][2], a["farm"][3]),
+                           Ellipse(*a["fist"])], k=2.0)
+            _mass(c, lower, mat, prio + 1, lo=2.6, hi=2.0)
+            arm_shapes.append((lower, prio + 1))
 
-    # ---- head ----------------------------------------------------------
-    c.add(Ellipse(hx, hy + 4.0, hrx - 2.0, hry - 3.0), mat, prio=16,
-          wrap=0.55, amb=0.16)
-    c.add(Ellipse(hx, hy, hrx, hry), mat, prio=16, wrap=0.55, amb=0.16)
-    c.add(Ellipse(hx - hrx + 0.8, hy + 4.5, 2.8, 4.4), mat, prio=16)
-    c.add(Ellipse(hx + hrx - 0.8, hy + 4.5, 2.8, 4.4), mat, prio=16)
-    for shp in _hair(r["hair"], hx, hy, hrx, hry):
-        c.add(shp, "hair", prio=18, wrap=0.60, amb=0.10)
-    _strands(c, r["hair"], hx, hy, hrx, hry)
+    # ---- head + mane ----------------------------------------------------
+    head = Union([Ellipse(hx, hy, hrx, hry),
+                  Ellipse(hx, hy + 4.0, hrx - 2.2, hry - 3.0)], k=2.0)
+    _mass(c, head, mat, 16, lo=3.0, hi=2.4)
+    crown, falls = _hair(r["hair"], hx, hy, hrx, hry)
+    if falls is not None:
+        _mass(c, falls, "hair", 5, lo=3.0, hi=2.4)
+    _mass(c, crown, "hair", 18, lo=3.0, hi=2.4)
 
-    # ---- separation between overlapping parts ---------------------------
-    for key in order:
-        a = r[key]
-        c.contour(Ellipse(*a["delt"]), 1.3, 2, mats=(mat,))
-        c.contour(Capsule(a["uarm"][0], a["uarm"][1], a["uarm"][2], a["uarm"][3]),
-                  1.3, 2, mats=(mat,))
-        c.contour(Capsule(a["farm"][0], a["farm"][1], a["farm"][2], a["farm"][3]),
-                  1.3, 2, mats=(mat,))
-    if r["fore"]:
-        a = r[r["fore"]]
-        c.contour(Ellipse(a["fist"][0], a["fist"][1], a["fist"][2] + .4,
-                          a["fist"][3] + .4), 1.6, 9, color=OUTLINE)
-    for key in r["chamber"]:
-        a = r[key]
-        c.contour(Ellipse(a["fist"][0], a["fist"][1], a["fist"][2] + .3,
-                          a["fist"][3] + .3), 1.4, 9, color=OUTLINE)
-        c.contour(Capsule(a["farm"][0], a["farm"][1], a["farm"][2] + .3,
-                          a["farm"][3] + .3), 1.3, 3, mats=(mat,))
-    # jaw drops a shadow onto the neck and traps only, never onto the head
-    c.contour(Ellipse(hx, hy + 2.0, hrx - 1.0, hry - 1.0), 1.4, 2, mats=(mat,),
-              below_prio=16)
+    # ---- black ink between overlapping masses ---------------------------
+    for shp, prio in arm_shapes:
+        c.contour(shp, 1.4, color=OUTLINE, below_prio=prio)
+    c.contour(head, 1.4, color=OUTLINE, below_prio=16)
+    for key in ("legL", "legR"):
+        b = r[key]["boot"]
+        c.contour(RoundRect(b[0], b[1], b[2], b[3], r=4.0, round_r=6.5), 1.2,
+                  color=OUTLINE, below_prio=5)
 
-    _anatomy(c, r, L, mat, ty0, ty1, B)
+    _details(c, r, L, mat, ty0, ty1, B)
     if rage:
         _rage_extras(c, r)
 
@@ -598,217 +608,91 @@ def build(pose="hero", hair=None):
         face = _scowl(FACE)
     c.stamp(face, int(FACE_X + r["head_dx"]), int(FACE_Y + r["head_dy"]),
             RAGE_CH if rage else FACE_CH)
-
-    c.occlude(strength=2, reach=2)
-    c.rim(1, mats=(mat, "hair", "trunk", "boot"))
-    c.despeckle()
     return c
 
 
 # ---------------------------------------------------------------------------
 def _hair(style, hx, hy, hrx, hry):
-    """Two lengths for review.  Both use a parted fringe that points down over
-    the temples and leaves the centre forehead bare, so the three red furrow
-    marks stay readable - they are the thing that makes the face his."""
-    if style == "crew":
-        line = Poly([(hx - 22, hy - 26), (hx + 22, hy - 26), (hx + 22, hy - 2.0),
-                     (hx + 11, hy - 3.0), (hx + 8, hy - 5.5), (hx + 4, hy - 4.5),
-                     (hx, hy - 5.5), (hx - 4, hy - 4.5), (hx - 8, hy - 5.5),
-                     (hx - 11, hy - 3.0), (hx - 22, hy - 2.0)], round_r=9)
-        return [Clip(Ellipse(hx, hy, hrx + 0.5, hry + 0.4), line)]
-
-    # the face opening, with a fringe biting back into it over each temple
-    face = Ellipse(hx, hy + 5.0, hrx - 1.6, hry - 2.2)
-    frL = Poly([(hx - 13, hy - 11), (hx - 3.5, hy - 7.5), (hx - 5.5, hy - 1.0),
-                (hx - 14, hy - 3.0)], round_r=3)
-    frR = Poly([(hx + 13, hy - 11), (hx + 3.5, hy - 7.5), (hx + 5.5, hy - 1.0),
-                (hx + 14, hy - 3.0)], round_r=3)
+    """The mane, as one flat blonde shape with a parted fringe that leaves the
+    centre forehead - and the three red furrows - bare."""
+    face = Ellipse(hx, hy + 5.0, hrx - 2.2, hry - 2.2)
+    frL = Poly([(hx - 15, hy - 11), (hx - 3.5, hy - 7.5), (hx - 5.5, hy - 1.0),
+                (hx - 16, hy - 3.0)], round_r=3)
+    frR = Poly([(hx + 15, hy - 11), (hx + 3.5, hy - 7.5), (hx + 5.5, hy - 1.0),
+                (hx + 16, hy - 3.0)], round_r=3)
     hole = Sub(Sub(face, frL), frR)
-
     if style == "mid":
-        mass = Ellipse(hx, hy + 1.0, hrx + 2.2, hry + 3.6)
-        jaw = HalfPlane(0, 1, -(hy + hry + 2.0))
-        return [Sub(Clip(mass, jaw), hole)]
-
-    # long: a wrestler's mane spilling over the traps onto the pecs
-    mass = Ellipse(hx, hy + 1.5, hrx + 2.6, hry + 4.4)
-    fallL = Capsule((hx - hrx - 1.0, hy - 1), (hx - hrx - 2.5, hy + 24), 5.4, 4.6)
-    fallR = Capsule((hx + hrx + 1.0, hy - 1), (hx + hrx + 2.5, hy + 24), 5.4, 4.6)
-    return [Sub(Union([mass, fallL, fallR], k=2.0), hole)]
+        mass = Ellipse(hx, hy + 1.0, hrx + 2.0, hry + 3.6)
+        return Sub(Clip(mass, HalfPlane(0, 1, -(hy + hry + 2.0))), hole), None
+    mass = Ellipse(hx, hy + 1.5, hrx + 2.4, hry + 4.4)
+    fallL = Capsule((hx - hrx - 0.5, hy + 2), (hx - hrx - 2.0, hy + 24), 5.4, 4.6)
+    fallR = Capsule((hx + hrx + 0.5, hy + 2), (hx + hrx + 2.0, hy + 24), 5.4, 4.6)
+    return Sub(mass, hole), Union([fallL, fallR], k=1.0)
 
 
-def _strands(c, style, hx, hy, hrx, hry):
-    """Darker strand grooves + a lit band on the crown.  Without these the
-    hair reads as a helmet of flat colour at 3x."""
-    if style == "crew":
-        return
-    long_ = style == "long"
-    end = hy + (22 if long_ else 8)
-    for dx, bend in ((-8.5, -2.5), (5.0, 1.5), (10.5, 3.0)):
-        c.shade_px(polyline([(hx + dx, hy - hry + 4),
-                             (hx + dx * 1.3, hy + 1),
-                             (hx + dx * 1.45 + bend, end)]), 2, "hair")
-    c.shade_px(polyline([(hx - 10, hy - 9), (hx - 4, hy - 12), (hx + 3, hy - 11)]),
-               -2, "hair")
-    c.shade_px(polyline([(hx - 12, hy - 5), (hx - 13, hy + 2)]), -1, "hair")
-    if long_:
-        for sgn in (-1, 1):
-            c.shade_px(polyline([(hx + sgn * (hrx + 3.5), hy + 8),
-                                 (hx + sgn * (hrx + 4.5), hy + 21)]), 2, "hair")
+def _details(c, r, L, mat, ty0, ty1, B=0.0):
+    """The only internal lines Mason's style allows: a waistband, a sole, a
+    couple of knuckles, one crease where a limb folds."""
+    ty0, ty1 = int(round(ty0)), int(round(ty1))
+    c.raw_px([(x, ty0 + 1) for x in range(22, 74)], OUTLINE)
+    c.shade_px([(x, ty0 + 2) for x in range(22, 74)], -1, "trunk")
+
+    for key in ("legL", "legR"):
+        b = r[key]["boot"]
+        x0, x1, y1 = int(b[0]), int(b[2]), int(b[3])
+        c.raw_px([(x, y1 - 2) for x in range(x0, x1 + 1)], OUTLINE)
+        c.raw_px([(x, int(b[1]) + 3) for x in range(x0 + 2, x1 - 1)], OUTLINE)
+
+    for key in ("armL", "armR"):
+        a = r[key]
+        fx, fy, frx, fry = [float(v) for v in a["fist"]]
+        ix, iy = int(round(fx)), int(round(fy))
+        big = frx > 9.0
+        step = frx * (0.46 if big else 0.6)
+        for k in range(-1, 2 if big else 1):
+            gx = ix + int(round((k + (0.5 if big else 0.0)) * step))
+            c.raw_px([(gx, iy - 1), (gx, iy), (gx, iy + 1)], OUTLINE)
 
 
 def _scowl(face):
-    """heavier brow + narrowed eyes for the wind-up and the combo"""
     g = list(face)
-    g[14] = "  nsddggdd       ddggddnmmw"
-    g[15] = "  nsdKKKKKSsSSsnnKKKKKdmm  "
+    g[14] = "    ddddd         ddddd    "
+    g[15] = "     KKKK         KKKK     "
     return g
 
 
 def _hurt(face):
-    """eyes screwed shut, mouth blown open - the hit reaction"""
+    """eyes squeezed shut, mouth blown open"""
     g = list(face)
-    g[16] = "  nsSKKKKKSSSSsnnKKKKKmmw  "
-    g[17] = "  nswwwwwwsSSsnnmwwwwwmmw  "
-    g[24] = "    Ssnnmtttttttttmnmww    "
-    g[25] = "     snnmooooooooomnmw     "
-    g[26] = "      nSsooooooommmww      "
+    g[15] = "     KKKK         KKKK     "
+    g[16] = "     KKKK         KKKK     "
+    g[17] = "                           "
+    g[22] = "       gdKKKKKKKKKdg       "
+    g[23] = "         KtttttttK         "
+    g[24] = "         KoooooooK         "
+    g[25] = "         KKKKKKKKK         "
     return g
 
 
 def _out(face):
-    """lights out: closed eyes, slack mouth - defeat hold"""
+    """lights out"""
     g = list(face)
-    g[16] = "  nsSKKKKKSSSSsnnKKKKKmmw  "
-    g[17] = "  nswnnnnnsSSsnnmnnnnnmmw  "
-    g[24] = "    Ssnnmooooooooomnmww    "
+    g[15] = "     KKKK         KKKK     "
+    g[16] = "                           "
+    g[17] = "                           "
+    g[23] = "         KoooooooK         "
     return g
 
 
-# ---------------------------------------------------------------------------
-def _anatomy(c, r, L, mat, ty0, ty1, B=0.0):
-    P = lambda pts: [(int(round(a + L)), int(round(b + B))) for a, b in pts]
-
-    c.shade_px(P(polyline([(AX, 35), (AX, 48)])), 2, mat)
-    c.shade_px(P(polyline([(AX - 18, 45), (AX - 11, 48), (AX - 3, 48)])), 2, mat)
-    c.shade_px(P(polyline([(AX + 18, 45), (AX + 11, 48), (AX + 3, 48)])), 2, mat)
-    c.shade_px(P(polyline([(AX - 14, 37), (AX - 5, 36)])), -1, mat)
-    c.shade_px(P(polyline([(AX + 14, 37), (AX + 5, 36)])), -1, mat)
-    c.shade_px(P(polyline([(AX - 12, 34), (AX - 4, 35)])), 1, mat)
-    c.shade_px(P(polyline([(AX + 12, 34), (AX + 4, 35)])), 1, mat)
-
-    c.shade_px(P(polyline([(AX, 49), (AX, 62)])), 2, mat)
-    for yy, w in ((51, 7), (55, 7), (59, 5)):
-        c.shade_px(P(polyline([(AX - w, yy), (AX + w, yy)])), 2, mat)
-        c.shade_px(P(polyline([(AX - w + 1, yy - 1), (AX + w - 1, yy - 1)])), -1, mat)
-
-    c.shade_px(P(polyline([(AX - 12, 51), (AX - 10, 57), (AX - 7, 62)])), 2, mat)
-    c.shade_px(P(polyline([(AX + 12, 51), (AX + 10, 57), (AX + 7, 62)])), 2, mat)
-    for i, yy in enumerate((45, 49, 53)):
-        c.shade_px(P(polyline([(AX - 17 + i, yy), (AX - 13 + i, yy + 2)])), 2, mat)
-        c.shade_px(P(polyline([(AX + 17 - i, yy), (AX + 13 - i, yy + 2)])), 2, mat)
-
-    c.shade_px(P(polyline([(AX - 9, 29), (AX - 14, 35)])), 1, mat)
-    c.shade_px(P(polyline([(AX + 9, 29), (AX + 14, 35)])), 1, mat)
-
-    for key in ("armL", "armR"):
-        a = r[key]
-        dx, dy = a["delt"][0], a["delt"][1]
-        s = -1 if dx < AX else 1
-        c.shade_px(polyline([(dx - 4 * s, dy + 3), (dx + 4 * s, dy + 6)]), 2, mat)
-        c.shade_px(polyline([(dx - 5 * s, dy - 1), (dx + 3 * s, dy + 1)]), 2, mat)
-        bx, by = a["bice"][0], a["bice"][1]
-        c.shade_px(polyline([(bx - 2 * s, by - 4), (bx - 3 * s, by + 2)]), -1, mat)
-        e = a["farm"][0]
-        c.shade_px(polyline([(e[0] - 3, e[1] + 1), (e[0] + 3, e[1] + 2)]), 2, mat)
-        _fist(c, a["fist"], mat, fore=(key == r["fore"]))
-
-    for key in ("legL", "legR"):
-        g = r[key]
-        kx, ky = g["thigh"][1]
-        s = -1 if kx < AX else 1
-        c.shade_px(polyline([(kx + 3 * s, ky - 12), (kx + 1 * s, ky - 3)]), 2, mat)
-        c.shade_px(polyline([(kx - 4 * s, ky - 11), (kx - 3 * s, ky - 2)]), 2, mat)
-        c.shade_px(polyline([(kx - 4, ky), (kx + 4, ky)]), 1, mat)
-
-    for key in ("legL", "legR"):
-        _boot(c, r[key]["boot"])
-
-    c.shade_px([(x, ty0 - 1) for x in range(22, 74)], -1, "trunk")
-    c.shade_px([(x, ty0 + 1) for x in range(22, 74)], 2, "trunk")
-    # trunks cast onto the thighs
-    c.shade_px([(x, ty1 + 1) for x in range(24, 72)], 2, mat)
-    c.shade_px([(x, ty1 + 2) for x in range(26, 70)], 1, mat)
-    c.shade_px(polyline([(AX - 12, ty0 + 4), (AX - 14, ty1)]), 2, "trunk")
-    c.shade_px(polyline([(AX + 12, ty0 + 4), (AX + 14, ty1)]), 2, "trunk")
-    c.shade_px(polyline([(AX, ty0 + 3), (AX, ty1 - 1)]), 2, "trunk")
-
-
-def _fist(c, fist, mat, fore=False):
-    """knuckle blocks + a wrapped thumb, so a fist never reads as a ball"""
-    fx, fy, frx, fry = [float(v) for v in fist]
-    ix, iy = int(round(fx)), int(round(fy))
-    if fore:
-        # thrown at the camera: four knuckles across the middle
-        for k in range(-2, 2):
-            gx = ix + int(round((k + 0.5) * frx * 0.46))
-            c.shade_px([(gx, iy - 3), (gx, iy - 2), (gx, iy - 1), (gx, iy)], 2, mat)
-        for k in range(-2, 2):
-            hxp = ix + int(round(k * frx * 0.46)) + 1
-            c.shade_px([(hxp, iy - 4), (hxp + 1, iy - 4)], -2, mat)
-        c.shade_px(polyline([(ix - frx * .75, iy + 2), (ix, iy + 4),
-                             (ix + frx * .55, iy + 3)]), 2, mat)
-        c.shade_px(polyline([(ix - frx * .7, iy + 4), (ix - frx * .2, iy + 6)]), 2, mat)
-        c.shade_px(polyline([(ix - frx * .45, iy - 6), (ix + frx * .3, iy - 6)]), -2, mat)
-    else:
-        for k in range(-1, 2):
-            gx = ix + int(round(k * frx * 0.55))
-            c.shade_px([(gx, iy - 1), (gx, iy), (gx, iy + 1)], 2, mat)
-        c.shade_px(polyline([(ix - frx * .7, iy - 3), (ix + frx * .55, iy - 3)]), -1, mat)
-        c.shade_px(polyline([(ix - frx * .55, iy + 3), (ix + frx * .45, iy + 3)]), 2, mat)
-        s = 1 if fx < AX else -1
-        c.shade_px(polyline([(ix + frx * .55 * s, iy - 1),
-                             (ix + frx * .75 * s, iy + 2)]), 2, mat)
-
-
-def _boot(c, b):
-    """white wrestling boot: cuff, lace bars, dark sole"""
-    x0, y0, x1, y1 = int(b[0]), int(b[1]), int(b[2]), int(b[3])
-    cx = (x0 + x1) // 2
-    c.shade_px([(x, y0 + 1) for x in range(x0, x1 + 1)], -2, "boot")
-    c.shade_px([(x, y0 + 3) for x in range(x0, x1 + 1)], 3, "boot")
-    for k, y in enumerate(range(y0 + 6, y1 - 4, 3)):
-        w = 3 + k
-        c.shade_px([(x, y) for x in range(cx - w, cx + w + 1)], 2, "boot")
-    c.shade_px([(cx, y) for y in range(y0 + 5, y1 - 4)], 1, "boot")
-    c.shade_px([(x, y) for x in range(x0, x0 + 2) for y in range(y0 + 4, y1 - 2)],
-               1, "boot")
-    c.shade_px([(x, y1 - 2) for x in range(x0 - 1, x1 + 2)], 2, "boot")
-    c.shade_px([(x, y1 - 1) for x in range(x0 - 1, x1 + 2)], 4, "boot")
-    c.shade_px([(x, y1) for x in range(x0 - 1, x1 + 2)], 4, "boot")
-
-
 def _rage_extras(c, r):
-    for key in ("armL", "armR"):
-        a = r[key]
-        fx, fy = a["farm"][0]
-        tx, ty = a["farm"][1]
-        c.shade_px(polyline([(fx + 1, fy + 3), (tx, ty - 6), (tx + 2, ty - 2)]),
-                   -2, "rage")
-    c.shade_px(polyline([(AX - 11, 40), (AX - 15, 45)]), -2, "rage")
-    c.shade_px(polyline([(AX + 11, 40), (AX + 15, 45)]), -2, "rage")
-    c.shade_px(polyline([(AX - 4, 30), (AX - 7, 34)]), -2, "rage")
-
-    # Computah's snapped antenna clenched in his screen-left fist
+    """Computah's snapped antenna clenched in his screen-left fist"""
     rod = polyline([(13, 76), (9, 84), (7, 90)])
     for (x, y) in rod:
         c.set_px([(x, y)], "steel", 1)
-        c.set_px([(x + 1, y)], "steel", 3)
-    c.raw_px([(6, 91), (7, 91), (6, 92), (7, 92)], "#B8322A")
+        c.set_px([(x + 1, y)], "steel", 2)
+    c.raw_px([(6, 91), (7, 91), (6, 92), (7, 92)], "#C0392B")
     c.raw_px([(6, 91)], "#FF8A7A")
-    # a single tear on his cheek
     c.raw_px([(int(AX) - 9, 28), (int(AX) - 9, 29)], "#9FE0FF")
-    c.raw_px([(int(AX) - 9, 27)], "#E8F8FF")
 
 
 SHEETS = {
@@ -819,8 +703,7 @@ SHEETS = {
     "greyson_phase2_idle": ["p2_idle0", "p2_idle1", "p2_idle2", "p2_idle3"],
 }
 
-# fist centre of the punching hand, in frame pixels (x, y) - multiply by the
-# sprite scale and add the sprite origin to place an impact burst
+# fist centre of the punching hand, in frame pixels (x, y)
 CONTACT = {"combo_r": (53, 49), "combo_l": (44, 52), "combo_rlow": (50, 55)}
 
 
@@ -828,20 +711,19 @@ if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else "."
     bad = _check_face()
     if bad:
-        print("FACE not symmetric:\n  " + "\n  ".join(bad))
+        print("FACE not symmetric:" + "".join(chr(10) + "  " + x for x in bad))
         sys.exit(1)
     from PIL import Image
     for name in ("hero", "windup", "phase2"):
         build(name).to_image().save(os.path.join(out, "greyson_%s.png" % name))
-    for h in ("crew", "mid", "long"):
+    for h in ("mid", "long"):
         build("hero", hair=h).to_image().save(
             os.path.join(out, "greyson_hair_%s.png" % h))
     for sheet, poses in SHEETS.items():
-        ims = [build(p).to_image() for p in poses]
+        ims = [build(pp).to_image() for pp in poses]
         strip = Image.new("RGBA", (W * len(ims), H), (0, 0, 0, 0))
         for i, im in enumerate(ims):
             strip.paste(im, (i * W, 0))
-            im.save(os.path.join(out, "%s_f%d.png" % (sheet, i)))
         strip.save(os.path.join(out, "%s.png" % sheet))
         print("%-22s %d frames  %dx%d" % (sheet, len(ims), strip.width, strip.height))
     print("ok")

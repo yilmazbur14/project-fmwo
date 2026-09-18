@@ -253,6 +253,27 @@ class Sub(Shape):
         return self.shape.normal(x, y)
 
 
+class Translate(Shape):
+    """`shape` moved by (dx, dy).  Subtracting a translated copy of a mass from
+    itself yields the crescent used for flat cartoon shading."""
+
+    def __init__(self, shape, dx, dy):
+        self.shape = shape
+        self.dx = float(dx)
+        self.dy = float(dy)
+        self.round_r = shape.round_r
+
+    def bbox(self):
+        a = self.shape.bbox()
+        return (a[0] + self.dx, a[1] + self.dy, a[2] + self.dx, a[3] + self.dy)
+
+    def sdf(self, x, y):
+        return self.shape.sdf(x - self.dx, y - self.dy)
+
+    def normal(self, x, y):
+        return self.shape.normal(x - self.dx, y - self.dy)
+
+
 class HalfPlane(Shape):
     """ax+by+c <= 0 is inside."""
 

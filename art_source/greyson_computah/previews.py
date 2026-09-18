@@ -102,7 +102,7 @@ def before_after(wip, out):
     panel_h = 96 * z + 120
     im = plate(96 * z * 2 + 200, panel_h * 2 + 60, checker=True)
     d = ImageDraw.Draw(im)
-    d.text((22, 16), "OLD vs NEW - same on-screen scale", font=font(26), fill=INK)
+    d.text((22, 16), "OLD vs NEW - same on-screen scale (Greyson rebuilt flat, Mason-style)", font=font(26), fill=INK)
     for r, (name, old, new, oc, nc) in enumerate(rows):
         top = 60 + r * panel_h
         for col, (src, fw, idx, cap) in enumerate(
@@ -150,7 +150,7 @@ def battery_closeup(wip, out):
     print("battery_states.png", im.size)
 
 
-def hair_options(wip, out):
+def _unused_hair_options(wip, out):
     """A/B for the user to pick: mid-length vs a full mane."""
     z = 7
     opts = [("greyson_hero.png", "A - MID LENGTH",
@@ -216,4 +216,3 @@ if __name__ == "__main__":
     before_after(wip, out)
     battery_closeup(wip, out)
     cast_lineup(wip, out)
-    hair_options(wip, out)
