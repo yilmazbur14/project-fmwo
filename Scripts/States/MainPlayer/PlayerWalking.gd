@@ -20,7 +20,7 @@ func Exit() -> void:
 	# print("Exiting Walking State")
 
 func Update(delta: float) -> void:
-	var input_vector = InputSettings.move_vector()
+	var input_vector = player.move_input()
 
 	# A parry-only sequence roots the player, so a walk that was under way ends here.
 	if input_vector.length() < speed_threshold or player.is_action_locked:

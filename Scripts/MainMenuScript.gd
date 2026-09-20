@@ -7,24 +7,34 @@ const SHOW_BOSS_SELECT := true
 
 # Under the volume slider, inside the column the menu art keeps clear of the boss tower. Two
 # columns, because ten rows in one would run off the bottom of the screen.
-const BOSS_SELECT_RECT := Rect2(156, 714, 664, 272)
+const BOSS_SELECT_RECT := Rect2(156, 830, 664, 240)
 const BOSS_SELECT_COLUMNS := 2
+# Pixelify Sans is only crisp at multiples of its 11 px design size.
 const BOSS_SELECT_FONT_SIZE := 22
-const BOSS_SELECT_BUTTON_HEIGHT := 40
+const BOSS_SELECT_BUTTON_HEIGHT := 34
+
+const ControlsArtLayout := preload("res://Scripts/ControlsArtLayout.gd")
 
 @export var arena_scene = "res://Scenes/Core/ArenaScene.tscn"
 var intro_scene = "res://Scenes/Core/IntroCutsceneScene.tscn"
+var controls_scene = "res://Scenes/Core/ControlsSettingsScene.tscn"
 @export var start_game_button : Button
+@export var controls_button : Button
 @export var volume_slider : HSlider
 @export var music_player : AudioStreamPlayer
 @export var fade_in_time := 0.5
 
 var master_bus_index := 0
+# The menu's own looks, put back whenever the player isn't on a pad.
+var menu_focus_style: StyleBox
+var menu_slider_highlight: StyleBox
+var pad_slider_highlight: StyleBoxTexture
 
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	start_game_button.pressed.connect(_on_start_game_button_pressed)
+	controls_button.pressed.connect(_on_controls_button_pressed)
 
 	if music_player:
 		music_player.stream = load("res://Assets/Audio/Music/main_menu_theme.ogg")
@@ -42,8 +52,16 @@ func _ready() -> void:
 			volume_slider.value = db_to_linear(AudioServer.get_bus_volume_db(master_bus_index))
 		volume_slider.value_changed.connect(_on_volume_slider_changed)
 
+	_link_menu_focus()
 	if SHOW_BOSS_SELECT:
 		_build_boss_select()
+
+	menu_focus_style = start_game_button.get_theme_stylebox("focus")
+	menu_slider_highlight = volume_slider.get_theme_stylebox("grabber_area_highlight")
+	pad_slider_highlight = menu_slider_highlight.duplicate() as StyleBoxTexture
+	pad_slider_highlight.modulate_color = ControlsArtLayout.FOCUS_TINT
+	_show_focus()
+	InputSettings.device_changed.connect(_show_focus.unbind(1))
 
 	_fade_in()
 
@@ -55,6 +73,32 @@ func _process(delta: float) -> void:
 func _on_start_game_button_pressed() -> void:
 	GameProgress.reset_progress()
 	get_tree().change_scene_to_file(intro_scene)
+
+
+func _on_controls_button_pressed() -> void:
+	get_tree().change_scene_to_file(controls_scene)
+
+
+# Geometric navigation can't be trusted across the gap the menu art leaves, so the column is chained
+# by hand: NEW GAME, CONTROLS, VOLUME, and on into the boss select when it's built.
+func _link_menu_focus() -> void:
+	var column: Array[Control] = [start_game_button, controls_button, volume_slider]
+	for i in column.size():
+		if i > 0:
+			column[i].focus_neighbor_top = column[i - 1].get_path()
+			column[i].focus_previous = column[i - 1].get_path()
+		if i < column.size() - 1:
+			column[i].focus_neighbor_bottom = column[i + 1].get_path()
+			column[i].focus_next = column[i + 1].get_path()
+
+
+# The menu draws no focus, which suits a mouse, but on a pad focus is the only way to see where you
+# are. A slider can't draw a focus box at all, so it shows focus through its highlight art instead.
+func _show_focus() -> void:
+	var on_pad := InputSettings.device == InputSettings.Device.GAMEPAD
+	for button in [start_game_button, controls_button]:
+		button.add_theme_stylebox_override("focus", ControlsArtLayout.focus_ring() if on_pad else menu_focus_style)
+	volume_slider.add_theme_stylebox_override("grabber_area_highlight", pad_slider_highlight if on_pad else menu_slider_highlight)
 
 
 # One button per fight in GameProgress' order, so the panel can't drift out of step with the
@@ -117,16 +161,17 @@ func _build_boss_select() -> void:
 	# built yet and over the break between the two columns, which neither Godot's geometric
 	# navigation nor tree order would follow on its own.
 	for i in chain.size():
-		var previous := chain[i - 1].get_path() if i > 0 else NodePath()
+		var previous := chain[i - 1].get_path() if i > 0 else volume_slider.get_path()
 		var next := chain[i + 1].get_path() if i < chain.size() - 1 else NodePath()
 		chain[i].focus_previous = previous
 		chain[i].focus_neighbor_top = previous
 		chain[i].focus_next = next
 		chain[i].focus_neighbor_bottom = next
 
-	# The panel is added after the menu's own controls, but make sure it can never be what the
-	# keyboard lands on first.
-	start_game_button.grab_focus()
+	# The menu column hands down into the panel from the volume slider.
+	if not chain.is_empty():
+		volume_slider.focus_neighbor_bottom = chain[0].get_path()
+		volume_slider.focus_next = chain[0].get_path()
 
 
 func _boss_select_panel_style() -> StyleBoxFlat:
@@ -179,3 +224,8 @@ func _fade_in() -> void:
 	var tween := create_tween()
 	tween.tween_property(fade, "color:a", 0.0, fade_in_time)
 	tween.tween_callback(fade.queue_free)
+	# Nothing takes focus by itself, and a pad can only press what has it. Not before the screen is
+	# up, though, as on the Victory and Defeat screens: an accept still held or mashed from whatever
+	# led here - quitting a fight from the pause screen, or the rebind screen's Back - would
+	# otherwise press NEW GAME before the player ever saw this menu.
+	tween.tween_callback(start_game_button.grab_focus)

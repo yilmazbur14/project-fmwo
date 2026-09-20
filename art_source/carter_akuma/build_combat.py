@@ -12,6 +12,7 @@ Writes, all 96x96 frames on a horizontal strip, feet plane on row 95:
   carter_hit.png         2 frames, one shot
   carter_defeat.png      6 frames, one shot, holds on the last
   carter_victory.png     7 frames, one shot into a loop from frame 4
+  carter_look_back.png   6 frames, one shot into a loop from frame 3
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -23,6 +24,7 @@ from pngio import write_png, blank, paste
 import combat_poses as CP
 import combat_rush as CR
 import combat_victory as CVI
+import combat_look as CLK
 
 OUT = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '..', '..', 'Assets', 'Characters', 'Carter'))
@@ -36,6 +38,7 @@ SHEETS = [
     ('carter_hit.png', CP.hit, 2),
     ('carter_defeat.png', CP.defeat, 6),
     ('carter_victory.png', CVI.frame, CVI.N),
+    ('carter_look_back.png', CLK.frame, CLK.N),
 ]
 
 # milliseconds per frame, as quoted in the report
@@ -48,6 +51,7 @@ TIMINGS = {
     'carter_hit.png': [70, 90],
     'carter_defeat.png': [110, 110, 100, 130, 180, 700],
     'carter_victory.png': CVI.MS,
+    'carter_look_back.png': CLK.MS,
 }
 
 

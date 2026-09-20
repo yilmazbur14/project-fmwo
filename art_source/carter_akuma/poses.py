@@ -186,6 +186,15 @@ def sigil():
 
 
 def draw_back(cv):
+    """The approved back view.  Split in two so the victory look-back can draw
+    this exact body under a different head - draw order is unchanged, so the
+    shipped frame is byte-identical."""
+    draw_back_body(cv)
+    draw_back_head(cv)
+    return cv
+
+
+def draw_back_body(cv):
     R.legs_and_trousers(cv)
     # heels instead of toes
     for hx in (27, 31, 35):
@@ -238,7 +247,10 @@ def draw_back(cv):
     for x0 in range(32, 68, 5):
         seg(cv, [(x0, 63), (x0 - 3, 68)], 'r', mirror_too=False)
     seg(cv, [(30, 63), (65, 63)], 'n')
+    return cv
 
+
+def draw_back_head(cv):
     # head from behind
     cv.part(P.neck(), 'skin', cylm((41.0, 40.0), (54.0, 40.0), 7.4), TH_HARD, bias=1)
     cv.part(P.ears(), 'skin', ('dist', 3.4), TH_HARD, bias=0)

@@ -17,6 +17,7 @@ extends SceneTree
 # The pre-fight dialogue is skipped by disabling the Intro state, which stops the node-bound tweens
 # its entrance is waiting on, so no balloon is ever shown.
 
+const CarterArtLayout := preload("res://Scripts/CarterArtLayout.gd")
 const FIGHT := "res://Scenes/Bosses/CarterBossFightScene.tscn"
 const PLAYER_PATH := "Arena/MainPlayer/CharacterBody2D"
 const BOSS_PATH := "Arena/CarterAkumaScene/CarterAkumaCharacterBody"
@@ -71,6 +72,15 @@ var guard_broke := false
 var most_lights := 0
 var ducked_to := 0.0
 var loudest := -INF
+# The KO, timed from the frame the player went down.
+var ko_clock := -1.0
+var ko_times := {}
+var ko_bell_cut := false
+# The first thing that lifted between the kill and the ignition, if anything did.
+var ko_lifted := ""
+var ko_teleport_checked := false
+# Right after a KO the next fight is checked for anything carried over.
+var after_ko := false
 
 
 func _initialize() -> void:
@@ -109,13 +119,12 @@ func _process(_delta: float) -> bool:
 			# resolving inside a locked, blacked-out barrage has to reach FightOutro cleanly.
 			if _in_rush() and player.playerHealth > 1:
 				player.playerHealth = 1
-			if player.playerHealth <= 0:
-				# Long enough to cover the whole KO beat: the teleport, the turn, the blackout
-				# and the ignition come to about a second after they go down.
-				_settle(func() -> void:
-					_check_released("a clone kills the player mid-barrage", 0)
-					_check_victory_pose()
-					_restart(4), 120)
+			# The whole KO beat is watched frame by frame rather than settled over, so each part of it
+			# can be timed from the moment they went down.
+			if player.playerHealth <= 0 and _watch_ko():
+				_check_ko_released()
+				_check_victory_pose()
+				_restart(4)
 		4:
 			if _in_rush():
 				boss.boss_health = 1
@@ -241,6 +250,9 @@ func _launch(next: int) -> void:
 	player.is_talking = false
 	# The scenarios that only watch the machinery need the fight to keep running; the ones measuring
 	# what a barrage costs have to take it on the six half-hearts the player really has.
+	if after_ko:
+		after_ko = false
+		_check_fresh_after_ko()
 	if not PROFILES.has(next):
 		player.playerHealth = 9999
 	start_health = player.playerHealth
@@ -447,8 +459,84 @@ func _check_released(label: String, next: int) -> void:
 		_restart(next)
 
 
-# He turns his back and the emblem burns, and the bell lands on the frame it lights. The settle is
-# 40 frames, well past the 370 ms ignition, so by now all of it should have happened.
+# Steps the KO a frame at a time from the moment the player went down, noting when each part of it
+# lands and whether anything cut the bell short. True once the look-back has arrived and held.
+func _watch_ko() -> bool:
+	if ko_clock < 0.0:
+		ko_clock = 0.0
+		ko_times.clear()
+		ko_bell_cut = false
+		ko_lifted = ""
+		ko_teleport_checked = false
+	ko_clock += 1.0 / 60.0
+	var victory: State = state_machine.states.get("Victory")
+	if victory == null or state_machine.current_state != victory:
+		return ko_clock > 8.0
+	for flag in ["ignited", "lit", "looked"]:
+		if victory.get(flag) and not ko_times.has(flag):
+			ko_times[flag] = ko_clock
+	# Stay dark: from the kill to the ignition the barrage's curtain stays up at full strength, the
+	# blackout only ever adds to it, and the music stays down. One lit frame anywhere in there fails.
+	if not victory.ignited and ko_lifted.is_empty():
+		var dark: Node2D = scene.get_node(DARK_PATH)
+		if not dark.visible:
+			ko_lifted = "the dark stage went away at %.2f s" % ko_clock
+		elif dark.get_node("Curtain").modulate.a < 0.99:
+			ko_lifted = "the curtain lifted to %.2f at %.2f s" % [dark.get_node("Curtain").modulate.a, ko_clock]
+		elif boss.music_player.volume_db > boss.music_base_db - 6.0:
+			ko_lifted = "the music came back up to %.1f dB at %.2f s" % [boss.music_player.volume_db, ko_clock]
+	# While he dissolves and reforms, he is over the dark, and the fallen player is still lifted in
+	# their own pool of light over it too.
+	if not ko_teleport_checked and victory.beat == victory.Beat.REAPPEAR:
+		ko_teleport_checked = true
+		var curtain_z: int = boss.dark_stage.z_index
+		_expect(boss.sprite.z_index > curtain_z + boss.pool.z_index,
+			"the KO teleport: he is at z %d, under the darkness" % boss.sprite.z_index)
+		_expect(player.get_parent().z_index > curtain_z,
+			"the KO teleport: the fallen player dropped under the darkness (z %d)" % player.get_parent().z_index)
+	# The bell may end on its own; it may not be stopped before its length has run out.
+	if ko_times.has("ignited") and not boss.ko_sfx_player.playing and not ko_bell_cut:
+		var rang: float = ko_clock - ko_times.ignited
+		if rang < boss.ko_sfx_player.stream.get_length() - 0.1:
+			ko_bell_cut = true
+	if ko_times.has("looked") and ko_clock >= ko_times.looked + 0.5:
+		return true
+	if ko_clock > 8.0:
+		failures.append("the victory pose: the look-back never arrived within 8 s")
+		return true
+	return false
+
+
+# A KO frees the player and the clones like any other end - but it keeps the dark, the fallen
+# player's draw order and the duck, which its victory pose carries on to full black.
+func _check_ko_released() -> void:
+	_expect(not player.is_action_locked, "the KO: the player is still locked")
+	_expect(get_nodes_in_group(HAZARD_GROUP).is_empty(), "the KO: %d clones left live"
+		% get_nodes_in_group(HAZARD_GROUP).size())
+	_expect(ko_lifted.is_empty(), "the KO: the dark lifted between the kill and the ignition - %s" % ko_lifted)
+	_expect(ko_teleport_checked, "the KO: never saw the teleport")
+	notes.append("the KO stays dark: curtain up and music down from the kill to the ignition, the teleport drawn over the dark")
+	after_ko = true
+
+
+# He turns his back and the emblem burns, the bell lands on the frame it lights, and then the light
+# comes back up on him and he looks round at them.
+func _check_fresh_after_ko() -> void:
+	var dark: Node2D = scene.get_node(DARK_PATH)
+	_expect(not dark.visible, "a fight after a KO starts dark")
+	_expect(dark.get_node("Curtain").modulate.a == 0.0 and boss.pool.modulate.a == 0.0,
+		"a fight after a KO starts with the barrage's curtain or pool up")
+	_expect(not boss.blackout.visible and boss.blackout.modulate.a == 0.0, "a fight after a KO starts blacked out")
+	_expect(not boss.ko_light.visible, "a fight after a KO starts with the KO spotlight on")
+	_expect(boss.sprite.z_index == 0 and boss.aura.z_index == 0 and boss.mark_glow.z_index == 0,
+		"a fight after a KO starts with him lifted (sprite %d, aura %d, mark %d)"
+		% [boss.sprite.z_index, boss.aura.z_index, boss.mark_glow.z_index])
+	_expect(player.get_parent().z_index == 0, "a fight after a KO starts with the player lifted")
+	_expect(is_equal_approx(boss.music_player.volume_db, boss.music_base_db),
+		"a fight after a KO starts with the music ducked (%.1f dB)" % boss.music_player.volume_db)
+	notes.append("a fight after a KO starts in the light: nothing dark, lifted or ducked carried over")
+
+
 func _check_victory_pose() -> void:
 	var victory: State = state_machine.states.get("Victory")
 	_expect(victory != null, "the victory pose: there is no Victory state")
@@ -456,23 +544,46 @@ func _check_victory_pose() -> void:
 		% state_machine.current_state.name)
 	_expect(victory.ignited, "the victory pose: the mark never ignited")
 	_expect(boss.mark_glow.visible, "the victory pose: the emblem isn't burning")
-	_expect(boss.current_anim == &"victory_hold", "the victory pose: he is playing %s, not the burn loop"
+	_expect(boss.current_anim == &"look_back_hold", "the victory pose: he is playing %s, not the look-back"
 		% boss.current_anim)
+	_expect(boss.sprite.texture.resource_path == CarterArtLayout.anim(&"look_back_hold").sheet,
+		"the victory pose: the look-back is drawn from %s" % boss.sprite.texture.resource_path.get_file())
+	# Lit, the emblem's glow only ever shows its quieter frames; the peaks are for burning alone.
+	var lit_frames: Array = CarterArtLayout.FINAL_MARK_GLOW.lit_frames
+	_expect(boss.mark_frames == lit_frames and boss.mark_glow.frame in lit_frames,
+		"the victory pose: the lit emblem is on glow frame %d, outside %s" % [boss.mark_glow.frame, lit_frames])
+	# The light is back on him, over the blackout, and he is drawn on it; the arena stays gone.
+	_expect(victory.lit and boss.ko_light.visible and is_equal_approx(boss.ko_light.modulate.a, 1.0),
+		"the victory pose: the spotlight never came back up on him")
+	var black_z: int = boss.blackout.z_index + boss.dark_stage.z_index
+	_expect(boss.ko_light.z_index > black_z and boss.sprite.z_index > boss.ko_light.z_index,
+		"the victory pose: light z %d and body z %d aren't both over the z %d blackout, in that order"
+		% [boss.ko_light.z_index, boss.sprite.z_index, black_z])
+	_expect(is_equal_approx(boss.sprite.modulate.a, 1.0), "the victory pose: his body only came up to %.2f"
+		% boss.sprite.modulate.a)
+	_expect(boss.blackout.visible and is_equal_approx(boss.blackout.modulate.a, 1.0),
+		"the victory pose: the arena came back up with him")
+	# Back to its own size on his back, and under the sheet's own emblem rather than smeared over it.
+	_expect(is_equal_approx(boss.mark_glow.scale.x, CarterArtLayout.FINAL_MARK_GLOW.scale),
+		"the victory pose: the emblem is still drawn at %.1fx on a lit body" %
+		(boss.mark_glow.scale.x / CarterArtLayout.FINAL_MARK_GLOW.scale))
+	_expect(not ko_bell_cut, "the victory pose: something stopped the bell before it had rung out")
+	var held: float = ko_times.get("lit", 0.0) - ko_times.get("ignited", 0.0)
+	_expect(absf(held - CarterArtLayout.KO_HOLD_TIME) < 0.05,
+		"the victory pose: the emblem burned alone for %.2f s, not %.1f" % [held, CarterArtLayout.KO_HOLD_TIME])
 	_expect(boss.ko_sfx_player.stream != null, "the victory pose: no KO sound was loaded")
 	# The track bows out under the bell rather than fighting it.
 	_expect(boss.music_player.volume_db < boss.music_base_db - 6.0 or not boss.music_player.playing,
 		"the victory pose: the music is still at %.1f dB over the bell" % boss.music_player.volume_db)
-	# The arena is all the way out and the emblem is the only thing above it.
 	_expect(boss.global_position == state_machine.ARENA_CENTRE,
 		"the victory pose: he is at %s, not the middle of the ring" % boss.global_position)
-	_expect(boss.blackout.visible and is_equal_approx(boss.blackout.modulate.a, 1.0),
-		"the victory pose: the arena isn't fully black (alpha %.2f)" % boss.blackout.modulate.a)
-	_expect(boss.mark_glow.z_index > boss.blackout.z_index + boss.dark_stage.z_index,
-		"the victory pose: the emblem is under the blackout, so nothing is visible")
-	_expect(not boss.sprite.visible or boss.sprite.z_index < boss.blackout.z_index + boss.dark_stage.z_index,
-		"the victory pose: his body is drawn over the blackout instead of vanishing into it")
-	notes.append("the victory pose: centre of the ring, arena fully black, emblem alone at z %d over a z %d blackout, burning on '%s', bell from %s"
-		% [boss.mark_glow.z_index, boss.blackout.z_index + boss.dark_stage.z_index, boss.current_anim,
+	# The emblem stays the top of the stack: over the light and over the body it is lit on.
+	_expect(boss.mark_glow.z_index > boss.sprite.z_index,
+		"the victory pose: the emblem is drawn under his own body")
+	notes.append("the KO, from the frame they went down: ignition %.2f s, light back up %.2f s, look-back %.2f s"
+		% [ko_times.get("ignited", -1.0), ko_times.get("lit", -1.0), ko_times.get("looked", -1.0)])
+	notes.append("the victory pose: centre of the ring, arena black at z %d, light z %d, body z %d, emblem z %d, on '%s', bell from %s"
+		% [black_z, boss.ko_light.z_index, boss.sprite.z_index, boss.mark_glow.z_index, boss.current_anim,
 			boss.ko_sfx_player.stream.resource_path.get_file()])
 
 

@@ -6,10 +6,11 @@ extends Node2D
 # `anchor` is an optional Callable returning the world point the badge stands on, since a boss's daze
 # anchor is tuned for his downed frames; without one it falls back to that anchor.
 # Which attacks advertise themselves is data: AttackCatalog's `tell`, with `parry_stagger` picking the
-# strong look. It's purely a picture: it never touches hitboxes or timing. It lives beside the boss in
-# the fight scene, so it freezes with a finisher and goes away with the fight.
-# ParryTell.glow() puts the matching aura behind a parryable projectile in flight; nothing calls it
-# yet, since only Eric's sword toss and grab tell.
+# strong look, and its `dodge_tell` for the yellow one, the attacks to dodge rather than parry
+# (DefenseHypeArtLayout.dodge_tell). It's purely a picture: it never touches hitboxes or timing. It
+# lives beside the boss in the fight scene, so it freezes with a finisher and goes away with the fight.
+# ParryTell.glow() puts the matching aura behind a parryable projectile in flight: Eric's thrown
+# sword wears it from release, when the badge over his head has already gone.
 
 const AttackCatalog := preload("res://Scripts/AttackCatalog.gd")
 const DefenseHypeArtLayout := preload("res://Scripts/DefenseHypeArtLayout.gd")
@@ -21,7 +22,9 @@ static var tells_only_for_stagger := false
 var boss: Node2D
 var anchor := Callable()
 var strong := false
+var dodge := false
 var glowing := false
+var glow_scale := 0.0
 var clock := 0.0
 var time_left := 0.0
 var fading := false
@@ -37,7 +40,9 @@ static func telegraph(for_boss: Node2D, attack_id: StringName, duration: float, 
 	tell.name = _tell_name(for_boss)
 	tell.boss = for_boss
 	tell.anchor = at
-	tell.strong = AttackCatalog.get_attack(attack_id).parry_stagger
+	var attack := AttackCatalog.get_attack(attack_id)
+	tell.dodge = attack.dodge_tell
+	tell.strong = attack.parry_stagger and not tell.dodge
 	tell.time_left = duration
 	# Beside the boss rather than under him: his art is scaled up, this isn't.
 	for_boss.get_parent().add_child(tell)
@@ -52,11 +57,14 @@ static func clear(for_boss: Node2D) -> void:
 
 
 # The aura for a projectile the player can parry, drawn behind its own art and gone with it.
-static func glow(projectile: Node2D, attack_id: StringName) -> void:
+# `at_scale` overrides PARRY_GLOW.scale, and 0 keeps it: the art is drawn for a projectile 12-16
+# texels across, and anything bigger wants its own whole-number scale.
+static func glow(projectile: Node2D, attack_id: StringName, at_scale := 0.0) -> void:
 	if not _tells(attack_id) or not is_instance_valid(projectile):
 		return
 	var aura := new()
 	aura.glowing = true
+	aura.glow_scale = at_scale
 	aura.time_left = INF
 	projectile.add_child(aura)
 	projectile.move_child(aura, 0)
@@ -66,6 +74,8 @@ static func _tells(attack_id: StringName) -> bool:
 	if not parry_tells_enabled:
 		return false
 	var attack := AttackCatalog.get_attack(attack_id)
+	if attack.dodge_tell:
+		return true
 	return attack.tell and (attack.parry_stagger or not tells_only_for_stagger)
 
 
@@ -75,10 +85,23 @@ static func _tell_name(for_boss: Node2D) -> String:
 
 func _ready() -> void:
 	if glowing:
-		_build_sprite(DefenseHypeArtLayout.PARRY_GLOW, DefenseHypeArtLayout.PARRY_GLOW.scale)
-		frame_times = [DefenseHypeArtLayout.PARRY_GLOW.frame_time]
+		var aura: Dictionary = DefenseHypeArtLayout.PARRY_GLOW
+		_build_sprite(aura, glow_scale if glow_scale > 0.0 else aura.scale)
+		# It hangs off the projectile's own sprite, so behind its art has to be asked for: a child
+		# draws over its parent otherwise, and the aura would cover the blade it is lighting.
+		show_behind_parent = true
+		frame_times = [aura.frame_time]
 		return
 	z_index = DefenseHypeArtLayout.PARRY_TELL_Z_INDEX
+	if dodge:
+		var ring := DefenseHypeArtLayout.dodge_tell()
+		if ring.has("texture"):
+			_build_sprite(ring, ring.scale)
+			sprite.frame = _dodge_frame(0.0)
+		else:
+			_build_ring(ring)
+		_follow()
+		return
 	var spec := DefenseHypeArtLayout.parry_tell()
 	if spec.has("scale"):
 		var badge: Dictionary = spec.strong if strong else spec.standard
@@ -102,7 +125,10 @@ func _process(delta: float) -> void:
 	if time_left <= 0.0:
 		fade_out()
 		return
-	if sprite:
+	if dodge:
+		if sprite:
+			sprite.frame = _dodge_frame(clock)
+	elif sprite:
 		sprite.frame = _frame_at(clock)
 	else:
 		var spec := DefenseHypeArtLayout.parry_tell()
@@ -144,6 +170,33 @@ func _build_chevron(spec: Dictionary) -> void:
 	])
 	chevron.color = spec.strong_color if strong else spec.color
 	add_child(chevron)
+
+
+func _build_ring(spec: Dictionary) -> void:
+	var ring := Line2D.new()
+	var points := PackedVector2Array()
+	for i in spec.points:
+		points.append(Vector2.from_angle(TAU * i / spec.points) * spec.radius)
+	ring.points = points
+	ring.closed = true
+	ring.width = spec.width
+	ring.default_color = spec.color
+	# Its bottom edge on the anchor, where the badges put their tips.
+	ring.position = Vector2(0, -spec.radius - spec.width / 2.0)
+	add_child(ring)
+
+
+# The yellow ring's frames: its intro once, then its loop.
+func _dodge_frame(time: float) -> int:
+	var spec := DefenseHypeArtLayout.dodge_tell()
+	var intro_times: Array = spec.intro_times
+	var end := 0.0
+	for i in intro_times.size():
+		end += intro_times[i]
+		if time < end:
+			return spec.intro_frames[i]
+	var loop: Array = spec.loop_frames
+	return loop[int((time - end) / spec.loop_time) % loop.size()]
 
 
 # Loops, and starts on frame 0: the biggest, brightest one.

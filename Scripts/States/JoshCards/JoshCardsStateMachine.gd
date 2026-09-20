@@ -11,6 +11,7 @@ extends Node
 @export var recover_timer: Timer
 @export var finisher_stagger_timer: Timer
 
+const VsCard := preload("res://Scripts/VsCard.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
 const CARD_BOMB_SCENE := preload("res://Scenes/Bosses/JoshCardBombScene.tscn")
 const JoshArtLayout := preload("res://Scripts/JoshArtLayout.gd")
@@ -190,7 +191,7 @@ func show_pre_fight_dialogue() -> void:
 
 
 func _on_dialogue_ended(_dialogue: Object) -> void:
-	post_dialogue_pre_fight_timer.start()
+	VsCard.play_intro(self, "josh", post_dialogue_pre_fight_timer.start)
 
 
 func _on_post_dialogue_pre_fight_timer_timeout() -> void:

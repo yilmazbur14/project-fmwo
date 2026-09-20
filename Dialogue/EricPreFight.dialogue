@@ -1,3 +1,9 @@
+# Eric's pre-fight lines. The "do" lines play his entrance's beats (in EricIntro.gd) and the
+# dialogue waits for each one to finish before the next line.
+
 ~ start
-Eric: Not another step filthy conservative.... Did you really think we'd allow filth like you into our beautiful, utopian, liberal server? NO. Not while I still breathe the same air as my left-winged brothers and sisters. Your wretched bloodline will die with you today. Good luck!
+Eric: Not another step filthy conservative.... Did you really think we'd allow filth like you into our beautiful, liberal server? NO. Not while I still breathe the same air as my left-winged brothers and sisters. Your wretched bloodline will die with you today. Good luck!
+do pull_sword()
+do point_at_player()
+Eric: I won't let scum like you into our utopia.
 => END

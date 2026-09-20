@@ -8,6 +8,7 @@ extends RefCounted
 #     parryable             a fresh press parries it even though a held guard can't absorb it
 #     weight                the stamina a block costs
 #     tell                  it warns over the boss's head while it winds up (ParryTell)
+#     dodge_tell            it warns in yellow instead: don't parry it, dodge it (ParryTell)
 #     parry_stagger         a parry may stagger the boss (its can_parry_stagger() decides)
 #     from_above            blockable from any facing
 #     dash_through          dash immunity dodges it
@@ -28,6 +29,7 @@ const DEFAULTS := {
 	"parryable": false,
 	"weight": Weight.NONE,
 	"tell": false,
+	"dodge_tell": false,
 	"parry_stagger": false,
 	"from_above": false,
 	"dash_through": false,
@@ -46,6 +48,24 @@ const ATTACKS := {
 	&"eric_bear_hug_grab": {"damage": 0, "dash_through": true, "grab": true, "parryable": true, "parry_stagger": true, "tell": true},
 	# The player is held and can't defend; the grab already cost the hype.
 	&"eric_bear_hug_squeeze": {"bypass_invincibility": true, "hype_loss": false},
+	# Eric's reworked fight (EricPacing V2). Red is a parry, yellow a dodge.
+	# The slam's waves, with the standard red tell timing the read.
+	&"eric_quake_wave_v2": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
+	# The whirlwind's lunges, behind a yellow wind-up: dashed through, or blocked at a heavy cost.
+	&"eric_whirlwind_v2": {"blockable": true, "weight": Weight.HEAVY, "dash_through": true, "dodge_tell": true},
+	# The red bear hug: only a parry answers it. A dash gives no immunity, though stepping out of its
+	# line still makes it whiff.
+	&"eric_bear_hug_grab_v2": {"damage": 0, "grab": true, "parryable": true, "parry_stagger": true, "tell": true},
+	# The yellow bear hug, a shoulder charge on the same art and timing: no guard or parry stops it, a
+	# dash goes through it.
+	&"eric_shoulder_charge": {"dash_through": true, "dodge_tell": true},
+	# The sparring dummy in the controls room, which teaches the same red-and-yellow vocabulary Eric's
+	# fight is built on, one attack each.
+	# Red: the padded arm. HEAVY is deliberate - three blocks in a row empty the bar, so the guard
+	# break teaches itself - and a parry leaves the arm out, which is the punish window to punch into.
+	&"dummy_swing": {"blockable": true, "weight": Weight.HEAVY, "parry_stagger": true, "tell": true},
+	# Yellow: the torso lunge. Nothing guards or parries it; a dash through it is a perfect dodge.
+	&"dummy_lunge": {"dash_through": true, "dodge_tell": true},
 	&"computah_laser": {"dash_through": true},
 	# Boss 2. Computah's pounce is the grab at the end of his chase: a held guard does not stop it,
 	# a parry does and sparks him out early, and a dash through it is a perfect dodge.

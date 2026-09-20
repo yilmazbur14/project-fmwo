@@ -14,6 +14,8 @@ extends State
 @export var eric_state_machine : Node
 @export var stagger_timer : Timer
 
+const EricPacing := preload("res://Scripts/EricPacing.gd")
+
 const FLASH := Color(1.6, 1.9, 2.6)
 const FLASH_TIME := 0.3
 # The sword is parried from wherever the player was standing, usually across the arena, so the
@@ -38,7 +40,7 @@ var driven: Node2D
 
 
 func Enter() -> void:
-	glide_speed = eric_state_machine.states["Whirlwind"].chase_speed
+	glide_speed = EricPacing.value("stagger_glide_speed")
 	animation_player.play("downed")
 	# He can be standing on the player.
 	boss_collision_shape.disabled = true

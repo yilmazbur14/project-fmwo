@@ -31,7 +31,8 @@ BODY_SET |= set(c for step in GI_STEPS for c in step)
 
 SHEETS = ['carter_idle.png', 'carter_eye_flash.png', 'carter_rush.png',
           'carter_rush_pass.png', 'carter_spent.png', 'carter_hit.png',
-          'carter_defeat.png', 'carter_victory.png']
+          'carter_defeat.png', 'carter_victory.png',
+          'carter_look_back.png']
 
 
 def check(name):

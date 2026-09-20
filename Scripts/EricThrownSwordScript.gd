@@ -15,6 +15,8 @@ signal struck_thrower
 const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
 const HitInfo := preload("res://Scripts/HitInfo.gd")
 const DefenseHypeArtLayout := preload("res://Scripts/DefenseHypeArtLayout.gd")
+const EricSwordMark := preload("res://Scripts/EricSwordMark.gd")
+const ParryTell := preload("res://Scripts/ParryTell.gd")
 
 const SPIN_FRAME_TIME := 0.05
 # Flights end or start with the spinning sword's centre where the planted sword's centre is, so
@@ -43,6 +45,8 @@ const DIVE_TIME := 0.32
 const SHADOW_STEP := 70.0
 const SHADOW_FRAMES := 3
 const PLANTED_DUST_TIME := 0.1
+# How finely the contact scan steps through a flight, as a fraction of it.
+const CONTACT_STEP := 1.0 / 240.0
 # A flung-back sword is lit in the parry's own colour, so it reads as the player's the whole way in.
 const REFLECT_TINT: Color = DefenseHypeArtLayout.PARRY_FLASH[0]
 
@@ -51,6 +55,11 @@ var speed := 1400.0
 # Both set by the throw, before the sword is added to the tree.
 var player: Node2D
 var thrower: Node2D
+# A thrown sword plants itself in the mat. A spin release (EricWhirlwind) skips off it instead and is
+# recalled straight away, and its return leg passes through the player: running in to punch the man
+# who just let go of it is the read there, and a hit on the way back would punish it.
+var plants := true
+var returns_harmless := false
 
 @onready var shadow: Sprite2D = $Shadow
 @onready var sword: Sprite2D = $Sword
@@ -69,6 +78,8 @@ var returning := false
 var reflecting := false
 var catch_lean := 0.0
 var planted_time := -1.0
+# The floor mark under the landing spot, while the outgoing throw is in the air.
+var mark: Node2D
 
 
 func _ready() -> void:
@@ -81,20 +92,60 @@ func _ready() -> void:
 	hitbox.set_meta(HitInfo.META_ATTACK, &"eric_thrown_sword")
 
 
+# In a y-sorted fight the sword sorts among the fighters at its ground point, but its shadow lies on
+# the floor: it goes on the floor layer, under everyone, and follows the sword from there.
+func lay_shadow_on(layer: Node2D) -> void:
+	if layer == get_parent():
+		return
+	shadow.reparent(layer)
+	shadow.global_position = global_position
+
+
+func _exit_tree() -> void:
+	if is_instance_valid(shadow) and shadow.get_parent() != self:
+		shadow.queue_free()
+	# It is on the floor layer, not under the sword, so it would outlive it.
+	if is_instance_valid(mark):
+		mark.queue_free()
+
+
 # `hand` is the sword's centre as it leaves his hand; `ground_y` is the floor line under Eric.
 func throw(hand: Vector2, ground_y: float, target: Vector2) -> void:
 	sword.flip_h = false
 	_fly(Vector2(hand.x, ground_y), ground_y - hand.y, target, PLANTED_HEIGHT, EricArtLayout.SPIN_LANDING_FRAME)
 
 
+# The mark on the floor under where this throw is going to land. It is built after throw(), since
+# only then is `to_ground` known, and only for the outgoing throw: a recall and a flung-back sword
+# are aimed at Eric, not at the player. It is handed back rather than parented here, so the state can
+# put it on the fight's floor layer with everything else he throws.
+func mark_landing() -> Node2D:
+	mark = EricSwordMark.new()
+	mark.name = "SwordMark"
+	# The commit frame is lit for exactly the parry window, so the hot ring is the window. It is timed
+	# off when the blade reaches them rather than off the end of the flight: the two are the same thing
+	# from across the ring, but the blade is 108 px across and dives in tip first, so a throw from close
+	# up touches them with a third of its flight still to run. 0 if it arrives inside a window of the
+	# release, which is the truth there: press at once.
+	mark.commit_at = maxf(_contact_progress() - player.defense.parry_window / duration, 0.0)
+	return mark
+
+
+# The parry tell's own aura, on the blade rather than on this node's ground point: from release the
+# sword itself is the only warning the player gets, on the way out and on the way back.
+func glow_as_parryable() -> void:
+	ParryTell.glow(sword, &"eric_thrown_sword", EricArtLayout.SWORD_GLOW_SCALE)
+
+
 # Flies back into his hand and arrives as the sword on his catch frame: centred on `centre`, the
 # upright catch spin frame turned `lean` radians. `mirrored` plays the spin forward flipped, which
-# keeps the trail behind the blade on the way back.
-func recall(centre: Vector2, ground_y: float, lean: float, mirrored: bool) -> void:
+# keeps the trail behind the blade on the way back. It starts `from_height` px over its ground point:
+# where it planted itself, unless it was planted some other way (EricBroken).
+func recall(centre: Vector2, ground_y: float, lean: float, mirrored: bool, from_height := PLANTED_HEIGHT) -> void:
 	returning = true
 	catch_lean = lean
 	sword.flip_h = mirrored
-	_fly(global_position, PLANTED_HEIGHT, Vector2(centre.x, ground_y), ground_y - centre.y, EricArtLayout.SPIN_CATCH_FRAME)
+	_fly(global_position, from_height, Vector2(centre.x, ground_y), ground_y - centre.y, EricArtLayout.SPIN_CATCH_FRAME)
 
 
 # Flung back at Eric after a parry: from where the player stopped it, spinning the other way and lit
@@ -126,7 +177,7 @@ func _fly(start_ground: Vector2, start_height: float, end_ground: Vector2, end_h
 	shadow.visible = true
 	planted.visible = false
 	# A flung-back sword is the player's: it mustn't hurt them on its way out.
-	hitbox.monitoring = not reflecting
+	hitbox.monitoring = not reflecting and not (returning and returns_harmless)
 	_place()
 
 
@@ -144,8 +195,10 @@ func _physics_process(delta: float) -> void:
 				struck_thrower.emit()
 			elif returning:
 				returned.emit()
-			else:
+			elif plants:
 				_plant()
+			else:
+				_skip()
 	elif planted_time >= 0.0:
 		planted_time += delta
 		planted.frame = 0 if planted_time < PLANTED_DUST_TIME else 1
@@ -161,6 +214,9 @@ func _resolve_hits() -> void:
 			if player.receive_hit(_hit()) == HitInfo.Result.PARRIED:
 				flying = false
 				hitbox.monitoring = false
+				if is_instance_valid(mark):
+					mark.cancel()
+				mark = null
 			return
 		if player.is_dodge_ghost(area):
 			near_miss = true
@@ -176,15 +232,14 @@ func _hit() -> RefCounted:
 func _place() -> void:
 	var t := _progress()
 	global_position = from_ground.lerp(to_ground, t)
+	# The mark runs off this same clock, so the ring closing on it can't drift from the blade.
+	if is_instance_valid(mark):
+		mark.set_progress(t)
 	# Only the outward throw dives: a recall is a catch and a flung-back sword is aimed at Eric's
 	# body, so both keep the plain lob.
 	var diving := not returning and not reflecting
-	var dive := _dive_progress() if diving else 0.0
-	var height := lerpf(from_height, to_height, t)
-	if diving:
-		height += THROW_LOB * sqrt(t) * (1.0 - dive)
-	else:
-		height += ARC_HEIGHT * 4.0 * t * (1.0 - t)
+	var dive := _dive_progress(global_position) if diving else 0.0
+	var height := _thrown_height(t, dive) if diving else lerpf(from_height, to_height, t) + ARC_HEIGHT * 4.0 * t * (1.0 - t)
 	sword.position = Vector2(0, -height)
 	# The blade goes in tip first, so on the way down the hitbox rides from the sword's centre to
 	# where that tip enters the ground. It is the only part of the dive that reaches a player
@@ -198,11 +253,42 @@ func _place() -> void:
 	# Counted back from the arrival, so the last spin frame drawn is the one it lands or is caught on.
 	sword.frame = posmod(arrival_frame + 1 - maxi(ceili(spin_left / SPIN_FRAME_TIME), 1), EricArtLayout.SPIN_FRAMES)
 	shadow.frame = clampi(int((height - PLANTED_HEIGHT) / SHADOW_STEP), 0, SHADOW_FRAMES - 1)
+	if shadow.get_parent() != self:
+		shadow.global_position = global_position
 
 
-# How far into the dive the throw is: 0 while it is still cruising, 1 as it plants.
-func _dive_progress() -> float:
-	return clampf(1.0 - global_position.distance_to(to_ground) / (DIVE_TIME * speed), 0.0, 1.0)
+# The fraction of the flight at which the blade first reaches the player standing where this throw is
+# aimed, or 1 if it never does. Stepped rather than solved, the way EricWhirlwind's re-aim steps its
+# lunges: it is the same curve _place() draws.
+func _contact_progress() -> float:
+	var body: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var rect: Rect2 = body.global_transform * body.shape.get_rect()
+	var radius: float = hitbox.get_node("CollisionShape2D").shape.radius
+	var t := 0.0
+	while t <= 1.0:
+		var at := _blade_at(t)
+		if at.clamp(rect.position, rect.end).distance_squared_to(at) <= radius * radius:
+			return t
+		t += CONTACT_STEP
+	return 1.0
+
+
+# Where the hitbox is `t` of the way through this throw, as _place() puts it: the blade rides down
+# from the sword's centre to where the tip enters the ground over the dive.
+func _blade_at(t: float) -> Vector2:
+	var ground := from_ground.lerp(to_ground, t)
+	var dive := _dive_progress(ground)
+	return ground + Vector2(0, -(_thrown_height(t, dive) - PLANTED_HEIGHT * dive))
+
+
+# How far into the dive a throw over `at` is: 0 while it is still cruising, 1 as it plants.
+func _dive_progress(at: Vector2) -> float:
+	return clampf(1.0 - at.distance_to(to_ground) / (DIVE_TIME * speed), 0.0, 1.0)
+
+
+# The thrown sword's height over its ground point: the lob, given back over the dive.
+func _thrown_height(t: float, dive: float) -> float:
+	return lerpf(from_height, to_height, t) + THROW_LOB * sqrt(t) * (1.0 - dive)
 
 
 # Fraction of the path covered. A catch eases out over the settle, so the rest of that flight runs
@@ -218,10 +304,21 @@ func _progress() -> float:
 	return 1.0 - speed_up / (3.0 * settle * settle) * pow(1.0 - t, 3.0)
 
 
+# A spin release: it skips off the mat and stays out, spinning, for the recall that follows it.
+func _skip() -> void:
+	if is_instance_valid(mark):
+		mark.land()
+	mark = null
+	landed.emit()
+
+
 func _plant() -> void:
 	sword.visible = false
 	shadow.visible = false
 	planted.visible = true
 	planted.frame = 0
 	planted_time = 0.0
+	if is_instance_valid(mark):
+		mark.land()
+	mark = null
 	landed.emit()

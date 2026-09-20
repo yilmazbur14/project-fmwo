@@ -5,61 +5,36 @@
 [ext_resource type="PackedScene" uid="uid://c7l5sbpwdkp6y" path="res://Scenes/Player/MainPlayer.tscn" id="2_fovy7"]
 [ext_resource type="Texture2D" uid="uid://dkdgje27jlnib" path="res://Assets/Environment/boundaries.png" id="3_fnbqh"]
 [ext_resource type="Texture2D" uid="uid://bb3exdvr8s5mp" path="res://Assets/Environment/pole.png" id="4_2uq8x"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_d8iqj"]
-bg_color = Color(1, 0.19607843, 0.105882354, 0.47058824)
+[ext_resource type="Texture2D" uid="uid://4d370crmd26m" path="res://Assets/Environment/arena_ringside.png" id="6_ringside"]
+[ext_resource type="Texture2D" uid="uid://s4dhkailvnqc" path="res://Assets/Environment/arena_mat.png" id="7_mat"]
+[ext_resource type="PackedScene" uid="uid://cqp8hs3ye2v0n" path="res://Scenes/Core/PauseMenuScene.tscn" id="8_pause"]
+[ext_resource type="PackedScene" path="res://Scenes/Core/VsCardScene.tscn" id="9_vscard"]
+[ext_resource type="Script" path="res://Scripts/ArenaGate.gd" id="10_gates"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_y32ns"]
 size = Vector2(1720, 10)
 
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_1pi56"]
-load_path = "res://.godot/imported/pole.png-af1bfdde19ce67a749afc68a60c61ebf.ctex"
-
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wtcfe"]
 size = Vector2(10, 880)
-
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_o7u4c"]
-load_path = "res://.godot/imported/boundaries.png-af4b834f67b7086416b38f5260e6e398.ctex"
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_0e48y"]
 size = Vector2(10, 880)
 
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_8o1qv"]
-load_path = "res://.godot/imported/boundaries.png-af4b834f67b7086416b38f5260e6e398.ctex"
-
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_epypp"]
 size = Vector2(1720, 10)
-
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_dulu2"]
-load_path = "res://.godot/imported/boundaries.png-af4b834f67b7086416b38f5260e6e398.ctex"
 
 [node name="Arena" type="Node2D" unique_id=991001701]
 
 [node name="ColorRect" type="ColorRect" parent="." unique_id=317890913]
-offset_right = 1921.0
-offset_bottom = 1077.0
+offset_right = 1920.0
+offset_bottom = 1080.0
 color = Color(0, 0, 0, 1)
 
-[node name="ColorRect2" type="ColorRect" parent="." unique_id=760899020]
-offset_left = 84.0
-offset_top = 105.0
-offset_right = 99.0
-offset_bottom = 987.0
-color = Color(0.4420115, 0.59622294, 0.3102822, 1)
-
-[node name="ColorRect3" type="ColorRect" parent="." unique_id=91144969]
-offset_left = 1819.0
-offset_top = 99.0
-offset_right = 1834.0
-offset_bottom = 987.0
-color = Color(0.4420115, 0.59622294, 0.3102822, 1)
-
-[node name="ColorRect4" type="ColorRect" parent="." unique_id=1013960869]
-offset_left = 83.0
-offset_top = 987.0
-offset_right = 1833.0
-offset_bottom = 1010.0
-color = Color(0.4420115, 0.59622294, 0.3102822, 1)
+[node name="Ringside" type="Sprite2D" parent="."]
+editor_description = "Ringside surround: 640x360 at 3x from the screen origin. Clear over the ring and over the crowd band; the ropes cover its inner edge."
+scale = Vector2(3, 3)
+texture = ExtResource("6_ringside")
+centered = false
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1288694375]
 position = Vector2(960, 60)
@@ -68,19 +43,13 @@ texture = ExtResource("1_wtggk")
 hframes = 5
 script = ExtResource("5_crowd")
 
-[node name="Panel" type="Panel" parent="." unique_id=106748164]
-custom_minimum_size = Vector2(1720, 880)
-offset_left = 100.0
-offset_top = 100.0
-offset_right = 1820.0
-offset_bottom = 980.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_d8iqj")
-
-[node name="ColorRect" type="ColorRect" parent="Panel" unique_id=459883172]
-layout_mode = 0
-offset_right = 1711.0
-offset_bottom = 876.0
-color = Color(0.5348749, 0.7046306, 0.38997492, 1)
+[node name="Mat" type="Sprite2D" parent="."]
+editor_description = "Drawn at (111, 114) from an origin at y 99 plus a 5-texel offset, so the y-sorted fights sort it where the old Panel sat: over the crowd band (y 60), under the floor layers the fights keep at y 101 and under anyone standing on it. 565x285 at 3x; its edges tuck under the ropes."
+position = Vector2(111, 99)
+scale = Vector2(3, 3)
+texture = ExtResource("7_mat")
+centered = false
+offset = Vector2(0, 5)
 
 [node name="MainPlayer" parent="." unique_id=2109948936 instance=ExtResource("2_fovy7")]
 position = Vector2(959, 900)
@@ -93,10 +62,20 @@ position = Vector2(960, 100)
 shape = SubResource("RectangleShape2D_y32ns")
 debug_color = Color(0.89769113, 0.31609207, 0, 0.41960785)
 
-[node name="wall" type="Sprite2D" parent="wallBoundaries/topWall" unique_id=1757215083]
-position = Vector2(59.500137, 14)
+[node name="wallLeft" type="Sprite2D" parent="wallBoundaries/topWall" unique_id=1757215083]
+editor_description = "The top rope, in two halves with a 216 px doorway at screen x 852..1068 for the gate. The region cuts the texture at the gap, so the rope either side of it is drawn exactly where the one sprite drew it."
+position = Vector2(-608, 14)
 scale = Vector2(7.783335, 6.9375)
 texture = ExtResource("3_fnbqh")
+region_enabled = true
+region_rect = Rect2(0, 0, 128.47955, 32)
+
+[node name="wallRight" type="Sprite2D" parent="wallBoundaries/topWall"]
+position = Vector2(667.5, 14)
+scale = Vector2(7.783335, 6.9375)
+texture = ExtResource("3_fnbqh")
+region_enabled = true
+region_rect = Rect2(156.22682, 0, 143.77318, 32)
 
 [node name="topLeftPole" type="Sprite2D" parent="wallBoundaries/topWall" unique_id=412246558]
 position = Vector2(-855.00006, 7.000004)
@@ -106,7 +85,7 @@ texture = ExtResource("4_2uq8x")
 [node name="topRightPole" type="Sprite2D" parent="wallBoundaries/topWall" unique_id=1229754495]
 position = Vector2(846.99994, 9.000004)
 scale = Vector2(1.5859377, 2.03125)
-texture = SubResource("CompressedTexture2D_1pi56")
+texture = ExtResource("4_2uq8x")
 flip_h = true
 
 [node name="leftWall" type="CollisionShape2D" parent="wallBoundaries" unique_id=2013955483]
@@ -118,7 +97,7 @@ debug_color = Color(0.94097954, 0.23209533, 0.2029345, 0.41960785)
 position = Vector2(-7.999981, 31.41027)
 rotation = 1.5707964
 scale = Vector2(3.9833364, 6.9375)
-texture = SubResource("CompressedTexture2D_o7u4c")
+texture = ExtResource("3_fnbqh")
 
 [node name="rightWall" type="CollisionShape2D" parent="wallBoundaries" unique_id=2014825227]
 position = Vector2(1820, 540)
@@ -129,17 +108,27 @@ debug_color = Color(0.8305962, 0.39350197, 0, 0.41960785)
 position = Vector2(-14.99998, 27.50096)
 rotation = 1.5707964
 scale = Vector2(3.9273026, 6.9375)
-texture = SubResource("CompressedTexture2D_8o1qv")
+texture = ExtResource("3_fnbqh")
 
 [node name="bottomWall" type="CollisionShape2D" parent="wallBoundaries" unique_id=354189786]
 position = Vector2(960, 980)
 shape = SubResource("RectangleShape2D_epypp")
 debug_color = Color(0.9514479, 0.21990731, 0.08271069, 0.41960785)
 
-[node name="wall" type="Sprite2D" parent="wallBoundaries/bottomWall" unique_id=1173701576]
-position = Vector2(57, 8)
+[node name="wallLeft" type="Sprite2D" parent="wallBoundaries/bottomWall" unique_id=1173701576]
+editor_description = "The bottom rope, split around the same 216 px doorway the top one is."
+position = Vector2(-609.25, 8)
 scale = Vector2(7.783335, 6.9375)
-texture = SubResource("CompressedTexture2D_dulu2")
+texture = ExtResource("3_fnbqh")
+region_enabled = true
+region_rect = Rect2(0, 0, 128.80088, 32)
+
+[node name="wallRight" type="Sprite2D" parent="wallBoundaries/bottomWall"]
+position = Vector2(666.25, 8)
+scale = Vector2(7.783335, 6.9375)
+texture = ExtResource("3_fnbqh")
+region_enabled = true
+region_rect = Rect2(156.54815, 0, 143.45185, 32)
 
 [node name="topLeftPole2" type="Sprite2D" parent="wallBoundaries/bottomWall" unique_id=1137104301]
 position = Vector2(-847, -16.000021)
@@ -153,3 +142,18 @@ scale = Vector2(1.5859377, 1.1875007)
 texture = ExtResource("4_2uq8x")
 flip_h = true
 flip_v = true
+
+[node name="Gates" type="Node2D" parent="."]
+editor_description = "The rope gates a boss entrance opens and slams. Hidden until one does, so every other fight draws what it always did. z 2 puts them over the ropes, which the fights draw at z 1."
+z_index = 2
+script = ExtResource("10_gates")
+
+[node name="Bottom" type="Sprite2D" parent="Gates"]
+
+[node name="Top" type="Sprite2D" parent="Gates"]
+
+[node name="ClangSfxPlayer" type="AudioStreamPlayer" parent="Gates"]
+
+[node name="VsCard" parent="." instance=ExtResource("9_vscard")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("8_pause")]

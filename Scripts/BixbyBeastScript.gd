@@ -7,6 +7,7 @@ const HitStop := preload("res://Scripts/HitStop.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
 const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
+const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 # What Liam says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/LiamOutro.dialogue"
 const NEXT_FIGHT_SCENE := "res://Scenes/Bosses/JordanBossFightScene.tscn"
@@ -25,10 +26,8 @@ const FLY_ACCELERATION := 2600.0
 # Flying sideways faster than this turns the fly frames to face the way he's going.
 const FLY_TURN_SPEED := 60.0
 
-#UI (built at runtime - no new art needed)
-var health_bar: ProgressBar
-var name_label: Label
-var fill_style: StyleBoxFlat
+#UI (BossHealthBarUI builds it at runtime)
+var health_bar: Control
 
 # Kept under a node that y-sorts at the top edge of the arena floor, so it's drawn under every
 # character wherever it goes, rather than over the feet of a player standing just behind him.
@@ -40,6 +39,10 @@ var fill_style: StyleBoxFlat
 @onready var state_machine = $StateManager
 
 #AUDIO
+# His own theme. Same level as the rest of the ladder, so moving between fights does not jump.
+const THEME := "res://Assets/Audio/Music/liam_theme.wav"
+const THEME_DB := -7.0
+
 @onready var music_player: AudioStreamPlayer = $MusicPlayer
 @onready var hit_sfx_player: AudioStreamPlayer = $HitSfxPlayer
 @onready var victory_sfx_player: AudioStreamPlayer = $VictorySfxPlayer
@@ -94,11 +97,17 @@ func _ready() -> void:
 	sprite_base_position = sprite.position
 	ground_position = global_position
 	_apply_art_layout()
-	_build_health_bar()
+	_build_hud()
 
-	# Placeholders: beast Bixby has no theme or sounds of his own yet.
-	music_player.stream = load("res://Assets/Audio/Music/boss_theme.ogg")
-	if music_player.stream:
+	# "Carried In, Swallowed Whole", written for this fight - see art_source/music/liam_theme.rb.
+	# One 16-bar cycle cut to the beat, so LOOP_FORWARD runs it end to end with no seam.
+	music_player.stream = load(THEME)
+	music_player.volume_db = THEME_DB
+	if music_player.stream is AudioStreamWAV:
+		music_player.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		music_player.stream.loop_begin = 0
+		music_player.stream.loop_end = int(music_player.stream.get_length() * music_player.stream.mix_rate)
+	elif music_player.stream:
 		music_player.stream.loop = true
 	hit_sfx_player.stream = load("res://Assets/Audio/SFX/hit_impact.ogg")
 	victory_sfx_player.stream = load("res://Assets/Audio/SFX/victory_fanfare.ogg")
@@ -373,7 +382,7 @@ func _apply_damage(amount: int) -> int:
 	if dealt <= 0:
 		return 0
 	boss_health -= dealt
-	_update_health_bar()
+	_refresh_health_bar()
 	_hit_feedback()
 	hit_sfx_player.play()
 
@@ -456,58 +465,37 @@ func _clear_hazards() -> void:
 		hazard.queue_free()
 
 
-func _build_health_bar() -> void:
+# The bar goes hot in two steps: caution under 0.6 of his health, then the last third.
+func _refresh_health_bar() -> void:
+	if not health_bar:
+		return
+	health_bar.set_value(0, boss_health)
+	var ratio := get_health_ratio()
+	var heat := 0.0
+	if ratio <= 0.34:
+		heat = 1.0
+	elif ratio <= 0.6:
+		heat = 0.5
+	health_bar.set_heat(0, heat)
+
+
+# The gulp in his entrance (BixbyBeastIntro): from here on the bar carries the beast rather than the
+# man who was riding him, so the name stays a pair and the fill changes hands.
+func swallow_liam() -> void:
+	if health_bar:
+		health_bar.set_accent(0, &"bixby")
+
+
+func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
 
-	name_label = Label.new()
-	name_label.text = "LIAM & BIXBY"
-	name_label.position = Vector2(700, 36)
-	name_label.theme = load("res://Assets/UI/ui_theme.tres")
-	name_label.add_theme_color_override("font_color", Color(1, 1, 1))
-	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	name_label.add_theme_constant_override("outline_size", 6)
-	layer.add_child(name_label)
-
-	health_bar = ProgressBar.new()
-	health_bar.min_value = 0
-	health_bar.max_value = max_health
-	health_bar.value = boss_health
-	health_bar.show_percentage = false
-	health_bar.size = Vector2(460, 22)
-	health_bar.position = Vector2(700, 70)
-
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.08, 0.08, 0.08, 0.85)
-	bg.set_corner_radius_all(3)
-	bg.border_width_left = 2
-	bg.border_width_right = 2
-	bg.border_width_top = 2
-	bg.border_width_bottom = 2
-	bg.border_color = Color(0, 0, 0)
-	health_bar.add_theme_stylebox_override("background", bg)
-
-	fill_style = StyleBoxFlat.new()
-	fill_style.bg_color = Color(0.62, 0.12, 0.2, 1)
-	fill_style.set_corner_radius_all(3)
-	health_bar.add_theme_stylebox_override("fill", fill_style)
-
+	health_bar = BossHealthBarUI.create({
+		"rows": [{"key": &"liam", "max": max_health, "value": boss_health}],
+		"plate": &"liam_pair",
+		"text": "LIAM & BIXBY",
+	})
 	layer.add_child(health_bar)
-
-
-func _update_health_bar() -> void:
-	if not health_bar:
-		return
-	var tween = create_tween()
-	tween.tween_property(health_bar, "value", boss_health, 0.2)
-
-	var ratio := get_health_ratio()
-	if ratio <= 0.34:
-		fill_style.bg_color = Color(1.0, 0.55, 0.0, 1)
-	elif ratio <= 0.6:
-		fill_style.bg_color = Color(0.95, 0.75, 0.1, 1)
-	else:
-		fill_style.bg_color = Color(0.62, 0.12, 0.2, 1)
 
 
 func _hit_feedback() -> void:

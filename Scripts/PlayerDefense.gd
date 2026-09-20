@@ -22,6 +22,8 @@ extends Node
 # so every attack area that watches the player can see it.
 # Dash recovery: a dash ends in recovery frames where the player can't move, punch or dash, so dash
 # spam is slower than walking. The guard may still go up, and a parry during them ends them at once.
+# With the player's feel_v2 the recovery is only a landing beat, and a cooldown from one dash's start
+# to the next keeps dashes as far apart as the long recovery did; a parry ends both.
 # Status drain: a status effect (PlayerStatus) can empty the bar over time through drain_stamina(),
 # which keeps the refill off and breaks the guard of a player who holds block through it.
 # Stamina keeps refilling through a finisher's freeze, since the player's branch keeps processing.
@@ -62,7 +64,8 @@ static var LOG_HITS := false
 # Either side of the facing.
 @export var block_half_angle_degrees := 60.0
 # A hit from this close to the hurtbox centre has no direction to face, so any facing blocks it.
-@export var block_omni_radius := 20.0
+# A shade past the hurtbox's own half-width (18), so it is "landed on top of him" and not a reach.
+@export var block_omni_radius := 30.0
 # Of the walking speed while guarding; 0 roots the player.
 @export var block_move_speed_ratio := 0.0
 # The i-frames' cadence.
@@ -102,9 +105,22 @@ static var LOG_HITS := false
 @export var perfect_dodge_source_lockout := 3.0
 # An attack that touched the player this recently isn't a near miss.
 @export var perfect_dodge_contact_grace := 1.0
-# The lockout after a dash, long enough that mashing dash covers less ground than walking. Only a
-# parry cuts it short.
+# The dash's lockout and re-dash cooldown: today's numbers beside feel_v2's (PlayerScript.feel_v2, only
+# Eric's fight for now), so rolling v2 out to every fight changes nothing here. Only a parry cuts
+# either short.
+# Today: a lockout long enough that mashing dash covers less ground than walking. It is also what
+# spaces dashes out, so there is no cooldown.
+# feel_v2: the lockout is a landing beat of 5 frames (83 ms) standing still after the dash's last
+# moving frame, which it counts from like today's: over before anyone could react to the dash ending.
+# The cooldown runs from the press and keeps mashed dashes 26 frames apart, the spacing today's
+# lockout gives them (2 dash frames plus 0.4 s), so every rule that counts the gap between dashes
+# (DashImmunity, the perfect dodge) sees what it always has. It also refuses a press during the dash,
+# which today is taken, paid for again and re-aims it. Both sit between two frames, so rounding can't
+# move them; today's 0.4 s ends on one and sometimes runs a frame long.
 @export var dash_recovery_time := 0.4
+@export var dash_cooldown := 0.0
+@export var dash_recovery_time_v2 := 0.09
+@export var dash_cooldown_v2 := 0.43
 
 # In PlayerScript's Facing order: DOWN, UP, LEFT, RIGHT.
 const FACING_VECTORS := [Vector2.DOWN, Vector2.UP, Vector2.LEFT, Vector2.RIGHT]
@@ -140,6 +156,7 @@ var hit_during_window := false
 var dash_overlaps := {}
 var last_perfect_dodge_time := -INF
 var dash_recovery_until := -INF
+var dash_ready_at := -INF
 
 
 func _ready() -> void:
@@ -289,6 +306,7 @@ func on_dash_started() -> void:
 	dash_clean = previous_frame < 0 or player.last_dodge_physics_frame - previous_frame >= roundi(perfect_dodge_min_dash_gap * ticks)
 	dash_started_invincible = player.is_invincible
 	dash_start_time = clock
+	dash_ready_at = clock + (dash_cooldown_v2 if player.feel_v2 else dash_cooldown)
 	dash_start_position = player.global_position
 	dash_refundable = true
 	hit_during_window = false
@@ -306,15 +324,22 @@ func on_dash_started() -> void:
 
 # Called as a dash's frames run out.
 func on_dash_ended() -> void:
-	dash_recovery_until = clock + dash_recovery_time
+	dash_recovery_until = clock + (dash_recovery_time_v2 if player.feel_v2 else dash_recovery_time)
 
 
 func is_dash_recovering() -> bool:
 	return clock < dash_recovery_until
 
 
+# A dash pressed now would come too soon after the last one started.
+func is_dash_cooling_down() -> bool:
+	return clock < dash_ready_at
+
+
+# Everything that holds the player after a dash: the lockout and the wait for the next dash.
 func clear_dash_recovery() -> void:
 	dash_recovery_until = -INF
+	dash_ready_at = -INF
 
 
 func clear_dodge_ghost() -> void:

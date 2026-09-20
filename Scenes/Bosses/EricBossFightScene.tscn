@@ -4,8 +4,30 @@
 [ext_resource type="PackedScene" uid="uid://bva0fygw12gyi" path="res://Scenes/Bosses/BossOneScene.tscn" id="2_bd0gm"]
 
 [node name="EricBossFight" type="Node2D" unique_id=466149210]
+y_sort_enabled = true
 
 [node name="Arena" parent="." unique_id=991001701 instance=ExtResource("1_vsluw")]
+y_sort_enabled = true
+
+[node name="MainPlayer" parent="Arena" index="6"]
+y_sort_enabled = true
+
+[node name="CharacterBody2D" parent="Arena/MainPlayer" index="0"]
+y_sort_enabled = true
+
+[node name="Sprite2D" parent="Arena/MainPlayer/CharacterBody2D" index="1"]
+position = Vector2(0, 13)
+offset = Vector2(0, -13)
+
+[node name="wallBoundaries" parent="Arena" index="7"]
+z_index = 1
+
+[node name="GroundFx" type="Node2D" parent="Arena"]
+editor_description = "The floor layer. Not y-sorted, and at y 101: it sorts over the mat (99) and under anyone standing on the floor. Eric's waves, ring and dust (EricStateMachine.add_hazard) and the finisher's ground effects go here."
+position = Vector2(0, 101)
 
 [node name="EricBossScene" parent="Arena" unique_id=307067125 instance=ExtResource("2_bd0gm")]
 position = Vector2(960, 380)
+
+[editable path="Arena"]
+[editable path="Arena/MainPlayer"]

@@ -236,6 +236,7 @@ func bixby_swallows_liam() -> void:
 	_show_storyboard(SWALLOW_KEYS, 1)
 	liam_shadow.hide()
 	gulp_sfx_player.play()
+	body.swallow_liam()
 	_hit_shake()
 	get_tree().call_group("arena_crowd", "cheer", CHOMP_CHEER)
 	await _pause(CHOMP_HOLD)

@@ -6,6 +6,9 @@ extends CharacterBody2D
 signal actions_locked
 signal actions_unlocked
 signal warped(from: Vector2, to: Vector2)
+# Every physics step a dash moves the player, `kick_off` on its first: PlayerDashFx draws the dash
+# from these.
+signal dash_stepped(from: Vector2, to: Vector2, kick_off: bool)
 
 #CONSTANTS
 const SPEED = 600.0
@@ -74,21 +77,36 @@ const FACING_HYSTERESIS_DEGREES := 10.0
 # and a threat being faced keeps the facing this far past THREAT_FACING_RADIUS, so standing midway
 # can't flip the facing back and forth.
 const TARGET_SWITCH_MARGIN := 12.0
-# Punch hitbox per facing, in texels from the frame centre: 4.33 across the arm by 7.67 along it,
-# reaching 2 texels past the glove at full extension, the size and reach of the original up-only
-# punch. The down punch's glove is drawn over the body, so its box instead reaches 5 texels past the
-# collision box, as far as the up punch does: a boss with collision stops the player at that box.
+# Punch hitbox per facing, in texels from the frame centre. Two sets side by side; punch_box() picks
+# by feel_v2, so rolling v2 out to every fight changes nothing here.
+# Today's, every fight without feel_v2: 4.33 across the arm by 7.67 along it, reaching 2 texels past
+# the glove at full extension, the size and reach of the original up-only punch. The down punch's
+# glove is drawn over the body, so its box instead reaches 5 texels past the collision box, as far as
+# the up punch does: a boss with collision stops the player at that box.
 const PUNCH_HITBOXES := {
 	Facing.DOWN: Rect2(-1.665, 11.33, 4.33, 7.67),
 	Facing.UP: Rect2(-6.165, -18.0, 4.33, 7.67),
 	Facing.LEFT: Rect2(-13.0, -8.165, 7.67, 4.33),
 	Facing.RIGHT: Rect2(5.33, -8.165, 7.67, 4.33),
 }
+# feel_v2 (Eric's fight for now): each box contains today's and reaches 3 texels (6 px) further, 6
+# texels across: reach from the centre 22 / 21 / 16 / 16 against 19 / 18 / 13 / 13. It is exactly what
+# PunchFx's swoosh draws at full extension (art_source/punch_fx/design.py, V2_BOXES), so what the
+# player sees is what hits: change both together, and the punch_reach test holds them to each other.
+const PUNCH_HITBOXES_V2 := {
+	Facing.DOWN: Rect2(-2.0, 11.0, 6.0, 11.0),
+	Facing.UP: Rect2(-7.0, -21.0, 6.0, 11.0),
+	Facing.LEFT: Rect2(-16.0, -9.0, 11.0, 6.0),
+	Facing.RIGHT: Rect2(5.0, -9.0, 11.0, 6.0),
+}
 
 var facing := Facing.UP
 var facing_target: Area2D
 var threat_turn_frame := -1
 @onready var punch_hitbox: CollisionShape2D = $Hitbox/CollisionShape2D
+# The punch's swoosh, star and whoosh (feel_v2 only). Looked up softly: a player scene without it
+# still punches, just without the effects.
+@onready var punch_fx: Node2D = get_node_or_null("PunchFx")
 
 #AUDIO
 @onready var hurt_sfx_player: AudioStreamPlayer = $HurtSfxPlayer
@@ -107,6 +125,11 @@ var is_finishing := false
 var is_action_locked := false
 # Where a fight wants the player looking, or Vector2.INF for the usual rules.
 var facing_point := Vector2.INF
+# The reworked feel is tried out on one fight before the rest: a fight opts in by setting this before
+# it starts (only Eric's does, in BossOneScript), and every other fight plays exactly as it did.
+# Everything reworked reads it: the dash here and in PlayerDefense, its effects in PlayerDashFx, and
+# the punch's effects. Rolling it out to every fight is flipping this default.
+var feel_v2 := false
 
 var state_machine : Node
 var current_state : State
@@ -153,11 +176,20 @@ func _physics_process(delta: float) -> void:
 	if defense.is_guard_broken:
 		return
 
-	# Held block brings the guard back up once a dash or a punch is over.
-	if Input.is_action_pressed("block") and not punch_buffered:
+	# Held block brings the guard back up once a dash or a punch is over; not a bumper still held from a
+	# feel_v2 mash, though (PlayerFinisher's release latch).
+	if Input.is_action_pressed("block") and not punch_buffered and not finisher.is_mash_latched():
 		_raise_guard()
 
+	var dash_from := Vector2.INF
+	var kick_off := false
 	if is_dodging:
+		kick_off = dodge_timer == 0.0
+		# Aimed once the frame's input is all in, so the second arrow of a diagonal landing just after
+		# the dash key in the same frame still counts.
+		if feel_v2 and kick_off:
+			direction = status.steer(InputSettings.move_vector())
+		dash_from = global_position
 		dodge_timer += delta
 		velocity = direction.normalized() * DODGE_SPEED
 
@@ -175,7 +207,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		# Reversed while a status inverts the controls (PlayerStatus); the axes stay separate, so the
 		# diagonal is as fast as it has always been.
-		var steer: Vector2 = status.steer(InputSettings.move_vector())
+		var steer: Vector2 = status.steer(move_input())
 		var directionHorz := steer.x
 		var directionVert := steer.y
 		var speed := SPEED
@@ -194,6 +226,8 @@ func _physics_process(delta: float) -> void:
 			velocity.y = move_toward(velocity.y, 0, SPEED)
 
 	move_and_slide()
+	if dash_from != Vector2.INF:
+		dash_stepped.emit(dash_from, global_position, kick_off)
 
 func _input(event: InputEvent) -> void:
 	# The finisher swallows these presses before they reach this node; this guard doesn't rely on that order.
@@ -227,8 +261,9 @@ func _input(event: InputEvent) -> void:
 		_raise_guard()
 
 	if event.is_action_pressed("dodge"):
-		# Before anything about the dash is set, so a refused one can't grant dash immunity.
-		if not defense.try_spend_dash():
+		# Before anything about the dash is set, so a refused one can't grant dash immunity. The cooldown
+		# is asked first: it isn't a lack of stamina, so the bar mustn't flash for it.
+		if defense.is_dash_cooling_down() or not defense.try_spend_dash():
 			return
 		if state_machine.current_state.name == "Blocking":
 			state_machine.on_child_transition(state_machine.current_state, "Idle")
@@ -242,6 +277,13 @@ func _input(event: InputEvent) -> void:
 		# print("Punch")
 		# The live state: the guard may have gone up earlier in this same input flush.
 		state_machine.on_child_transition(state_machine.current_state, "Punching")
+
+
+# What walking reads: the move keys and stick, or nothing while keys held from a feel_v2 mash are
+# still down (PlayerFinisher's release latch). A dash aims with InputSettings itself: it is a fresh
+# press, so it goes wherever the player is holding.
+func move_input() -> Vector2:
+	return Vector2.ZERO if finisher.is_mash_latched() else InputSettings.move_vector()
 
 
 func _raise_guard() -> void:
@@ -513,7 +555,7 @@ func _aim() -> Vector2:
 		return velocity
 	var box := _hurtbox_rect(target)
 	# A threat the punch already reaches keeps the facing, so one jostling around the player can't spin them.
-	if target.is_in_group(THREAT_GROUP) and box.intersects(global_transform * PUNCH_HITBOXES[facing]):
+	if target.is_in_group(THREAT_GROUP) and box.intersects(global_transform * punch_box(facing)):
 		return Vector2.ZERO
 	if box.has_point(global_position):
 		return box.get_center() - global_position
@@ -570,6 +612,18 @@ func _facing_toward(aim: Vector2) -> Facing:
 
 func _apply_facing() -> void:
 	sprite.frame_coords.y = facing
-	var box: Rect2 = PUNCH_HITBOXES[facing]
+	fit_punch_hitbox()
+
+
+# The punch hitbox for `for_facing` under this fight's feel.
+func punch_box(for_facing: int) -> Rect2:
+	return PUNCH_HITBOXES_V2[for_facing] if feel_v2 else PUNCH_HITBOXES[for_facing]
+
+
+# Also called as every punch starts (PlayerPunching.Enter): a fight turns feel_v2 on after the player's
+# _ready (BossOneScript does), and the facing is locked for the whole swing, so this is what gives even
+# the first punch the right box. The hitbox is off until then, so refitting it loses nothing.
+func fit_punch_hitbox() -> void:
+	var box := punch_box(facing)
 	punch_hitbox.position = box.get_center()
 	(punch_hitbox.shape as RectangleShape2D).size = box.size

@@ -10,6 +10,10 @@
 [ext_resource type="Script" path="res://Scripts/States/Eric/EricSwordThrow.gd" id="7_throw"]
 [ext_resource type="Script" path="res://Scripts/States/Eric/EricBearHug.gd" id="8_hug"]
 [ext_resource type="Script" path="res://Scripts/States/Eric/EricParryStaggered.gd" id="9_parry_staggered"]
+[ext_resource type="Script" path="res://Scripts/States/Eric/EricWinded.gd" id="10_winded"]
+[ext_resource type="Script" path="res://Scripts/States/Eric/EricBroken.gd" id="11_broken"]
+[ext_resource type="Script" path="res://Scripts/States/Eric/EricJuggled.gd" id="12_juggled"]
+[ext_resource type="Script" path="res://Scripts/States/Eric/EricIntro.gd" id="13_intro"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_whhg3"]
 size = Vector2(58, 72)
@@ -423,9 +427,303 @@ tracks/0/keys = {
 "values": [13, 14]
 }
 
+[sub_resource type="Animation" id="Animation_whirl_windup"]
+resource_name = "whirl_windup"
+length = 0.1
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [13]
+}
+
+[sub_resource type="Animation" id="Animation_whirl_dizzy"]
+resource_name = "whirl_dizzy"
+length = 0.1
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [11]
+}
+
+[sub_resource type="Animation" id="Animation_whirl_release"]
+resource_name = "whirl_release"
+length = 0.52
+step = 0.005
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.025, 0.055, 0.09, 0.13, 0.175, 0.23, 0.29, 0.36, 0.44),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+"update": 1,
+"values": [13, 14, 15, 16, 17, 18, 19, 20, 34, 35]
+}
+tracks/1/type = "method"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("StateManager/SwordThrow")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.44),
+"transitions": PackedFloat32Array(1),
+"values": [{
+"args": [],
+"method": &"release_sword"
+}]
+}
+
+[sub_resource type="Animation" id="Animation_winded"]
+resource_name = "winded"
+length = 0.6
+loop_mode = 1
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.3),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [25, 26]
+}
+
+[sub_resource type="Animation" id="Animation_winded_final"]
+resource_name = "winded_final"
+length = 0.6
+loop_mode = 1
+step = 0.05
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.3, 0.45),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [0, 1, 2, 3]
+}
+
+[sub_resource type="Animation" id="Animation_broken"]
+resource_name = "broken"
+loop_mode = 1
+step = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2, 0.4, 0.6, 0.8),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 1,
+"values": [27, 28, 29, 30, 31]
+}
+
+[sub_resource type="Animation" id="Animation_broken_final"]
+resource_name = "broken_final"
+length = 0.4
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.06, 0.13, 0.2, 0.3),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 1,
+"values": [0, 1, 2, 3, 4]
+}
+
+[sub_resource type="Animation" id="Animation_broken_final_loop"]
+resource_name = "broken_final_loop"
+length = 0.48
+loop_mode = 1
+step = 0.04
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.16, 0.32),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [5, 6, 7]
+}
+
+[sub_resource type="Animation" id="Animation_juggle_hit_final"]
+resource_name = "juggle_hit_final"
+length = 0.12
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [0, 1]
+}
+
+[sub_resource type="Animation" id="Animation_juggle_tumble_final"]
+resource_name = "juggle_tumble_final"
+length = 0.44
+loop_mode = 1
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.11, 0.22, 0.33),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [2, 3, 4, 5]
+}
+
+[sub_resource type="Animation" id="Animation_juggle_crash_final"]
+resource_name = "juggle_crash_final"
+length = 0.3
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.08, 0.18, 0.28),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [6, 7, 8, 9]
+}
+
+[sub_resource type="Animation" id="Animation_juggle_down_final"]
+resource_name = "juggle_down_final"
+length = 0.1
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [9]
+}
+
+[sub_resource type="Animation" id="Animation_juggle_hit"]
+resource_name = "juggle_hit"
+length = 0.12
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [27]
+}
+
+[sub_resource type="Animation" id="Animation_juggle_tumble"]
+resource_name = "juggle_tumble"
+length = 0.44
+loop_mode = 1
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.11, 0.22, 0.33),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [27, 28, 29, 30]
+}
+
+[sub_resource type="Animation" id="Animation_juggle_crash"]
+resource_name = "juggle_crash"
+length = 0.3
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [31]
+}
+
+[sub_resource type="Animation" id="Animation_juggle_down"]
+resource_name = "juggle_down"
+length = 0.1
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [31]
+}
+
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_2bqtl"]
 _data = {
 &"RESET": SubResource("Animation_whhg3"),
+&"broken": SubResource("Animation_broken"),
+&"broken_final": SubResource("Animation_broken_final"),
+&"broken_final_loop": SubResource("Animation_broken_final_loop"),
 &"downed": SubResource("Animation_0q7xt"),
 &"earthquake": SubResource("Animation_6b76w"),
 &"empty_wait": SubResource("Animation_empty_wait"),
@@ -441,20 +739,35 @@ _data = {
 &"hug_toss_end": SubResource("Animation_hug_toss_end"),
 &"hug_whiff": SubResource("Animation_hug_whiff"),
 &"idle": SubResource("Animation_jgw10"),
+&"juggle_crash": SubResource("Animation_juggle_crash"),
+&"juggle_crash_final": SubResource("Animation_juggle_crash_final"),
+&"juggle_down": SubResource("Animation_juggle_down"),
+&"juggle_down_final": SubResource("Animation_juggle_down_final"),
+&"juggle_hit": SubResource("Animation_juggle_hit"),
+&"juggle_hit_final": SubResource("Animation_juggle_hit_final"),
+&"juggle_tumble": SubResource("Animation_juggle_tumble"),
+&"juggle_tumble_final": SubResource("Animation_juggle_tumble_final"),
 &"recall_catch": SubResource("Animation_recall_catch"),
 &"recall_reach": SubResource("Animation_recall_reach"),
 &"recover": SubResource("Animation_recover"),
 &"throw_release": SubResource("Animation_throw_release"),
 &"throw_windup": SubResource("Animation_throw_windup"),
-&"whirlwind": SubResource("Animation_uw3ha")
+&"whirl_dizzy": SubResource("Animation_whirl_dizzy"),
+&"whirl_release": SubResource("Animation_whirl_release"),
+&"whirl_windup": SubResource("Animation_whirl_windup"),
+&"whirlwind": SubResource("Animation_uw3ha"),
+&"winded": SubResource("Animation_winded"),
+&"winded_final": SubResource("Animation_winded_final")
 }
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_vkshu"]
 
 [node name="EricBossScene" type="Node2D" unique_id=307067125]
+y_sort_enabled = true
 position = Vector2(12.03, -116)
 
 [node name="CharacterBody2D" type="CharacterBody2D" parent="." unique_id=1106112174 node_paths=PackedStringArray("post_dialogue_pre_fight_timer")]
+y_sort_enabled = true
 scale = Vector2(3, 3)
 collision_layer = 4
 collision_mask = 3
@@ -466,8 +779,9 @@ position = Vector2(3, 28)
 shape = SubResource("RectangleShape2D_whhg3")
 
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D" unique_id=1257626594]
+position = Vector2(0, 63.5)
 texture = ExtResource("2_sheet")
-offset = Vector2(0, -32)
+offset = Vector2(0, -95.5)
 hframes = 40
 
 [node name="Hurtbox" type="Area2D" parent="CharacterBody2D" unique_id=1189620406 groups=["enemy", "boss_target"]]
@@ -518,7 +832,7 @@ volume_db = -4.0
 
 [node name="StateManager" type="Node" parent="CharacterBody2D" unique_id=452676717 node_paths=PackedStringArray("initial_state", "post_dialogue_pre_fight_timer", "rest_timer", "downed_state_timer")]
 script = ExtResource("3_vkshu")
-initial_state = NodePath("Idle")
+initial_state = NodePath("Intro")
 post_dialogue_pre_fight_timer = NodePath("PostDialoguePreFightTimer")
 rest_timer = NodePath("RestTimer")
 downed_state_timer = NodePath("DownedTimer")
@@ -539,10 +853,11 @@ whirlwind_hitbox = NodePath("../../WhirlwindArea2D")
 whirlwind_duration_timer = NodePath("../WhirlwindDuration")
 eric_state_machine = NodePath("..")
 
-[node name="SwordThrow" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "eric_state_machine")]
+[node name="SwordThrow" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox", "eric_state_machine")]
 script = ExtResource("7_throw")
 animation_player = NodePath("../../AnimationPlayer")
 character_body = NodePath("../..")
+hurtbox = NodePath("../../Hurtbox")
 eric_state_machine = NodePath("..")
 
 [node name="BearHug" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox", "grab_area", "boss_collision_shape", "eric_state_machine")]
@@ -562,6 +877,12 @@ hurtbox = NodePath("../../Hurtbox")
 [node name="Idle" type="Node" parent="CharacterBody2D/StateManager" unique_id=658631749 node_paths=PackedStringArray("animation_player", "hurtbox")]
 script = ExtResource("6_difkq")
 animation_player = NodePath("../../AnimationPlayer")
+hurtbox = NodePath("../../Hurtbox")
+
+[node name="Intro" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox")]
+script = ExtResource("13_intro")
+animation_player = NodePath("../../AnimationPlayer")
+character_body = NodePath("../..")
 hurtbox = NodePath("../../Hurtbox")
 
 [node name="PostDialoguePreFightTimer" type="Timer" parent="CharacterBody2D/StateManager" unique_id=130356422]
@@ -591,9 +912,33 @@ stagger_timer = NodePath("../ParryStaggerTimer")
 [node name="ParryStaggerTimer" type="Timer" parent="CharacterBody2D/StateManager"]
 one_shot = true
 
+[node name="Winded" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox")]
+script = ExtResource("10_winded")
+animation_player = NodePath("../../AnimationPlayer")
+character_body = NodePath("../..")
+hurtbox = NodePath("../../Hurtbox")
+
+[node name="Broken" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox", "boss_collision_shape", "eric_state_machine")]
+script = ExtResource("11_broken")
+animation_player = NodePath("../../AnimationPlayer")
+character_body = NodePath("../..")
+hurtbox = NodePath("../../Hurtbox")
+boss_collision_shape = NodePath("../../CollisionShape2D")
+eric_state_machine = NodePath("..")
+
+[node name="Juggled" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox", "boss_collision_shape", "eric_state_machine")]
+script = ExtResource("12_juggled")
+animation_player = NodePath("../../AnimationPlayer")
+character_body = NodePath("../..")
+hurtbox = NodePath("../../Hurtbox")
+boss_collision_shape = NodePath("../../CollisionShape2D")
+eric_state_machine = NodePath("..")
+
 [connection signal="animation_finished" from="CharacterBody2D/AnimationPlayer" to="CharacterBody2D/StateManager/Earthquake" method="_on_animation_player_animation_finished"]
 [connection signal="animation_finished" from="CharacterBody2D/AnimationPlayer" to="CharacterBody2D/StateManager/SwordThrow" method="_on_animation_player_animation_finished"]
 [connection signal="animation_finished" from="CharacterBody2D/AnimationPlayer" to="CharacterBody2D/StateManager/BearHug" method="_on_animation_player_animation_finished"]
+[connection signal="animation_finished" from="CharacterBody2D/AnimationPlayer" to="CharacterBody2D/StateManager/Broken" method="_on_animation_player_animation_finished"]
+[connection signal="animation_finished" from="CharacterBody2D/AnimationPlayer" to="CharacterBody2D/StateManager/Juggled" method="_on_animation_player_animation_finished"]
 [connection signal="timeout" from="CharacterBody2D/StateManager/PostDialoguePreFightTimer" to="CharacterBody2D/StateManager" method="_on_post_dialogue_pre_fight_timer_timeout"]
 [connection signal="timeout" from="CharacterBody2D/StateManager/RestTimer" to="CharacterBody2D/StateManager" method="_on_rest_timer_timeout"]
 [connection signal="timeout" from="CharacterBody2D/StateManager/DownedTimer" to="CharacterBody2D/StateManager" method="_on_downed_timer_timeout"]

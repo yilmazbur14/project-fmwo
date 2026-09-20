@@ -19,7 +19,7 @@ func Exit() -> void:
 	# print("Exiting Idle State")
 
 func Update(delta: float) -> void:
-	var input_vector = InputSettings.move_vector()
+	var input_vector = player.move_input()
 	# print("input vector length: ", input_vector.length())
     
 	# A parry-only sequence roots the player: holding a direction mustn't even start the walk.

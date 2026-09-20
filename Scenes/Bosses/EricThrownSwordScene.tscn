@@ -19,14 +19,12 @@ hframes = 3
 
 [node name="Planted" type="Sprite2D" parent="."]
 visible = false
-z_index = 1
 scale = Vector2(3, 3)
 texture = ExtResource("3_planted")
 offset = Vector2(0, -59)
 hframes = 2
 
 [node name="Sword" type="Sprite2D" parent="."]
-z_index = 1
 scale = Vector2(3, 3)
 texture = ExtResource("4_sword")
 hframes = 8

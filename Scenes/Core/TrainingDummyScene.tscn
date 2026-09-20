@@ -1,0 +1,47 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://Scripts/TrainingDummyScript.gd" id="1_dummy"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(16, 9)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hurt"]
+size = Vector2(16, 29)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_swing"]
+size = Vector2(12, 16)
+
+[node name="TrainingDummy" type="CharacterBody2D"]
+y_sort_enabled = true
+scale = Vector2(3, 3)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("1_dummy")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, 8)
+offset = Vector2(0, -18)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 3.5)
+shape = SubResource("RectangleShape2D_body")
+
+[node name="Hurtbox" type="Area2D" parent="." groups=["boss_target", "enemy"]]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+position = Vector2(0, -6.5)
+shape = SubResource("RectangleShape2D_hurt")
+
+[node name="SwingHitbox" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SwingHitbox"]
+shape = SubResource("RectangleShape2D_swing")
+
+[node name="HitSfxPlayer" type="AudioStreamPlayer" parent="."]
+
+[node name="SwingSfxPlayer" type="AudioStreamPlayer" parent="."]
+volume_db = -6.0

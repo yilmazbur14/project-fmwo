@@ -28,6 +28,7 @@ extends Node
 @export var finisher_stagger_timer: Timer
 @export var beat_timer: Timer
 
+const VsCard := preload("res://Scripts/VsCard.gd")
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/CarterPreFight.dialogue"
 const HAZARD_GROUP := "carter_hazard"
 
@@ -148,7 +149,7 @@ func show_pre_fight_dialogue() -> void:
 
 
 func _on_dialogue_ended(_dialogue: Object) -> void:
-	post_dialogue_pre_fight_timer.start()
+	VsCard.play_intro(self, "carter", post_dialogue_pre_fight_timer.start)
 
 
 func _on_post_dialogue_pre_fight_timer_timeout() -> void:
@@ -350,18 +351,21 @@ func enter_defeated() -> void:
 	_end_fight("Defeated")
 
 
-# The player lost: he turns his back on them and the emblem burns.
+# The player lost: he turns his back on them and the emblem burns. The barrage's darkness is handed
+# straight on to his victory pose rather than lifted - they always die in the dark, since only the
+# clones can hurt them, and the lights never come back up.
 func enter_player_defeated() -> void:
-	_end_fight("Victory")
+	_end_fight("Victory", true)
 	player_defeated = true
 
 
-func _end_fight(final_state_name: String) -> void:
+func _end_fight(final_state_name: String, keep_dark := false) -> void:
 	# Before anything else: a terminal path that never reaches RagingDemon.Exit() still has to free
-	# the player and take the curtain down. A player left locked is unrecoverable.
+	# the player and take the curtain down. A player left locked is unrecoverable. The one exception
+	# to the curtain is his own win, which keeps it (RagingDemon.release).
 	var demon: State = states.get("RagingDemon")
 	if demon:
-		demon.release()
+		demon.release(keep_dark)
 	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
 		hazard.queue_free()
 	on_child_transition(current_state, final_state_name)

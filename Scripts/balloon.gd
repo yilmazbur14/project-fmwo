@@ -4,8 +4,9 @@ extends CanvasLayer
 
 ## While a node in this group (the fight hearts HUD) is visible, the dialogue box moves to its right so the hearts stay on screen.
 const FIGHT_HUD_GROUP: StringName = &"player_health_hud"
-## Fixed rather than read from the HUD's rect: its container hasn't sized it yet when the first line appears. The hearts row is 284px wide.
-const FIGHT_PANEL_OFFSET_LEFT: float = 300.0
+## Taken from the layout rather than the HUD's rect: the row hasn't been sized yet when the first line appears.
+const PlayerHealthArtLayout := preload("res://Scripts/PlayerHealthArtLayout.gd")
+const FIGHT_PANEL_GAP: float = 16.0
 const FIGHT_PANEL_OFFSET_RIGHT: float = -24.0
 
 const DialogueVoices := preload("res://Scripts/DialogueVoices.gd")
@@ -229,7 +230,7 @@ func apply_dialogue_line() -> void:
 		responses_menu.show()
 	elif dialogue_line.time != "":
 		var time: float = dialogue_line.text.length() * 0.02 if dialogue_line.time == "auto" else dialogue_line.time.to_float()
-		await get_tree().create_timer(time).timeout
+		await get_tree().create_timer(time, false).timeout
 		next(dialogue_line.next_id)
 	else:
 		is_waiting_for_input = true
@@ -242,10 +243,16 @@ func next(next_id: String) -> void:
 	dialogue_line = await dialogue_resource.get_next_dialogue_line(next_id, temporary_game_states)
 
 
+## Start the current line's input lock again. The lock is on the real clock, so a pause screen that
+## held a line on screen would otherwise hand the resuming press straight to it as "next line".
+func rearm_input_lock() -> void:
+	_line_shown_msec = Time.get_ticks_msec()
+
+
 func _place_panel() -> void:
 	var fight_hud := get_tree().get_first_node_in_group(FIGHT_HUD_GROUP) as CanvasItem
 	if is_instance_valid(fight_hud) and fight_hud.is_visible_in_tree():
-		panel.offset_left = FIGHT_PANEL_OFFSET_LEFT
+		panel.offset_left = PlayerHealthArtLayout.row_right_edge() + FIGHT_PANEL_GAP
 		panel.offset_right = FIGHT_PANEL_OFFSET_RIGHT
 	else:
 		panel.offset_left = centred_panel_offsets.x
@@ -318,6 +325,8 @@ func _on_balloon_gui_input(event: InputEvent) -> void:
 		if mouse_was_clicked or skip_button_was_pressed:
 			get_viewport().set_input_as_handled()
 			dialogue_label.skip_typing()
+			# The whole line is only up from now, so any input lock starts again from here.
+			_line_shown_msec = Time.get_ticks_msec()
 			return
 
 	if not is_waiting_for_input: return

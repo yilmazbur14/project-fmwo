@@ -23,11 +23,16 @@ const FEINT_CLONE := 3
 const FEINT_PRESS_AT := 0.3
 
 # A second argument of "kill" instead lets a clone finish the player off late in the barrage and
-# shoots his victory pose: back turned, emblem burning.
+# shoots his victory pose: back turned, emblem burning. It also writes the whole KO, from the frame
+# the player goes down until his line has typed in, as a frame sequence under <out dir>/ko_gif/ - at
+# a third of the window, which is exactly one texel of the art per pixel - for a GIF to be made from.
+const GIF_FPS := 15
+const GIF_LENGTH := 5.2
 var kill_mode := false
 var killed := false
-var victory_clock := 0.0
-var last_clock := 0.0
+var gif_from := -1.0
+var gif_frames := 0
+var gif_done := false
 var out_dir := "."
 var scene: Node
 var boss: Node
@@ -68,11 +73,11 @@ func _process(delta: float) -> bool:
 			return false
 		_launch()
 		return false
-	last_clock = clock
 	clock += delta
 	if kill_mode:
 		_watch_kill()
-		return shots >= 4
+		_record_gif()
+		return shots >= 6 and gif_done
 	_watch()
 	return shots >= 10
 
@@ -127,8 +132,9 @@ func _watch_kill() -> void:
 		return
 	if state_machine.current_state != victory:
 		return
-	# The whole beat: gone, standing in the middle, the arena going out around the turn, and the
-	# emblem alone in the black.
+	# The whole beat: gone, standing in the middle, the arena going out around the turn, the emblem
+	# alone in the black, then the light coming back up on him and his head coming round. Nobody
+	# presses anything here, so the outro line stays up and nothing fades over the end of it.
 	match victory.beat:
 		victory.Beat.REAPPEAR:
 			if victory.clock >= 0.12:
@@ -137,11 +143,16 @@ func _watch_kill() -> void:
 			if boss.blackout.visible and boss.blackout.modulate.a >= 0.55:
 				_shoot("12_ko_fading_out")
 		victory.Beat.BURN:
-			victory_clock += clock - last_clock
-			if victory_clock >= 0.05:
+			if victory.clock >= 0.05:
 				_shoot("13_ko_ignition")
-			if victory_clock >= 1.4:
-				_shoot("14_ko_hold_under_outro")
+			if victory.clock >= 1.5:
+				_shoot("14_ko_hold")
+		victory.Beat.LIGHT:
+			if victory.clock >= 0.3:
+				_shoot("15_ko_light_up")
+		victory.Beat.LOOK:
+			if victory.clock >= 0.6:
+				_shoot("16_ko_look_back")
 
 
 func _watch_rush() -> void:
@@ -174,6 +185,30 @@ func _watch_rush() -> void:
 		parry_at = clock
 	if parry_at >= 0.0 and clock - parry_at >= 0.03:
 		_shoot("8_parry_break")
+
+
+# From the frame the player's health hits zero, one frame in every (60 / GIF_FPS).
+func _record_gif() -> void:
+	if gif_done:
+		return
+	if gif_from < 0.0:
+		if not killed or player.playerHealth > 0:
+			return
+		gif_from = clock
+		DirAccess.make_dir_recursive_absolute(out_dir + "/ko_gif")
+	var since := clock - gif_from
+	if since > GIF_LENGTH:
+		gif_done = true
+		return
+	if frames % (60 / GIF_FPS) != 0:
+		return
+	var path := "%s/ko_gif/f_%04d.png" % [out_dir, gif_frames]
+	gif_frames += 1
+	RenderingServer.frame_post_draw.connect(func() -> void:
+		var image := root.get_texture().get_image()
+		image.resize(image.get_width() / 3, image.get_height() / 3, Image.INTERPOLATE_NEAREST)
+		image.save_png(path)
+	, CONNECT_ONE_SHOT)
 
 
 func _shoot(name: String) -> void:

@@ -2,6 +2,7 @@ extends CharacterBody2D
 
 const HitStop := preload("res://Scripts/HitStop.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
+const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 # What he says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/MasonOutro.dialogue"
 # This fight's place in the order; GameProgress decides what follows it.
@@ -16,15 +17,39 @@ const PHANTOM_HIT_WINDOW := 0.5
 # The finisher's daze stars circle here, from his origin: about 34 px over his hat.
 const DAZE_ANCHOR_OFFSET := Vector2(0, -124)
 
-#UI (built at runtime - no new art needed)
-var health_bar: ProgressBar
-var name_label: Label
-var fill_style: StyleBoxFlat
+#UI (BossHealthBarUI builds it at runtime)
+var health_bar: Control
 
 @onready var sprite = $Sprite2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var hurtbox: Area2D = $Hurtbox
 @onready var state_machine = $StateManager
+
+#MUSIC
+# His theme is the user's own track, kept in Assets/Audio/SFX/local/, which is gitignored: those rights
+# aren't ours and the repo is public. A fresh clone doesn't have it, so it falls back to the shared boss
+# theme and the fight still has music.
+const MUSIC_LOCAL := "res://Assets/Audio/SFX/local/mason_theme_local.mp3"
+# "Snack Run", written for this fight - see art_source/music/mason_theme.rb. One 16-bar cycle cut
+# to the beat. This is what a fresh clone hears, and it is ours, unlike the local reference above.
+const MUSIC_FALLBACK := "res://Assets/Audio/Music/mason_theme.wav"
+# Measured through a capture bus (art_source/mason_tuning/measure_mason_theme.gd), not guessed: the track
+# runs -14.5 to -15.8 dBFS RMS with peaks near -1. At -7 dB it sits around -22, where Carter's fight
+# settled for music under constant sound and about 5 dB under where the placeholder sat, so the squat
+# before every poo line, Carter's slams and the nugget and bomb impacts (the same hit at -10 dB) stay on
+# top of it. The fallback keeps the level it has always had.
+const MUSIC_LOCAL_DB := -7.0
+const MUSIC_FALLBACK_DB := -7.0
+# The track fades out over its last five seconds and ends in silence: looped end to start, that is a
+# six-second hole on every pass, and this fight often runs past its 1:46. So it loops early instead. It is
+# 115 BPM on a steady grid from its first beat (Godot strips the MP3's encoder delay, so that is the
+# start of the file), and after 192 beats, the 48th bar line and the last before the fade (100.17 s), the
+# stream goes straight back to the top. Found and checked offline by
+# art_source/mason_tuning/loop_mason_theme.gd. Only for the file it was measured on: a different track
+# dropped in at this path loops end to start rather than being cut at this one's bar line.
+const MUSIC_LOCAL_BPM := 115.0
+const MUSIC_LOCAL_LOOP_BEATS := 192
+const MUSIC_LOCAL_LENGTH := 106.43
 
 #AUDIO
 @onready var music_player: AudioStreamPlayer = $MusicPlayer
@@ -60,12 +85,24 @@ func _ready() -> void:
 	add_child(finisher_stagger_timer)
 
 	sprite_base_position = sprite.position
-	_build_health_bar()
+	_build_hud()
 
-	# Placeholder: Mason has no theme of his own yet.
-	music_player.stream = load("res://Assets/Audio/Music/boss_theme.ogg")
-	if music_player.stream:
+	# Loaded here rather than when the fight starts, so the first play doesn't hitch.
+	var own_theme := ResourceLoader.exists(MUSIC_LOCAL)
+	music_player.stream = load(MUSIC_LOCAL if own_theme else MUSIC_FALLBACK)
+	music_player.volume_db = MUSIC_LOCAL_DB if own_theme else MUSIC_FALLBACK_DB
+	if music_player.stream is AudioStreamWAV:
+		# Our own theme: a WAV cut to one whole cycle, so it loops by sample range and needs none
+		# of the beat bookkeeping below - the seam is the bar line.
+		music_player.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		music_player.stream.loop_begin = 0
+		music_player.stream.loop_end = int(music_player.stream.get_length() * music_player.stream.mix_rate)
+	elif music_player.stream:
 		music_player.stream.loop = true
+		# Only on his local reference track, which is the one with a measured grid to line up to.
+		if own_theme and absf(music_player.stream.get_length() - MUSIC_LOCAL_LENGTH) < 0.1:
+			music_player.stream.bpm = MUSIC_LOCAL_BPM
+			music_player.stream.beat_count = MUSIC_LOCAL_LOOP_BEATS
 	hit_sfx_player.stream = load("res://Assets/Audio/SFX/hit_impact.ogg")
 	victory_sfx_player.stream = load("res://Assets/Audio/SFX/victory_fanfare.ogg")
 	squat_sfx_player.stream = load("res://Assets/Audio/SFX/wrestler_charge.ogg")
@@ -124,7 +161,7 @@ func _apply_damage(amount: int) -> int:
 		return 0
 
 	boss_health -= dealt
-	_update_health_bar()
+	_refresh_health_bar()
 	_hit_feedback()
 	hit_sfx_player.play()
 
@@ -212,58 +249,30 @@ func on_player_defeated() -> void:
 		hazard.queue_free()
 
 
-func _build_health_bar() -> void:
+# The bar goes hot in two steps: caution under 0.6 of his health, then the last third.
+func _refresh_health_bar() -> void:
+	if not health_bar:
+		return
+	health_bar.set_value(0, boss_health)
+	var ratio := get_health_ratio()
+	var heat := 0.0
+	if ratio <= 0.34:
+		heat = 1.0
+	elif ratio <= 0.6:
+		heat = 0.5
+	health_bar.set_heat(0, heat)
+
+
+func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
 
-	name_label = Label.new()
-	name_label.text = GameProgress.boss_name(FIGHT_SCENE)
-	name_label.position = Vector2(770, 36)
-	name_label.theme = load("res://Assets/UI/ui_theme.tres")
-	name_label.add_theme_color_override("font_color", Color(1, 1, 1))
-	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	name_label.add_theme_constant_override("outline_size", 6)
-	layer.add_child(name_label)
-
-	health_bar = ProgressBar.new()
-	health_bar.min_value = 0
-	health_bar.max_value = max_health
-	health_bar.value = boss_health
-	health_bar.show_percentage = false
-	health_bar.size = Vector2(380, 22)
-	health_bar.position = Vector2(770, 70)
-
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.08, 0.08, 0.08, 0.85)
-	bg.set_corner_radius_all(3)
-	bg.border_width_left = 2
-	bg.border_width_right = 2
-	bg.border_width_top = 2
-	bg.border_width_bottom = 2
-	bg.border_color = Color(0, 0, 0)
-	health_bar.add_theme_stylebox_override("background", bg)
-
-	fill_style = StyleBoxFlat.new()
-	fill_style.bg_color = Color(0.55, 0.36, 0.2, 1)
-	fill_style.set_corner_radius_all(3)
-	health_bar.add_theme_stylebox_override("fill", fill_style)
-
+	health_bar = BossHealthBarUI.create({
+		"rows": [{"key": &"mason", "max": max_health, "value": boss_health}],
+		"plate": &"mason",
+		"text": GameProgress.boss_name(FIGHT_SCENE),
+	})
 	layer.add_child(health_bar)
-
-
-func _update_health_bar() -> void:
-	if not health_bar:
-		return
-	var tween = create_tween()
-	tween.tween_property(health_bar, "value", boss_health, 0.2)
-
-	var ratio := get_health_ratio()
-	if ratio <= 0.34:
-		fill_style.bg_color = Color(1.0, 0.55, 0.0, 1)
-	elif ratio <= 0.6:
-		fill_style.bg_color = Color(0.95, 0.75, 0.1, 1)
-	else:
-		fill_style.bg_color = Color(0.55, 0.36, 0.2, 1)
 
 
 func _hit_feedback() -> void:

@@ -45,3 +45,7 @@ func _fade_in() -> void:
 	var tween := create_tween()
 	tween.tween_property(fade, "color:a", 0.0, fade_in_time)
 	tween.tween_callback(fade.queue_free)
+	# The only button, and nothing takes focus by itself: without this a pad can't press it. Not
+	# before the screen is up, though: A punches too, and a player still mashing it as the fight
+	# was lost would be sent to the menu before ever seeing this screen.
+	tween.tween_callback(return_to_menu_button.grab_focus)

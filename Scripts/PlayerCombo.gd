@@ -4,7 +4,8 @@ extends Node
 # After a landed hit the next press has to come inside a timing window that opens a beat after
 # the swing ends; any press before it (mashing) or no press until it closes breaks the combo.
 # A boss whose hurtbox a punch reaches passes it to resolve_punch(), which asks the boss to
-# take_punch() and counts the damage the boss reports back.
+# take_punch() and counts the damage the boss reports back. With the player's feel_v2 the punch
+# resolves itself on contact instead (PlayerPunching), so no swing waits on a report.
 signal combo_changed(count: int, charged: bool)
 signal beat_window_changed(open: bool)
 # A charged punch dealt damage to `target`. Emitted inside the physics flush that reported the hit.
@@ -14,12 +15,12 @@ signal punch_landed(target: Node, dealt: int, charged: bool)
 
 const HitStop := preload("res://Scripts/HitStop.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
+const PlayerFeel := preload("res://Scripts/PlayerFeel.gd")
 
-# Seconds of game time after a swing ends. A swing lasts 22 physics frames (0.37s) from the
-# press to its hitbox switching off, so by default the window runs 0.42s-0.77s after the press
-# that started it: any press rhythm faster than about 2.7 a second lands a press mid-swing.
-@export var window_offset := 0.05
-@export var window_length := 0.35
+# The beat window's offset and length are PlayerFeel's. A swing lasts 22 physics frames (0.37s) from
+# the press to its hitbox switching off, so today's window runs 0.42s-0.77s after the press that
+# started it, feel_v2's 0.41s-0.66s: any press rhythm faster than about 2.7 a second lands a press
+# mid-swing.
 @export var hits_to_charge := 3
 @export var charged_damage := 2
 @export var charged_hit_stop := 0.1
@@ -49,6 +50,8 @@ var press_on_beat := false
 var beat_missed := false
 var window_open := false
 
+@onready var player: CharacterBody2D = get_parent()
+
 
 func _physics_process(delta: float) -> void:
 	clock += delta
@@ -60,10 +63,11 @@ func _physics_process(delta: float) -> void:
 		_set_window(false)
 		return
 	var since_end := clock - swing_end_time
-	if since_end > window_offset + window_length:
+	var offset: float = PlayerFeel.value("combo_window_offset", player.feel_v2)
+	if since_end > offset + PlayerFeel.value("combo_window_length", player.feel_v2):
 		reset()
 	else:
-		_set_window(since_end >= window_offset)
+		_set_window(since_end >= offset)
 
 
 # Called on every punch press, judged by when it was pressed, including presses mid-swing that
@@ -80,8 +84,10 @@ func register_press() -> void:
 
 
 # Starting a punch before the last one's report is in would cancel the report: the hitbox would
-# switch back on before the physics server saw it switch off.
+# switch back on before the physics server saw it switch off. A feel_v2 punch has no report to wait on.
 func report_pending() -> bool:
+	if player.feel_v2:
+		return false
 	return swing_end_frame >= 0 and Engine.get_physics_frames() - swing_end_frame < REPORT_FRAMES
 
 
@@ -96,6 +102,10 @@ func start_swing() -> void:
 func end_swing() -> void:
 	swing_end_frame = Engine.get_physics_frames()
 	swing_end_time = clock
+	# A feel_v2 punch resolves on contact while the arm is out: one still open as it ends missed.
+	if player.feel_v2 and swing_open:
+		swing_open = false
+		reset()
 
 
 func reset() -> void:

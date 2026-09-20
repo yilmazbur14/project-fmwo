@@ -26,6 +26,7 @@ var blockable := false
 var parryable := false
 var weight := AttackCatalog.Weight.NONE
 var tell := false
+var dodge_tell := false
 var parry_stagger := false
 var from_above := false
 var dash_through := false

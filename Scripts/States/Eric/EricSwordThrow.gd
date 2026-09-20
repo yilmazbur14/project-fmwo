@@ -5,25 +5,17 @@ extends State
 # The wind-up warns first: a parry while the sword is in the air flings it back at him, and it takes
 # a chip of health off and staggers him where he threw it when it arrives. A held guard absorbs it
 # as before, and an unparried sword plants and rings as before.
+# The V2 whirlwind ends in this same state (EricStateMachine.throw_from_whirlwind): the spin lets the
+# sword go on these release frames, so the parry, the chip and the uppercut are the throw's own. That
+# one skips off the mat instead of planting, so there is no ring and no wait before he takes it back,
+# and he is open to punches while it is out of his hands.
 
 @export var animation_player : AnimationPlayer
 @export var character_body : CharacterBody2D
+@export var hurtbox : Area2D
 @export var eric_state_machine : Node
 
-# Sword speed in px/s both ways, ring growth in px/s and how long the sword stays planted before
-# he recalls it, at full health and at none.
-@export var flight_speed := 1400.0
-@export var rage_flight_speed := 1700.0
-@export var ring_speed := 950.0
-@export var rage_ring_speed := 1200.0
-@export var planted_time := 0.7
-@export var rage_planted_time := 0.45
-# How fast a parried sword comes back, in px/s: faster than he threw it, since the player sent it.
-@export var reflect_speed := 1600.0
-# Added to the parry's own stagger window. He is struck at throwing range, not standing over the
-# player the way a parried whirlwind left him, so there is further to run before the punish.
-@export var reflect_stagger_bonus := 0.5
-
+const EricPacing := preload("res://Scripts/EricPacing.gd")
 const SWORD_SCENE := preload("res://Scenes/Bosses/EricThrownSwordScene.tscn")
 const IMPACT_SCENE := preload("res://Scenes/Bosses/EricQuakeImpactScene.tscn")
 const RING_SCENE := preload("res://Scenes/Bosses/EricQuakeRingScene.tscn")
@@ -35,6 +27,9 @@ const TELL_HEAD_PIXEL := Vector2(116, 104)
 # throw_windup's length plus the release frames before the sword leaves his hands: the warning is up
 # for the whole wind-up, and the sword itself is the cue from then on.
 const TELL_TIME := 0.63
+# whirl_release's length up to its own release frame, for the throw the whirlwind hands over. Past the
+# red tell's floor (EricPacing's slam_tell_time) and 1.8x PlayerDefense.parry_window.
+const WHIRL_TELL_TIME := 0.44
 # What the flung-back sword takes off him, on top of the punches the stagger then opens up.
 const REFLECT_DAMAGE := 1
 
@@ -45,12 +40,22 @@ var planted_left := -1.0
 # Where he stood to throw, which the stagger puts him back on.
 var throw_spot: Vector2
 var pending_stagger := 0.0
+# Set by the state machine before it switches here, and cleared on the way out: the whirlwind's spin
+# release rather than a throw he wound up himself.
+var from_whirlwind := false
 
 
 func Enter() -> void:
 	planted_left = -1.0
 	pending_stagger = 0.0
 	throw_spot = character_body.global_position
+	if from_whirlwind:
+		# whirl_release's spin frames are spaced wider and wider on purpose: the throw plays at
+		# speed_scale 1.0 where the whirlwind spins at 1.5-2.1x, so evenly spaced ones would speed the
+		# spin up into the release instead of winding it down.
+		animation_player.play("whirl_release")
+		ParryTell.telegraph(character_body, &"eric_thrown_sword", WHIRL_TELL_TIME, _tell_anchor)
+		return
 	animation_player.play("throw_windup")
 	ParryTell.telegraph(character_body, &"eric_thrown_sword", TELL_TIME, _tell_anchor)
 
@@ -62,6 +67,12 @@ func Exit() -> void:
 	if is_instance_valid(sword):
 		sword.queue_free()
 	sword = null
+	if from_whirlwind:
+		# Shut here and now, not deferred: the window he goes on to (EricWinded) opens its own on the
+		# way in, and a deferred close would land on top of it and shut him for all of it.
+		hurtbox.monitoring = false
+		hurtbox.monitorable = false
+	from_whirlwind = false
 
 
 func Physics_Update(delta: float) -> void:
@@ -69,13 +80,18 @@ func Physics_Update(delta: float) -> void:
 		return
 	planted_left -= delta
 	if planted_left <= 0.0:
-		planted_left = -1.0
-		animation_player.play("recall_reach")
-		var flipped: bool = character_body.sprite.flip_h
-		var lean := deg_to_rad(EricArtLayout.THROW_CATCH_ANGLE)
-		var catch_centre: Vector2 = character_body.to_global(EricArtLayout.frame_local(EricArtLayout.THROW_CATCH_CENTRE, flipped))
-		sword.recall(catch_centre, _ground_y(), -lean if flipped else lean, not flipped)
-		_play_whoosh()
+		_recall_now()
+
+
+# Back into his hand: from the mat it is planted in, or from where a spin release skipped off it.
+func _recall_now() -> void:
+	planted_left = -1.0
+	animation_player.play("recall_reach")
+	var flipped: bool = character_body.sprite.flip_h
+	var lean := deg_to_rad(EricArtLayout.THROW_CATCH_ANGLE)
+	var catch_centre: Vector2 = character_body.to_global(EricArtLayout.frame_local(EricArtLayout.THROW_CATCH_CENTRE, flipped))
+	sword.recall(catch_centre, _ground_y(), -lean if flipped else lean, not flipped)
+	_play_whoosh()
 
 
 func _ground_y() -> float:
@@ -94,15 +110,29 @@ func release_sword() -> void:
 	ParryTell.clear(character_body)
 	var rage: float = eric_state_machine.rage
 	sword = SWORD_SCENE.instantiate()
-	sword.speed = lerpf(flight_speed, rage_flight_speed, rage)
+	sword.speed = EricPacing.raged("sword_speed", rage)
 	sword.player = player
 	sword.thrower = character_body
 	sword.landed.connect(_on_sword_landed)
 	sword.returned.connect(_on_sword_returned)
 	sword.struck_thrower.connect(_on_sword_struck_thrower)
 	var hand: Vector2 = character_body.frame_point(EricArtLayout.THROW_RELEASE_PIXEL)
-	eric_state_machine.add_hazard(sword, Vector2(hand.x, _ground_y()))
+	eric_state_machine.add_hazard(sword, Vector2(hand.x, _ground_y()), false)
+	sword.lay_shadow_on(eric_state_machine.ground_layer())
+	sword.plants = not from_whirlwind
+	sword.returns_harmless = from_whirlwind
 	sword.throw(hand, _ground_y(), player.global_position)
+	# The reworked feel only. The sword is aimed at where they stood and never re-aims, so once they
+	# have walked off that spot the throw says nothing: the floor says where and when it lands, and
+	# the blade wears the red the badge over his head just dropped. Neither touches the attack.
+	if player.feel_v2:
+		eric_state_machine.add_hazard(sword.mark_landing(), sword.to_ground, true)
+		sword.glow_as_parryable()
+	if from_whirlwind:
+		# What the spin's dizzy stop was, and only now the sword is out of his hands: the red wind-up
+		# before this is still a warning to read, not a free punch.
+		hurtbox.set_deferred("monitoring", true)
+		hurtbox.set_deferred("monitorable", true)
 	_play_whoosh()
 
 
@@ -112,8 +142,8 @@ func release_sword() -> void:
 func reflect(stagger_duration: float) -> void:
 	if not is_instance_valid(sword):
 		return
-	pending_stagger = stagger_duration + reflect_stagger_bonus
-	sword.reflect(character_body.frame_point(EricArtLayout.BODY_BOX.get_center()), _ground_y(), reflect_speed)
+	pending_stagger = stagger_duration + EricPacing.value("reflect_stagger_bonus")
+	sword.reflect(character_body.frame_point(EricArtLayout.BODY_BOX.get_center()), _ground_y(), EricPacing.value("reflect_speed"))
 	_play_whoosh()
 
 
@@ -130,6 +160,10 @@ func _on_sword_struck_thrower() -> void:
 	character_body.take_punch(REFLECT_DAMAGE)
 	if character_body.boss_health <= 0 or eric_state_machine.defeated:
 		return
+	# V2: it fills his Break gauge too, and one it fills breaks him instead.
+	var gauge: Node = character_body.break_gauge
+	if gauge and gauge.add(gauge.reflect_gain):
+		return
 	# This window is its own daze, whatever an earlier Downed window spent.
 	character_body.daze_used = false
 	eric_state_machine.parry_stagger(pending_stagger, throw_spot, true)
@@ -138,14 +172,19 @@ func _on_sword_struck_thrower() -> void:
 
 
 func _on_sword_landed() -> void:
-	var rage: float = eric_state_machine.rage
 	var contact: Vector2 = sword.global_position
 	eric_state_machine.add_hazard(IMPACT_SCENE.instantiate(), contact)
+	# The spin release skips off the mat: the dust it kicks up, but no plant, no ring, and no wait
+	# before he pulls it back.
+	if from_whirlwind:
+		_recall_now()
+		return
+	var rage: float = eric_state_machine.rage
 	var ring = RING_SCENE.instantiate()
-	ring.speed = lerpf(ring_speed, rage_ring_speed, rage)
+	ring.speed = EricPacing.raged("ring_speed", rage)
 	ring.player = player
 	eric_state_machine.add_hazard(ring, contact)
-	planted_left = lerpf(planted_time, rage_planted_time, rage)
+	planted_left = EricPacing.raged("planted_time", rage)
 
 	var sfx = character_body.get_node_or_null("EarthquakeSfxPlayer")
 	if sfx:
@@ -174,7 +213,7 @@ func _on_animation_player_animation_finished(anim_name: StringName) -> void:
 	match anim_name:
 		&"throw_windup":
 			animation_player.play("throw_release")
-		&"throw_release":
+		&"throw_release", &"whirl_release":
 			animation_player.play("empty_wait")
 		&"recall_catch":
 			eric_state_machine.attack_finished()

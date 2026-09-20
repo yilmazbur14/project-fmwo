@@ -1,6 +1,10 @@
+using InputSettings
+
 ~ start
-Danny: I'm mid-raid, so I'm saying this ONCE. Arrows move, Q punches, W dashes. Land three punches in rhythm and the third one really hurts.
-Danny: HOLD SHIFT to block whatever's coming at your face. It drains that stamina bar under your hearts, and if that bar empties you're standing there wide open. Which, honestly, tracks.
-Danny: TAP SHIFT the instant a hit lands and you PARRY it. Costs no stamina, staggers some attacks, and then you get to hit them back. Dashing costs a little stamina and leaves you stuck for a moment after, unless you parry out of it.
-Danny: Boss goes all dizzy on you? Mash Q and W to wind up an uppercut. That's everything, dum dum. Click I'm ready and go meet Eric, the White Knight. Don't cry to me when he flattens you.
+Danny: I'm mid-raid, so I'm saying this ONCE. {{move_name}} to move, {{punch_name}} punches, {{dodge_name}} dashes. Land three punches in rhythm and the third one really hurts.
+Danny: HOLD {{block_name}} to block whatever's coming at your face. It drains that stamina bar under your hearts, and if that bar empties you're standing there wide open. Which, honestly, tracks.
+Danny: TAP {{block_name}} the instant a hit lands and you PARRY it. Costs no stamina, staggers some attacks, and then you get to hit them back. Dashing costs a little stamina and leaves you stuck for a moment after, unless you parry out of it.
+Danny: Boss goes all dizzy? Follow the prompt to finish him: mash {{mash_left_name}} and {{mash_right_name}}.
+Danny: Need out mid-fight? {{pause_name}} pauses it, and from there you can resume, start the fight over, change these controls or run home to the menu. That's everything, dum dum.
+Danny: Now go warm up on that sparring bot: punch it, combo it, finish it. Then WALK INTO THE POST beside it and it starts swinging back - red over its head means TAP {{block_name}} to parry, yellow means {{dodge_name}} straight through it. Those two reads are the whole game. You CAN'T lose in here. Done? Hit I'm ready, or walk out the Arena #1 door. Don't cry to me when Eric flattens you.
 => END

@@ -15,10 +15,13 @@ extends Node2D
 
 const FightOutro := preload("res://Scripts/FightOutro.gd")
 const Layout := preload("res://Scripts/GreysonComputahArtLayout.gd")
+const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 # What the two of them say once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/GreysonAndComputahOutro.dialogue"
 # This fight's place in the order; GameProgress decides what follows it.
 const FIGHT_SCENE := "res://Scenes/Bosses/GreysonBossFightScene.tscn"
+# Whose fill each row carries, in bodies() order: Greyson on top, Computah under him.
+const BAR_KEYS: Array[StringName] = [&"greyson", &"computah"]
 
 #THE SURGE
 # The visible warning while both live. The gap between the two health ratios past SURGE_FLOOR ramps
@@ -42,6 +45,10 @@ const SURGE_AURA_AT := 0.05
 const SWAP_GUARD_RATIO := 0.75
 const BRINK_WORD := "ON THE BRINK"
 
+# Their own theme. Same level as Eric's, so walking from one fight to the next does not jump.
+const THEME := "res://Assets/Audio/Music/greyson_theme.wav"
+const THEME_DB := -7.0
+
 @export var greyson: CharacterBody2D
 @export var computah: CharacterBody2D
 
@@ -50,13 +57,9 @@ const BRINK_WORD := "ON THE BRINK"
 @onready var victory_sfx_player: AudioStreamPlayer = $VictorySfxPlayer
 @onready var hit_sfx_player: AudioStreamPlayer = $HitSfxPlayer
 
-#UI (built at runtime - no new art needed)
+#UI (BossHealthBarUI builds it at runtime)
 var hud_layer: CanvasLayer
-var panel: Panel
-var name_label: Label
-var bars: Array[ProgressBar] = []
-var fills: Array[StyleBoxFlat] = []
-var markers: Array[ColorRect] = []
+var health_panel: Control
 
 var music_base_db := 0.0
 var music_duck: Tween
@@ -66,7 +69,6 @@ var power := 0.0
 var swapped := false
 var surge := 0.0
 var surge_word_shown := false
-var surge_clock := 0.0
 
 
 func _ready() -> void:
@@ -76,9 +78,18 @@ func _ready() -> void:
 	_build_health_panel()
 	_refresh_bars()
 
-	music_player.stream = load("res://Assets/Audio/Music/boss2_theme.ogg")
-	if music_player.stream:
+	# "Two Bars", written for this fight - see art_source/music/greyson_theme.rb. One 16-bar cycle
+	# cut to the beat, so LOOP_FORWARD runs it end to end with no seam. Replaces boss2_theme.ogg,
+	# which was a shared placeholder three fights were using.
+	music_player.stream = load(THEME)
+	music_player.volume_db = THEME_DB
+	if music_player.stream is AudioStreamWAV:
+		music_player.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		music_player.stream.loop_begin = 0
+		music_player.stream.loop_end = int(music_player.stream.get_length() * music_player.stream.mix_rate)
+	elif music_player.stream and "loop" in music_player.stream:
 		music_player.stream.loop = true
+	# Captured after the theme's own level is set, so ducking still swings around the right base.
 	music_base_db = music_player.volume_db
 	# Placeholders: the pair have no sounds of their own yet.
 	victory_sfx_player.stream = load("res://Assets/Audio/SFX/victory_fanfare.ogg")
@@ -162,10 +173,10 @@ func _set_surge(value: float) -> void:
 	for body in bodies():
 		if is_alive(body):
 			body.show_aura(body == hot or (swapped and body == survivor()))
-	# The beat below stops running when the gap closes, so the bar it was beating has to be put back.
-	if hot == null:
-		for bar in bars:
-			bar.modulate.a = 1.0
+	# Only the body the player is neglecting beats, and only while the gap is open: the bar puts
+	# itself back when its beat goes to nothing.
+	for row in bodies().size():
+		health_panel.set_beat(row, surge if bodies()[row] == hot else 0.0)
 	if surge >= SURGE_WORD_AT and not surge_word_shown:
 		surge_word_shown = true
 		show_word(SURGE_WORD)
@@ -295,142 +306,45 @@ func snap_music_level() -> void:
 #THE HEALTH PANEL
 # One framed panel, one name, two stacked bars joined by a bracket: they have to read as one boss.
 # Each bar carries a ghost marker at the OTHER body's ratio, so the gap between a bar's fill edge and
-# its marker is the imbalance itself.
+# its marker is the imbalance itself. BossHealthBarUI draws all of that; this node only tells it what
+# the two bodies are doing.
 
 func _build_health_panel() -> void:
 	hud_layer = CanvasLayer.new()
 	add_child(hud_layer)
 
-	panel = Panel.new()
-	panel.position = Layout.PANEL_RECT.position
-	panel.size = Layout.PANEL_RECT.size
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var frame := StyleBoxFlat.new()
-	frame.bg_color = Layout.PANEL_BG
-	frame.set_corner_radius_all(4)
-	frame.border_width_left = Layout.PANEL_BORDER_WIDTH
-	frame.border_width_right = Layout.PANEL_BORDER_WIDTH
-	frame.border_width_top = Layout.PANEL_BORDER_WIDTH
-	frame.border_width_bottom = Layout.PANEL_BORDER_WIDTH
-	frame.border_color = Layout.PANEL_BORDER
-	panel.add_theme_stylebox_override("panel", frame)
-	hud_layer.add_child(panel)
-
-	name_label = Label.new()
-	name_label.text = GameProgress.boss_name(FIGHT_SCENE)
-	name_label.position = Layout.NAME_POSITION
-	name_label.theme = load("res://Assets/UI/ui_theme.tres")
-	name_label.add_theme_font_size_override("font_size", Layout.NAME_FONT_SIZE)
-	name_label.add_theme_color_override("font_color", Color(1, 1, 1))
-	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	name_label.add_theme_constant_override("outline_size", 6)
-	hud_layer.add_child(name_label)
-
-	var bracket := ColorRect.new()
-	bracket.color = Layout.BRACKET_COLOR
-	bracket.position = Layout.BRACKET_RECT.position
-	bracket.size = Layout.BRACKET_RECT.size
-	bracket.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hud_layer.add_child(bracket)
-
-	for row in 2:
-		hud_layer.add_child(_build_row_label(row))
-		var bar := _build_bar(row)
-		hud_layer.add_child(bar)
-		bars.append(bar)
-
-
-func _build_row_label(row: int) -> Label:
-	var label := Label.new()
-	label.text = Layout.BAR_LABELS[row]
-	label.position = Vector2(Layout.BAR_LABEL_X, Layout.BAR_TOP[row] - 4.0)
-	label.theme = load("res://Assets/UI/ui_theme.tres")
-	label.add_theme_font_size_override("font_size", Layout.BAR_LABEL_FONT_SIZE)
-	label.add_theme_color_override("font_color", Layout.BAR_FILL[row])
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	label.add_theme_constant_override("outline_size", 5)
-	return label
-
-
-func _build_bar(row: int) -> ProgressBar:
-	var body: Node = bodies()[row]
-	var bar := ProgressBar.new()
-	bar.min_value = 0
-	bar.max_value = body.max_health
-	bar.value = body.boss_health
-	bar.show_percentage = false
-	bar.size = Layout.BAR_SIZE
-	bar.position = Vector2(Layout.BAR_LEFT, Layout.BAR_TOP[row])
-	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Layout.BAR_BG
-	bg.set_corner_radius_all(3)
-	bg.border_width_left = 2
-	bg.border_width_right = 2
-	bg.border_width_top = 2
-	bg.border_width_bottom = 2
-	bg.border_color = Color(0, 0, 0)
-	bar.add_theme_stylebox_override("background", bg)
-
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = Layout.BAR_FILL[row]
-	fill.set_corner_radius_all(3)
-	bar.add_theme_stylebox_override("fill", fill)
-	fills.append(fill)
-
-	# The other body's ratio, drawn over this bar: the gap between the fill edge and this tick is the
-	# imbalance the whole fight is about.
-	var marker := ColorRect.new()
-	marker.color = Layout.GHOST_MARKER_COLOR
-	marker.size = Vector2(Layout.GHOST_MARKER_WIDTH, Layout.BAR_SIZE.y)
-	marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bar.add_child(marker)
-	markers.append(marker)
-	return bar
+	var rows: Array = []
+	for row in bodies().size():
+		var body: Node = bodies()[row]
+		rows.append({"key": BAR_KEYS[row], "max": body.max_health, "value": body.boss_health})
+	health_panel = BossHealthBarUI.create({
+		"rows": rows,
+		"plate": &"greyson_pair",
+		"text": GameProgress.boss_name(FIGHT_SCENE),
+	})
+	hud_layer.add_child(health_panel)
 
 
 func _refresh_bars() -> void:
-	for row in bars.size():
+	for row in bodies().size():
 		var body: Node = bodies()[row]
 		var other := other_body(body)
-		var bar := bars[row]
-		var tween := bar.create_tween()
-		tween.tween_property(bar, "value", body.boss_health, Layout.BAR_FILL_TIME)
-		markers[row].position.x = clampf(other.get_health_ratio() * Layout.BAR_SIZE.x
-			- Layout.GHOST_MARKER_WIDTH / 2.0, 0.0, Layout.BAR_SIZE.x - Layout.GHOST_MARKER_WIDTH)
-		markers[row].visible = is_alive(other)
-		_refresh_fill_colour(row)
+		health_panel.set_value(row, body.boss_health)
+		health_panel.set_ghost(row, other.get_health_ratio(), is_alive(other))
+		health_panel.set_heat(row, _heat_for(body))
 
 
-func _refresh_fill_colour(row: int) -> void:
-	var body: Node = bodies()[row]
-	var base: Color = Layout.BAR_FILL[row]
-	if body.get_health_ratio() <= Layout.BAR_LOW_RATIO:
-		base = Layout.BAR_FILL_LOW[row]
+# How far this body's bar is pushed toward hot: the gap it is winning, or the power a swap latched.
+func _heat_for(body: Node) -> float:
 	if body == surging_body():
-		base = base.lerp(Layout.BAR_FILL_HOT, surge)
-	elif swapped and body == survivor():
-		base = base.lerp(Layout.BAR_FILL_HOT, power)
-	fills[row].bg_color = base
+		return surge
+	if swapped and body == survivor():
+		return power
+	return 0.0
 
 
 func _grey_out_bar(body: Node) -> void:
-	var row: int = bodies().find(body)
-	fills[row].bg_color = Color(0.3, 0.32, 0.36, 1)
-	bars[row].modulate = Color(0.6, 0.6, 0.6)
-	markers[row].hide()
-
-
-# The hot bar beats while the surge is up: the look that says "you are neglecting this one".
-# _set_surge() puts it back when the gap closes, since this stops running with it.
-func _process(delta: float) -> void:
-	var hot := surging_body()
-	if hot == null:
-		return
-	surge_clock += delta
-	var beat := absf(sin(surge_clock * PI / Layout.BAR_PULSE_TIME))
-	bars[bodies().find(hot)].modulate.a = lerpf(1.0, 1.0 - Layout.BAR_PULSE_ALPHA * surge, beat)
+	health_panel.finish_row(bodies().find(body))
 
 
 #WORD POPUPS

@@ -142,7 +142,7 @@ func _parry_punch(tier: int, away: Vector2) -> void:
 	zoom_punch += 1
 	var punch := zoom_punch
 	ScreenView.zoom_to(get_tree(), zoom, player.global_position, half, true)
-	var settle := get_tree().create_timer(half, true, false, true)
+	var settle := get_tree().create_timer(half, false, false, true)
 	settle.timeout.connect(func() -> void:
 		# Only the latest punch pulls the view back, so parries in a row can't fight each other.
 		if punch == zoom_punch and not player.fight_over and not player.finisher.is_active():

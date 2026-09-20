@@ -57,7 +57,7 @@ func begin_charge(target: Vector2, arrival_time: float = DEFAULT_ARRIVAL_TIME) -
 	if telegraph_line:
 		telegraph_line.visible = true
 	_play_telegraph()
-	await get_tree().create_timer(TELEGRAPH_DURATION).timeout
+	await get_tree().create_timer(TELEGRAPH_DURATION, false).timeout
 	# play_defeated() flips is_defeated without touching state, so a wrestler
 	# killed during his own telegraph would otherwise resume the charge here.
 	if state != State.TELEGRAPH or is_defeated:
@@ -94,7 +94,7 @@ func _finish_charge() -> void:
 	if body_hitbox:
 		body_hitbox.remove_from_group("enemy projectile")
 	_play_recovering()
-	await get_tree().create_timer(RECOVER_DURATION).timeout
+	await get_tree().create_timer(RECOVER_DURATION, false).timeout
 	# A wrestler who stood down mid-recovery stays where he is.
 	if is_defeated or state != State.RECOVERING:
 		return
