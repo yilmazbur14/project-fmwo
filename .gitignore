@@ -8,3 +8,9 @@ __pycache__/
 
 # Locally-supplied audio that must never enter the public repo (rights not ours).
 Assets/Audio/SFX/local/
+
+# Raw Sonic Pi recordings: ~163 MB of intermediates across eight themes, and git keeps them
+# forever. The theme source is art_source/music/*.rb and the shipped loop is the cut WAV in
+# Assets/Audio/Music/ - a raw take is reproducible by re-recording (Rec before Run, then
+# cut_loop.py), so it is a build artefact rather than a source.
+art_source/music/*_raw.wav

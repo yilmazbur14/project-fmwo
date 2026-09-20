@@ -410,14 +410,18 @@ class Canvas(object):
                         break
         self.lvl = out
 
-    def shade_px(self, pts, d=2, mat=None):
-        """Darken specific pixels by d ramp steps (anatomy creases, folds)."""
+    def shade_px(self, pts, d=2, mat=None, below_prio=None):
+        """Darken specific pixels by d ramp steps (anatomy creases, folds).
+        below_prio keeps a mark on the layer it belongs to: a torso line with
+        below_prio set can never land on an arm or fist drawn over the torso."""
         for (x, y) in pts:
             x, y = int(round(x)), int(round(y))
             if not (0 <= x < self.w and 0 <= y < self.h):
                 continue
             m = self.mat[y][x]
             if m is None or (mat and m != mat):
+                continue
+            if below_prio is not None and self.prio[y][x] >= below_prio:
                 continue
             n = len(self.pal[m])
             self.lvl[y][x] = int(_clampi(self.lvl[y][x] + d, 0, n - 1))

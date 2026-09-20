@@ -25,6 +25,8 @@
 [ext_resource type="Script" path="res://Scripts/ParryStreakUI.gd" id="23_parry_streak"]
 [ext_resource type="Script" path="res://Scripts/PlayerStatus.gd" id="24_status"]
 [ext_resource type="Script" path="res://Scripts/StatusIconsUI.gd" id="25_status_icons"]
+[ext_resource type="Script" path="res://Scripts/PlayerDashFx.gd" id="26_dash_fx"]
+[ext_resource type="PackedScene" path="res://Scenes/Player/PunchFx.tscn" id="27_punch_fx"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_h87yu"]
 size = Vector2(12, 27)
@@ -36,7 +38,7 @@ size = Vector2(36, 81)
 size = Vector2(4.33, 7.67)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ghost"]
-size = Vector2(24, 54)
+size = Vector2(36, 81)
 
 [sub_resource type="Animation" id="Animation_0sgo8"]
 length = 0.20000334
@@ -148,7 +150,7 @@ _data = {
 [node name="MainPlayer" type="Node2D" unique_id=2109948936]
 
 [node name="CharacterBody2D" type="CharacterBody2D" parent="." unique_id=478092288 node_paths=PackedStringArray("invincibility_timer", "healthUI", "hurtBox", "hitBox")]
-scale = Vector2(2, 2)
+scale = Vector2(3, 3)
 collision_layer = 2
 collision_mask = 13
 script = ExtResource("1_0sgo8")
@@ -254,6 +256,13 @@ script = ExtResource("24_status")
 [node name="HypeFullSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
 
 [node name="SuperUppercutSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="DashSfxPlayer" type="AudioStreamPlayer" parent="CharacterBody2D"]
+
+[node name="DashFx" type="Node" parent="CharacterBody2D"]
+script = ExtResource("26_dash_fx")
+
+[node name="PunchFx" parent="CharacterBody2D" instance=ExtResource("27_punch_fx")]
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=547045528]
 

@@ -4,6 +4,10 @@ extends Node2D
 var Projectile = preload("res://Scenes/Bosses/BossProjectileScene.tscn")
 const HitStop := preload("res://Scripts/HitStop.gd")
 const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
+const EricPacing := preload("res://Scripts/EricPacing.gd")
+const EricBreakGauge := preload("res://Scripts/EricBreakGauge.gd")
+const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
+const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
 # What he says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/EricOutro.dialogue"
@@ -17,10 +21,8 @@ const KNOCKBACK_AREA := Rect2(240, 200, 1440, 570)
 @export var max_health := 24
 var boss_health := max_health
 
-#UI (built at runtime - no new art needed)
-var health_bar: ProgressBar
-var name_label: Label
-var fill_style: StyleBoxFlat
+#UI (BossHealthBarUI builds it at runtime)
+var health_bar: Control
 
 @onready var animationPlayer = $AnimationPlayer
 @onready var sprite = $Sprite2D
@@ -28,15 +30,25 @@ var fill_style: StyleBoxFlat
 @export var post_dialogue_pre_fight_timer: Timer
 
 #AUDIO
+# Eric's theme. -7 dB puts its -15 dBFS master at about -22 dBFS in the fight, the level the
+# other fights' music settled on, so his hits and his stingers still sit on top of it.
+const THEME := "res://Assets/Audio/Music/eric_theme.wav"
+const THEME_DB := -7.0
+
 @onready var music_player: AudioStreamPlayer = $MusicPlayer
 @onready var hit_sfx_player: AudioStreamPlayer = $HitSfxPlayer
 @onready var victory_sfx_player: AudioStreamPlayer = $VictorySfxPlayer
+@onready var downed_sfx_player: AudioStreamPlayer = $DownedSfxPlayer
 var defeated := false
-# One finisher daze per Downed window; Downed clears it.
+# One finisher daze per Downed or Broken window, which clear it.
 var daze_used := false
 # Punches that can land while a parry has him staggered.
 const PARRY_STAGGER_HIT_CAP := 2
 var parry_stagger_hits := 0
+# The reworked fight's Break gauge (EricPacing V2); null in V1.
+var break_gauge: Node
+var hud_layer: CanvasLayer
+var break_sting_players: Array[AudioStreamPlayer] = []
 
 var sprite_base_position: Vector2
 
@@ -46,14 +58,82 @@ func _ready() -> void:
 	var hurtBox = get_node("Hurtbox")
 	hurtBox.area_entered.connect(_on_hurtbox_entered)
 	_apply_art_layout()
+	max_health = EricPacing.value("max_health")
+	boss_health = max_health
 
 	sprite_base_position = sprite.position
-	_build_health_bar()
+	var player := get_tree().current_scene.get_node_or_null(FightOutro.PLAYER_PATH)
+	if player and EricPacing.is_v2():
+		_add_break_gauge(player)
+	_build_hud()
 
-	music_player.stream = load("res://Assets/Audio/Music/boss_theme.ogg")
-	music_player.stream.loop = true
+	# Eric's own theme, "Ride for the King": written for this fight in Sonic Pi and recorded from
+	# it, so unlike the placeholder tracks it ships in the repo. One 16-bar cycle at 138 bpm cut on
+	# the downbeat, with the reverb tail wrapped over the start, so it loops with no seam. It loops
+	# because eric_theme.wav.import sets edit/loop_mode=2 over the whole sample: that importer enum
+	# lists Detect From WAV first, so 2 is Forward and 1 would be Disabled. Deliberately nothing is
+	# forced here - music_player.stream is the shared imported resource, so setting loop_mode on it
+	# would leak onto everything else that loads the same stream this session. A future .ogg cut of
+	# the theme needs loop=true in its own .import for the same reason.
+	music_player.stream = load(THEME)
+	music_player.volume_db = THEME_DB
 	hit_sfx_player.stream = load("res://Assets/Audio/SFX/hit_impact.ogg")
 	victory_sfx_player.stream = load("res://Assets/Audio/SFX/victory_fanfare.ogg")
+	# The cue that his chain is over and the window is open, played by EricStateMachine. Left at the
+	# file's own pitch: the hype meter's full cue is this same sting at 1.3, and these two must not
+	# read as the same sound.
+	downed_sfx_player.stream = load("res://Assets/Audio/SFX/downed_stinger.ogg")
+
+	# This fight tries the reworked feel out before the others (PlayerScript.feel_v2).
+	if player:
+		player.feel_v2 = true
+
+
+func _add_break_gauge(player: Node) -> void:
+	break_gauge = EricBreakGauge.new()
+	break_gauge.name = "BreakGauge"
+	break_gauge.boss = self
+	break_gauge.player = player
+	add_child(break_gauge)
+	break_gauge.broke.connect(_on_break)
+	for sting in EricArtLayout.BREAK_STING_SFX:
+		var sfx := AudioStreamPlayer.new()
+		sfx.stream = load(sting.stream)
+		sfx.pitch_scale = sting.pitch
+		sfx.volume_db = sting.volume_db
+		add_child(sfx)
+		break_sting_players.append(sfx)
+
+
+# The gauge fills inside physics flushes and his own physics steps, where his states can't switch.
+func _on_break() -> void:
+	state_machine.enter_broken.call_deferred()
+
+
+func is_broken() -> bool:
+	return state_machine.current_state == state_machine.states.get("Broken")
+
+
+# Down from a Break or a juggle, until he's up with his sword again.
+func is_down() -> bool:
+	return is_broken() or state_machine.current_state == state_machine.states.get("Juggled")
+
+
+func play_break_sting() -> void:
+	for sfx in break_sting_players:
+		sfx.play()
+
+
+# White over the whole view, fading in real time: it plays out through the Break's hit-stop.
+func flash_hud(color: Color, time: float) -> void:
+	var flash := ColorRect.new()
+	flash.color = color
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hud_layer.add_child(flash)
+	var fade := flash.create_tween().set_ignore_time_scale(true)
+	fade.tween_property(flash, "modulate:a", 0.0, time)
+	fade.tween_callback(flash.queue_free)
 
 
 func start_music() -> void:
@@ -94,7 +174,8 @@ func frame_point(pixel: Vector2) -> Vector2:
 func _apply_art_layout() -> void:
 	scale = Vector2(EricArtLayout.SCALE, EricArtLayout.SCALE)
 	sprite.hframes = EricArtLayout.SHEET_FRAMES
-	sprite.offset = EricArtLayout.SPRITE_OFFSET
+	sprite.position = EricArtLayout.SORT_POINT
+	sprite.offset = EricArtLayout.SPRITE_OFFSET - EricArtLayout.SORT_POINT
 	_fit_box($CollisionShape2D, EricArtLayout.BODY_BOX)
 	_fit_box($Hurtbox/CollisionShape2D, EricArtLayout.BODY_BOX)
 	_fit_box($GrabArea2D/CollisionShape2D, EricArtLayout.GRAB_BOX)
@@ -121,12 +202,13 @@ func take_punch(amount: int) -> int:
 	return _take_damage(amount)
 
 
-func _take_damage(amount: int) -> int:
+func _take_damage(amount: int, pitch := 1.0) -> int:
 	var dealt := mini(amount, boss_health)
 	boss_health -= dealt
 	print("Boss health: ", boss_health)
-	_update_health_bar()
+	_refresh_health_bar()
 	_hit_feedback()
+	hit_sfx_player.pitch_scale = pitch
 	hit_sfx_player.play()
 	return dealt
 
@@ -135,6 +217,7 @@ func _take_damage(amount: int) -> int:
 const PARRY_STAGGER_STATES := {
 	&"eric_thrown_sword": "SwordThrow",
 	&"eric_bear_hug_grab": "BearHug",
+	&"eric_bear_hug_grab_v2": "BearHug",
 }
 
 
@@ -158,29 +241,48 @@ func parry_stagger(duration: float) -> void:
 		state_machine.parry_stagger(duration, state.plant_spot)
 
 
-# The player's finisher (PlayerFinisher). The Downed window, and the stagger his own sword leaves him
-# in when a parry sends it back through him: that one fires the uppercut on its own. A parried bear
-# hug isn't one, its stumble is too short.
+# The player's finisher (PlayerFinisher). The Downed window, a Break until he gets up, and the stagger
+# his own sword leaves him in when a parry sends it back through him: that one fires the uppercut on
+# its own. A parried bear hug isn't one, its stumble is too short.
 func can_be_dazed() -> bool:
 	if defeated or boss_health <= 0 or daze_used:
 		return false
 	var state = state_machine.current_state
 	if state == state_machine.states.get("Downed"):
 		return true
+	# Getting his sword back, he's up and no longer open.
+	if state == state_machine.states.get("Broken"):
+		return not state.retrieving
 	return state == state_machine.states.get("ParryStaggered") and state.from_reflect
 
 
+# The reworked fight's finisher is the tiered one: a mash of up to three bars, then a juggle.
+func can_be_juggled() -> bool:
+	return EricPacing.is_v2() and not defeated and boss_health > 0
+
+
+# The finisher draws its own daze stars over Broken's.
 func enter_daze() -> void:
 	daze_used = true
+	if is_broken():
+		state_machine.current_state.show_stars(false)
 
 
-func exit_daze(_finisher_landed: bool) -> void:
-	pass
+func exit_daze(finisher_landed: bool) -> void:
+	if is_broken() and not finisher_landed:
+		state_machine.current_state.show_stars(true)
 
 
 func end_recovery(stagger_time: float) -> bool:
 	if defeated or boss_health <= 0:
 		return false
+	# Crashed from a juggle, he lies a beat before he gets up for his sword.
+	if state_machine.current_state == state_machine.states.get("Juggled"):
+		state_machine.current_state.recover(stagger_time)
+		return true
+	# Broken with his sword knocked into the mat, he gets up and calls it back first.
+	if is_broken() and state_machine.current_state.recover(stagger_time):
+		return true
 	state_machine.downed_state_timer.stop()
 	state_machine.start_chain(stagger_time)
 	# Idle raises his sword, as if he'd shrugged the uppercut off; he stays slumped through the stagger.
@@ -198,6 +300,47 @@ func get_max_health() -> int:
 	return max_health
 
 
+# The tiered finisher's juggle (PlayerFinisher): only the reworked fight has one.
+func begin_juggle() -> void:
+	state_machine.enter_juggled()
+
+
+func juggle_lift(px: float) -> void:
+	var juggled = state_machine.states["Juggled"]
+	if state_machine.current_state == juggled:
+		juggled.lift(px)
+
+
+func juggle_pose(pose: StringName, crater := false) -> void:
+	var juggled = state_machine.states["Juggled"]
+	if state_machine.current_state == juggled:
+		juggled.pose(pose, crater)
+
+
+# The most he can be lifted and still be seen whole: his top stays inside the arena, which is as far up
+# as the view can go.
+func juggle_headroom() -> float:
+	var ground_y: float = frame_point(Vector2(0, EricArtLayout.FEET_ROW)).y
+	var height: float = (EricArtLayout.FEET_ROW - EricArtLayout.juggle().top_row) * EricArtLayout.SCALE
+	return ground_y - height - EricArtLayout.JUGGLE_TOP_MARGIN
+
+
+# Past the hit cap, as take_finisher, with his hit sound pitched up a step each uppercut.
+func take_juggle_hit(amount: int, pitch: float) -> int:
+	return _take_damage(amount, pitch)
+
+
+func get_juggle_point() -> Vector2:
+	return state_machine.states["Juggled"].air_point()
+
+
+# A juggle that killed him lets him finish falling and crash before his line.
+func outro_line_delay(_player_won: bool) -> float:
+	if state_machine.current_state == state_machine.states.get("Juggled"):
+		return EricArtLayout.JUGGLE_OUTRO_DELAY
+	return 0.0
+
+
 # The uppercut shoves him back (PlayerFinisher). Each of his attacks takes its own starting spot as it
 # begins, and his hazards spawn where he is at the time, so he just fights on from where he lands.
 func knock_back(push: Vector2, time: float) -> void:
@@ -210,6 +353,8 @@ func knock_back(push: Vector2, time: float) -> void:
 
 
 func get_daze_anchor() -> Vector2:
+	if is_broken():
+		return state_machine.current_state.head_point()
 	return to_global(EricArtLayout.frame_local(EricArtLayout.DAZE_HEAD_PIXEL + Vector2(0.5, 0.5), sprite.flip_h))
 
 
@@ -217,58 +362,36 @@ func get_finisher_hurtbox() -> Area2D:
 	return $Hurtbox
 
 
-func _build_health_bar() -> void:
-	var layer := CanvasLayer.new()
-	add_child(layer)
-
-	name_label = Label.new()
-	name_label.text = GameProgress.boss_name(FIGHT_SCENE)
-	name_label.position = Vector2(770, 36)
-	name_label.theme = load("res://Assets/UI/ui_theme.tres")
-	name_label.add_theme_color_override("font_color", Color(1, 1, 1))
-	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	name_label.add_theme_constant_override("outline_size", 6)
-	layer.add_child(name_label)
-
-	health_bar = ProgressBar.new()
-	health_bar.min_value = 0
-	health_bar.max_value = max_health
-	health_bar.value = boss_health
-	health_bar.show_percentage = false
-	health_bar.size = Vector2(380, 22)
-	health_bar.position = Vector2(770, 70)
-
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.08, 0.08, 0.08, 0.85)
-	bg.set_corner_radius_all(3)
-	bg.border_width_left = 2
-	bg.border_width_right = 2
-	bg.border_width_top = 2
-	bg.border_width_bottom = 2
-	bg.border_color = Color(0, 0, 0)
-	health_bar.add_theme_stylebox_override("background", bg)
-
-	fill_style = StyleBoxFlat.new()
-	fill_style.bg_color = Color(0.85, 0.16, 0.16, 1)
-	fill_style.set_corner_radius_all(3)
-	health_bar.add_theme_stylebox_override("fill", fill_style)
-
-	layer.add_child(health_bar)
-
-
-func _update_health_bar() -> void:
+# His bar goes hot in two steps: caution as he drops past 0.6, then the rage chain's own threshold.
+func _refresh_health_bar() -> void:
 	if not health_bar:
 		return
-	var tween = create_tween()
-	tween.tween_property(health_bar, "value", boss_health, 0.2)
-
+	health_bar.set_value(0, boss_health)
 	var ratio := get_health_ratio()
-	if ratio <= 0.34:
-		fill_style.bg_color = Color(1.0, 0.55, 0.0, 1)  # rage orange
+	var heat := 0.0
+	if ratio <= EricPacing.value("rage_chain_health_ratio"):
+		heat = 1.0
 	elif ratio <= 0.6:
-		fill_style.bg_color = Color(0.95, 0.75, 0.1, 1)  # caution yellow
-	else:
-		fill_style.bg_color = Color(0.85, 0.16, 0.16, 1)  # normal red
+		heat = 0.5
+	health_bar.set_heat(0, heat)
+
+
+func _build_hud() -> void:
+	hud_layer = CanvasLayer.new()
+	add_child(hud_layer)
+
+	health_bar = BossHealthBarUI.create({
+		"rows": [{"key": &"eric", "max": max_health, "value": boss_health}],
+		"plate": &"eric",
+		"text": GameProgress.boss_name(FIGHT_SCENE),
+	})
+	hud_layer.add_child(health_bar)
+
+	if break_gauge:
+		var gauge_bar := BreakGaugeUI.new()
+		gauge_bar.gauge = break_gauge
+		hud_layer.add_child(gauge_bar)
+		gauge_bar.position = health_bar.break_gauge_anchor()
 
 
 func _hit_feedback() -> void:

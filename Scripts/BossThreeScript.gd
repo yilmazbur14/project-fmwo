@@ -12,6 +12,7 @@ extends Node2D
 # first - the player's job is just to not be standing there anymore.
 
 const FightOutro := preload("res://Scripts/FightOutro.gd")
+const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 # What Carter and Josh say once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/CarterAndJoshOutro.dialogue"
 # Carter and Josh are separate fights now, so this tag-team fight is no longer part of the
@@ -28,10 +29,8 @@ var damage_per_collision := 2
 @export var cycle_timer: Timer
 @export var post_dialogue_pre_fight_timer: Timer
 
-#UI (built at runtime - no new art needed)
-var health_bar: ProgressBar
-var name_label: Label
-var fill_style: StyleBoxFlat
+#UI (BossHealthBarUI builds it at runtime)
+var health_bar: Control
 
 #AUDIO
 @onready var music_player: AudioStreamPlayer = $MusicPlayer
@@ -50,7 +49,7 @@ const MIN_ARRIVAL := 0.24
 
 func _ready() -> void:
 	add_to_group(FightOutro.BOSS_GROUP)
-	_build_health_bar()
+	_build_hud()
 
 	music_player.stream = load("res://Assets/Audio/Music/boss3_theme.ogg")
 	if music_player.stream:
@@ -118,7 +117,7 @@ func on_wrestler_collision() -> void:
 
 	boss_health = max(boss_health - damage_per_collision, 0)
 	print("Boss health: ", boss_health)
-	_update_health_bar()
+	_refresh_health_bar()
 
 	if collision_sfx_player:
 		collision_sfx_player.play()
@@ -166,55 +165,29 @@ func on_player_defeated() -> void:
 		carter.stand_down()
 
 
-func _build_health_bar() -> void:
+# The bar goes hot in two steps: caution under 0.6 of the pair's health, then the last third.
+func _refresh_health_bar() -> void:
+	if not health_bar:
+		return
+	health_bar.set_value(0, boss_health)
+	var ratio := get_health_ratio()
+	var heat := 0.0
+	if ratio <= 0.34:
+		heat = 1.0
+	elif ratio <= 0.6:
+		heat = 0.5
+	health_bar.set_heat(0, heat)
+
+
+# The legacy pair, superseded by the Carter/Josh split: a keyless row and the Label, with no drawn
+# art of its own.
+func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
 
-	name_label = Label.new()
-	name_label.text = "CARTER & JOSH"
-	name_label.position = Vector2(700, 36)
-	name_label.theme = load("res://Assets/UI/ui_theme.tres")
-	name_label.add_theme_color_override("font_color", Color(1, 1, 1))
-	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	name_label.add_theme_constant_override("outline_size", 6)
-	layer.add_child(name_label)
-
-	health_bar = ProgressBar.new()
-	health_bar.min_value = 0
-	health_bar.max_value = max_health
-	health_bar.value = boss_health
-	health_bar.show_percentage = false
-	health_bar.size = Vector2(460, 22)
-	health_bar.position = Vector2(700, 70)
-
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.08, 0.08, 0.08, 0.85)
-	bg.set_corner_radius_all(3)
-	bg.border_width_left = 2
-	bg.border_width_right = 2
-	bg.border_width_top = 2
-	bg.border_width_bottom = 2
-	bg.border_color = Color(0, 0, 0)
-	health_bar.add_theme_stylebox_override("background", bg)
-
-	fill_style = StyleBoxFlat.new()
-	fill_style.bg_color = Color(0.75, 0.25, 0.65, 1)
-	fill_style.set_corner_radius_all(3)
-	health_bar.add_theme_stylebox_override("fill", fill_style)
-
+	health_bar = BossHealthBarUI.create({
+		"rows": [{"key": &"", "max": max_health, "value": boss_health}],
+		"plate": &"",
+		"text": "CARTER & JOSH",
+	})
 	layer.add_child(health_bar)
-
-
-func _update_health_bar() -> void:
-	if not health_bar:
-		return
-	var tween = create_tween()
-	tween.tween_property(health_bar, "value", boss_health, 0.2)
-
-	var ratio := get_health_ratio()
-	if ratio <= 0.34:
-		fill_style.bg_color = Color(1.0, 0.55, 0.0, 1)  # rage orange
-	elif ratio <= 0.6:
-		fill_style.bg_color = Color(0.95, 0.75, 0.1, 1)  # caution yellow
-	else:
-		fill_style.bg_color = Color(0.75, 0.25, 0.65, 1)  # normal

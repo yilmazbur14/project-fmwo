@@ -110,17 +110,17 @@ def _mirror_leg(l):
 
 # ---------------------------------------------------------------------------
 def _rig(pose):
-    armL = {                       # lat spread: out, down, elbow bent
-        "delt": (27.0, 34.0, 8.0, 7.5),
-        "uarm": ((27.0, 34.0), (18.0, 48.0), 7.5, 5.8),
-        "bice": (23.0, 40.0, 6.6, 6.0),
-        "farm": ((18.0, 48.0), (19.0, 62.0), 5.8, 4.8),
-        "fist": (20.0, 67.0, 5.0, 4.6),
+    armL = {                       # lat spread: out and down, elbow soft,
+        "delt": (27.0, 34.0, 8.2, 7.6),   # fist held AWAY from the thigh so
+        "uarm": ((27.0, 34.0), (18.5, 48.0), 7.6, 5.8),   # the arm/torso gap
+        "bice": (23.0, 40.0, 6.8, 6.2),   # reads as a triangle of daylight
+        "farm": ((18.5, 48.0), (13.5, 61.0), 5.8, 4.8),
+        "fist": (12.0, 66.0, 5.0, 4.6),
     }
-    legL = {
-        "thigh": ((41.0, 58.0), (39.5, 78.0), 7.2, 5.2),
-        "calf": ((39.5, 78.0), (38.5, 89.0), 5.2, 4.2),
-        "boot": (31.0, 86.0, 45.0, 95.0),
+    legL = {                       # real legs: length AND a bodybuilder's quads
+        "thigh": ((41.0, 58.0), (39.5, 77.0), 9.2, 6.0),
+        "calf": ((39.5, 77.0), (38.5, 87.0), 6.2, 4.6),
+        "boot": (31.0, 84.0, 45.0, 95.0),
     }
     r = {
         "head": (AX, 13.5, 8.5, 11.0),
@@ -157,16 +157,34 @@ def _rig(pose):
         }
         r["fore"] = "armR"
         r["chamber"] = ("armL",)
-        r["legL"] = {"thigh": ((41.0, 58.0), (36.0, 78.0), 7.2, 5.2),
-                     "calf": ((36.0, 78.0), (34.5, 89.0), 5.2, 4.2),
-                     "boot": (27.0, 86.0, 41.0, 95.0)}
-        r["legR"] = {"thigh": ((53.0, 58.0), (58.5, 78.0), 7.0, 5.0),
-                     "calf": ((58.5, 78.0), (60.0, 89.0), 5.0, 4.0),
-                     "boot": (53.0, 86.0, 67.0, 95.0)}
+        r["legL"] = {"thigh": ((41.0, 58.0), (36.0, 77.0), 9.2, 6.0),
+                     "calf": ((36.0, 77.0), (34.5, 87.0), 6.2, 4.6),
+                     "boot": (27.0, 84.0, 41.0, 95.0)}
+        r["legR"] = {"thigh": ((53.0, 58.0), (58.5, 77.0), 9.0, 5.8),
+                     "calf": ((58.5, 77.0), (60.0, 87.0), 6.0, 4.4),
+                     "boot": (53.0, 84.0, 67.0, 95.0)}
     return r
 
 
 # ---------------------------------------------------------------------------
+def _fist_shape(fist, kind):
+    """A fist is a squared-off block, not a ball - a round skin shape with
+    two marks in it reads as a face at 1x, every time.
+
+      front  thrust at the camera: wider than tall, knuckle row on top
+      side   chambered at the ribs, seen thumb-side
+      hang   at the end of a hanging arm, fingers curled under
+    """
+    fx, fy, frx, fry = [float(v) for v in fist]
+    if kind == "front":
+        w, h, rr = frx * 1.08, fry * 0.78, 3.5
+    elif kind == "side":
+        w, h, rr = frx * 1.18, fry * 0.84, 2.6
+    else:
+        w, h, rr = frx * 0.92, fry * 1.04, 2.4
+    return RoundRect(fx - w, fy - h, fx + w, fy + h, r=rr, round_r=4.0)
+
+
 def _mass(c, shape, mat, prio, wrap=0.56, amb=0.10):
     c.add(shape, mat, prio=prio, wrap=wrap, amb=amb)
 
@@ -212,13 +230,13 @@ def build(pose="hero"):
         legs.append(leg)
 
     # ---- trunks ---------------------------------------------------------
-    tx = AX - 13 + L
+    # clean boxing-trunk hem: one straight edge across both thighs, inked.
+    # (Ripped shorts are Danny's - Greyson's hem stays tidy.)
+    tx = AX - 14 + L
     trunk_poly = Poly([(tx, ty0 - 1), (2 * AX - tx, ty0 - 1),
-                       (2 * AX - tx + 1, ty0 + 4), (2 * AX - tx + 1, ty1 + 2),
-                       (AX + 7, ty1 + 3), (AX + 4.5, ty1 - 1), (AX, ty1 + 1),
-                       (AX - 4.5, ty1 - 1), (AX - 7, ty1 + 3),
-                       (tx - 1, ty1 + 2), (tx - 1, ty0 + 4)], round_r=5)
-    _mass(c, Clip(Union([hips] + legs, k=2.0), trunk_poly), "trunk", 5)
+                       (2 * AX - tx + 1, ty1), (tx - 1, ty1)], round_r=5)
+    trunks = Clip(Union([hips] + legs, k=2.0), trunk_poly)
+    _mass(c, trunks, "trunk", 5)
 
     for key in ("legL", "legR"):
         b = r[key]["boot"]
@@ -239,13 +257,13 @@ def build(pose="hero"):
         inked.append((upper, prio))
         if key in (r["fore"],) + tuple(r["chamber"]):
             fore = Capsule(a["farm"][0], a["farm"][1], a["farm"][2], a["farm"][3])
-            fist = Ellipse(*a["fist"])
+            fist = _fist_shape(a["fist"], "front" if key == r["fore"] else "side")
             _mass(c, fore, "skin", prio + 1)
             _mass(c, fist, "skin", prio + 2)
             inked += [(fore, prio + 1), (fist, prio + 2)]
         else:
             lower = Union([Capsule(a["farm"][0], a["farm"][1], a["farm"][2], a["farm"][3]),
-                           Ellipse(*a["fist"])], k=1.8)
+                           _fist_shape(a["fist"], "hang")], k=1.8)
             _mass(c, lower, "skin", prio + 1)
             inked.append((lower, prio + 1))
 
@@ -260,6 +278,7 @@ def build(pose="hero"):
     for shp, prio in inked:
         c.contour(shp, 1.3, color=OUTLINE, below_prio=prio)
     c.contour(head, 1.3, color=OUTLINE, below_prio=18)
+    c.contour(trunks, 1.2, color=OUTLINE, below_prio=5)
 
     c.occlude(strength=2, reach=1)
     c.rim(1, mats=("skin", "hair", "trunk", "boot"))
@@ -303,17 +322,65 @@ def _details(c, r, L, ty0, ty1):
         c.shade_px(polyline([(ex + (fx2 - ex) * .3, ey + (fy2 - ey) * .3),
                              (ex + (fx2 - ex) * .8 - 1, ey + (fy2 - ey) * .8)]),
                    1, "skin")
-        fx, fy, frx, fry = [float(v) for v in a["fist"]]
-        big = frx > 7.0
-        for k in range(-1, 2 if big else 1):
-            gx = int(round(fx + (k + (0.5 if big else 0.0)) * frx * 0.5))
-            c.raw_px([(gx, int(fy) - 1), (gx, int(fy)), (gx, int(fy) + 1)], OUTLINE)
+        if key == r["fore"]:
+            kind = "front"
+        elif key in r["chamber"]:
+            kind = "side"
+        else:
+            kind = "hang"
+        _fist_marks(c, a["fist"], kind, -1.0 if a["delt"][0] < AX else 1.0)
 
     for key in ("legL", "legR"):
         b = r[key]["boot"]
         x0, x1, y1 = int(b[0]), int(b[2]), int(b[3])
         c.raw_px([(x, y1 - 2) for x in range(x0, x1 + 1)], OUTLINE)
         c.raw_px([(x, int(b[1]) + 2) for x in range(x0 + 1, x1)], OUTLINE)
+
+
+def _fist_marks(c, fist, kind, sgn):
+    """Every mark on a fist runs out to the fist's own edge.  A mark that
+    floats in the middle of a round skin shape is an eye."""
+    fx, fy, frx, fry = [float(v) for v in fist]
+    if kind == "front":
+        w, h = frx * 1.08, fry * 0.78
+        x0, x1 = int(round(fx - w)), int(round(fx + w))
+        y0, y1 = int(round(fy - h)), int(round(fy + h))
+        crease = int(round(y0 + (y1 - y0) * 0.58))
+        # four fingers: three long dividers from the top edge down to the
+        # thumb crease, with a knuckle catch-light on each finger
+        for k in (1, 2, 3):
+            gx = int(round(x0 + (x1 - x0) * k / 4.0))
+            c.raw_px([(gx, y) for y in range(y0, crease)], OUTLINE)
+        for k in range(4):
+            kx = int(round(x0 + (x1 - x0) * (k + 0.5) / 4.0))
+            c.shade_px([(kx, y0 + 1), (kx - 1, y0 + 1)], -2, "skin")
+        # thumb wrapped across the bottom, crease running edge to edge
+        c.raw_px([(x, crease) for x in range(x0, x1 + 1)], OUTLINE)
+        c.shade_px([(x, y) for x in range(x0 + 2, int(fx) + 3)
+                    for y in range(crease + 1, crease + 3)], -1, "skin")
+    elif kind == "side":
+        w, h = frx * 1.18, fry * 0.84
+        x0, x1 = int(round(fx - w)), int(round(fx + w))
+        y0, y1 = int(round(fy - h)), int(round(fy + h))
+        front = x1 - 3 if sgn < 0 else x0 + 3       # knuckles face the punch
+        c.raw_px([(front, y) for y in range(y0, y1 + 1)], OUTLINE)
+        thumb_y = y0 + 2
+        span = range(min(front, int(fx)), max(front, int(fx)) + 1)
+        c.raw_px([(x, thumb_y) for x in span], OUTLINE)
+        c.shade_px([(x, thumb_y - 1) for x in span], -2, "skin")
+    else:
+        w, h = frx * 0.92, fry * 1.04
+        x0, x1 = int(round(fx - w)), int(round(fx + w))
+        y1 = int(round(fy + h))
+        # fingers curled under: three short gaps rising from the bottom edge
+        for k in (1, 2, 3):
+            gx = int(round(x0 + (x1 - x0) * k / 4.0))
+            c.raw_px([(gx, y1), (gx, y1 - 1), (gx, y1 - 2)], OUTLINE)
+        # thumb crease on the side facing the body, touching that edge
+        ex = x1 if sgn < 0 else x0
+        step = -1 if sgn < 0 else 1
+        c.raw_px([(ex, int(fy) - 1), (ex + step, int(fy)), (ex + 2 * step, int(fy))],
+                 OUTLINE)
 
 
 CONTACT = {"windup": None}   # filled in below from the rig

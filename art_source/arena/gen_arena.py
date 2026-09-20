@@ -6,7 +6,7 @@ Authors the ring mat and the ringside surround as pixel art on a 3x grid
 640x40 per frame drawn at scale 3) and the bosses (scale 3).
 
   full screen  = 640 x 360 art px  -> 1920 x 1080
-  mat          = 564 x 284 art px  -> 1692 x  852, anchored at screen (111,114)
+  mat          = 565 x 285 art px  -> 1695 x  855, anchored at screen (111,114)
 
 Nothing here writes into the project's Assets folder or touches any scene.
 
@@ -28,13 +28,24 @@ SCALE = 3
 ART = (SCREEN[0] // SCALE, SCREEN[1] // SCALE)          # 640 x 360
 
 MAT_ANCHOR = (111, 114)                 # snapped to the 3x grid
-MAT_ART = (564, 284)
+# The visible mat is screen x 113..1804, y 114..966. On the 3x grid the
+# nearest cover is 565x285 art px from (111,114): it overdraws x 111-112,
+# x 1805 and y 967-968, all hidden under the rope sprites. 564x284 leaves
+# black seams at x 1803-1804 and y 966.
+MAT_ART = (565, 285)
 CROWD_BOTTOM = 119                      # crowd band owns screen y 0..119
 CROWD_Y = (CROWD_BOTTOM + 1) // SCALE   # 40 in art px
 
 # the ring, in art px: everything inside is mat, everything outside is ringside
-RING_X0, RING_X1 = 31, ART[0] - 32      # 31 .. 608
+# the hole in the ringside frame. Its right edge stops at art 607 (screen
+# 1823) so the apron starts under the right rope - at 608 it left a 1px black
+# seam at screen x 1826.
+RING_X0, RING_X1 = 31, ART[0] - 33      # 31 .. 607
 RING_Y1 = 328
+
+# the black-white-black rope sprites, measured off the render (inclusive)
+ROPE_BANDS = ((92, 93, 112, 987), (1805, 93, 1825, 987),     # left, right
+              (92, 93, 1825, 113), (92, 967, 1825, 987))     # top, bottom
 
 MAT_GREEN = (136, 180, 99)
 APRON_GREEN = (113, 152, 79)
@@ -138,6 +149,9 @@ def ring_dist(x, y):
 # --------------------------------------------------------------------------
 # palettes - three directions
 # --------------------------------------------------------------------------
+# The user approved direction A without changes (2026-09-18). --final ships exactly this.
+APPROVED = "a"
+
 DIRECTIONS = {
     # A: keeps today's exact green as the base tone. Worn wrestling canvas.
     "a": dict(
@@ -191,7 +205,7 @@ DIRECTIONS = {
 # THE MAT
 # ==========================================================================
 def build_mat(cfg, seed=7):
-    """564x284 art px. Tight value range: texture must sit UNDER the fight."""
+    """565x285 art px. Tight value range: texture must sit UNDER the fight."""
     w, h = MAT_ART
     img = Image.new("RGB", (w, h), cfg["mat_ramp"][3])
     px = img.load()
@@ -611,6 +625,14 @@ def composite(render, bg):
                     if 0 <= xx < W:
                         r[xx] = True
 
+    # the rope assembly draws above the mat and the frame in the scene tree,
+    # so every pixel of it survives whole, black outline included
+    for (x0, y0, x1, y1) in ROPE_BANDS:
+        for y in range(max(y0, CROWD_BOTTOM + 1), y1 + 1):
+            r = dil[y]
+            for x in range(x0, x1 + 1):
+                r[x] = True
+
     for y in range(CROWD_BOTTOM + 1, H):
         for x in range(W):
             if not dil[y][x]:
@@ -632,11 +654,24 @@ def report_range(name, img):
 # ==========================================================================
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--render", required=True, help="dir holding arena000000NN.png")
+    ap.add_argument("--render", help="dir holding arena000000NN.png (mockups only)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--frame", default="arena00000015.png")
+    ap.add_argument("--final", action="store_true",
+                    help="write only the approved direction's two textures, at 1x, as "
+                         "arena_mat.png and arena_ringside.png (build_final.py drives this)")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
+
+    if args.final:
+        cfg = DIRECTIONS[APPROVED]
+        build_mat(cfg).save(os.path.join(args.out, "arena_mat.png"))
+        build_ringside(cfg).save(os.path.join(args.out, "arena_ringside.png"))
+        print("final textures:", cfg["name"])
+        return
+
+    if not args.render:
+        ap.error("--render is required to build the mockups")
     render = Image.open(os.path.join(args.render, args.frame)).convert("RGB")
 
     for key, cfg in DIRECTIONS.items():

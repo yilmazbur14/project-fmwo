@@ -39,6 +39,7 @@ extends Node
 @export var finisher_stagger_timer: Timer
 @export var beat_timer: Timer
 
+const VsCard := preload("res://Scripts/VsCard.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/GreysonAndComputahPreFightDialogue.dialogue"
 const HAZARD_GROUP := "greyson_computah_hazard"
@@ -198,7 +199,7 @@ func show_pre_fight_dialogue() -> void:
 
 
 func _on_dialogue_ended(_dialogue: Object) -> void:
-	post_dialogue_pre_fight_timer.start(intro_beat)
+	VsCard.play_intro(self, "greyson", post_dialogue_pre_fight_timer.start.bind(intro_beat))
 
 
 func _on_post_dialogue_pre_fight_timer_timeout() -> void:

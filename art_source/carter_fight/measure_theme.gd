@@ -51,7 +51,7 @@ func _time_load() -> void:
 	start = Time.get_ticks_usec()
 	var again: AudioStream = load(TRACK)
 	var cached := (Time.get_ticks_usec() - start) / 1000.0
-	print("load from disk %.1f ms, from cache %.2f ms, length %.1f s (%s)"
+	print("load from disk %.1f ms, from cache %.2f ms, length %.4f s (%s)"
 		% [loaded, cached, stream.get_length(), "same resource" if again == stream else "reloaded"])
 
 

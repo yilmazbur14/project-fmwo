@@ -4,7 +4,8 @@ extends SceneTree
 #   Godot.exe --headless --fixed-fps 60 --script res://art_source/mason_tuning/verify_mason_tuning.gd -- <mode> <phase>
 # Modes: poo (density, pacing and free space of the bomb lines), reach (can a player in the far
 # corner make the start of a line before its first bomb goes off), carter (call-in geometry and
-# cadence), nuggets (shower density and free space), gaps (what nothing can reach, on paper).
+# cadence), nuggets (shower density and free space), gaps (what nothing can reach, on paper),
+# music (which theme the fight loaded, at what level, where it loops, and that a win stops it).
 
 const FIGHT := "res://Scenes/Bosses/MasonBossFightScene.tscn"
 const PLAYER_PATH := "Arena/MainPlayer/CharacterBody2D"
@@ -117,6 +118,8 @@ func _launch() -> void:
 	elif mode == "nuggets":
 		sm.on_child_transition(sm.current_state, "NuggetShower")
 	print("mode %s, phase %d" % [mode, phase + 1])
+	if mode == "music":
+		_report_music()
 	if mode == "poo" or mode == "reach":
 		print("  bomb_spacing %.0f  waddle_speed %.0f  fuse_delay %.2f  detonate_interval %.2f  lines %d" % [
 			sm.bomb_spacing[phase], sm.waddle_speed[phase], sm.fuse_delay[phase],
@@ -183,6 +186,18 @@ func _finished(hazards: Dictionary) -> bool:
 			if clock > 4.0:
 				print("  beaten mid-line: %d bombs, %d rings, %d nuggets left over" % [
 					hazards.bombs.size(), hazards.rings.size(), hazards.nuggets.size()])
+				return true
+			return false
+		"music":
+			# The theme is up from the start of the fight, and a win stops it for the fanfare.
+			if clock < 0.1:
+				boss.start_music()
+			if clock > 1.0 and not boss.defeated:
+				print("  fight started: music playing %s" % boss.music_player.playing)
+				boss.take_finisher(boss.boss_health)
+			if clock > 1.5:
+				print("  after the win: music playing %s, fanfare playing %s" % [
+					boss.music_player.playing, boss.victory_sfx_player.playing])
 				return true
 			return false
 	return false
@@ -451,6 +466,31 @@ func _print_free() -> void:
 	print("  free standing cells (%.0f px grid): %d of %d at worst (t %.2f), biggest open patch %d cells; %.0f%% free on average" % [
 		GRID_STEP, worst_free, _grid_cells(), worst_free_at, worst_region, 100.0 * free_total / maxi(samples * _grid_cells(), 1)])
 	print("  furthest the player was ever from a safe spot: %.0f px (t %.2f)" % [furthest_from_free, furthest_at])
+
+
+# What _ready() set the theme up as, and what that very stream does where it loops: mixed offline, so
+# no audio device is needed.
+func _report_music() -> void:
+	var music: AudioStreamPlayer = boss.music_player
+	var stream: AudioStream = music.stream
+	print("  theme %s at %.1f dB, loop %s" % [stream.resource_path.get_file(), music.volume_db, stream.loop])
+	if not stream is AudioStreamMP3 or stream.beat_count == 0:
+		print("  loops end to start, at %.2f s" % stream.get_length())
+		return
+	var loop_at: float = stream.beat_count * 60.0 / stream.bpm
+	print("  loops after %d beats at %.1f BPM: %.3f s, %.2f s before the file ends" % [
+		stream.beat_count, stream.bpm, loop_at, stream.get_length() - loop_at])
+	var playback := stream.instantiate_playback()
+	playback.start(loop_at - 1.0)
+	var window := int(0.05 * AudioServer.get_mix_rate())
+	var quietest := 0.0
+	for w in 40:
+		var sum := 0.0
+		for frame in playback.mix_audio(1.0, window):
+			sum += frame.x * frame.x + frame.y * frame.y
+		quietest = minf(quietest, 10.0 * log(sum / (window * 2) + 1e-12) / log(10.0))
+	print("  1 s either side of the loop in 50 ms windows: %d loop(s), quietest window %.1f dB" % [
+		playback.get_loop_count(), quietest])
 
 
 # What each attack can never touch, from the bounds alone.

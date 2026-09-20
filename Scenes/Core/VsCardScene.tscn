@@ -1,0 +1,62 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/VsCard.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://dnd78vy0t1wm3" path="res://Assets/UI/ui_theme.tres" id="2_theme"]
+
+[node name="VsCard" type="CanvasLayer"]
+layer = 110
+visible = false
+script = ExtResource("1_script")
+
+[node name="Back" type="Control" parent="."]
+editor_description = "The darkening and the letterbox: full screen, so they never take the knock the band does."
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Dim" type="ColorRect" parent="Back"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Letterbox" type="Control" parent="Back"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Top" type="ColorRect" parent="Back/Letterbox"]
+editor_description = "The four letterbox strips: VsCardArtLayout places and colours them."
+mouse_filter = 2
+
+[node name="TopRule" type="ColorRect" parent="Back/Letterbox"]
+mouse_filter = 2
+
+[node name="Bottom" type="ColorRect" parent="Back/Letterbox"]
+mouse_filter = 2
+
+[node name="BottomRule" type="ColorRect" parent="Back/Letterbox"]
+mouse_filter = 2
+
+[node name="Card" type="Control" parent="."]
+editor_description = "Everything the card is drawn from, built per play from VsCardArtLayout's table. Unanchored: the knock the VS lands with moves it."
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+theme = ExtResource("2_theme")
+
+[node name="Flash" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

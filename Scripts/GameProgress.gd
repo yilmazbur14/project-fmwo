@@ -38,6 +38,10 @@ const RESULT_SCENES: Array[String] = [
 # result screen); -1 for anything outside the order.
 var fight_index := -1
 var bosses_cleared := 0
+# Fight scenes whose boss entrance has already played this run (BossEntrance.already_seen). It lives
+# here because this is an autoload: a retry after a loss reloads the fight scene, and nobody wants to
+# watch the same walk-in twice in a row.
+var entrances_seen := {}
 
 
 func _ready() -> void:
@@ -49,6 +53,7 @@ func _ready() -> void:
 func reset_progress() -> void:
 	fight_index = -1
 	bosses_cleared = 0
+	entrances_seen.clear()
 
 
 # Returns how many bosses the Victory screen's ladder should show as beaten.

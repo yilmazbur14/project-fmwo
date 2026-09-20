@@ -2,9 +2,12 @@ extends RefCounted
 
 # Stops a fight in place around the player. The fight scene is disabled, which stops every boss,
 # Timer, AnimationPlayer, node-bound tween and hazard under it and takes their collision out of
-# physics; the kept branches are set to always process, so they carry on. A Timer keeps its time
+# physics; the kept branches get their own process mode, so they carry on. A Timer keeps its time
 # left, so a boss's punish window resumes where it stopped. SceneTree timers and tweens aren't
 # stopped. Not SceneTree.paused: that would also stop the player's physics and FightOutro's lines.
+#
+# The kept branches are PAUSABLE rather than ALWAYS so that the pause screen still reaches them: a
+# fight paused mid-finisher must stop the player, the crowd and the music too.
 
 const CROWD_GROUP := "arena_crowd"
 
@@ -31,7 +34,7 @@ static func freeze(tree: SceneTree, keep: Array) -> bool:
 	# Kept branches first: a mode change only passes down to children that inherit theirs, so the
 	# disable never reaches them and the player never leaves the physics world.
 	for pair in kept:
-		pair[0].process_mode = Node.PROCESS_MODE_ALWAYS
+		pair[0].process_mode = Node.PROCESS_MODE_PAUSABLE
 	frozen_scene = scene
 	scene_mode = scene.process_mode
 	scene.process_mode = Node.PROCESS_MODE_DISABLED

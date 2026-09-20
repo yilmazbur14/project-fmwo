@@ -18,18 +18,35 @@ extends Node
 #     get_daze_anchor() -> Vector2       where the stars circle, about 34 px above the head
 #     get_finisher_hurtbox() -> Area2D   with its shape in a child named CollisionShape2D
 # besides the `sprite` and get_health_ratio() every boss has.
+# Against a boss that can also be juggled, in a fight on the player's feel_v2, the mash is tiered
+# instead: three bars (FinisherTierMeter), then an uppercut for each bar banked, each one throwing him
+# higher, until he crashes. Such a boss also implements:
+#     can_be_juggled() -> bool           asked as the daze starts
+#     begin_juggle()                     at the first uppercut's contact, as the fight unfreezes
+#     juggle_lift(px: float)             his height over his ground line, on his sprite alone
+#     juggle_pose(pose: StringName, crater := false)
+#                                        &"launch" at each contact, &"crash" as he lands
+#     juggle_headroom() -> float         the most he can be lifted and still be seen whole
+#     take_juggle_hit(amount: int, pitch: float) -> int
+#                                        take_finisher, with his hit sound at `pitch`
+#     get_juggle_point() -> Vector2      his middle in the air, which the camera follows
+# and his end_recovery() then comes as he crashes rather than at contact.
 
 signal prompt_shown
 signal meter_changed(meter: float, next_action: StringName)
 signal charge_ended(filled: bool)
 signal finished
+signal tier_banked(tier: int)
+signal juggle_hit(index: int, last: bool)
 
 const FightFreeze := preload("res://Scripts/FightFreeze.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
 const HitStop := preload("res://Scripts/HitStop.gd")
 const FinisherArtLayout := preload("res://Scripts/FinisherArtLayout.gd")
+const FinisherTierMeter := preload("res://Scripts/FinisherTierMeter.gd")
 
-enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE }
+# JUGGLE_FALL: the juggle's last uppercut has landed and the boss is still falling.
+enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE, JUGGLE_FALL }
 
 # Seconds are game time unless noted.
 # Time for the charged punch's hit-stop, flash and shake to play out before the fight stops.
@@ -88,6 +105,57 @@ enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE }
 # After the finisher, punch and dodge presses are swallowed for this long, so leftover mashing can't
 # throw a punch or spend the next dash's immunity.
 @export var post_input_lock := 0.2
+# After a feel_v2 mash, whose keys (the arrows, the bumpers) movement and the guard share: while any is
+# still held, up to this long, movement reads nothing and a held guard stays down (PlayerScript), so
+# the key the player was last hammering doesn't walk them off or raise their guard.
+@export var mash_release_latch := 1.0
+
+# The tiered mash (FinisherTierMeter). At about 7.0, 9.4 and 10.9 alternating presses a second each bar
+# fills inside its window: presses every 8, 6 and 5 frames reach tiers 1, 2 and 3, and every 9, 7 and 6
+# don't, each at least 1.3 press intervals clear of its window either way (mash_tiers). Windows 2 and 3
+# are under the plan's 1.2 and 1.05 s because the drain can't take the meter back under a bar that has
+# just banked, so the next bar fills a press sooner than the plan's maths had it.
+@export var tier_gain := 0.20
+@export var tier_drains: Array[float] = [0.75, 1.0, 1.2]
+@export var tier_windows: Array[float] = [1.30, 1.06, 0.92]
+@export var tier_start_grace := 1.0
+@export var tier_idle_stop := 0.5
+# The charge builds with m_s: the banked bars, or the meter smoothed over meter_smoothing if higher.
+@export var meter_smoothing := 0.12
+@export var charge_zoom := 1.40
+@export var charge_zoom_per_bar := 0.12
+# A px rattle, reissued every rumble_step real seconds.
+@export var charge_rumble := 1.5
+@export var charge_rumble_per_bar := 3.0
+@export var rumble_step := 0.05
+# As each bar banks: a kick over bank_kick_steps, and the crowd.
+@export var bank_kicks: Array[float] = [8.0, 12.0, 16.0]
+@export var bank_kick_steps := 6
+@export var bank_cheers: Array[float] = [1.0, 1.5, 2.5]
+# The juggle: each uppercut a share of max health, at least 1, the last one supercharge_bonus more with
+# a full hype meter at the daze.
+@export var juggle_shares: Array[float] = [0.15, 0.10, 0.15]
+@export var supercharge_bonus := 0.10
+# Into the land frame before the next uppercut launches, so they connect 0.55 s apart.
+@export var relaunch_delay := 0.08
+# The boss's flight, px/s up and px/s/s down: for an uppercut more follow, by uppercut, and for the last
+# one, by uppercut. Each hit before the last catches him about 100 px up.
+@export var juggle_gravity := 2900.0
+@export var juggle_launches: Array[float] = [980.0, 800.0]
+@export var juggle_last_launches: Array[float] = [900.0, 900.0, 1100.0]
+@export var juggle_hit_stops: Array[float] = [0.10, 0.10, 0.35]
+# From the first contact the view eases to juggle_zoom, between the player and the boss in the air, and
+# follows them; after the crash it eases back out.
+@export var juggle_zoom := 1.45
+@export var juggle_zoom_in_time := 0.25
+@export var juggle_zoom_out_time := 0.45
+@export var crash_shake := 18.0
+@export var special_crash_shake := 34.0
+@export var crash_shake_steps := 8
+# How long the boss takes to get up and attack again after he crashes, longer after the third uppercut
+# or a supercharged one.
+@export var juggle_recovery := 1.5
+@export var long_juggle_recovery := 2.0
 
 # Straight above or below the boss's middle, the player keeps the side they were facing.
 const SIDE_DEAD_ZONE := 8.0
@@ -100,6 +168,9 @@ const HOP_BOUNCE_TEXELS := 2
 const HOP_BOUNCE_TIME := 0.1
 # Summed frame deltas land a hair short of a step's start, which would hold a 3-frame step a frame long.
 const STEP_TOLERANCE := 0.001
+# The ground layer's y: one px below the top edge of the arena floor, where the fights keep their own
+# floor layers, so a y-sorted fight sorts it over the mat and under every character.
+const GROUND_FX_Y := 101.0
 
 @onready var player: CharacterBody2D = get_parent()
 @onready var fx_layer: Node2D = player.get_parent().get_node("FinisherFx")
@@ -130,6 +201,49 @@ var auto_hold := 0.0
 # Decided when the daze starts: nothing can hit the player during the finisher, so the hype it needs
 # can't drain in between. PlayerFinishing reads it for the recoloured sheet.
 var supercharged := false
+# Whether this finisher asked for a mash: only then is a key held at its end left over from mashing.
+var mashed := false
+var latch_left := 0.0
+# The tiered mash and the juggle it pays out.
+var tiered := false
+var tier_meter: RefCounted
+var smoothed_meter := 0.0
+# m_s, what the charge builds with.
+var charge_level := 0.0
+var charge_time := 0.0
+var charge_zoom_from := 1.0
+var charge_focus_from := Vector2.ZERO
+var rumble_left := 0.0
+var kick_left := 0.0
+var juggle_tiers := 0
+var juggle_index := 0
+# Whether another uppercut can follow: a whiff or a kill stops the juggle.
+var juggle_goes_on := false
+var juggling := false
+# The third uppercut, Knight Breaker.
+var special := false
+# Whether the last contact was Knight Breaker's or a supercharged one.
+var last_hit_big := false
+# The boss's height over his ground line in px, before lift_scale, and the arc he's on.
+var lift := 0.0
+var lift_scale := 1.0
+var arc_from := 0.0
+var arc_speed := 0.0
+var arc_time := 0.0
+var airborne := false
+var camera_time := 0.0
+var camera_zoom_from := 1.0
+var camera_focus_from := Vector2.ZERO
+# Knight Breaker's zoom punch, on top of the juggle's zoom.
+var punch_zoom := 1.0
+var punch_tween: Tween
+var charge_loop: AudioStreamPlayer
+var bar_sounds: Array[AudioStreamPlayer] = []
+var knight_breaker_sound: AudioStreamPlayer
+
+# In a feel_v2 fight the mash runs on keys movement and the guard share, so while it runs they are
+# kept from everything else.
+const V2_MASH_SWALLOWS: Array[StringName] = [&"mash_left", &"mash_right", &"move_up", &"move_down", &"move_left", &"move_right", &"block"]
 
 
 func _ready() -> void:
@@ -140,6 +254,18 @@ func _ready() -> void:
 	super_sfx_player.stream = load(impact.stream)
 	super_sfx_player.pitch_scale = impact.pitch
 	super_sfx_player.volume_db = impact.volume_db
+	charge_loop = _add_sound(FinisherArtLayout.CHARGE_LOOP_SFX)
+	for path in FinisherArtLayout.BAR_SFX:
+		bar_sounds.append(_add_sound(path))
+	knight_breaker_sound = _add_sound(FinisherArtLayout.KNIGHT_BREAKER_SFX)
+
+
+# Under this node, in the player's branch, so they play on through the freeze.
+func _add_sound(path: String) -> AudioStreamPlayer:
+	var sound := AudioStreamPlayer.new()
+	sound.stream = load(path)
+	add_child(sound)
+	return sound
 
 
 func is_active() -> bool:
@@ -148,6 +274,18 @@ func is_active() -> bool:
 
 func is_input_locked() -> bool:
 	return input_lock_left > 0.0
+
+
+# The pair the mash alternates between. A fight on the player's feel_v2 mashes on its own keys, the
+# arrows or the bumpers, clear of attack and dash; every other fight mashes attack and dash.
+func mash_actions() -> Array[StringName]:
+	if player.feel_v2:
+		return [&"mash_left", &"mash_right"]
+	return [&"punch", &"dodge"]
+
+
+func is_mash_latched() -> bool:
+	return latch_left > 0.0
 
 
 func charge_time_left() -> float:
@@ -165,18 +303,29 @@ func _exit_tree() -> void:
 
 func _input(event: InputEvent) -> void:
 	var action := &""
-	if event.is_action_pressed("punch"):
-		action = &"punch"
-	elif event.is_action_pressed("dodge"):
-		action = &"dodge"
-	if action.is_empty() or (phase == Phase.OFF and not is_input_locked()):
+	for candidate in mash_actions():
+		if action.is_empty() and event.is_action_pressed(candidate):
+			action = candidate
+	var attack_or_dash := event.is_action_pressed("punch") or event.is_action_pressed("dodge")
+	if phase == Phase.OFF:
+		if not (attack_or_dash and is_input_locked()):
+			return
+	elif action.is_empty() and not attack_or_dash and not (player.feel_v2 and _v2_swallows(event)):
 		return
 	# Before the event is marked handled: the autoload's device tracker sits below this node in the
 	# propagation order and would never see the presses that drive the mash.
 	InputSettings.note_device(event)
 	get_viewport().set_input_as_handled()
-	if (phase == Phase.DAZED and prompt_visible) or phase == Phase.CHARGING:
+	if not action.is_empty() and ((phase == Phase.DAZED and prompt_visible) or phase == Phase.CHARGING):
 		_press(action)
+
+
+func _v2_swallows(event: InputEvent) -> bool:
+	return V2_MASH_SWALLOWS.any(func(swallowed: StringName) -> bool: return event.is_action(swallowed))
+
+
+func _mash_keys_held() -> bool:
+	return mash_actions().any(func(action: StringName) -> bool: return Input.is_action_pressed(action))
 
 
 # The hit is reported inside a physics flush, where collision can't be taken out of physics.
@@ -218,10 +367,13 @@ func begin_auto(target: Node, hold := 0.35) -> bool:
 func _process(delta: float) -> void:
 	if phase == Phase.OFF:
 		input_lock_left = maxf(input_lock_left - delta, 0.0)
+		# Letting go of every mash key ends it early: from then on a press is meant.
+		if latch_left > 0.0:
+			latch_left = maxf(latch_left - delta, 0.0) if _mash_keys_held() else 0.0
 		return
 	phase_time += delta
-	# The uppercut always plays out to its landing, even past a kill.
-	if phase != Phase.UPPERCUT and (player.fight_over or not _boss_valid()):
+	# The uppercut always plays out to its landing, and a juggled boss to his, even past a kill.
+	if phase != Phase.UPPERCUT and phase != Phase.JUGGLE_FALL and (player.fight_over or not _boss_valid()):
 		_abort()
 		return
 	match phase:
@@ -238,12 +390,22 @@ func _process(delta: float) -> void:
 					_start_charging()
 			elif not prompt_visible and daze_time >= prompt_delay:
 				prompt_visible = true
+				mashed = true
+				if tiered:
+					charge_loop.pitch_scale = 1.0 + FinisherArtLayout.CHARGE_LOOP_PITCH_PER_BAR * charge_level
+					charge_loop.play()
 				prompt_shown.emit()
+			elif tiered and prompt_visible:
+				tier_meter.advance(delta)
+				if tier_meter.resolved:
+					_resolve_mash()
 			elif daze_time >= prompt_delay + charge_time_limit:
 				_start_fizzle()
 		Phase.CHARGING:
+			if tiered:
+				_charge_tiered(delta)
 			# Before the drain, so the press that filled the meter counts.
-			if meter >= 1.0:
+			elif meter >= 1.0:
 				_start_uppercut()
 			else:
 				daze_time += delta
@@ -252,10 +414,17 @@ func _process(delta: float) -> void:
 				if daze_time >= prompt_delay + charge_time_limit:
 					_start_fizzle()
 		Phase.UPPERCUT:
-			_advance_uppercut()
+			# The boss's arc first, so a contact this frame launches him from where he is now.
+			_fly_boss(delta)
+			if phase == Phase.UPPERCUT:
+				_advance_uppercut()
+		Phase.JUGGLE_FALL:
+			_fly_boss(delta)
 		Phase.FIZZLE:
 			if phase_time >= fizzle_time:
 				_end_fizzle()
+	if juggling and phase != Phase.OFF:
+		_follow_juggle(delta)
 	if phase == Phase.OFF:
 		return
 	_animate_stars(delta)
@@ -277,6 +446,12 @@ func _begin_daze() -> void:
 	boss.enter_daze()
 	dazed = true
 	supercharged = player.hype.is_full()
+	tiered = player.feel_v2 and boss.has_method("can_be_juggled") and boss.can_be_juggled()
+	if tiered:
+		# A full hype meter banks bar 1 before the first press.
+		tier_meter = FinisherTierMeter.new(tier_gain, tier_drains, tier_windows, tier_start_grace, tier_idle_stop, 1 if supercharged else 0)
+		smoothed_meter = tier_meter.meter
+		charge_level = tier_meter.meter
 	FightFreeze.freeze(get_tree(), [player.get_parent()])
 	player.enter_finisher_pose()
 	flipped = _boss_on_left()
@@ -285,7 +460,7 @@ func _begin_daze() -> void:
 	get_tree().call_group("arena_crowd", "cheer", 1.0)
 	daze_time = 0.0
 	prompt_visible = false
-	meter = 0.0
+	meter = tier_meter.meter if tiered else 0.0
 	last_action = &""
 	last_press_usec = 0
 	_set_phase(Phase.DAZED)
@@ -302,8 +477,15 @@ func _press(action: StringName) -> void:
 		return
 	last_action = action
 	last_press_usec = now
-	meter = minf(meter + meter_gain_per_press, 1.0)
-	meter_changed.emit(meter, &"dodge" if action == &"punch" else &"punch")
+	if tiered:
+		var banked: int = tier_meter.press()
+		meter = tier_meter.meter
+		if banked > 0:
+			_on_bar_banked(banked)
+	else:
+		meter = minf(meter + meter_gain_per_press, 1.0)
+	var pair := mash_actions()
+	meter_changed.emit(meter, pair[1] if action == pair[0] else pair[0])
 	get_tree().call_group("arena_crowd", "cheer", 0.4)
 	if phase == Phase.DAZED:
 		_start_charging()
@@ -315,13 +497,72 @@ func _start_charging() -> void:
 	charge_step = 0
 	_show_pose(_sheet().charge[0])
 	zoomed = true
+	if tiered and not auto:
+		# The charge drives the view itself from here (_escalate), easing in from where it is.
+		if ScreenView.zoom_tween:
+			ScreenView.zoom_tween.kill()
+		charge_zoom_from = ScreenView.zoom
+		charge_focus_from = ScreenView.focus
+		charge_time = 0.0
+		return
 	ScreenView.zoom_to(get_tree(), zoom, player.global_position.lerp(boss.get_daze_anchor(), focus_boss_weight), zoom_in_time)
+
+
+func _charge_tiered(delta: float) -> void:
+	if auto:
+		juggle_tiers = 1
+		_start_uppercut()
+		return
+	tier_meter.advance(delta)
+	meter = tier_meter.meter
+	if tier_meter.resolved:
+		_resolve_mash()
+		return
+	_escalate(delta)
+	_animate_charge(delta)
+
+
+# What the mash banked: an uppercut for each bar, or today's fizzle for none.
+func _resolve_mash() -> void:
+	charge_loop.stop()
+	juggle_tiers = tier_meter.banked
+	if juggle_tiers == 0:
+		_start_fizzle()
+		return
+	_start_uppercut()
+
+
+# The view closes in and rattles harder as the charge builds. The prompt is on the HUD, so neither
+# touches it.
+func _escalate(delta: float) -> void:
+	smoothed_meter = lerpf(smoothed_meter, meter, 1.0 - exp(-delta / meter_smoothing))
+	charge_level = maxf(float(tier_meter.banked), smoothed_meter)
+	charge_time += delta
+	var ease_in := 1.0 - pow(1.0 - clampf(charge_time / zoom_in_time, 0.0, 1.0), 2.0)
+	var focus := player.global_position.lerp(boss.get_daze_anchor(), focus_boss_weight)
+	ScreenView.zoom = lerpf(charge_zoom_from, charge_zoom + charge_zoom_per_bar * charge_level, ease_in)
+	ScreenView.focus = charge_focus_from.lerp(focus, ease_in)
+	var real_delta := delta / maxf(Engine.time_scale, 0.001)
+	kick_left -= real_delta
+	rumble_left -= real_delta
+	if kick_left <= 0.0 and rumble_left <= 0.0:
+		ScreenView.shake(get_tree(), charge_rumble + charge_rumble_per_bar * charge_level, 1, rumble_step, Vector2.ZERO, true)
+		rumble_left = rumble_step
+	charge_loop.pitch_scale = 1.0 + FinisherArtLayout.CHARGE_LOOP_PITCH_PER_BAR * charge_level
+
+
+func _on_bar_banked(tier: int) -> void:
+	ScreenView.shake(get_tree(), bank_kicks[tier - 1], bank_kick_steps, IMPACT_SHAKE_STEP_TIME, Vector2.ZERO, true)
+	kick_left = bank_kick_steps * IMPACT_SHAKE_STEP_TIME
+	get_tree().call_group("arena_crowd", "cheer", bank_cheers[tier - 1])
+	bar_sounds[tier - 1].play()
+	tier_banked.emit(tier)
 
 
 func _animate_charge(delta: float) -> void:
 	var frame_times: Array = _sheet().charge_frame_time
 	charge_clock += delta
-	var frame_time := lerpf(frame_times[0], frame_times[1], meter)
+	var frame_time := lerpf(frame_times[0], frame_times[1], charge_level / 3.0 if tiered else meter)
 	if charge_clock < frame_time:
 		return
 	charge_clock -= frame_time
@@ -333,6 +574,11 @@ func _start_uppercut() -> void:
 	charge_ended.emit(true)
 	if supercharged:
 		_flash(player.sprite, super_launch_flash)
+	if tiered:
+		juggle_index = 0
+		juggle_goes_on = true
+		special = false
+		lift = 0.0
 	_set_phase(Phase.UPPERCUT)
 	uppercut_step = -1
 	_advance_uppercut()
@@ -342,12 +588,31 @@ func _advance_uppercut() -> void:
 	var steps: Array = _sheet().uppercut
 	var starts := FinisherArtLayout.uppercut_step_starts()
 	while uppercut_step + 1 < steps.size() and phase_time + STEP_TOLERANCE >= starts[uppercut_step + 1]:
+		if special and FinisherArtLayout.KNIGHT_BREAKER_GHOST.steps.has(uppercut_step + 1):
+			_drop_ghost()
 		uppercut_step += 1
 		_show_pose(steps[uppercut_step])
 		if uppercut_step == _sheet().contact_step:
-			_contact()
-	if phase_time + STEP_TOLERANCE >= starts[-1]:
-		_land()
+			if tiered:
+				_juggle_contact()
+			else:
+				_contact()
+	if tiered and juggle_goes_on and juggle_index + 1 < juggle_tiers and phase_time + STEP_TOLERANCE >= starts[steps.size() - 1] + relaunch_delay:
+		_relaunch()
+	elif phase_time + STEP_TOLERANCE >= starts[-1]:
+		if tiered and airborne:
+			_set_phase(Phase.JUGGLE_FALL)
+		else:
+			_land()
+
+
+# The next uppercut, from the land frame.
+func _relaunch() -> void:
+	juggle_index += 1
+	special = juggle_index == 2
+	_set_phase(Phase.UPPERCUT)
+	uppercut_step = -1
+	_advance_uppercut()
 
 
 # The fight starts again at contact, before any damage, so a killing blow goes through the boss's own
@@ -394,13 +659,167 @@ func _contact() -> void:
 		ScreenView.zoom_to(get_tree(), 1.0, ScreenView.focus, zoom_out_time)
 
 
+# One uppercut of the juggle: its share of his health, and a launch higher than the one before. The first
+# unfreezes the fight and hands him to his juggled state; the last knocks him back unless it killed him.
+# A kill or a whiff means none follow.
+func _juggle_contact() -> void:
+	var landed := _boss_valid() and _in_reach()
+	var box := _hurtbox_rect() if landed else Rect2()
+	if juggle_index == 0:
+		FightFreeze.unfreeze(get_tree())
+		_clear_stars()
+		if not landed:
+			juggle_goes_on = false
+			if _boss_valid():
+				boss.exit_daze(false)
+			ScreenView.zoom_to(get_tree(), 1.0, ScreenView.focus, zoom_out_time)
+			return
+		boss.exit_daze(true)
+		boss.begin_juggle()
+		lift_scale = clampf(boss.juggle_headroom() / _planned_apex(), 0.0, 1.0)
+		juggling = true
+		camera_time = 0.0
+		camera_zoom_from = ScreenView.zoom
+		camera_focus_from = ScreenView.focus
+		if ScreenView.zoom_tween:
+			ScreenView.zoom_tween.kill()
+	elif not landed:
+		juggle_goes_on = false
+		return
+	var last := juggle_index == juggle_tiers - 1
+	var share: float = juggle_shares[juggle_index]
+	var max_health: int = boss.get_max_health()
+	var normal := maxi(1, roundi(max_health * share))
+	var amount := maxi(1, roundi(max_health * (share + supercharge_bonus))) if last and supercharged else normal
+	var dealt: int = boss.take_juggle_hit(amount, FinisherArtLayout.JUGGLE_HIT_PITCHES[juggle_index])
+	# A nearly dead boss can clip it: hype is only spent for damage it added.
+	var super_applied := last and supercharged and dealt > normal
+	if super_applied:
+		player.hype.spend()
+	var killed: bool = boss.get_health_ratio() <= 0.0
+	if killed:
+		last = true
+		juggle_goes_on = false
+	arc_from = lift
+	arc_speed = juggle_last_launches[juggle_index] if last else juggle_launches[juggle_index]
+	arc_time = 0.0
+	airborne = true
+	boss.juggle_pose(&"launch")
+	last_hit_big = special or super_applied
+	# A killing blow leaves him where it caught him: his defeat and the outro play from under it.
+	if last and not killed:
+		_knock_back(super_uppercut_knockback if last_hit_big else uppercut_knockback, 0.0, true)
+	_spawn_impact(box, last_hit_big)
+	if last_hit_big:
+		_super_contact_extras(box)
+		_juggle_zoom_punch()
+	if special:
+		knight_breaker_sound.play()
+	if super_applied:
+		super_sfx_player.play()
+	HitStop.freeze(get_tree(), super_impact_hit_stop if super_applied else juggle_hit_stops[juggle_index])
+	ScreenView.shake(get_tree(), super_impact_shake if last_hit_big else impact_shake, super_impact_shake_steps if last_hit_big else IMPACT_SHAKE_STEPS, IMPACT_SHAKE_STEP_TIME)
+	_flash(boss.sprite, super_impact_flash if last_hit_big else impact_flash)
+	get_tree().call_group("arena_crowd", "cheer", super_impact_cheer if last_hit_big else impact_cheer)
+	juggle_hit.emit(juggle_index, last)
+
+
+# The highest the juggle ahead would throw him, each uppercut catching him where the one before left him.
+func _planned_apex() -> float:
+	var starts := FinisherArtLayout.uppercut_step_starts()
+	var between: float = starts[_sheet().uppercut.size() - 1] + relaunch_delay
+	var apex := 0.0
+	var from := 0.0
+	for i in juggle_tiers:
+		var speed: float = juggle_last_launches[i] if i == juggle_tiers - 1 else juggle_launches[i]
+		apex = maxf(apex, from + speed * speed / (2.0 * juggle_gravity))
+		from += speed * between - 0.5 * juggle_gravity * between * between
+	return apex
+
+
+# His arc, in game time like the uppercuts, so the two stay in step through every hit-stop.
+func _fly_boss(delta: float) -> void:
+	if not airborne or not _boss_valid():
+		return
+	arc_time += delta
+	lift = arc_from + arc_speed * arc_time - 0.5 * juggle_gravity * arc_time * arc_time
+	if lift > 0.0:
+		boss.juggle_lift(lift * lift_scale)
+		return
+	lift = 0.0
+	airborne = false
+	boss.juggle_lift(0.0)
+	_crash()
+
+
+# He hits the mat: his crash, a shake, and, alive, the recovery that ends in his next attack. The view
+# eases back out, and the player, who has landed first, is theirs again.
+func _crash() -> void:
+	var crater := special and last_hit_big
+	boss.juggle_pose(&"crash", crater)
+	ScreenView.shake(get_tree(), special_crash_shake if crater else crash_shake, crash_shake_steps, IMPACT_SHAKE_STEP_TIME)
+	if boss.get_health_ratio() > 0.0:
+		boss.end_recovery(long_juggle_recovery if last_hit_big else juggle_recovery)
+	juggling = false
+	if punch_tween:
+		punch_tween.kill()
+	punch_zoom = 1.0
+	ScreenView.zoom_to(get_tree(), 1.0, ScreenView.focus, juggle_zoom_out_time)
+	if phase == Phase.JUGGLE_FALL:
+		_land()
+
+
+# Between the player and the boss in the air, easing in from the mash's view, and on top of it
+# Knight Breaker's zoom punch.
+func _follow_juggle(delta: float) -> void:
+	camera_time += delta
+	var ease_in := 1.0 - pow(1.0 - clampf(camera_time / juggle_zoom_in_time, 0.0, 1.0), 2.0)
+	var middle: Vector2 = player.global_position.lerp(boss.get_juggle_point(), 0.5) if _boss_valid() else ScreenView.focus
+	ScreenView.zoom = lerpf(camera_zoom_from, juggle_zoom, ease_in) * punch_zoom
+	ScreenView.focus = camera_focus_from.lerp(middle, ease_in)
+
+
+# Snapped in, held and eased back in real time, so it plays out through the hit-stop.
+func _juggle_zoom_punch() -> void:
+	if punch_tween:
+		punch_tween.kill()
+	punch_tween = create_tween().set_ignore_time_scale(true)
+	punch_tween.tween_property(self, "punch_zoom", super_impact_zoom, super_impact_zoom_in_time)
+	punch_tween.tween_interval(super_impact_zoom_hold)
+	punch_tween.tween_property(self, "punch_zoom", 1.0, super_impact_zoom_out_time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+# Knight Breaker's afterimage: the pose just shown, left behind in gold as the next one replaces it.
+func _drop_ghost() -> void:
+	var source: Sprite2D = player.sprite
+	var spec := FinisherArtLayout.KNIGHT_BREAKER_GHOST
+	var ghost := Sprite2D.new()
+	ghost.texture = source.texture
+	ghost.hframes = source.hframes
+	ghost.vframes = source.vframes
+	ghost.frame = source.frame
+	ghost.flip_h = source.flip_h
+	ghost.centered = source.centered
+	ghost.offset = source.offset
+	ghost.scale = source.global_scale
+	ghost.modulate = spec.tint
+	fx_layer.add_child(ghost)
+	ghost.global_position = source.global_position
+	var fade := ghost.create_tween()
+	fade.tween_property(ghost, "modulate:a", 0.0, spec.fade_time)
+	fade.tween_callback(ghost.queue_free)
+
+
 # The shove away from the player. A boss who can take it moves for real, clamped to his own ground;
 # the rest rock back on their sprite and settle through the stagger, so nothing anchored to their
-# position moves with them. Returns true when the sprite is what moved.
-func _knock_back(distance: float, settle_time: float) -> bool:
+# position moves with them. Returns true when the sprite is what moved. A `level` shove keeps his
+# ground line: a juggle's, whose heights are fitted to where he stands.
+func _knock_back(distance: float, settle_time: float, level := false) -> bool:
 	if distance <= 0.0 or not _boss_valid():
 		return false
 	var push := (_hurtbox_rect().get_center() - player.global_position).normalized()
+	if level:
+		push = Vector2(-1.0 if flipped else 1.0, 0.0)
 	if push == Vector2.ZERO:
 		push = Vector2.UP
 	if boss.has_method("knock_back"):
@@ -428,7 +847,7 @@ func _super_contact_extras(box: Rect2) -> void:
 # Snapped in on the contact frame and eased back out, in real time so it reads through the hit-stop.
 func _super_zoom_punch() -> void:
 	ScreenView.zoom_to(get_tree(), ScreenView.zoom * super_impact_zoom, ScreenView.focus, super_impact_zoom_in_time, true)
-	var settle := get_tree().create_timer(super_impact_zoom_in_time + super_impact_zoom_hold, true, false, true)
+	var settle := get_tree().create_timer(super_impact_zoom_in_time + super_impact_zoom_hold, false, false, true)
 	# A method rather than a closure: the timer outlives a scene change, the connection doesn't.
 	settle.timeout.connect(_ease_out_super_zoom)
 
@@ -518,6 +937,7 @@ func _ground_layer() -> Node2D:
 	if layer == null:
 		layer = Node2D.new()
 		layer.name = "GroundFx"
+		layer.position.y = GROUND_FX_Y
 		arena.add_child(layer)
 		arena.move_child(layer, stage.get_index())
 	return layer
@@ -530,6 +950,7 @@ func _land() -> void:
 
 
 func _start_fizzle() -> void:
+	charge_loop.stop()
 	charge_ended.emit(false)
 	_show_pose(_sheet().ready)
 	if zoomed:
@@ -547,6 +968,7 @@ func _end_fizzle() -> void:
 
 
 func _abort() -> void:
+	charge_loop.stop()
 	FightFreeze.unfreeze(get_tree())
 	ScreenView.reset(get_tree())
 	_clear_stars()
@@ -557,6 +979,9 @@ func _abort() -> void:
 
 
 func _finish() -> void:
+	if mashed and player.feel_v2 and _mash_keys_held():
+		latch_left = mash_release_latch
+	mashed = false
 	phase = Phase.OFF
 	boss = null
 	auto = false
@@ -564,6 +989,11 @@ func _finish() -> void:
 	supercharged = false
 	prompt_visible = false
 	zoomed = false
+	tiered = false
+	juggling = false
+	airborne = false
+	special = false
+	charge_loop.stop()
 	finished.emit()
 
 

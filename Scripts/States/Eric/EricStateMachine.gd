@@ -10,41 +10,30 @@ extends Node
 @export var rest_timer: Timer
 @export var downed_state_timer: Timer
 
+const VsCard := preload("res://Scripts/VsCard.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
+const EricPacing := preload("res://Scripts/EricPacing.gd")
+const DROPPED_SWORD := preload("res://Scripts/States/Eric/EricDroppedSword.gd")
 
+const PRE_FIGHT_DIALOGUE := "res://Dialogue/EricPreFight.dialogue"
 const HAZARD_GROUP := "eric_hazard"
 const ATTACKS := ["Earthquake", "Whirlwind", "SwordThrow", "BearHug"]
 
-#PACING
-# Long enough to walk up to him and land two full three-punch combos.
-@export var downed_duration := 6.0
-@export var attacks_per_chain := 3
-# At or below this health ratio every chain gets one more attack.
-@export var rage_chain_health_ratio := 0.34
-@export var rage_attacks_per_chain := 4
-# Idle between attacks in a chain, at full health and at none.
-@export var attack_gap := 0.45
-@export var rage_attack_gap := 0.3
-# Idle after getting up, before the next chain.
-@export var recovery_rest := 0.6
-
 # 0 at full health, 1 at none; set at the start of each chain. Attack states scale their
-# speeds with it.
+# speeds with it (EricPacing.raged).
 var rage := 0.0
 var chain : Array = []
 var last_attack := ""
 var state_after_rest := ""
 var defeated := false
+# His sword while it's out of his hands (EricDroppedSword), which EricBroken and EricJuggled share.
+var dropped_sword: Node2D
 
 @onready var boss = get_parent()
 
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	DialogueManager.show_dialogue_balloon(load("res://Dialogue/EricPreFight.dialogue"), "start")
-	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
-	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
-
 	for child in get_children():
 		if child is State:
 			states[child.name] = child
@@ -53,7 +42,16 @@ func _ready() -> void:
 
 	if initial_state:
 		current_state = initial_state
-		current_state.Enter()
+		# Deferred until the scene is up: his entrance moves him, the player and the gates, and
+		# reads all three off the fight scene.
+		current_state.Enter.call_deferred()
+
+
+# His entrance's lines call its beats, so it passes itself along to the dialogue.
+func show_pre_fight_dialogue(intro: State) -> void:
+	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
+	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
+	DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start", [intro])
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -82,7 +80,11 @@ func on_child_transition(state, new_state_name):
 
 func _on_dialogue_ended(dialogue: Object) -> void:
 	print("post dialogue timer started: ", post_dialogue_pre_fight_timer)
-	post_dialogue_pre_fight_timer.start()
+	# The entrance's push-in on him levels off before the card takes the screen.
+	var intro = states.get("Intro")
+	if intro:
+		intro.release_camera()
+	VsCard.play_intro(self, "eric", post_dialogue_pre_fight_timer.start)
 
 
 func _on_post_dialogue_pre_fight_timer_timeout() -> void:
@@ -99,11 +101,12 @@ func _play_downed_stinger() -> void:
 			sfx.play()
 
 
-# A chain of different attacks in a random order, then the Downed window.
+# A chain of different attacks in a random order, then the window (EricPacing's window_state).
 func start_chain(delay: float) -> void:
 	var health_ratio: float = boss.get_health_ratio()
 	rage = clampf(1.0 - health_ratio, 0.0, 1.0)
-	var count := rage_attacks_per_chain if health_ratio <= rage_chain_health_ratio else attacks_per_chain
+	var enraged: bool = health_ratio <= EricPacing.value("rage_chain_health_ratio")
+	var count: int = EricPacing.value("rage_attacks_per_chain" if enraged else "attacks_per_chain")
 
 	var bag := ATTACKS.duplicate()
 	bag.shuffle()
@@ -116,11 +119,11 @@ func start_chain(delay: float) -> void:
 # Called by an attack state once Eric is back in his idle pose at his starting spot.
 func attack_finished() -> void:
 	if chain.is_empty():
-		downed_state_timer.start(downed_duration)
-		on_child_transition(current_state, "Downed")
+		downed_state_timer.start(EricPacing.raged("window_time", rage))
+		on_child_transition(current_state, EricPacing.value("window_state"))
 		_play_downed_stinger()
 	else:
-		_next_attack(lerpf(attack_gap, rage_attack_gap, rage))
+		_next_attack(EricPacing.raged("attack_gap", rage))
 
 
 func _next_attack(delay: float) -> void:
@@ -138,17 +141,27 @@ func _on_rest_timer_timeout() -> void:
 
 
 func _on_downed_timer_timeout() -> void:
-	start_chain(recovery_rest)
+	start_chain(EricPacing.value("recovery_rest"))
 
 
-# Hazards live under Eric's scene root, ahead of his body, so they draw above the floor and
-# below him, and don't move with him.
-func add_hazard(hazard: Node2D, spawn_position: Vector2) -> void:
+# Anything lying on the floor (his waves, the ring, the dust) goes on the arena's ground layer, under
+# everyone standing on it. Anything off the floor (his swords) lives under his scene root, ahead of
+# his body: it sorts among the fighters at its ground point, and doesn't move with him.
+func add_hazard(hazard: Node2D, spawn_position: Vector2, on_floor := true) -> void:
 	hazard.add_to_group(HAZARD_GROUP)
-	var root: Node2D = boss.get_parent()
-	hazard.position = root.to_local(spawn_position)
-	root.add_child(hazard)
-	root.move_child(hazard, 0)
+	var layer: Node2D = ground_layer() if on_floor else boss.get_parent()
+	hazard.position = layer.to_local(spawn_position)
+	layer.add_child(hazard)
+	if not on_floor:
+		layer.move_child(hazard, 0)
+
+
+# The fight's floor layer (Arena/GroundFx, which the finisher's ground effects use too), or his scene
+# root in a scene without one.
+func ground_layer() -> Node2D:
+	var arena: Node = boss.get_parent().get_parent()
+	var layer: Node2D = arena.get_node_or_null("GroundFx") if arena else null
+	return layer if layer else boss.get_parent()
 
 
 func enter_defeated() -> void:
@@ -170,16 +183,91 @@ func parry_stagger(duration: float, home: Vector2, from_reflect := false) -> voi
 	on_child_transition(current_state, "ParryStaggered")
 
 
+# The V2 whirlwind's last beat (EricWhirlwind): the spin ends with him throwing the sword instead of
+# stopping dizzy, and the throw owns it from its own red tell onwards.
+func throw_from_whirlwind() -> void:
+	states["SwordThrow"].from_whirlwind = true
+	on_child_transition(current_state, "SwordThrow")
+
+
+# A full Break gauge (EricBreakGauge): whatever he was doing stops, everything he threw goes, and he is
+# Broken until he gets up and starts a new chain.
+func enter_broken() -> void:
+	if defeated or boss.boss_health <= 0 or current_state == states.get("Broken"):
+		return
+	_stop_everything()
+	chain = []
+	on_child_transition(current_state, "Broken")
+
+
+# The tiered finisher's first uppercut (BossOneScript.begin_juggle): from a Break his sword stays where
+# it stands; from anywhere else the uppercut knocks it out of his grip.
+func enter_juggled() -> void:
+	var juggled = states["Juggled"]
+	if defeated or current_state == juggled:
+		return
+	if current_state == states.get("Broken"):
+		current_state.keep_sword = true
+	_stop_everything()
+	chain = []
+	on_child_transition(current_state, "Juggled")
+
+
+# Down after a juggle, he gets up for his sword (EricBroken's retrieve), and his next chain starts `delay`
+# after this, or recovery_rest after he has it.
+func after_juggle(delay: float) -> void:
+	var broken = states["Broken"]
+	broken.retrieve_only = true
+	broken.chain_delay = delay
+	on_child_transition(current_state, "Broken")
+
+
+# The one switch past the fight being decided: a juggled Eric, killed in the air, lands into his defeat.
+func land_juggled(final_state_name: String) -> void:
+	var final_state = states.get(final_state_name)
+	if final_state == states.get("Downed"):
+		final_state.lying = true
+	current_state.Exit()
+	final_state.Enter()
+	current_state = final_state
+
+
+func drop_sword() -> void:
+	if is_instance_valid(dropped_sword):
+		return
+	dropped_sword = DROPPED_SWORD.new()
+	dropped_sword.plant(boss, self)
+
+
+func clear_dropped_sword() -> void:
+	if is_instance_valid(dropped_sword):
+		dropped_sword.queue_free()
+	dropped_sword = null
+
+
 func _end_fight(final_state_name: String) -> void:
-	ParryTell.clear(boss)
 	post_dialogue_pre_fight_timer.stop()
-	rest_timer.stop()
-	downed_state_timer.stop()
-	states["ParryStaggered"].stagger_timer.stop()
-	# Anything he threw that outlives the fight could still hurt the player.
-	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
-		hazard.queue_free()
-	if current_state != states.get(final_state_name):
+	# A fight decided over the top of his entrance still leaves the ring set: gates shut, sword in
+	# his hands, both fighters on their marks.
+	var intro = states.get("Intro")
+	if intro:
+		intro.finish_entrance()
+	_stop_everything()
+	var juggled = states.get("Juggled")
+	# In the air, he finishes his fall and his crash first (land_juggled).
+	if juggled and current_state == juggled:
+		juggled.final_state = final_state_name
+	elif current_state != states.get(final_state_name):
 		on_child_transition(current_state, final_state_name)
 	# Terminal whoever lost.
 	defeated = true
+
+
+func _stop_everything() -> void:
+	ParryTell.clear(boss)
+	rest_timer.stop()
+	downed_state_timer.stop()
+	states["ParryStaggered"].stagger_timer.stop()
+	# Anything he threw that outlives what he was doing could still hurt the player.
+	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
+		hazard.queue_free()

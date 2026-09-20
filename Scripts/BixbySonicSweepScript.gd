@@ -20,9 +20,9 @@ const BEAM_SCENE := preload("res://Scenes/Bosses/BixbySonicBeamScene.tscn")
 const NEAR_Z := 1
 const FAR_Z := 0
 
-# The player's hurtbox is 12x27 next to a beam 78 thick, so the swept test treats them as a circle this
-# big, which is within a few px of it either way.
-const PLAYER_RADIUS := 13.0
+# The player's hurtbox is 36x81 px next to a beam 78 thick, so the swept test treats them as a circle
+# this big, which is within a few px of its half-width either way.
+const PLAYER_RADIUS := 19.5
 # A beam sweeps further than its own thickness between two physics frames, so an overlap test steps clean
 # over a player standing in its way: the arc is sampled at least this often instead, in px of tip travel.
 const SWEEP_SAMPLE_PX := 48.0

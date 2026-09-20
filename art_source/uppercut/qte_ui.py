@@ -18,8 +18,23 @@ G5 = '9badb7'; G4 = '847e87'; G3 = '696a6a'; G2 = '595652'
 
 
 # ------------------------------------------------------------------ keycaps
-def keycap_frames(name):
-    base = from_png(PROJ + 'Assets/UI/%s.png' % name)
+# key_arrows.png is the approved controls-screen cluster: the same 32x32 keycap as key_q.png, row for
+# row, with an arrow for the letter. Its bottom row holds left, down and right.
+ARROW_CELLS = {'left': (0, 32), 'right': (64, 32)}
+
+
+def arrow_key(side):
+    """The arrow keycap cut out of key_arrows.png, pixel for pixel."""
+    arrows = from_png(PROJ + 'Assets/UI/key_arrows.png')
+    ox, oy = ARROW_CELLS[side]
+    key = Canvas(32, 32)
+    for y in range(32):
+        for x in range(32):
+            key.p[y][x] = arrows.p[oy + y][ox + x]
+    return key
+
+
+def keycap_frames(base):
     f0 = base.copy()
     f1 = Canvas(32, 32)
     # top part (outline top .. face bottom shade row 23) moves down 2px
@@ -337,8 +352,12 @@ def check_nine_slice(c, l, t, r, b):
 
 def build():
     out = {}
-    out['qte_key_q'] = keycap_frames('key_q')
-    out['qte_key_w'] = keycap_frames('key_w')
+    out['qte_key_q'] = keycap_frames(from_png(PROJ + 'Assets/UI/key_q.png'))
+    out['qte_key_w'] = keycap_frames(from_png(PROJ + 'Assets/UI/key_w.png'))
+    # The mash's own keys in a fight on the player's feel_v2: the arrows, lit like Q and W.
+    for side in ARROW_CELLS:
+        out['key_' + side] = [arrow_key(side)]
+        out['qte_key_' + side] = keycap_frames(arrow_key(side))
     out['qte_mash_text'] = word_frames('MASH!')
     out['qte_full_text'] = word_frames('FULL!')
     out['qte_meter_frame'] = [meter_frame()]

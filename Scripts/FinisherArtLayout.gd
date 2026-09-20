@@ -34,7 +34,7 @@ const PLACEHOLDER_PLAYER := {
 	# The steps whose gloves count for the reach check.
 	"reach_steps": [1],
 	# The glove per step: the up punch's hitbox centre (PlayerScript.PUNCH_HITBOXES) moved by the step's offset.
-	"fists": {1: Vector2(-8, -40.33)},
+	"fists": {1: Vector2(-12, -60.5)},
 }
 const FINAL_PLAYER := {
 	"texture": "res://Assets/Characters/MainPlayer/player_uppercut.png",
@@ -58,14 +58,14 @@ const FINAL_PLAYER := {
 	# Frame 5: the artist's pick, it reads better than frame 4.
 	"contact_step": 2,
 	"reach_steps": [1, 2, 3],
-	"fists": {1: Vector2(12, -54), 2: Vector2(7, -68), 3: Vector2(5, -80), 4: Vector2(5, -84)},
+	"fists": {1: Vector2(18, -81), 2: Vector2(10.5, -102), 3: Vector2(7.5, -120), 4: Vector2(7.5, -126)},
 }
 # While finishing the player draws over the boss, whom some fights put later in the tree, and over
 # the finisher's effects.
 const FINISHING_Z_INDEX := 3
 # The mash prompt goes under the feet, or over the head, in px from the body origin.
-const PLAYER_FEET := Vector2(0, 24)
-const PLAYER_HEAD := Vector2(0, -32)
+const PLAYER_FEET := Vector2(0, 36)
+const PLAYER_HEAD := Vector2(0, -48)
 
 #DAZE STARS
 # `pivot` is the texel put on the boss's daze anchor; `scale` is screen px per texel.
@@ -88,13 +88,13 @@ const FINAL_STARS := {
 #IMPACT
 # The burst is pushed from the contact glove onto the boss by this many px (facing right), then kept
 # on the boss's hurtbox. It draws under the player, who is small next to it.
-const IMPACT_OFFSET := Vector2(40, -40)
+const IMPACT_OFFSET := Vector2(60, -60)
 const USE_FINAL_IMPACT := true
 # A burst polygon built in code, in px.
 const PLACEHOLDER_IMPACT := {
 	"points": 8,
-	"outer_radius": 40.0,
-	"inner_radius": 14.0,
+	"outer_radius": 60.0,
+	"inner_radius": 21.0,
 	"color": Color(1.0, 0.95, 0.6),
 	"from_scale": 0.5,
 	"to_scale": 1.5,
@@ -105,8 +105,9 @@ const FINAL_IMPACT := {
 	"hframes": 6,
 	# Played once.
 	"frame_times": [0.04, 0.06, 0.06, 0.07, 0.08, 0.09],
-	# The player's own scale: at the artist's 3x the burst hid smaller bosses and the rising player.
-	"scale": 2.0,
+	# The player's own scale, which is now the artist's 3x. It was held at 2x while he was half this
+	# size, where 3x hid smaller bosses and the rising player behind it.
+	"scale": 3.0,
 	"pivot": Vector2(48, 48),
 }
 
@@ -119,8 +120,9 @@ const PLACEHOLDER_SUPER_IMPACT := {"tint": Color(1.6, 1.25, 0.45)}
 const FINAL_SUPER_IMPACT := {
 	"texture": "res://Assets/Effects/uppercut_impact_super.png",
 	"hframes": 7,
+	# The same step past the normal burst it always was (x1.375), off the player's new scale.
 	"frame_times": [0.04, 0.06, 0.06, 0.07, 0.08, 0.09, 0.10],
-	"scale": 2.75,
+	"scale": 4.125,
 	"pivot": Vector2(48, 48),
 }
 
@@ -205,6 +207,8 @@ const USE_FINAL_KEYS := true
 const PLACEHOLDER_KEYS := {
 	"punch": "res://Assets/UI/key_q.png",
 	"dodge": "res://Assets/UI/key_w.png",
+	"mash_left": "res://Assets/UI/key_left.png",
+	"mash_right": "res://Assets/UI/key_right.png",
 	"hframes": 1,
 	"scale": 3.0,
 	"idle": [0, Color(0.6, 0.6, 0.6), 0],
@@ -214,12 +218,39 @@ const PLACEHOLDER_KEYS := {
 const FINAL_KEYS := {
 	"punch": "res://Assets/UI/qte_key_q_3x.png",
 	"dodge": "res://Assets/UI/qte_key_w_3x.png",
+	# A feel_v2 fight's mash keys (PlayerFinisher.mash_actions), made the same way from the arrows.
+	"mash_left": "res://Assets/UI/qte_key_left_3x.png",
+	"mash_right": "res://Assets/UI/qte_key_right_3x.png",
 	"hframes": 2,
 	"scale": 1.0,
 	# Frame 1 is drawn gold and 2 px down. A pressed key sinks without turning gold, so only the next
 	# key to press is ever gold.
 	"idle": [0, Color.WHITE, 0],
 	"lit": [1, Color.WHITE, 0],
+	"pressed": [0, Color.WHITE, 2],
+}
+
+# The same keys on a gamepad, for whatever punch and dodge are bound to (InputSettings). Unlike the
+# two dicts above, the first element of idle/lit/pressed is a ROW OFFSET added to the button's column
+# on the sheet (InputSettings.pad_frame_for), not an absolute frame.
+const USE_FINAL_PAD_KEYS := true
+# A key built in code with the button's name on it (ControlsArtLayout.keycap), `size` px; lit is
+# tinted gold, standing in for the final sheet's gold row.
+const PLACEHOLDER_PAD_KEYS := {
+	"size": Vector2(96, 96),
+	"idle": [0, Color(0.6, 0.6, 0.6), 0],
+	"lit": [0, Color(1.6, 1.35, 0.55), 0],
+	"pressed": [0, Color(2.0, 2.0, 2.0), 3],
+}
+# 14 columns by 2 rows of 96x96. Row 1 is drawn gold and 2 px down, as the keyboard's frame 1 is, so
+# lit is a whole row further on; a pressed key sinks without turning gold.
+const FINAL_PAD_KEYS := {
+	"texture": "res://Assets/UI/Pad/pad_buttons_3x.png",
+	"hframes": 14,
+	"vframes": 2,
+	"scale": 1.0,
+	"idle": [0, Color.WHITE, 0],
+	"lit": [14, Color.WHITE, 0],
 	"pressed": [0, Color.WHITE, 2],
 }
 
@@ -264,8 +295,126 @@ const FINAL_METER := {
 }
 
 
+#TIERED MASH (PlayerFinisher against a boss that can be juggled)
+# The same slot as the single meter, three bars across it, in px from the meter's top-left.
+const USE_FINAL_TIER_METER := true
+# A dark slot per bar, filled in code.
+const PLACEHOLDER_TIER_METER := {
+	"size": Vector2(216, 48),
+	"bars": [Rect2(21, 15, 48, 18), Rect2(84, 15, 48, 18), Rect2(147, 15, 48, 18)],
+	"slot_color": Color(0.08, 0.08, 0.08, 0.85),
+	"fill_color": Color(1.0, 0.72, 0.1),
+	"banked_colors": [Color(1.0, 0.85, 0.3), Color(1.0, 0.6, 0.15), Color(1.0, 0.4, 0.1)],
+	"full_colors": [Color(1.0, 1.0, 1.0), Color(1.0, 0.85, 0.2)],
+	"full_frame_time": 0.08,
+}
+const FINAL_TIER_METER := {
+	"size": Vector2(216, 48),
+	"frame": "res://Assets/UI/qte_meter3_frame_3x.png",
+	"fill": "res://Assets/UI/qte_meter3_fill_3x.png",
+	"fill_offset": Vector2(21, 15),
+	# In the fill, bar k (from 0) starts bar_stride * k px in and is bar_length px long, with nothing
+	# between the bars, so one bar reveals all three.
+	"bar_stride": 63.0,
+	"bar_length": 48.0,
+	# Over each banked bar its own row's glint, looping: frame (bar - 1) * 4 + step.
+	"banked": "res://Assets/UI/qte_meter3_banked_3x.png",
+	"banked_hframes": 4,
+	"banked_vframes": 3,
+	"banked_frame_times": [0.06, 0.06, 0.06, 0.24],
+	# As a bar banks its row's burst plays once, bigger each tier.
+	"flash": "res://Assets/UI/qte_meter3_flash_3x.png",
+	"flash_hframes": 4,
+	"flash_vframes": 3,
+	"flash_offset": Vector2(-36, -36),
+	"flash_frame_times": [0.04, 0.05, 0.06, 0.07],
+	# FULL, once bar 3 banks.
+	"full": "res://Assets/UI/qte_meter3_full_3x.png",
+	"full_hframes": 2,
+	"full_frame_time": 0.08,
+}
+
+# 1!, 2!! and 3!!! in MASH!'s place under the meter, from its top-left; the newest stays up until the
+# next bar banks.
+const USE_FINAL_TIER_STAMPS := true
+const PLACEHOLDER_TIER_STAMPS := {
+	"texts": ["1!", "2!!", "3!!!"],
+	"size": Vector2(120, 66),
+	"colors": [Color(1.0, 0.85, 0.2), Color(1.0, 1.0, 1.0)],
+	"offset": Vector2(48, 48),
+	"frame_time": 0.09,
+}
+const FINAL_TIER_STAMPS := {
+	"textures": ["res://Assets/UI/qte_tier_1_3x.png", "res://Assets/UI/qte_tier_2_3x.png", "res://Assets/UI/qte_tier_3_3x.png"],
+	"hframes": 2,
+	"offset": Vector2(48, 48),
+	"frame_time": 0.09,
+}
+
+# KNIGHT BREAKER!, centred on the HUD above the fight from bar 3 banking until just after the third
+# uppercut lands, then faded. Real seconds.
+const USE_FINAL_KNIGHT_BREAKER := true
+const PLACEHOLDER_KNIGHT_BREAKER := {
+	"text": "KNIGHT BREAKER!",
+	"size": Vector2(480, 60),
+	"font_size": 44,
+	"outline": 8,
+	"colors": [Color(1.0, 0.85, 0.2), Color(1.0, 1.0, 1.0)],
+	"position": Vector2(720, 150),
+	"frame_time": 0.08,
+	"hold_after_hit": 0.15,
+	"fade_time": 0.2,
+}
+const FINAL_KNIGHT_BREAKER := {
+	"texture": "res://Assets/UI/knight_breaker_3x.png",
+	"hframes": 2,
+	"position": Vector2(720, 150),
+	"frame_time": 0.08,
+	"hold_after_hit": 0.15,
+	"fade_time": 0.2,
+}
+
+# The third uppercut's afterimage: a gold copy of each rise frame left behind as the next one shows,
+# fading. Drawn in the finisher's effects layer, so behind the player and over the boss.
+const KNIGHT_BREAKER_GHOST := {
+	"steps": [1, 2, 3],
+	"tint": Color(2.0, 1.6, 0.6, 0.6),
+	"fade_time": 0.25,
+}
+
+# The juggle's hit sound, each uppercut the boss's own hit pitched a step higher.
+const JUGGLE_HIT_PITCHES := [1.12, 1.26, 1.4]
+
+#TIERED MASH SOUND
+# Every level is baked into its file, so each plays at 0 dB.
+# From the prompt until the mash resolves, pitched up with the charge: 1 + CHARGE_LOOP_PITCH_PER_BAR x
+# m_s. The file carries its own loop points: setting a loop mode on the stream brings back a click.
+const CHARGE_LOOP_SFX := "res://Assets/Audio/SFX/finisher_charge_loop.wav"
+const CHARGE_LOOP_PITCH_PER_BAR := 0.2
+# As each bar banks, each tuned to the loop's pitch at that moment.
+const BAR_SFX := [
+	"res://Assets/Audio/SFX/finisher_bar_1.wav",
+	"res://Assets/Audio/SFX/finisher_bar_2.wav",
+	"res://Assets/Audio/SFX/finisher_bar_3.wav",
+]
+# On the third uppercut's contact, over the rest of it.
+const KNIGHT_BREAKER_SFX := "res://Assets/Audio/SFX/knight_breaker_sting.wav"
+
+
 static func player_sheet() -> Dictionary:
 	return FINAL_PLAYER if USE_FINAL_PLAYER else PLACEHOLDER_PLAYER
+
+
+static func tier_meter() -> Dictionary:
+	return FINAL_TIER_METER if USE_FINAL_TIER_METER else PLACEHOLDER_TIER_METER
+
+
+static func tier_stamps() -> Dictionary:
+	return FINAL_TIER_STAMPS if USE_FINAL_TIER_STAMPS else PLACEHOLDER_TIER_STAMPS
+
+
+static func knight_breaker() -> Dictionary:
+	return FINAL_KNIGHT_BREAKER if USE_FINAL_KNIGHT_BREAKER else PLACEHOLDER_KNIGHT_BREAKER
 
 
 static func stars() -> Dictionary:
@@ -295,7 +444,9 @@ static func player_texture(supercharged: bool) -> String:
 	return player_sheet().texture
 
 
-static func keys() -> Dictionary:
+static func keys(gamepad := false) -> Dictionary:
+	if gamepad:
+		return FINAL_PAD_KEYS if USE_FINAL_PAD_KEYS else PLACEHOLDER_PAD_KEYS
 	return FINAL_KEYS if USE_FINAL_KEYS else PLACEHOLDER_KEYS
 
 

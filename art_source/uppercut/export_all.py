@@ -4,6 +4,7 @@ layers, durations, tags) with Aseprite in batch mode and round-trip check them.
   python export_all.py                  write into the project; refuses to touch any existing file
   python export_all.py --overwrite-own  also allow overwriting the deliverables listed in DELIVERABLES
   python export_all.py --check          rebuild everything and compare with the files in the project (no writes)
+  python export_all.py --only=a,b       only the named UI assets (either mode), leaving everything else alone
 
 Work files go to paths.WORK (outside the project)."""
 import sys, os, subprocess
@@ -18,16 +19,21 @@ import qte_ui as UI
 
 CHECK = '--check' in sys.argv
 OVERWRITE_OWN = '--overwrite-own' in sys.argv
+ONLY = next((a.split('=', 1)[1].split(',') for a in sys.argv if a.startswith('--only=')), None)
 TMP = work('ase_frames/')
 os.makedirs(TMP, exist_ok=True)
 
-UI_NAMES = ['qte_key_q', 'qte_key_w', 'qte_mash_text', 'qte_full_text', 'qte_meter_frame', 'qte_meter_fill',
-            'qte_meter_full']
+UI_NAMES = ['qte_key_q', 'qte_key_w', 'qte_key_left', 'qte_key_right', 'qte_mash_text', 'qte_full_text',
+            'qte_meter_frame', 'qte_meter_fill', 'qte_meter_full']
+# The arrow keycaps cut from key_arrows.png, which qte_key_left and _right are made from as qte_key_q is
+# from key_q.png. One frame at 1x, like key_q.png: the prompt's placeholder keys.
+KEY_NAMES = ['key_left', 'key_right']
 DELIVERABLES = (
     ['Assets/Characters/MainPlayer/player_uppercut.png', 'Assets/Characters/MainPlayer/player_uppercut.aseprite',
      'Assets/Effects/uppercut_impact.png', 'Assets/Effects/uppercut_impact.aseprite',
      'Assets/Effects/daze_stars.png', 'Assets/Effects/daze_stars.aseprite'] +
-    ['Assets/UI/%s%s' % (n, ext) for n in UI_NAMES for ext in ('.png', '_3x.png', '.aseprite')])
+    ['Assets/UI/%s%s' % (n, ext) for n in UI_NAMES for ext in ('.png', '_3x.png', '.aseprite')] +
+    ['Assets/UI/%s%s' % (n, ext) for n in KEY_NAMES for ext in ('.png', '.aseprite')])
 DELIVERABLES = {PROJ + p for p in DELIVERABLES}
 
 LUA = r'''
@@ -157,6 +163,39 @@ def build_ase(out_path, w, h, layer_names, frame_layers, durations, tags=()):
 
 
 def main():
+    if ONLY is None:
+        main_sheets()
+    ui = UI.build()
+    assert set(ui) == set(UI_NAMES) | set(KEY_NAMES)
+    assert not UI.check_nine_slice(ui['qte_meter_frame'][0], UI.ML, UI.MT, UI.MR, UI.MB)
+    assert not UI.check_nine_slice(scale3(ui['qte_meter_frame'][0]), UI.ML * 3, UI.MT * 3, UI.MR * 3, UI.MB * 3)
+    names = [n for n in UI_NAMES if ONLY is None or n in ONLY]
+    keys = [n for n in KEY_NAMES if ONLY is None or n in ONLY]
+    for name in names:
+        s = strip(ui[name])
+        p = PROJ + 'Assets/UI/%s.png' % name
+        emit(s, p)
+        check_png(p, DB32)
+        p3 = PROJ + 'Assets/UI/%s_3x.png' % name
+        emit(scale3(s), p3)
+        check_png(p3, DB32)
+    for name in keys:
+        p = PROJ + 'Assets/UI/%s.png' % name
+        emit(ui[name][0], p)
+        check_png(p, DB32)
+    timing = {'qte_key_q': [100, 100], 'qte_key_w': [100, 100], 'qte_key_left': [100, 100],
+              'qte_key_right': [100, 100], 'qte_mash_text': [150, 150], 'qte_full_text': [80, 80],
+              'qte_meter_frame': [100], 'qte_meter_fill': [100], 'qte_meter_full': [80, 80]}
+    for name in names:
+        fr = ui[name]
+        build_ase(PROJ + 'Assets/UI/%s.aseprite' % name, fr[0].w, fr[0].h, [name.replace('qte_', '')],
+                  [[f] for f in fr], timing[name], [('pulse', 1, 2)] if len(fr) == 2 else [])
+    for name in keys:
+        build_ase(PROJ + 'Assets/UI/%s.aseprite' % name, 32, 32, [name], [ui[name]], [100])
+    print('CHECK OK: project files match a fresh build' if CHECK else 'exported + verified')
+
+
+def main_sheets():
     # player_uppercut: body pixels only in the player's own palette, fx pixels only DB32
     frames, layers = UB.build_frames()
     assert len(frames) == 10 and all((f.w, f.h) == (48, 64) for f in frames)
@@ -179,33 +218,12 @@ def main():
     emit(strip(dz), dp)
     check_png(dp, DB32)
 
-    ui = UI.build()
-    assert set(ui) == set(UI_NAMES)
-    assert not UI.check_nine_slice(ui['qte_meter_frame'][0], UI.ML, UI.MT, UI.MR, UI.MB)
-    assert not UI.check_nine_slice(scale3(ui['qte_meter_frame'][0]), UI.ML * 3, UI.MT * 3, UI.MR * 3, UI.MB * 3)
-    for name in UI_NAMES:
-        s = strip(ui[name])
-        p = PROJ + 'Assets/UI/%s.png' % name
-        emit(s, p)
-        check_png(p, DB32)
-        p3 = PROJ + 'Assets/UI/%s_3x.png' % name
-        emit(scale3(s), p3)
-        check_png(p3, DB32)
-
     build_ase(up.replace('.png', '.aseprite'), 48, 64, ['fx_back', 'body', 'fx_front'], layers,
               UB.DURATIONS_MS, UB.TAGS)
     build_ase(ip.replace('.png', '.aseprite'), 96, 96, ['impact'], [[f] for f in imp],
               [40, 60, 60, 70, 80, 90], [('impact', 1, 6)])
     build_ase(dp.replace('.png', '.aseprite'), 48, 24, ['stars'], [[f] for f in dz], [100] * 6,
               [('daze_loop', 1, 6)])
-    timing = {'qte_key_q': [100, 100], 'qte_key_w': [100, 100], 'qte_mash_text': [150, 150],
-              'qte_full_text': [80, 80], 'qte_meter_frame': [100], 'qte_meter_fill': [100],
-              'qte_meter_full': [80, 80]}
-    for name in UI_NAMES:
-        fr = ui[name]
-        build_ase(PROJ + 'Assets/UI/%s.aseprite' % name, fr[0].w, fr[0].h, [name.replace('qte_', '')],
-                  [[f] for f in fr], timing[name], [('pulse', 1, 2)] if len(fr) == 2 else [])
-    print('CHECK OK: project files match a fresh build' if CHECK else 'exported + verified')
 
 
 if __name__ == '__main__':

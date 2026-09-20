@@ -11,6 +11,7 @@ extends Node
 @export var recover_timer: Timer
 @export var finisher_stagger_timer: Timer
 
+const VsCard := preload("res://Scripts/VsCard.gd")
 const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
 const FIRE_PATCH_SCENE := preload("res://Scenes/Bosses/BixbyFirePatchScene.tscn")
 const FirePatch := preload("res://Scripts/BixbyFirePatchScript.gd")
@@ -21,10 +22,12 @@ const PRE_FIGHT_DIALOGUE := "res://Dialogue/LiamPreFight.dialogue"
 const HAZARD_GROUP := "bixby_beast_hazard"
 # The inside edges of the ropes, as Mason's Carter call-in measures them.
 const ROPES := Rect2(113, 114, 1692, 853)
-# Where the centre of the player's body can go, inside the arena walls.
-const PLAYER_FLOOR := Rect2(117, 132, 1686, 816)
+# Where the centre of the player's body can go, inside the arena walls: ArenaScene's wall boxes reach
+# in to 105, 105, 1815 and 975, inset by PLAYER_HALF_BODY on each edge.
+const PLAYER_FLOOR := Rect2(123, 145.5, 1674, 789)
 # Half the player's collision box, and the margin past it that fire has to leave for a way through to count.
-const PLAYER_HALF_BODY := Vector2(12, 27)
+# The margin is a gap, not a proportion, so it stays where it is when his body grows.
+const PLAYER_HALF_BODY := Vector2(18, 40.5)
 const FIRE_PASSAGE_MARGIN := 6.0
 # The grid the floor is checked on for places the fire would wall off.
 const FLOOR_CELL := 16.0
@@ -149,7 +152,7 @@ func show_pre_fight_dialogue(intro: State) -> void:
 
 
 func _on_dialogue_ended(_dialogue: Object) -> void:
-	post_dialogue_pre_fight_timer.start()
+	VsCard.play_intro(self, "liam", post_dialogue_pre_fight_timer.start)
 
 
 # The transformation leaves him standing after his roar: the fight starts with his takeoff.

@@ -14,6 +14,7 @@ const HitStop := preload("res://Scripts/HitStop.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
 const CarterArtLayout := preload("res://Scripts/CarterArtLayout.gd")
+const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 # What he says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/CarterOutro.dialogue"
 const FIGHT_SCENE := "res://Scenes/Bosses/CarterBossFightScene.tscn"
@@ -37,11 +38,9 @@ const RUSH_SFX := [
 	"res://Assets/Audio/SFX/carter_rush_3.wav",
 ]
 
-#UI (built at runtime - no new art needed)
+#UI (BossHealthBarUI builds it at runtime)
 var hud_layer: CanvasLayer
-var health_bar: ProgressBar
-var name_label: Label
-var fill_style: StyleBoxFlat
+var health_bar: Control
 
 # The yank's ghosts, its dust and the entrance's ground ring. It sits one px below the top edge of
 # the arena floor, so it y-sorts over the mat and under every character wherever its children are put.
@@ -55,6 +54,8 @@ var fill_style: StyleBoxFlat
 @export var pool: Node2D
 # Pure black over the whole world, for the KO only. Built in code, hidden until then.
 var blackout: Polygon2D
+# The spotlight that comes back up on him at the end of the KO. Built in code, hidden until then.
+var ko_light: Node2D
 @export var flash_layer: CanvasLayer
 @export var flash: ColorRect
 
@@ -95,6 +96,8 @@ var music_duck: Tween
 
 var aura_clock := 0.0
 var mark_clock := 0.0
+# The frames the mark's glow cycles through; empty for all of them.
+var mark_frames: Array = []
 
 var current_anim := &""
 var anim: Dictionary = {}
@@ -112,14 +115,21 @@ func _ready() -> void:
 
 	sprite_base_position = sprite.position
 	_apply_art_layout()
-	_build_health_bar()
+	_build_hud()
 	_build_dark_stage()
+	_build_ko_light()
 
 	# Loaded here rather than when the fight starts: it is a 4 MB MP3 and reading it off disk on the
 	# first bar would hitch.
 	var theme := CarterArtLayout.theme()
 	music_player.stream = load(theme.stream)
-	if music_player.stream:
+	if music_player.stream is AudioStreamWAV:
+		# Our own theme is a WAV cut to one whole cycle, and a WAV loops by sample range rather
+		# than by a `loop` flag, so it takes the other branch entirely.
+		music_player.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		music_player.stream.loop_begin = 0
+		music_player.stream.loop_end = int(music_player.stream.get_length() * music_player.stream.mix_rate)
+	elif music_player.stream:
 		music_player.stream.loop = true
 		if theme.loop_offset > 0.0:
 			music_player.stream.loop_offset = theme.loop_offset
@@ -245,7 +255,11 @@ func _step_effects(delta: float) -> void:
 		aura.frame = int(aura_clock / CarterArtLayout.FINAL_AURA.frame_time) % aura.hframes
 	if mark_glow.visible and mark_glow.texture:
 		mark_clock += delta
-		mark_glow.frame = int(mark_clock / CarterArtLayout.FINAL_MARK_GLOW.frame_time) % mark_glow.hframes
+		var step := int(mark_clock / CarterArtLayout.FINAL_MARK_GLOW.frame_time)
+		if mark_frames.is_empty():
+			mark_glow.frame = step % mark_glow.hframes
+		else:
+			mark_glow.frame = mark_frames[step % mark_frames.size()]
 
 
 func _frame_time() -> float:
@@ -367,22 +381,38 @@ func _build_blackout() -> void:
 
 
 func _build_pool() -> void:
+	pool.add_child(_make_spotlight())
+
+
+# The Demon's spotlight, drawn as light, with its anchor texel on the origin of whatever it is added
+# to: the player's feet for the Demon's pool, his own for the KO.
+func _make_spotlight() -> Node2D:
 	var spec := CarterArtLayout.spotlight()
 	if spec.has("texture"):
 		var light := Sprite2D.new()
 		light.texture = load(spec.texture)
 		light.centered = false
-		# The texel that goes on the player's feet, which is where the pool is placed.
 		light.offset = -spec.anchor
 		light.scale = Vector2.ONE * spec.scale
 		light.material = CarterArtLayout.additive()
-		pool.add_child(light)
-		return
+		return light
 	var glow := Polygon2D.new()
 	glow.polygon = CarterArtLayout.ellipse(spec.radii, spec.points)
 	glow.color = spec.color
 	glow.material = CarterArtLayout.additive()
-	pool.add_child(glow)
+	return glow
+
+
+# The same light again for the end of the KO, on his feet rather than the player's. It was authored
+# to sit under someone standing at centre stage, and he is: 558 px of cone above his feet against his
+# 243 px, so it frames the whole of him and runs off the top of the screen the way a light from above
+# should. A child of him, so wherever the teleport put him, it is on him.
+func _build_ko_light() -> void:
+	ko_light = _make_spotlight()
+	ko_light.z_index = CarterArtLayout.KO_LIGHT_Z
+	ko_light.modulate.a = 0.0
+	ko_light.hide()
+	add_child(ko_light)
 
 
 # The sheet is exactly the view, so the border quads are what a screen shake can pull into frame
@@ -451,14 +481,51 @@ func snap_dark_clear() -> void:
 
 
 # The KO: the arena goes all the way to black, spotlight and all. Nothing in the world survives it
-# except the emblem, which is drawn above it.
+# except the emblem, which is drawn above it. It comes down OVER whatever darkness is already up -
+# the barrage's curtain and the fallen player's pool stay where they are beneath it - so the room
+# only ever gets darker from the kill to the ignition.
 func ko_blackout(seconds: float) -> void:
-	curtain.modulate.a = 0.0
-	pool.modulate.a = 0.0
 	dark_stage.show()
 	blackout.show()
 	var fade := blackout.create_tween()
 	fade.tween_property(blackout, "modulate:a", 1.0, seconds)
+
+
+# Over the barrage's darkness, so his dissolve and his reforming in the middle of the ring read in the
+# dark, and under the KO's blackout, so it still swallows him when it comes down.
+func lift_for_teleport() -> void:
+	sprite.z_index = CarterArtLayout.KO_TELEPORT_Z
+	aura.z_index = CarterArtLayout.KO_TELEPORT_Z - 1
+
+
+# The spotlight comes back on and he comes up out of the black with it: the light is drawn on the
+# blackout and he is drawn on the light, so the arena stays gone around him. His emblem settles back
+# to its own size and strength on his back, since twice-size was for burning alone and would be
+# bigger than his torso on a lit body. Node-bound tweens, all of them: nothing here touches audio,
+# so the bell rings on through it.
+func ko_light_up(seconds: float) -> void:
+	ko_light.show()
+	var light := ko_light.create_tween()
+	light.tween_property(ko_light, "modulate:a", 1.0, seconds)
+
+	for part: CanvasItem in [aura, sprite]:
+		if not part.visible:
+			continue
+		var rest: float = CarterArtLayout.AURA_ALPHA if part == aura else 1.0
+		part.modulate.a = 0.0
+		part.z_index = CarterArtLayout.KO_BODY_Z - (1 if part == aura else 0)
+		var reveal := part.create_tween()
+		reveal.tween_property(part, "modulate:a", rest, seconds)
+
+	# Its peak frames spread a wash over his whole upper back, which is what the dark hold wants and
+	# exactly what this beat doesn't: it is here to show the body. The frame jump hides inside the
+	# resize and the light coming up.
+	mark_frames = CarterArtLayout.FINAL_MARK_GLOW.lit_frames
+	mark_clock = 0.0
+	var mark := mark_glow.create_tween().set_parallel()
+	mark.tween_property(mark_glow, "scale", Vector2.ONE * CarterArtLayout.FINAL_MARK_GLOW.scale, seconds)
+	mark.tween_property(mark_glow, "position", Vector2.ZERO, seconds)
+	mark.tween_property(mark_glow, "modulate:a", CarterArtLayout.KO_LIT_MARK_ALPHA, seconds)
 
 
 # The one lit thing left. Lifted above the blackout and drawn at twice its size, scaled about its own
@@ -601,7 +668,7 @@ func _apply_damage(amount: int) -> int:
 		return 0
 
 	boss_health -= dealt
-	_update_health_bar()
+	_refresh_health_bar()
 	_hit_feedback()
 	hit_sfx_player.play()
 
@@ -681,64 +748,46 @@ func on_player_defeated() -> void:
 	_clear_hazards()
 
 
+# Asked by FightOutro before his line, after on_player_defeated() has started his pose. When he has
+# won, the line waits for the whole of it - the burn, the light coming back, the look over his
+# shoulder - so it lands after the pose like a win quote instead of the fade eating the head turn.
+# When he has lost there is no pose, so it asks for nothing and the line comes at the usual time.
+func outro_line_delay(player_won: bool) -> float:
+	if player_won:
+		return 0.0
+	return state_machine.states["Victory"].pose_length()
+
+
 # Whoever won, nothing he has sent out may stay live.
 func _clear_hazards() -> void:
 	for hazard in get_tree().get_nodes_in_group(state_machine.HAZARD_GROUP):
 		hazard.queue_free()
 
 
-func _build_health_bar() -> void:
+# The bar goes hot in two steps: caution under 0.66 of his health, then the last third.
+func _refresh_health_bar() -> void:
+	if not health_bar:
+		return
+	health_bar.set_value(0, boss_health)
+	var ratio := get_health_ratio()
+	var heat := 0.0
+	if ratio <= 0.34:
+		heat = 1.0
+	elif ratio <= 0.66:
+		heat = 0.5
+	health_bar.set_heat(0, heat)
+
+
+func _build_hud() -> void:
 	hud_layer = CanvasLayer.new()
 	add_child(hud_layer)
 
-	name_label = Label.new()
-	name_label.text = GameProgress.boss_name(FIGHT_SCENE)
-	name_label.position = Vector2(820, 36)
-	name_label.theme = load("res://Assets/UI/ui_theme.tres")
-	name_label.add_theme_color_override("font_color", Color(1, 1, 1))
-	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	name_label.add_theme_constant_override("outline_size", 6)
-	hud_layer.add_child(name_label)
-
-	health_bar = ProgressBar.new()
-	health_bar.min_value = 0
-	health_bar.max_value = max_health
-	health_bar.value = boss_health
-	health_bar.show_percentage = false
-	health_bar.size = Vector2(380, 22)
-	health_bar.position = Vector2(820, 70)
-
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.08, 0.08, 0.08, 0.85)
-	bg.set_corner_radius_all(3)
-	bg.border_width_left = 2
-	bg.border_width_right = 2
-	bg.border_width_top = 2
-	bg.border_width_bottom = 2
-	bg.border_color = Color(0, 0, 0)
-	health_bar.add_theme_stylebox_override("background", bg)
-
-	fill_style = StyleBoxFlat.new()
-	fill_style.bg_color = Color(0.58, 0.22, 0.42, 1)
-	fill_style.set_corner_radius_all(3)
-	health_bar.add_theme_stylebox_override("fill", fill_style)
-
+	health_bar = BossHealthBarUI.create({
+		"rows": [{"key": &"carter", "max": max_health, "value": boss_health}],
+		"plate": &"carter",
+		"text": GameProgress.boss_name(FIGHT_SCENE),
+	})
 	hud_layer.add_child(health_bar)
-
-
-func _update_health_bar() -> void:
-	if not health_bar:
-		return
-	var tween = create_tween()
-	tween.tween_property(health_bar, "value", boss_health, 0.2)
-
-	var ratio := get_health_ratio()
-	if ratio <= 0.34:
-		fill_style.bg_color = Color(0.85, 0.2, 0.28, 1)
-	elif ratio <= 0.66:
-		fill_style.bg_color = Color(0.7, 0.2, 0.36, 1)
-	else:
-		fill_style.bg_color = Color(0.58, 0.22, 0.42, 1)
 
 
 func _hit_feedback() -> void:

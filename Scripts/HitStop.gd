@@ -14,8 +14,9 @@ static func freeze(tree: SceneTree, duration: float) -> void:
 	Engine.time_scale = TIME_SCALE
 	if release_timer and release_timer.time_left >= duration:
 		return
-	# Ignores time_scale, otherwise the slowdown would stretch its own duration.
-	var timer := tree.create_timer(duration, true, false, true)
+	# Ignores time_scale, otherwise the slowdown would stretch its own duration. Pausable, so a
+	# pause screen holds the stop where it is instead of eating it.
+	var timer := tree.create_timer(duration, false, false, true)
 	release_timer = timer
 	timer.timeout.connect(func():
 		if release_timer == timer:
@@ -29,13 +30,13 @@ static func freeze(tree: SceneTree, duration: float) -> void:
 # which is what parries in a row want.
 static func freeze_then_slow(tree: SceneTree, hold: float, tail: float, tail_scale: float) -> void:
 	Engine.time_scale = TIME_SCALE
-	var stop := tree.create_timer(hold, true, false, true)
+	var stop := tree.create_timer(hold, false, false, true)
 	release_timer = stop
 	stop.timeout.connect(func():
 		if release_timer != stop:
 			return
 		Engine.time_scale = tail_scale
-		var back := tree.create_timer(tail, true, false, true)
+		var back := tree.create_timer(tail, false, false, true)
 		release_timer = back
 		back.timeout.connect(func():
 			if release_timer == back:

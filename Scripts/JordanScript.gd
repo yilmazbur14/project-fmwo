@@ -2,6 +2,7 @@ extends CharacterBody2D
 
 const HitStop := preload("res://Scripts/HitStop.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
+const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 # What he says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/JordanOutro.dialogue"
 # This fight's place in the order; as the last one, GameProgress finds nothing after it.
@@ -22,10 +23,8 @@ const STAGGER_LEAN_TIME := 0.1
 # Where the finisher's daze stars circle, from his origin: just above his cap.
 const DAZE_ANCHOR_OFFSET := Vector2(0, -92)
 
-#UI (built at runtime - no new art needed)
-var health_bar: ProgressBar
-var name_label: Label
-var fill_style: StyleBoxFlat
+#UI (BossHealthBarUI builds it at runtime)
+var health_bar: Control
 
 @onready var sprite = $Sprite2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
@@ -33,6 +32,10 @@ var fill_style: StyleBoxFlat
 @onready var state_machine = $StateManager
 
 #AUDIO
+# His own theme. Same level as Eric's and the pair's, so the ladder does not jump between fights.
+const THEME := "res://Assets/Audio/Music/jordan_theme.wav"
+const THEME_DB := -7.0
+
 @onready var music_player: AudioStreamPlayer = $MusicPlayer
 @onready var hit_sfx_player: AudioStreamPlayer = $HitSfxPlayer
 @onready var victory_sfx_player: AudioStreamPlayer = $VictorySfxPlayer
@@ -57,11 +60,18 @@ func _ready() -> void:
 	hurtbox.area_entered.connect(_on_hurtbox_entered)
 
 	sprite_base_position = sprite.position
-	_build_health_bar()
+	_build_hud()
 
 	# Placeholder: Jordan has no theme of his own yet.
-	music_player.stream = load("res://Assets/Audio/Music/boss_theme.ogg")
-	if music_player.stream:
+	# "The Last Name on the List", written for this fight - see art_source/music/jordan_theme.rb.
+	# One 16-bar cycle cut to the beat, so LOOP_FORWARD runs it end to end with no seam.
+	music_player.stream = load(THEME)
+	music_player.volume_db = THEME_DB
+	if music_player.stream is AudioStreamWAV:
+		music_player.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		music_player.stream.loop_begin = 0
+		music_player.stream.loop_end = int(music_player.stream.get_length() * music_player.stream.mix_rate)
+	elif music_player.stream and "loop" in music_player.stream:
 		music_player.stream.loop = true
 	hit_sfx_player.stream = load("res://Assets/Audio/SFX/hit_impact.ogg")
 	victory_sfx_player.stream = load("res://Assets/Audio/SFX/victory_fanfare.ogg")
@@ -165,7 +175,7 @@ func get_finisher_hurtbox() -> Area2D:
 func _take_damage(amount: int) -> int:
 	var dealt := mini(amount, boss_health)
 	boss_health -= dealt
-	_update_health_bar()
+	_refresh_health_bar()
 	_hit_feedback()
 	hit_sfx_player.play()
 
@@ -217,58 +227,30 @@ func _clear_hazards() -> void:
 		hazard.queue_free()
 
 
-func _build_health_bar() -> void:
+# The bar goes hot in two steps: caution under 0.6 of his health, then the last third.
+func _refresh_health_bar() -> void:
+	if not health_bar:
+		return
+	health_bar.set_value(0, boss_health)
+	var ratio := get_health_ratio()
+	var heat := 0.0
+	if ratio <= 0.34:
+		heat = 1.0
+	elif ratio <= 0.6:
+		heat = 0.5
+	health_bar.set_heat(0, heat)
+
+
+func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
 
-	name_label = Label.new()
-	name_label.text = GameProgress.boss_name(FIGHT_SCENE)
-	name_label.position = Vector2(770, 36)
-	name_label.theme = load("res://Assets/UI/ui_theme.tres")
-	name_label.add_theme_color_override("font_color", Color(1, 1, 1))
-	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	name_label.add_theme_constant_override("outline_size", 6)
-	layer.add_child(name_label)
-
-	health_bar = ProgressBar.new()
-	health_bar.min_value = 0
-	health_bar.max_value = max_health
-	health_bar.value = boss_health
-	health_bar.show_percentage = false
-	health_bar.size = Vector2(380, 22)
-	health_bar.position = Vector2(770, 70)
-
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.08, 0.08, 0.08, 0.85)
-	bg.set_corner_radius_all(3)
-	bg.border_width_left = 2
-	bg.border_width_right = 2
-	bg.border_width_top = 2
-	bg.border_width_bottom = 2
-	bg.border_color = Color(0, 0, 0)
-	health_bar.add_theme_stylebox_override("background", bg)
-
-	fill_style = StyleBoxFlat.new()
-	fill_style.bg_color = Color(0.8, 0.22, 0.55, 1)
-	fill_style.set_corner_radius_all(3)
-	health_bar.add_theme_stylebox_override("fill", fill_style)
-
+	health_bar = BossHealthBarUI.create({
+		"rows": [{"key": &"jordan", "max": max_health, "value": boss_health}],
+		"plate": &"jordan",
+		"text": GameProgress.boss_name(FIGHT_SCENE),
+	})
 	layer.add_child(health_bar)
-
-
-func _update_health_bar() -> void:
-	if not health_bar:
-		return
-	var tween = create_tween()
-	tween.tween_property(health_bar, "value", boss_health, 0.2)
-
-	var ratio := get_health_ratio()
-	if ratio <= 0.34:
-		fill_style.bg_color = Color(1.0, 0.55, 0.0, 1)
-	elif ratio <= 0.6:
-		fill_style.bg_color = Color(0.95, 0.75, 0.1, 1)
-	else:
-		fill_style.bg_color = Color(0.8, 0.22, 0.55, 1)
 
 
 func _hit_feedback() -> void:

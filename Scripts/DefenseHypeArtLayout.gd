@@ -3,7 +3,7 @@ extends RefCounted
 # Every number that depends on how the defence and hype HUD and effects are drawn. Each asset has its
 # own USE_FINAL_* flag; placeholder and final art go through the same code, so turning a flag off
 # brings the placeholder back. HUD art uses the _3x copies at scale 1 on whole screen px; world
-# effects are drawn at the player's 2x.
+# effects are drawn at the player's 3x.
 
 #STAMINA BAR
 # The frame's top-left on the 1920x1080 HUD: under the hearts, left of the dialogue box.
@@ -84,16 +84,17 @@ const FINAL_HYPE := {
 
 #CONTACT EFFECTS
 # Played once where the guard meets an attack: the hurtbox centre pushed this many px toward the
-# attack's origin, or straight up for a sky attack.
-const CONTACT_PUSH := 14.0
+# attack's origin, or straight up for a sky attack. A shade past the hurtbox's own half-width (18),
+# so the burst sits on the guard rather than inside him.
+const CONTACT_PUSH := 21.0
 
 # Final bursts are sheets played once; `pivot` is the texel put on the contact point and `scale` is
 # screen px per texel. Placeholders are stars built in code, in px.
 const USE_FINAL_BLOCK_SPARK := true
 const PLACEHOLDER_BLOCK_SPARK := {
 	"points": 4,
-	"outer_radius": 16.0,
-	"inner_radius": 5.0,
+	"outer_radius": 24.0,
+	"inner_radius": 7.5,
 	"color": Color(0.65, 0.88, 1.0),
 	"from_scale": 0.6,
 	"to_scale": 1.2,
@@ -103,7 +104,7 @@ const FINAL_BLOCK_SPARK := {
 	"texture": "res://Assets/Effects/block_spark.png",
 	"hframes": 4,
 	"frame_times": [0.04, 0.05, 0.06, 0.07],
-	"scale": 2.0,
+	"scale": 3.0,
 	"pivot": Vector2(16, 16),
 }
 
@@ -111,31 +112,31 @@ const FINAL_BLOCK_SPARK := {
 const USE_FINAL_PARRY_FLASH := true
 const PLACEHOLDER_PARRY_FLASH := {
 	"points": 4,
-	"outer_radius": 30.0,
-	"inner_radius": 7.0,
+	"outer_radius": 45.0,
+	"inner_radius": 10.5,
 	"color": Color(1.0, 0.95, 0.65),
 	"from_scale": 0.5,
 	"to_scale": 1.4,
 	"time": 0.25,
 	"push": 0.0,
 }
-# At its peak the flash would cover the small player's head, and the effects draw above him.
+# At its peak the flash would cover the player's head, and the effects draw above him.
 const FINAL_PARRY_FLASH := {
 	"texture": "res://Assets/Effects/parry_flash.png",
 	"hframes": 5,
 	"frame_times": [0.03, 0.05, 0.06, 0.07, 0.08],
-	"scale": 2.0,
+	"scale": 3.0,
 	"pivot": Vector2(32, 32),
-	"push": 34.0,
+	"push": 51.0,
 }
 # From the third parry in a row: a double shock ring with magenta rays and a white-hot core.
 const FINAL_PARRY_FLASH_STRONG := {
 	"texture": "res://Assets/Effects/parry_flash_strong.png",
 	"hframes": 7,
 	"frame_times": [0.03, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10],
-	"scale": 2.0,
+	"scale": 3.0,
 	"pivot": Vector2(48, 48),
-	"push": 34.0,
+	"push": 51.0,
 }
 
 # Bursts at a parried projectile, at the projectile's own scale. Neutral, so it reads over any of them.
@@ -186,6 +187,35 @@ const FINAL_PARRY_TELL := {
 	},
 }
 
+#DODGE TELL
+# The yellow warning over a boss winding up an attack the player must not parry, only dodge
+# (AttackCatalog's dodge_tell), through ParryTell like the red one, at the same anchor and z. It's in
+# the gold of Carter's feint light, which already means exactly this there: red is a parry, yellow a
+# read that punishes one. It differs from the red badge in silhouette too, a hollow ring with a bar
+# through it, so it survives colourblindness. It ignites and peaks once, then only the arcs at its
+# sides pulse: the ring holds still for the whole read, since a tell that flickers gets re-read
+# instead of acted on.
+const USE_FINAL_DODGE_TELL := true
+# A hollow ring built in code, in px, its bottom edge on the anchor.
+const PLACEHOLDER_DODGE_TELL := {
+	"radius": 30.0,
+	"width": 8.0,
+	"points": 20,
+	"color": Color(1.0, 0.85, 0.15),
+}
+const FINAL_DODGE_TELL := {
+	"texture": "res://Assets/Effects/dodge_tell.png",
+	"hframes": 6,
+	# Played once, then the loop for as long as it is up.
+	"intro_frames": [0, 1],
+	"intro_times": [0.05, 0.04],
+	"loop_frames": [2, 3, 4, 5],
+	"loop_time": 0.11,
+	# The ring's bottom edge, which stands on the anchor the way the red badge's tip does.
+	"pivot": Vector2(16, 24),
+	"scale": 3.0,
+}
+
 # The aura for a parryable projectile in flight, drawn behind it and centred on it, through
 # ParryTell.glow(). Wired but unused: only Eric's whirlwind and grab tell at all for now. The art is
 # sized for a projectile 12-16 texels across, so bigger ones want a larger whole-number scale.
@@ -195,6 +225,46 @@ const PARRY_GLOW := {
 	"frame_time": 0.09,
 	"pivot": Vector2(16, 16),
 	"scale": 2.0,
+}
+
+#SWORD LANDING MARK
+# Where Eric's thrown greatsword is going to land, drawn flat on the fight's floor layer from the
+# moment it leaves his hand (EricSwordMark): a fixed target ring that says where, and a second ring
+# closing onto it that says when. The sword is aimed at where the player stood and never re-aims, so
+# without the mark a throw goes unreadable the moment they walk off that spot. Eric-only, behind the
+# player's feel_v2.
+# EricArtLayout.SWORD_HITBOX_RADIUS (108 px) plus the player's hurtbox half-width (18 px): the ground
+# the falling blade can still reach him on. Only the second term moves with the player's size - the
+# blade is Eric's and does not, so this is 108 + 18 and not the old 120 scaled.
+const SWORD_MARK_RADIUS := 126.0
+
+const USE_FINAL_SWORD_MARK := true
+# Two rings built in code, squashed onto the floor plane the way Eric's leap shadow is, in px.
+const PLACEHOLDER_SWORD_MARK := {
+	"radius": SWORD_MARK_RADIUS,
+	# eric_leap_shadow.png's own height-to-width ratio.
+	"squash": 7.0 / 22.0,
+	"points": 28,
+	"width": 9.0,
+	"color": Color(0.67, 0.2, 0.2),
+	"commit_color": Color(1.0, 0.93, 0.8),
+	# The closing ring's radius as a multiple of the target's, at release and at the commit.
+	"close_scale": [1.8, 1.15],
+	"impact_scale": [1.2, 1.5],
+	"impact_frame_times": [0.05, 0.07],
+}
+# Frames 0 to close_frames - 1 step with the flight; commit_frame is lit for exactly
+# PlayerDefense.parry_window before the blade arrives, so the hot ring is the window; the impact
+# frames play once, where it goes in.
+const FINAL_SWORD_MARK := {
+	"texture": "res://Assets/Effects/eric_sword_mark.png",
+	"hframes": 12,
+	"pivot": Vector2(76, 26),
+	"scale": 3.0,
+	"close_frames": 9,
+	"commit_frame": 9,
+	"impact_frames": [10, 11],
+	"impact_frame_times": [0.05, 0.07],
 }
 
 #PARRY WINDOW
@@ -251,17 +321,17 @@ const PLACEHOLDER_GUARD_BREAK_STARS := {
 	"texture": "res://Assets/Effects/daze_stars.png",
 	"hframes": 6,
 	"frame_time": 0.1,
-	"scale": 2.0,
+	"scale": 3.0,
 	"pivot": Vector2(24, 13),
-	"offset": Vector2(0, -40),
+	"offset": Vector2(0, -60),
 }
 const FINAL_GUARD_BREAK_STARS := {
 	"texture": "res://Assets/Effects/guard_break_stars.png",
 	"hframes": 6,
 	"frame_time": 0.1,
-	"scale": 2.0,
+	"scale": 3.0,
 	"pivot": Vector2(16, 9),
-	"offset": Vector2(0, -26),
+	"offset": Vector2(0, -39),
 }
 
 # The stunned player: `frames` are columns stepped every frame_time on the facing's row, odd steps move
@@ -297,7 +367,7 @@ const DASH_RECOVERY_POSE := {
 
 #PERFECT DODGE
 # Ghosts of the player left along the dash path, evenly spaced from where the dash started to where
-# he is now, drawn at his 2x and centred on the body origin like his sprite.
+# he is now, drawn at his 3x and centred on the body origin like his sprite.
 const PERFECT_DODGE_GHOST_COUNT := 3
 const USE_FINAL_PERFECT_DODGE_TRAIL := true
 # Copies of the player's own frame, tinted and fading.
@@ -311,8 +381,43 @@ const FINAL_PERFECT_DODGE_TRAIL := {
 	"hframes": 4,
 	"vframes": 4,
 	"frame_times": [0.05, 0.06, 0.07, 0.08],
-	"scale": 2.0,
+	"scale": 3.0,
 }
+
+#DASH (feel_v2)
+# Only in a fight that opts into PlayerScript.feel_v2; PlayerDashFx draws it. A perfect dodge keeps its
+# own flash and trail, on top of these.
+# Afterimages: copies of the player's own frame at his 3x, dropped evenly along the dash as he passes,
+# so a wall bends the trail with him. The first is the faintest, and each fades on its own. The tint
+# is modulate past white, so his colours wash out toward one pale blue: it reads on the green mat and
+# isn't the perfect dodge's cyan.
+const DASH_GHOST_COUNT := 4
+# Blue pushed hardest and the ghosts kept fairly opaque: a pale blue that is mostly see-through mixes
+# with the mat into mint.
+const DASH_GHOST_TINT := Color(1.25, 1.55, 3.0)
+# Alpha of the first ghost and of the last.
+const DASH_GHOST_ALPHA := Vector2(0.45, 0.85)
+const DASH_GHOST_FADE_TIME := 0.2
+# A puff of dust where a dash kicks off, drawn in code until there is a sheet. Each frame is a list of
+# [x, y, radius] blobs, in texels from the player's feet, whose lower halves take `shade`. It steps a
+# frame every frame_time while it fades out, easing in so it holds before it goes, pushed `push`
+# texels back along the dash.
+const DASH_DUST := {
+	"color": Color(0.94, 0.9, 0.8),
+	"shade": Color(0.76, 0.71, 0.6),
+	"alpha": 0.95,
+	"frames": [
+		[[0, -1, 2.5], [-3, 0, 1.8], [3, 0, 1.8]],
+		[[0, -2, 3.2], [-4, -1, 2.6], [4, -1, 2.6]],
+		[[0, -3, 3.4], [-6, -2, 2.6], [6, -2, 2.6]],
+		[[0, -4, 2.6], [-7, -3, 1.8], [7, -3, 1.8]],
+	],
+	"frame_time": 0.06,
+	"scale": 3.0,
+	"push": 3.0,
+}
+# Synthesised by art_source/audio_voices/make_dash_whoosh.py: 8 dB under the quietest hit sound.
+const DASH_WHOOSH_SFX := {"stream": "res://Assets/Audio/SFX/dash_whoosh.wav", "pitch": 1.0, "volume_db": 0.0}
 
 #LOCKED SEQUENCE
 # A fight holding the player for a parry-only sequence (Carter's clones). The blink that puts them in
@@ -483,6 +588,14 @@ static func parry_shatter() -> Dictionary:
 
 static func parry_tell() -> Dictionary:
 	return FINAL_PARRY_TELL if USE_FINAL_PARRY_TELL else PLACEHOLDER_PARRY_TELL
+
+
+static func dodge_tell() -> Dictionary:
+	return FINAL_DODGE_TELL if USE_FINAL_DODGE_TELL else PLACEHOLDER_DODGE_TELL
+
+
+static func sword_mark() -> Dictionary:
+	return FINAL_SWORD_MARK if USE_FINAL_SWORD_MARK else PLACEHOLDER_SWORD_MARK
 
 
 static func perfect_dodge_trail() -> Dictionary:

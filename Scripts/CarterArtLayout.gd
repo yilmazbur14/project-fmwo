@@ -42,6 +42,9 @@ const USE_FINAL_ANIMS := {
 	&"victory_hold": true,
 	&"ko_vanish": true,
 	&"ko_reappear": true,
+	&"look_back_ready": true,
+	&"look_back": true,
+	&"look_back_hold": true,
 }
 
 const PLACEHOLDER_ANIMS := {
@@ -61,6 +64,13 @@ const PLACEHOLDER_ANIMS := {
 	&"victory_hold": {sheet = AKUMA_SHEET, frames = [2], times = [1.0], loop = true},
 	&"ko_vanish": {sheet = AKUMA_SHEET, frames = [2], times = [0.28], loop = false},
 	&"ko_reappear": {sheet = AKUMA_SHEET, frames = [2], times = [0.30], loop = false},
+	# His back view, still burning, for when the look-back sheet is turned off.
+	&"look_back_ready": {sheet = "res://Assets/Characters/Carter/carter_victory.png",
+		frames = [4, 5, 6], times = [0.11, 0.13, 0.13], loop = true},
+	&"look_back": {sheet = "res://Assets/Characters/Carter/carter_victory.png",
+		frames = [4, 5, 6], times = [0.11, 0.13, 0.13], loop = false},
+	&"look_back_hold": {sheet = "res://Assets/Characters/Carter/carter_victory.png",
+		frames = [4, 5, 6], times = [0.11, 0.13, 0.13], loop = true},
 }
 
 const FINAL_ANIMS := {
@@ -111,6 +121,21 @@ const FINAL_ANIMS := {
 	# smoothing it would steal the sound's cue. Then it burns on a loop under the defeat screen.
 	&"victory_hold": {sheet = "res://Assets/Characters/Carter/carter_victory.png",
 		frames = [4, 5, 6], times = [0.11, 0.13, 0.13], loop = true},
+	# His back stays to the player; only his head comes round, neck cranked, over his RIGHT shoulder,
+	# face to screen-right so the earring stays on our side. Never flip_h it: that moves the earring.
+	# His feet and his emblem sit exactly where carter_akuma frame 2 has them, so the mark overlay's
+	# offset holds on every frame.
+	# The burn frames paint the emblem white-hot with bloom and this sheet paints it crisp, so the swap
+	# to this sheet happens as the light starts coming up - frame 0, held through KO_LOOK_DELAY - where
+	# the lighting change hides it, rather than popping at the start of the turn.
+	&"look_back_ready": {sheet = "res://Assets/Characters/Carter/carter_look_back.png",
+		frames = [0], times = [1.0], loop = true},
+	# 330 ms, and his head arrives on the first frame of the hold. CarterVictory.pose_length() reads
+	# this length, so his outro line lands the moment it does.
+	&"look_back": {sheet = "res://Assets/Characters/Carter/carter_look_back.png",
+		frames = [0, 1, 2], times = [0.12, 0.11, 0.10], loop = false},
+	&"look_back_hold": {sheet = "res://Assets/Characters/Carter/carter_look_back.png",
+		frames = [3, 4, 5], times = [0.2], loop = true},
 }
 
 # carter_rush.png and carter_rush_pass.png are also drawn, and nothing here plays them: they are his
@@ -148,6 +173,10 @@ const FINAL_MARK_GLOW := {
 	# 250. The KO starts the cycle here so the ignition IS the peak, on the same frame as the bell,
 	# instead of snapping on at its faintest and brightening a third of a second later.
 	"peak_frame": 3,
+	# Once his body is lit, only these. The peaks (3 and 4) spread a dithered wash over his whole upper
+	# back, which is exactly right burning alone in the dark and exactly wrong once the point is to
+	# show the body under it.
+	"lit_frames": [0, 1, 2, 5],
 }
 
 #THE GROUND RING HIS ENTRANCE LANDS ON
@@ -422,12 +451,33 @@ const VICTORY_CHEER := 3.0
 const KO_BLACKOUT_TIME := 0.5
 # Relative to DarkStage, so the blackout ends up over every fighter, hazard and burst in the world.
 const KO_BLACK_Z := 30
+# Where he is drawn for the KO's teleport: over the barrage's darkness (DARK_Z) and its pool (POOL_Z)
+# so it reads in the dark, and under the blackout so the blackout still takes him.
+const KO_TELEPORT_Z := 8
 # Absolute, and above that: the emblem has to be the one lit thing left on screen.
 const KO_MARK_Z := 40
 # At its usual size the emblem is 192x162 px alone in a 1920x1080 frame, which reads as a speck. For
 # this beat and no other it is drawn twice that, scaled about its own centre so it doesn't drift off
 # his back.
 const KO_MARK_SCALE := 2.0
+
+# THEN THE LIGHT COMES BACK ON HIM. The emblem burns alone for KO_HOLD_TIME - the moment the user
+# picked out as the one to keep - and then the Demon's own spotlight comes up on him and he looks
+# back over his shoulder at them, back still turned.
+const KO_HOLD_TIME := 2.0
+const KO_LIGHT_TIME := 0.6
+# A breath after he is lit before his head comes round, so the body registers before the look does.
+const KO_LOOK_DELAY := 0.25
+# The draw order once he is lit, all over the blackout: the light on the black, him on the light, the
+# emblem on him. The arena stays gone - the light is drawn on the blackout, not cut out of it, so the
+# pool lands on black rather than bringing the mat back.
+const KO_LIGHT_Z := 36
+const KO_BODY_Z := 38
+# Twice its size was right alone in the dark and is wrong on a lit body - it would be bigger than his
+# torso - so once he is lit it settles back to its own size on his back. It is drawn additively over
+# the emblem the sheet already paints there, so it comes down in strength too or the two stack into a
+# white smear.
+const KO_LIT_MARK_ALPHA := 0.7
 
 #HIS MUSIC
 # The user's own track, kept out of the repo for the same reason as the KO bell below. A fresh clone
@@ -442,23 +492,28 @@ const KO_MARK_SCALE := 2.0
 # top, the fight would begin with four seconds of nothing, so it starts - and loops back to - the
 # lead-in instead. Both numbers are the same one on purpose.
 # The tail fades out from about 260 s into silence by 263 s, so the loop seam is a fade into a
-# lead-in rather than a stutter, and the encoder padding at the very end is inaudible inside it. The
-# file is 4:26 and a fight lasts 35-90 s, so that seam is almost never reached anyway.
+# lead-in rather than a stutter. The file is 4:26 and a fight lasts 35-90 s, so that seam is almost
+# never reached anyway. Nothing here compensates for the MP3's encoder delay or padding: Godot 4.6
+# strips both itself (it reports the file as 266.043 s, which is its raw 266.088 s less exactly the
+# 576 + 1601 samples the Lavc header declares), so the 3.9 s above is 3.9 s of music time.
 const MUSIC_LOCAL := {
 	"stream": "res://Assets/Audio/SFX/local/carter_theme_local.mp3",
 	"volume_db": -12.0,
 	"start": 3.9,
 	"loop_offset": 3.9,
 }
+# "The Mark Burns", written for this fight - see art_source/music/carter_theme.rb. One 16-bar cycle
+# cut to the beat, so it needs no lead-in and no loop offset: the seam is the bar line. This is what
+# a fresh clone hears, and it is ours, unlike the local reference track above.
 const MUSIC_FALLBACK := {
-	"stream": "res://Assets/Audio/Music/boss3_theme.ogg",
-	"volume_db": -5.0,
+	"stream": "res://Assets/Audio/Music/carter_theme.wav",
+	"volume_db": -7.0,
 	"start": 0.0,
 	"loop_offset": 0.0,
 }
 
 
-# His own track when it is there, the placeholder theme when it isn't.
+# His own track when it is there, ours when it isn't.
 static func theme() -> Dictionary:
 	if ResourceLoader.exists(MUSIC_LOCAL.stream):
 		return MUSIC_LOCAL

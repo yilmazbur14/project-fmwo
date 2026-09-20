@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://wv482advna66"]
+[gd_scene load_steps=28 format=3 uid="uid://wv482advna66"]
 
 [ext_resource type="Script" uid="uid://c6twvc3axgj2x" path="res://Scripts/ControlsSceneScript.gd" id="1_3qffu"]
 [ext_resource type="Theme" uid="uid://dnd78vy0t1wm3" path="res://Assets/UI/ui_theme.tres" id="2_theme"]
@@ -13,6 +13,9 @@
 [ext_resource type="Texture2D" uid="uid://dumy2xwfcof6i" path="res://Assets/UI/ui_button_pressed_3x.png" id="10_button_pressed"]
 [ext_resource type="Texture2D" uid="uid://78evdi77qt5d" path="res://Assets/Characters/Danny/danny.png" id="11_danny"]
 [ext_resource type="Script" path="res://Scripts/DannyScript.gd" id="12_danny_script"]
+[ext_resource type="Script" path="res://Scripts/TrainingRoomScript.gd" id="14_room"]
+[ext_resource type="PackedScene" path="res://Scenes/Core/TrainingDummyScene.tscn" id="15_dummy"]
+[ext_resource type="PackedScene" uid="uid://c7l5sbpwdkp6y" path="res://Scenes/Player/MainPlayer.tscn" id="16_player"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_card"]
 content_margin_left = 24.0
@@ -72,6 +75,12 @@ texture_margin_top = 24.0
 texture_margin_right = 24.0
 texture_margin_bottom = 24.0
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_post"]
+size = Vector2(130, 120)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_door"]
+size = Vector2(198, 40)
+
 [sub_resource type="Animation" id="Animation_danny_reset"]
 length = 0.001
 tracks/0/type = "value"
@@ -121,17 +130,90 @@ grow_vertical = 2
 theme = ExtResource("2_theme")
 script = ExtResource("1_3qffu")
 
-[node name="Background" type="TextureRect" parent="."]
-layout_mode = 1
+[node name="Room" type="Node2D" parent="." node_paths=PackedStringArray("player", "cards", "dummy", "danny", "walls", "mode_post", "post_art", "door_exit", "callout", "danny_bark", "door_prompt", "ready_button")]
+y_sort_enabled = true
+script = ExtResource("14_room")
+player = NodePath("MainPlayer/CharacterBody2D")
+cards = NodePath("../ScreenUI/Screen/Cards")
+dummy = NodePath("TrainingDummy")
+danny = NodePath("Danny")
+walls = NodePath("Walls")
+mode_post = NodePath("ModePost")
+post_art = NodePath("ModePost/PostArt")
+door_exit = NodePath("DoorExit")
+callout = NodePath("../ScreenUI/Screen/Persistent/Callout")
+danny_bark = NodePath("../ScreenUI/Screen/Persistent/DannyBark")
+door_prompt = NodePath("../ScreenUI/Screen/Persistent/DoorPrompt")
+ready_button = NodePath("../ScreenUI/Screen/Persistent/ReadyButton")
+
+[node name="Background" type="Sprite2D" parent="Room"]
+scale = Vector2(3, 3)
+texture = ExtResource("3_bg")
+centered = false
+
+[node name="GroundFx" type="Node2D" parent="Room"]
+editor_description = "The floor layer. PlayerFinisher._ground_layer() looks for it here by name and would otherwise build its own at y 101, up in the lockers. Its effects draw behind anyone standing on the floor."
+
+[node name="Walls" type="StaticBody2D" parent="Room"]
+editor_description = "Boxes the play band. TrainingRoomScript builds its shapes from PLAY_BAND."
+
+[node name="ModePost" type="Area2D" parent="Room"]
+position = Vector2(1400, 790)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Room/ModePost"]
+position = Vector2(0, -30)
+shape = SubResource("RectangleShape2D_post")
+
+[node name="PostArt" type="Node2D" parent="Room/ModePost"]
+
+[node name="DoorExit" type="Area2D" parent="Room"]
+position = Vector2(1797, 750)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Room/DoorExit"]
+shape = SubResource("RectangleShape2D_door")
+
+[node name="TrainingDummy" parent="Room" instance=ExtResource("15_dummy")]
+position = Vector2(1150, 948)
+
+[node name="MainPlayer" parent="Room" instance=ExtResource("16_player")]
+position = Vector2(640, 960)
+
+[node name="CharacterBody2D" parent="Room/MainPlayer" index="0"]
+y_sort_enabled = true
+
+[node name="Sprite2D" parent="Room/MainPlayer/CharacterBody2D" index="1"]
+position = Vector2(0, 13)
+offset = Vector2(0, -13)
+
+[node name="Danny" type="Sprite2D" parent="Room"]
+position = Vector2(1668, 552)
+scale = Vector2(3, 3)
+texture = ExtResource("11_danny")
+centered = false
+hframes = 2
+script = ExtResource("12_danny_script")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Room/Danny"]
+libraries/ = SubResource("AnimationLibrary_danny")
+
+[node name="ScreenUI" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="Screen" type="Control" parent="ScreenUI"]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("3_bg")
-expand_mode = 1
+mouse_filter = 2
+theme = ExtResource("2_theme")
 
-[node name="Cards" type="HBoxContainer" parent="." unique_id=177939738]
+[node name="Cards" type="HBoxContainer" parent="ScreenUI/Screen" unique_id=177939738]
 layout_mode = 1
 offset_left = 60.0
 offset_top = 36.0
@@ -139,16 +221,17 @@ offset_right = 1620.0
 offset_bottom = 570.0
 theme_override_constants/separation = 24
 
-[node name="MoveCard" type="PanelContainer" parent="Cards" unique_id=1730149436]
+[node name="MoveCard" type="PanelContainer" parent="ScreenUI/Screen/Cards" unique_id=1730149436]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxTexture_card")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Cards/MoveCard" unique_id=1979209322]
+[node name="VBoxContainer" type="VBoxContainer" parent="ScreenUI/Screen/Cards/MoveCard" unique_id=1979209322]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Label" type="Label" parent="Cards/MoveCard/VBoxContainer" unique_id=185123292]
+[node name="MoveTitle" type="Label" parent="ScreenUI/Screen/Cards/MoveCard/VBoxContainer" unique_id=185123292]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 138)
 layout_mode = 2
 theme_type_variation = &"CardTitle"
@@ -157,27 +240,28 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="CenterContainer" type="CenterContainer" parent="Cards/MoveCard/VBoxContainer"]
+[node name="CenterContainer" type="CenterContainer" parent="ScreenUI/Screen/Cards/MoveCard/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="TextureRect" type="TextureRect" parent="Cards/MoveCard/VBoxContainer/CenterContainer" unique_id=1655308067]
+[node name="MoveGlyph" type="TextureRect" parent="ScreenUI/Screen/Cards/MoveCard/VBoxContainer/CenterContainer" unique_id=1655308067]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(288, 192)
 layout_mode = 2
 texture = ExtResource("5_arrows")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="AttackCard" type="PanelContainer" parent="Cards" unique_id=712047834]
+[node name="AttackCard" type="PanelContainer" parent="ScreenUI/Screen/Cards" unique_id=712047834]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxTexture_card")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Cards/AttackCard" unique_id=1712070247]
+[node name="VBoxContainer" type="VBoxContainer" parent="ScreenUI/Screen/Cards/AttackCard" unique_id=1712070247]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Label" type="Label" parent="Cards/AttackCard/VBoxContainer" unique_id=164485373]
+[node name="Label" type="Label" parent="ScreenUI/Screen/Cards/AttackCard/VBoxContainer" unique_id=164485373]
 custom_minimum_size = Vector2(0, 138)
 layout_mode = 2
 theme_type_variation = &"CardTitle"
@@ -185,27 +269,28 @@ text = "Attack"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="CenterContainer" type="CenterContainer" parent="Cards/AttackCard/VBoxContainer"]
+[node name="CenterContainer" type="CenterContainer" parent="ScreenUI/Screen/Cards/AttackCard/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="TextureRect" type="TextureRect" parent="Cards/AttackCard/VBoxContainer/CenterContainer" unique_id=1965011749]
+[node name="AttackGlyph" type="TextureRect" parent="ScreenUI/Screen/Cards/AttackCard/VBoxContainer/CenterContainer" unique_id=1965011749]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
 texture = ExtResource("6_q")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="DashCard" type="PanelContainer" parent="Cards" unique_id=965169894]
+[node name="DashCard" type="PanelContainer" parent="ScreenUI/Screen/Cards" unique_id=965169894]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxTexture_card")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Cards/DashCard" unique_id=640929565]
+[node name="VBoxContainer" type="VBoxContainer" parent="ScreenUI/Screen/Cards/DashCard" unique_id=640929565]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Label" type="Label" parent="Cards/DashCard/VBoxContainer" unique_id=1281222223]
+[node name="Label" type="Label" parent="ScreenUI/Screen/Cards/DashCard/VBoxContainer" unique_id=1281222223]
 custom_minimum_size = Vector2(0, 138)
 layout_mode = 2
 theme_type_variation = &"CardTitle"
@@ -213,27 +298,28 @@ text = "Dash"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="CenterContainer" type="CenterContainer" parent="Cards/DashCard/VBoxContainer"]
+[node name="CenterContainer" type="CenterContainer" parent="ScreenUI/Screen/Cards/DashCard/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="TextureRect" type="TextureRect" parent="Cards/DashCard/VBoxContainer/CenterContainer" unique_id=120625822]
+[node name="DashGlyph" type="TextureRect" parent="ScreenUI/Screen/Cards/DashCard/VBoxContainer/CenterContainer" unique_id=120625822]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
 texture = ExtResource("7_w")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="BlockCard" type="PanelContainer" parent="Cards"]
+[node name="BlockCard" type="PanelContainer" parent="ScreenUI/Screen/Cards"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxTexture_card")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Cards/BlockCard"]
+[node name="VBoxContainer" type="VBoxContainer" parent="ScreenUI/Screen/Cards/BlockCard"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Label" type="Label" parent="Cards/BlockCard/VBoxContainer"]
+[node name="Label" type="Label" parent="ScreenUI/Screen/Cards/BlockCard/VBoxContainer"]
 custom_minimum_size = Vector2(0, 138)
 layout_mode = 2
 theme_type_variation = &"CardTitle"
@@ -242,18 +328,29 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="CenterContainer" type="CenterContainer" parent="Cards/BlockCard/VBoxContainer"]
+[node name="CenterContainer" type="CenterContainer" parent="ScreenUI/Screen/Cards/BlockCard/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="TextureRect" type="TextureRect" parent="Cards/BlockCard/VBoxContainer/CenterContainer"]
+[node name="BlockGlyph" type="TextureRect" parent="ScreenUI/Screen/Cards/BlockCard/VBoxContainer/CenterContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(192, 96)
 layout_mode = 2
 texture = ExtResource("13_shift")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="ReadyButton" type="Button" parent="." unique_id=1717265982]
+[node name="Persistent" type="Control" parent="ScreenUI/Screen"]
+editor_description = "Everything that must stay readable and pressable while the cards are faded out: the Ready button above all."
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ReadyButton" type="Button" parent="ScreenUI/Screen/Persistent" unique_id=1717265982]
 unique_name_in_owner = true
 layout_mode = 1
 offset_left = 60.0
@@ -274,13 +371,45 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_button_pressed")
 theme_override_styles/normal = SubResource("StyleBoxTexture_button")
 text = "I'm ready!"
 
-[node name="Danny" type="Sprite2D" parent="."]
-position = Vector2(1668, 552)
-scale = Vector2(3, 3)
-texture = ExtResource("11_danny")
-centered = false
-hframes = 2
-script = ExtResource("12_danny_script")
+[node name="Callout" type="Label" parent="ScreenUI/Screen/Persistent"]
+layout_mode = 1
+offset_left = 500.0
+offset_top = 658.0
+offset_right = 1420.0
+offset_bottom = 728.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 44
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Danny"]
-libraries/ = SubResource("AnimationLibrary_danny")
+[node name="DannyBark" type="Label" parent="ScreenUI/Screen/Persistent"]
+layout_mode = 1
+offset_left = 500.0
+offset_top = 556.0
+offset_right = 1660.0
+offset_bottom = 652.0
+theme_override_colors/font_color = Color(1, 0.89411765, 0.6039216, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+horizontal_alignment = 2
+vertical_alignment = 2
+autowrap_mode = 2
+
+[node name="DoorPrompt" type="Label" parent="ScreenUI/Screen/Persistent"]
+visible = false
+layout_mode = 1
+offset_left = 1611.0
+offset_top = 775.0
+offset_right = 1911.0
+offset_bottom = 835.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 40
+text = "GOING IN..."
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[editable path="Room/MainPlayer"]

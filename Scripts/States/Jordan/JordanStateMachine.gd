@@ -10,6 +10,7 @@ extends Node
 @export var post_dialogue_pre_fight_timer: Timer
 @export var finisher_stagger_timer: Timer
 
+const VsCard := preload("res://Scripts/VsCard.gd")
 const HAZARD_GROUP := "jordan_hazard"
 
 # Phase 1's loop, a placeholder until his other attacks are designed: Idle, SummonFunkos, Taunt, then
@@ -82,7 +83,7 @@ func on_child_transition(state, new_state_name):
 
 
 func _on_dialogue_ended(_dialogue: Object) -> void:
-	post_dialogue_pre_fight_timer.start()
+	VsCard.play_intro(self, "jordan", post_dialogue_pre_fight_timer.start)
 
 
 func _on_post_dialogue_pre_fight_timer_timeout() -> void:

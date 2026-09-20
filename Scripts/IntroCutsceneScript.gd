@@ -56,6 +56,10 @@ const ANIMS := {
 #AUDIO
 const MUSIC_VOLUME_DB := -6.0
 
+# ui_cancel on either device; it is never rebindable, so the names are fixed.
+const SKIP_HINT_KEYBOARD := "ESC: skip"
+const SKIP_HINT_GAMEPAD := "B: skip"
+
 @onready var street: Node2D = $Street
 @onready var sky: Sprite2D = $Street/Sky
 @onready var buildings: Sprite2D = $Street/Buildings
@@ -64,6 +68,7 @@ const MUSIC_VOLUME_DB := -6.0
 @onready var poster_closeup: Sprite2D = $PosterCloseup
 @onready var fade: ColorRect = $FadeLayer/Fade
 @onready var skip_hint: Label = $HintLayer/SkipHint
+@onready var skip_hint_left := skip_hint.offset_left
 @onready var music_player: AudioStreamPlayer = $MusicPlayer
 
 var cam_x := 0
@@ -84,6 +89,8 @@ var leaving := false
 
 func _ready() -> void:
 	DialogueManager.dialogue_ended.connect(_on_dialogue_ended)
+	_show_skip_hint()
+	InputSettings.device_changed.connect(_show_skip_hint.unbind(1))
 	music_player.stream.loop = true
 	music_player.play()
 	_play_cutscene()
@@ -91,9 +98,19 @@ func _ready() -> void:
 
 func _input(event: InputEvent) -> void:
 	# _input, not _unhandled_input: the dialogue balloon swallows all unhandled input while it is up.
-	if event is InputEventKey and event.keycode == KEY_ESCAPE and event.pressed and not event.echo:
+	if event.is_action_pressed(&"ui_cancel"):
+		# Before it is marked handled, or the device tracker (an autoload, so later in the order) misses it.
+		InputSettings.note_device(event)
 		get_viewport().set_input_as_handled()
 		_leave()
+
+
+# The keyboard hint keeps the box it was drawn with; the shorter pad hint gets one fitted to it, on
+# the same right edge, so it doesn't sit in a gap.
+func _show_skip_hint() -> void:
+	var gamepad := InputSettings.device == InputSettings.Device.GAMEPAD
+	skip_hint.text = SKIP_HINT_GAMEPAD if gamepad else SKIP_HINT_KEYBOARD
+	skip_hint.offset_left = skip_hint.offset_right - skip_hint.get_combined_minimum_size().x if gamepad else skip_hint_left
 
 
 func _process(delta: float) -> void:

@@ -11,15 +11,11 @@ signal hype_full_changed(full: bool)
 signal hype_spent
 
 const FightOutro := preload("res://Scripts/FightOutro.gd")
+const PlayerFeel := preload("res://Scripts/PlayerFeel.gd")
 const CROWD_GROUP := "arena_crowd"
 
+# What punches, parries and perfect dodges pay is PlayerFeel's, by the player's feel_v2.
 @export var max_hype := 100.0
-@export var punch_gain := 5.0
-# Instead of punch_gain, not on top of it.
-@export var charged_punch_gain := 12.0
-# By parry streak tier: the first parry, the second, then the third and up.
-@export var parry_gains: Array = [25.0, 30.0, 35.0]
-@export var perfect_dodge_gain := 15.0
 # A punched figure's blast catching Jordan.
 @export var explosion_redirect_gain := 8.0
 @export var hit_loss := 20.0
@@ -93,15 +89,16 @@ func is_inert() -> bool:
 
 
 func _on_punch_landed(_target: Node, _dealt: int, charged: bool) -> void:
-	add(charged_punch_gain if charged else punch_gain)
+	add(PlayerFeel.value("hype_charged_punch_gain" if charged else "hype_punch_gain", player.feel_v2))
 
 
 func _on_parried(_hit: RefCounted, _contact_point: Vector2, _staggered: bool, streak: int) -> void:
-	add(parry_gains[clampi(streak - 1, 0, parry_gains.size() - 1)])
+	var gains: Array = PlayerFeel.value("hype_parry_gains", player.feel_v2)
+	add(gains[clampi(streak - 1, 0, gains.size() - 1)])
 
 
 func _on_perfect_dodged(_hit: RefCounted) -> void:
-	add(perfect_dodge_gain)
+	add(PlayerFeel.value("hype_perfect_dodge_gain", player.feel_v2))
 
 
 func _on_hit_taken(hit: RefCounted) -> void:

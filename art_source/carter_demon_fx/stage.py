@@ -37,7 +37,14 @@ from fxlib import (Cv, Mask, ell, poly, quant, bayer01, hexc, rgba,
 
 # ------------------------------------------------------------------ spotlight
 
-SW, SH = 160, 224          # texels; at 3x this is 480 x 672 on screen
+# The canvas has to reach past PY + PRY = 244, the bottom of the pool's
+# ellipse.  At 224 it stopped twenty rows short and sliced the pool off in a
+# straight line - hidden under the dithered dark during the Demon, glaring once
+# the KO laid the same light on pure black.  248 closes the ellipse, rim and
+# falloff included, with a few clear rows under it.  Rows are only ADDED at the
+# bottom: the anchor texel and every existing texel are exactly where they were,
+# and the code places this by its anchor, never by its size.
+SW, SH = 160, 248          # texels; at 3x this is 480 x 744 on screen
 PX, PY = 80.0, 186.0       # pool centre = the anchor = where the player stands
 PRX, PRY = 66.0, 58.0      # 396 x 348 px of pool at 3x
 

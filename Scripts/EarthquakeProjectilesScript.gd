@@ -27,6 +27,7 @@ const FADE_TIME := 0.25
 
 # Set by the slam before the group is added.
 var tilted := false
+var attack_id := &"eric_quake_wave"
 
 #FIGHTING GAME NUMPAD NOTATIONS FOR DIRECTIONS
 # Travel angle of each direction in the straight pattern, clockwise from +x (y points down).
@@ -65,7 +66,7 @@ func _ready() -> void:
 
 	for numpad in collision_map:
 		var area: Area2D = collision_map[numpad]
-		area.set_meta(HitInfo.META_ATTACK, &"eric_quake_wave")
+		area.set_meta(HitInfo.META_ATTACK, attack_id)
 		# Every wave comes from the slam, so a guard facing the slam point blocks it.
 		area.set_meta(HitInfo.META_ORIGIN, global_position)
 		var degrees: float = NUMPAD_ANGLES[numpad] + (TILTED_OFFSET_DEGREES if tilted else 0.0)

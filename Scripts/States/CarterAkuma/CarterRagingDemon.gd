@@ -141,20 +141,27 @@ func _exit_tree() -> void:
 # Idempotent, and called from both Exit() and _exit_tree(). A player left locked in a sequence that
 # ended is an unrecoverable bug - they can never move again - so every way out of this state runs
 # through here, including the terminal ones that skip Exit() (CarterStateMachine._end_fight).
-func release() -> void:
+# `keep_dark` is for the one exit that hands the dark on rather than giving it back: he has just
+# killed them, and his victory pose carries the barrage's darkness straight into its blackout. The
+# lights stay out, the music stays down, and the fallen player stays lifted in their pool of light
+# until the blackout swallows them - so nothing lifts at the moment of the kill. Everything else is
+# still released: the lock, the signal, the clones.
+func release(keep_dark := false) -> void:
 	if released:
 		return
 	released = true
 	if state_machine and is_instance_valid(state_machine):
 		state_machine.unlock_player()
 		state_machine.clear_player_facing()
-		state_machine.set_player_stage_z(player_stage_z)
+		if not keep_dark:
+			state_machine.set_player_stage_z(player_stage_z)
 		if listening:
 			state_machine.disconnect_block_presses(_on_block_pressed)
 	listening = false
 	if is_instance_valid(body):
-		body.snap_dark_clear()
-		body.snap_music_level()
+		if not keep_dark:
+			body.snap_dark_clear()
+			body.snap_music_level()
 		body.show_body(true)
 		body.show_mark_glow(false)
 	_clear_clones()

@@ -32,7 +32,7 @@ const G_TELL_ANCHOR := Vector2(0, -322)
 # Where the twin beam rig sits in his hands in phase two: chest height, on his middle.
 const G_BEAM_ORIGIN := Vector2(0, -190)
 # Where a thrown piece of junk leaves his hand, on the combo sheet's release frame.
-const G_HAND_THROW := Vector2(83, 49)
+const G_HAND_THROW := Vector2(53, 43)
 
 #COMPUTAH (64x64 strips, feet on row 63, x = 31.5 the mirror axis)
 const C_FRAME := Vector2(64, 64)
@@ -100,7 +100,7 @@ const GREYSON_ANIMS := {
 const COMBO_HIT_STEPS := [1, 2, 3, 4, 5]
 # The punching fist's centre on each combo frame, in texels. One point per drawing, so a burst lands
 # on the knuckles whichever of the five hits is playing.
-const COMBO_FIST_POINTS := {1: Vector2(53, 49), 2: Vector2(44, 52), 3: Vector2(50, 55)}
+const COMBO_FIST_POINTS := {1: Vector2(53, 43), 2: Vector2(44, 46), 3: Vector2(50, 49)}
 # Where the player is held through the combo, in px from Greyson's own floor point, toward the side
 # he faces: just past the reach of his lead fist.
 const COMBO_SPOT := Vector2(150, 0)
@@ -155,40 +155,6 @@ const COMPUTAH_ANIMS := {
 	&"defeat": {sheet = C_DIR + "computah_defeat.png",
 		frames = [0, 1, 2, 3, 4], times = [0.14, 0.12, 0.12, 0.30, 1.0], loop = false},
 }
-
-#THE TWO-BAR HEALTH PANEL
-# One framed panel, one name, two stacked bars joined by a bracket: they have to read as one boss.
-# Each bar carries a ghost marker at the other body's ratio, so the gap between a bar's fill edge and
-# its marker IS the imbalance the fight is about.
-const PANEL_RECT := Rect2(720, 28, 480, 104)
-const PANEL_BG := Color(0.05, 0.06, 0.09, 0.82)
-const PANEL_BORDER := Color(0, 0, 0)
-const PANEL_BORDER_WIDTH := 3
-const NAME_POSITION := Vector2(732, 32)
-const NAME_FONT_SIZE := 30
-const BAR_SIZE := Vector2(400, 20)
-const BAR_LEFT := 764.0
-const BAR_TOP := [70.0, 100.0]
-# The bracket joining the two bars down their left edge.
-const BRACKET_RECT := Rect2(752, 70, 6, 50)
-const BRACKET_COLOR := Color(0.62, 0.66, 0.78, 0.9)
-# Which body owns which row: Greyson on top, Computah under him.
-const BAR_LABELS := ["G", "C"]
-const BAR_LABEL_X := 736.0
-const BAR_LABEL_FONT_SIZE := 20
-const BAR_BG := Color(0.08, 0.08, 0.08, 0.85)
-# Greyson's fill, then Computah's: his trunks and Computah's chassis trim.
-const BAR_FILL := [Color(0.72, 0.45, 0.92, 1), Color(0.35, 0.72, 0.95, 1)]
-const BAR_FILL_LOW := [Color(0.92, 0.42, 0.44, 1), Color(0.95, 0.5, 0.3, 1)]
-const BAR_LOW_RATIO := 0.34
-# What the healthier body's bar turns as the surge climbs, and how hard it beats.
-const BAR_FILL_HOT := Color(1.0, 0.78, 0.22, 1)
-const BAR_PULSE_TIME := 0.45
-const BAR_PULSE_ALPHA := 0.45
-# The other body's ratio, a tick across the bar.
-const GHOST_MARKER_WIDTH := 3.0
-const GHOST_MARKER_COLOR := Color(1, 1, 1, 0.85)
-const BAR_FILL_TIME := 0.2
 
 #THE WORD POPUPS
 const WORD_CENTRE := Vector2(960, 290)

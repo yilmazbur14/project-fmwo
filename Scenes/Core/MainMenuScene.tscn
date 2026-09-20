@@ -88,7 +88,7 @@ texture_margin_top = 12.0
 texture_margin_right = 9.0
 texture_margin_bottom = 9.0
 
-[node name="Control" type="Control" unique_id=497181348 node_paths=PackedStringArray("start_game_button", "volume_slider", "music_player")]
+[node name="Control" type="Control" unique_id=497181348 node_paths=PackedStringArray("start_game_button", "controls_button", "volume_slider", "music_player")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -98,6 +98,7 @@ grow_vertical = 2
 theme = ExtResource("2_theme")
 script = ExtResource("1_47sjk")
 start_game_button = NodePath("StartGameButton")
+controls_button = NodePath("ControlsButton")
 volume_slider = NodePath("VolumeSlider")
 music_player = NodePath("MusicPlayer")
 
@@ -145,12 +146,30 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_button_pressed")
 theme_override_styles/normal = SubResource("StyleBoxTexture_button")
 text = "NEW GAME"
 
+[node name="ControlsButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 156.0
+offset_top = 566.0
+offset_right = 636.0
+offset_bottom = 692.0
+theme_type_variation = &"LargeButton"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
+theme_override_styles/hover = SubResource("StyleBoxTexture_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_button_pressed")
+theme_override_styles/normal = SubResource("StyleBoxTexture_button")
+text = "CONTROLS"
+
 [node name="VolumeLabel" type="Label" parent="." unique_id=1877363678]
 layout_mode = 0
 offset_left = 156.0
-offset_top = 580.0
+offset_top = 716.0
 offset_right = 636.0
-offset_bottom = 620.0
+offset_bottom = 756.0
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
 theme_override_constants/shadow_offset_x = 3
 theme_override_constants/shadow_offset_y = 3
@@ -162,9 +181,9 @@ vertical_alignment = 1
 [node name="VolumeSlider" type="HSlider" parent="." unique_id=1877363679]
 layout_mode = 0
 offset_left = 156.0
-offset_top = 648.0
+offset_top = 766.0
 offset_right = 636.0
-offset_bottom = 702.0
+offset_bottom = 820.0
 theme_override_styles/slider = SubResource("StyleBoxTexture_slider_track")
 theme_override_styles/grabber_area = SubResource("StyleBoxTexture_slider_fill")
 theme_override_styles/grabber_area_highlight = SubResource("StyleBoxTexture_slider_fill")
