@@ -99,14 +99,6 @@ func _ready() -> void:
 	_apply_art_layout()
 	_build_hud()
 
-	# This fight opts back out of the reworked feel (PlayerScript.feel_v2, on everywhere else). His
-	# hurtbox hangs off the hover node ($Air/Hurtbox), and a feel_v2 punch resolves against the
-	# hurtbox's parent, which is that node and has no take_punch: every punch would whiff and the
-	# fight could not be won. Deleting these three lines is how he goes back on it.
-	var player := get_tree().current_scene.get_node_or_null(FightOutro.PLAYER_PATH)
-	if player:
-		player.feel_v2 = false
-
 	# "Carried In, Swallowed Whole", written for this fight - see art_source/music/liam_theme.rb.
 	# One 16-bar cycle cut to the beat, so LOOP_FORWARD runs it end to end with no seam.
 	music_player.stream = load(THEME)

@@ -57,7 +57,26 @@ func _land_on_contact() -> void:
 	if not player.combo.swing_open:
 		return
 	for area in hitBox.get_overlapping_areas():
-		var target: Node = area.get_parent()
-		if area.is_in_group(player.BOSS_TARGET_GROUP) and target.has_method("take_punch"):
+		if not area.is_in_group(player.BOSS_TARGET_GROUP):
+			continue
+		var target := _boss_of(area)
+		if target != null:
 			player.combo.resolve_punch(target)
 			return
+
+
+# The body that owns a hurtbox, which is not always its parent: Josh and Bixby both hang theirs off
+# an `Air` node so the hover can move the whole body, and Air is a bare Node2D. Taking the parent
+# found no `take_punch` there, so under feel_v2 every punch whiffed and end_swing() killed the combo
+# - neither fight could be won. Walking up instead of assuming the shape costs nothing and means a
+# boss can nest its hurtbox however its animation needs to.
+#
+# Bounded by the fight's own root rather than the scene's, so a hurtbox with no owner resolves to
+# null and the swing stays open for the boss's own report, exactly as it did before.
+func _boss_of(area: Area2D) -> Node:
+	var node: Node = area
+	while node != null and node != get_tree().current_scene:
+		if node.has_method("take_punch"):
+			return node
+		node = node.get_parent()
+	return null
