@@ -19,7 +19,13 @@ extends SceneTree
 const SCENES := {
 	"eric": "res://Scenes/Bosses/EricBossFightScene.tscn",
 	"greyson": "res://Scenes/Bosses/GreysonBossFightScene.tscn",
+	# Deliberately the LEGACY combined scene, not the shipped CarterBossFightScene: test_smoke,
+	# test_blocks, test_approach and test_dodge_rollout all reach into Arena/CarterAndJoshScene/Carter
+	# and would break against the split fight. The shipped Carter is covered by clone_cadence, which
+	# uses Arena/CarterAkumaScene. Pointing this row at the split fight is its own job - it means
+	# reworking those four node paths - and is NOT a one-line change.
 	"carter": "res://Scenes/Bosses/CarterAndJoshBossFightScene.tscn",
+	"josh": "res://Scenes/Bosses/JoshBossFightScene.tscn",
 	"mason": "res://Scenes/Bosses/MasonBossFightScene.tscn",
 	"jordan": "res://Scenes/Bosses/JordanBossFightScene.tscn",
 	"liam": "res://Scenes/Bosses/LiamBossFightScene.tscn",
@@ -193,6 +199,33 @@ func skip_entrance() -> void:
 	if not intro.finished:
 		intro.skip()
 	await wait(2)
+
+
+# A boss whose entrance is a plain state in its own machine, rather than a node with
+# finish_entrance() the way Eric's is: entrance_state() cannot see it, so skip_entrance() no-ops and
+# load_fight()'s dialogue_ended fires while the intro is STILL PLAYING. The lines the intro opens
+# when it ends are then never dismissed, the boss never leaves Intro, and every mode reports a fight
+# that quietly does nothing - blocks and smoke both sat on an inert Josh for 45 s. These fights keep
+# the balloon and get read through the way a player reads them.
+const STATE_INTROS := {
+	"liam": "Arena/BixbyBeastScene/BixbyBeastCharacterBody/StateManager",
+	"josh": "Arena/JoshCardsScene/JoshCardsCharacterBody/StateManager",
+}
+
+
+# Taps through the intro and the lines behind it until the machine leaves Intro, and reports the
+# state it settled in so a caller can say so.
+func clear_intro(key_name: String) -> String:
+	if not STATE_INTROS.has(key_name):
+		return ""
+	var sm: Node = current_scene.get_node(STATE_INTROS[key_name])
+	for i in 3000:
+		if sm.current_state.name != "Intro":
+			break
+		if i % 15 == 0:
+			tap(KEY_ENTER)
+		await physics_frame
+	return str(sm.current_state.name)
 
 
 # The VS card plays between a fight's lines and the fight itself; every mode but vs_card is about
@@ -1924,9 +1957,28 @@ func test_gamepad_mash() -> void:
 # ------------------------------------------------------------------ step 8: every fight, no Shift, no W
 
 # Hits that deal nothing: they start a hold rather than hurting.
-const NO_DAMAGE_HITS := [&"eric_bear_hug_grab", &"eric_bear_hug_grab_v2", &"computah_chase", &"greyson_combo_jab"]
-# Hits worth more than one half-heart.
-const BIG_HITS := {&"greyson_combo_finish": 3, &"computah_slam": 3}
+# These three used to be hand-kept copies of what AttackCatalog already says, and a copy only covers
+# the attacks somebody remembered to add to it. Josh was in none of them, so every one of his attacks
+# was scored as a 1-damage unblockable: smoke expected 8 where the catalogue says 10, and blocks
+# called his two blockable cards "shouldn't be blockable". Reading the catalogue instead means a new
+# attack is covered the day it is catalogued. The invariant under test is unchanged and is the one
+# that matters: the RUNTIME honours what the catalogue declares.
+const CATALOG := preload("res://Scripts/AttackCatalog.gd")
+
+
+# The half-hearts the catalogue says this attack costs, which is 0 for a grab and 2 or 3 for the
+# blows that are worth more than one.
+func catalogue_damage(id: StringName) -> int:
+	return CATALOG.get_attack(id).damage
+
+
+# The stamina a guard facing this attack should spend, read off the catalogue's weight and the
+# player's own cost vars, or 0.0 for an attack no guard should be able to absorb at all.
+func catalogue_block_cost(id: StringName) -> float:
+	var entry: Dictionary = CATALOG.get_attack(id)
+	if not entry.blockable:
+		return 0.0
+	return defense.heavy_block_cost if entry.weight == CATALOG.Weight.HEAVY else defense.light_block_cost
 # Hits that land inside the i-frames on purpose, because the player is held and cannot dodge.
 const IGNORES_IFRAMES := [&"eric_bear_hug_squeeze", &"greyson_combo_jab", &"greyson_combo_finish", &"computah_slam"]
 
@@ -1937,6 +1989,7 @@ const SMOKE_SPOTS := {
 	"mason": Vector2(960, 640),
 	"jordan": Vector2(960, 640),
 	"liam": Vector2(960, 640),
+	"josh": Vector2(960, 640),
 }
 
 
@@ -1945,16 +1998,10 @@ func test_smoke() -> void:
 		pin_eric(ver)
 	# Liam's intro plays through his pre-fight dialogue, whose lines drive the transformation, so
 	# that balloon has to be tapped through rather than skipped.
-	await load_fight(fight, fight == "liam")
-	if fight == "liam":
-		var beast_sm: Node = current_scene.get_node("Arena/BixbyBeastScene/BixbyBeastCharacterBody/StateManager")
-		for i in 3000:
-			if beast_sm.current_state.name != "Intro":
-				break
-			if i % 15 == 0:
-				tap(KEY_ENTER)
-			await physics_frame
-		log_p("Liam's intro ended in %s" % beast_sm.current_state.name)
+	await load_fight(fight, STATE_INTROS.has(fight))
+	var settled := await clear_intro(fight)
+	if settled != "":
+		log_p("%s's intro ended in %s" % [fight, settled])
 	player.playerHealth = 1000
 	track()
 	track_parries()
@@ -1992,9 +2039,7 @@ func test_smoke() -> void:
 	# launching blow worth three, which is the shape of Eric's bear hug.
 	var expected := 0
 	for e in hits:
-		if e.id in NO_DAMAGE_HITS:
-			continue
-		expected += BIG_HITS.get(e.id, 1)
+		expected += catalogue_damage(e.id)
 	check(player.playerHealth == health - expected, "the catalogued damage per hit (%d expected of %d hits, %d health lost)" % [expected, hits.size(), health - player.playerHealth])
 	var bad_gaps := []
 	for i in range(1, hits.size()):
@@ -2023,30 +2068,12 @@ func test_smoke() -> void:
 
 
 # What each attack should cost the guard, and what should never be blockable at all.
-const BLOCK_COSTS := {
-	&"greyson_throw": 20.0,
-	&"greyson_throw_hard": 35.0,
-	&"wrestler_charge": 35.0,
-	&"mason_poo_blast": 20.0,
-	&"mason_nugget": 20.0,
-	&"carter_elbow_drop": 35.0,
-	&"funko_blast": 20.0,
-	&"bixby_fire_breath": 20.0,
-	&"bixby_quake_burst": 20.0,
-}
 const UNBLOCKABLE := [&"computah_laser", &"computah_chase", &"greyson_combo_jab", &"greyson_combo_finish", &"computah_slam", &"wrestler_punish", &"eric_quake_ring", &"eric_bear_hug_squeeze"]
 
 
 func test_blocks() -> void:
-	await load_fight(fight, fight == "liam")
-	if fight == "liam":
-		var beast_sm: Node = current_scene.get_node("Arena/BixbyBeastScene/BixbyBeastCharacterBody/StateManager")
-		for i in 3000:
-			if beast_sm.current_state.name != "Intro":
-				break
-			if i % 15 == 0:
-				tap(KEY_ENTER)
-			await physics_frame
+	await load_fight(fight, STATE_INTROS.has(fight))
+	await clear_intro(fight)
 	player.playerHealth = 1000
 	track()
 	track_parries()
@@ -2082,7 +2109,8 @@ func test_blocks() -> void:
 	log_p("%s blocked %s, hit %s, guard up for %d of %d frames%s" % [fight, costs, hit_ids, guarded_frames, frames_run, " (the fight ended early)" if player.fight_over else ""])
 	check(guarded_frames > frames_run * 0.9, "the guard stayed up through the fight (%d of %d frames)" % [guarded_frames, frames_run])
 	for id in costs:
-		check(BLOCK_COSTS.has(id) and is_equal_approx(costs[id], BLOCK_COSTS[id]), "%s costs %.0f (expected %s)" % [id, costs[id], BLOCK_COSTS.get(id, "nothing: it shouldn't be blockable")])
+		var want: float = catalogue_block_cost(id)
+		check(want > 0.0 and is_equal_approx(costs[id], want), "%s costs %.0f (expected %s)" % [id, costs[id], "%.0f" % want if want > 0.0 else "nothing: it shouldn't be blockable"])
 	for id in hit_ids:
 		if UNBLOCKABLE.has(id):
 			check(not costs.has(id), "%s is never blocked" % id)
@@ -2234,15 +2262,8 @@ const ROPES := Rect2(105, 105, 1710, 870)
 
 func test_knockback_boss() -> void:
 	var key := fight
-	await load_fight(key, key == "liam")
-	if key == "liam":
-		var intro_sm: Node = current_scene.get_node("Arena/BixbyBeastScene/BixbyBeastCharacterBody/StateManager")
-		for i in 3000:
-			if intro_sm.current_state.name != "Intro":
-				break
-			if i % 15 == 0:
-				tap(KEY_ENTER)
-			await physics_frame
+	await load_fight(key, STATE_INTROS.has(key))
+	await clear_intro(key)
 	player.playerHealth = 1000
 	var hype: Node = player.get_node("Hype")
 	var finisher: Node = player.get_node("Finisher")
@@ -2607,15 +2628,8 @@ const WINDUP_READS := {
 func test_approach() -> void:
 	if fight == "eric" and ver > 0:
 		pin_eric(ver)
-	await load_fight(fight, fight == "liam")
-	if fight == "liam":
-		var intro_sm: Node = current_scene.get_node("Arena/BixbyBeastScene/BixbyBeastCharacterBody/StateManager")
-		for i in 3000:
-			if intro_sm.current_state.name != "Intro":
-				break
-			if i % 15 == 0:
-				tap(KEY_ENTER)
-			await physics_frame
+	await load_fight(fight, STATE_INTROS.has(fight))
+	await clear_intro(fight)
 	player.playerHealth = 100000
 	var born := {}
 	var approaches := {}

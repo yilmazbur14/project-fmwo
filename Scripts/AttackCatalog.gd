@@ -92,7 +92,13 @@ const ATTACKS := {
 	# is to be somewhere else by the time it does. No dash immunity - stepping out is the dodge.
 	&"mason_nugget": {"blockable": true, "weight": Weight.LIGHT, "from_above": true, "dodge_tell": true},
 	&"carter_elbow_drop": {"blockable": true, "weight": Weight.HEAVY, "from_above": true},
-	&"funko_blast": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
+	# from_above because a funko's blast is a radius with no direction to face, exactly like the
+	# nugget and the elbow drop above it. Without it the guard only answers a blast inside +/-60 deg
+	# of facing, and facing auto-aims at the NEAREST figure while the one detonating usually is not
+	# it - measured, a standing player parried 0-1 of 7-10 landing blasts. That made the red tell a
+	# lie: it promised an answer the fight did not offer. Omni-blockable is what the attack already
+	# was in every other respect.
+	&"funko_blast": {"blockable": true, "weight": Weight.LIGHT, "from_above": true, "tell": true},
 	&"bixby_fire_breath": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
 	# The ground wave an erupting crack sends out.
 	&"bixby_quake_burst": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
