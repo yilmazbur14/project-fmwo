@@ -116,7 +116,7 @@ func _main() -> void:
 # over an empty rail.
 func _fill_daze(amount: float) -> void:
 	for node in root.find_children("*", "Node", true, false):
-		if node.get_script() != null and str(node.get_script().resource_path).ends_with("EricBreakGauge.gd"):
+		if node.get_script() != null and str(node.get_script().resource_path).ends_with("BossBreakGauge.gd"):
 			node.locked = false
 			node.add(amount)
 

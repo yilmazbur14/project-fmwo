@@ -1,6 +1,6 @@
 extends Control
 
-# Eric's Break gauge (EricBreakGauge): a brass gauge on the top rope, or a thin bar under his health
+# Eric's Break gauge (BossBreakGauge): a brass gauge on the top rope, or a thin bar under his health
 # bar while the art is off. It pulses as it nears full, shatters under a BREAK! when he breaks, and
 # sits dimmed while it takes nothing afterwards. It runs on real seconds, so it plays out through the
 # Break's own hit-stop. BossOneScript builds it at runtime, the way it builds the health bar above it.

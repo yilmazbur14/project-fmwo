@@ -1468,7 +1468,7 @@ func dash(direction_key: int) -> void:
 
 func test_dash_recovery() -> void:
 	await load_eric()
-	# Today's dash, which Eric's fight swaps for feel_v2's; dash_recovery_v2 covers that one.
+	# The dash a fight gets by opting out of feel_v2; dash_recovery_v2 covers the one that ships.
 	player.feel_v2 = false
 	park_eric()
 	health_ok()
@@ -1588,7 +1588,7 @@ func travel(seconds: float, dashing: bool) -> float:
 
 func test_dash_spam() -> void:
 	await load_eric()
-	# Today's dash, which Eric's fight swaps for feel_v2's; dash_spam_v2 covers that one.
+	# The dash a fight gets by opting out of feel_v2; dash_spam_v2 covers the one that ships.
 	player.feel_v2 = false
 	health_ok()
 	player.is_invincible = true
@@ -1622,7 +1622,7 @@ func test_hype() -> void:
 	await wait(3)
 	check(not hype.is_inert(), "hype counts in Eric's fight")
 	check(hype.hype == 0.0 and meter.visible, "starts empty, meter shown")
-	# What each pays is PlayerFeel's, by the player's feel_v2, which Eric's fight turns on.
+	# What each pays is PlayerFeel's, by the player's feel_v2, which every fight is on.
 	var punch_gain: float = feel("hype_punch_gain")
 	var charged_gain: float = feel("hype_charged_punch_gain")
 	var parry_gain: float = feel("hype_parry_gains")[0]
@@ -1760,8 +1760,8 @@ func mash_finisher() -> void:
 
 func test_super_uppercut() -> void:
 	await load_eric()
-	# Today's mash on Q and W, which Eric's fight swaps for feel_v2's arrows; verify_controls' eric_mash
-	# covers that one.
+	# The mash a fight gets by opting out of feel_v2, on Q and W; verify_controls' eric_mash covers the
+	# arrows that ship.
 	player.feel_v2 = false
 	health_ok()
 	var hype: Node = player.get_node("Hype")
@@ -1854,8 +1854,8 @@ func timed_mash(first: Callable, second: Callable) -> Array:
 # and the prompt waits for the finisher to end before swapping its keys.
 func test_gamepad_mash() -> void:
 	await load_eric()
-	# Today's mash on Q and W, and A and B, which Eric's fight swaps for feel_v2's arrows and bumpers;
-	# verify_controls' eric_mash covers that one.
+	# The mash a fight gets by opting out of feel_v2, on Q and W and on A and B; verify_controls'
+	# eric_mash covers the arrows and bumpers that ship.
 	player.feel_v2 = false
 	health_ok()
 	var settings: Node = root.get_node("InputSettings")
@@ -3372,7 +3372,7 @@ func test_parry_streak() -> void:
 		sounds.append([voice.stream.resource_path.get_file(), snappedf(voice.volume_db, 0.1), voice.playing])
 	log_p("streaks %s, hype gains %s, sounds %s" % [streaks, gains, sounds])
 	check(defense.parry_streak == 3, "streak counts to 3 (%d)" % defense.parry_streak)
-	# PlayerFeel's, by the player's feel_v2, which Eric's fight turns on.
+	# PlayerFeel's, by the player's feel_v2, which every fight is on.
 	var wanted_gains: Array = feel("hype_parry_gains")
 	check(gains == wanted_gains, "hype pays %s by tier (%s)" % [wanted_gains, gains])
 	# One sound, the same every time: the streak climbs in the art, never in the ears.
@@ -3686,10 +3686,10 @@ func swing_any() -> void:
 
 
 # ------------------------------------------------------------------ feel_v2's dash
-# The dash a fight opts into with player.feel_v2 (only Eric's does, from BossOneScript): a short
-# landing beat instead of the long lockout, a re-dash cooldown that keeps mashing at today's rate, the
-# direction read once the frame's input is all in, and PlayerDashFx's afterimages, dust and whoosh.
-# dash_legacy pins another fight to today's dash; dash_layers draws v2 in any of the seven fights.
+# The dash player.feel_v2 gives every fight: a short landing beat instead of the long lockout, a
+# re-dash cooldown that keeps mashing at today's rate, the direction read once the frame's input is
+# all in, and PlayerDashFx's afterimages, dust and whoosh. dash_legacy holds a fight to the dash the
+# feel_v2 opt-out leaves it on; dash_layers draws v2 in any of the seven fights.
 
 # The seven fights, and where each keeps its boss so it can be switched off.
 const DASH_FIGHTS := {
@@ -3873,7 +3873,7 @@ func test_dash_v2() -> void:
 	var arena: Node = current_scene.get_node("Arena")
 	var stage: Node = arena.get_node("MainPlayer")
 	var sfx: AudioStreamPlayer = player.get_node("DashSfxPlayer")
-	check(player.feel_v2, "Eric's fight turns feel_v2 on")
+	check(player.feel_v2, "the fight is on feel_v2")
 	# Taken standing: a landing pose leans the sprite back a texel, and the afterimages don't.
 	var draw_offset := sprite_draw_offset()
 
@@ -4101,7 +4101,7 @@ func test_dash_v2() -> void:
 func test_dash_recovery_v2() -> void:
 	await load_quiet("eric")
 	track_parries()
-	check(player.feel_v2, "Eric's fight turns feel_v2 on")
+	check(player.feel_v2, "the fight is on feel_v2")
 
 	log_p("-- the timeline, frame by frame, with right held through it")
 	await settle_player(DASH_CENTRE)
@@ -4273,10 +4273,12 @@ func test_dash_spam_v2() -> void:
 	check(runs.values().all(func(run: Dictionary): return float(run.immune) / run.frames < 0.35), "no way of dashing keeps dash immunity up for even 35% of the time")
 
 
-# Another fight, feel_v2 off: today's dash, frame for frame, with nothing drawn and nothing played.
+# A fight that opts out of feel_v2, the one line a fight whose retune isn't done puts in its _ready:
+# today's dash, frame for frame, with nothing drawn and nothing played.
 func test_dash_legacy() -> void:
 	await load_quiet(fight)
-	check(not player.feel_v2, "%s's fight leaves feel_v2 off" % fight)
+	player.feel_v2 = false
+	log_p("%s's fight, opted out of feel_v2" % fight)
 	var arena: Node = current_scene.get_node("Arena")
 	var sfx: AudioStreamPlayer = player.get_node("DashSfxPlayer")
 	var children := arena.get_child_count()
@@ -4333,8 +4335,8 @@ func test_dash_legacy() -> void:
 	check(not sounded[0], "and no whoosh")
 
 
-# feel_v2's effects in any of the seven fights: always drawn behind the player and over the floor. Only
-# Eric's fight opts in today; the others are opted in here to show the effects are ready for them.
+# feel_v2's effects in any of the seven fights: always drawn behind the player and over the floor.
+# Every fight is on feel_v2 now, and the assignment below keeps the mode honest if one opts back out.
 func test_dash_layers() -> void:
 	await load_quiet(fight)
 	player.feel_v2 = true
@@ -4387,10 +4389,10 @@ func test_dash_layers() -> void:
 
 
 # ------------------------------------------------------------------ feel_v2's punch
-# The punch a fight opts into with player.feel_v2 (Eric's, from BossOneScript): PlayerScript's
-# PUNCH_HITBOXES_V2, fitted as every swing starts, and PunchFx's swoosh, star and whoosh. fight=eric
-# pins v2 against the real Eric, held down so his hurtbox is live; any other fight must keep today's
-# box exactly, with nothing drawn or played.
+# The punch player.feel_v2 gives every fight: PlayerScript's PUNCH_HITBOXES_V2, fitted as every swing
+# starts, and PunchFx's swoosh, star and whoosh. fight=eric pins v2 against the real Eric, held down so
+# his hurtbox is live; any other fight is opted back out here and must keep today's box exactly, with
+# nothing drawn or played.
 
 const PUNCH_SWOOSH_TEXTURE := "res://Assets/Effects/punch_swoosh.png"
 const PUNCH_FX_SCRIPT := "res://Scripts/PunchFx.gd"
@@ -4485,10 +4487,10 @@ func watched_punch() -> Dictionary:
 
 func punch_reach_v2() -> void:
 	await load_eric()
-	check(player.feel_v2, "Eric's fight turns feel_v2 on")
+	check(player.feel_v2, "the fight is on feel_v2")
 	check(player.punch_fx != null and player.punch_fx == punch_fx(), "the player carries PunchFx")
 
-	log_p("-- the first punch gets v2's box, though feel_v2 came on after the player was ready")
+	log_p("-- the first punch gets v2's box, fitted as the swing starts rather than once at _ready")
 	var before := fitted_punch_box()
 	var first := await watched_punch()
 	log_p("box before the first swing %s, during it %s (facing %s)" % [before, first.box, PUNCH_FACING_NAMES[first.facing]])
@@ -4614,10 +4616,12 @@ func punch_reach_v2() -> void:
 	check(not swoosh.visible and not star.visible, "no swoosh or star left once it froze (swoosh %s, star %s)" % [swoosh.visible, star.visible])
 
 
-# Another fight, feel_v2 off: today's box in every facing, and PunchFx never draws or plays.
+# A fight that opts out of feel_v2, the one line a fight whose retune isn't done puts in its _ready:
+# today's box in every facing, and PunchFx never draws or plays.
 func punch_reach_legacy() -> void:
 	await load_quiet(fight)
-	check(not player.feel_v2, "%s's fight leaves feel_v2 off" % fight)
+	player.feel_v2 = false
+	log_p("%s's fight, opted out of feel_v2" % fight)
 	check(player.punch_fx != null, "the player carries PunchFx here too")
 	var fx := punch_fx()
 	var swoosh: Sprite2D = fx.get_node("Swoosh")
@@ -6224,9 +6228,11 @@ func test_mash_tiers_live() -> void:
 	check(banks == [1, 2] and finisher.juggle_tiers == 2, "two bars banked (%s)" % [banks])
 	await wait_until(func(): return finisher.phase == FINISHER_OFF, 400)
 
-	log_p("-- every other fight mashes attack and dash")
+	log_p("-- every fight mashes the pair, and opting out of feel_v2 puts it back on attack and dash")
 	await load_fight("mason")
-	check(player.get_node("Finisher").mash_actions() == [&"punch", &"dodge"], "Mason's finisher mashes punch and dodge")
+	check(player.get_node("Finisher").mash_actions() == [&"mash_left", &"mash_right"], "Mason's fight mashes the pair too")
+	player.feel_v2 = false
+	check(player.get_node("Finisher").mash_actions() == [&"punch", &"dodge"], "opted out of feel_v2, it mashes punch and dodge")
 
 
 # Tier 3 from start to finish, watched frame by frame.

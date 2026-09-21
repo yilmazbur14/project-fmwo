@@ -151,9 +151,6 @@ func _ready() -> void:
 	process_priority = -10
 	process_physics_priority = -10
 
-	# The room's only exit is Eric's fight, so it teaches Eric's feel: the V2 dash, the V2 punch
-	# reach and the finisher's own mash pair. Exactly what BossOneScript does as that fight starts.
-	player.feel_v2 = true
 	dummy.player = player
 	dummy.set_sparring(false)
 

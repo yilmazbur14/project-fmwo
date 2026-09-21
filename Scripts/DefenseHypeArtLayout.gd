@@ -385,8 +385,8 @@ const FINAL_PERFECT_DODGE_TRAIL := {
 }
 
 #DASH (feel_v2)
-# Only in a fight that opts into PlayerScript.feel_v2; PlayerDashFx draws it. A perfect dodge keeps its
-# own flash and trail, on top of these.
+# In any fight on PlayerScript.feel_v2, which is all of them; PlayerDashFx draws it. A perfect dodge
+# keeps its own flash and trail, on top of these.
 # Afterimages: copies of the player's own frame at his 3x, dropped evenly along the dash as he passes,
 # so a wall bends the trail with him. The first is the faintest, and each fades on its own. The tint
 # is modulate past white, so his colours wash out toward one pale blue: it reads on the green mat and

@@ -66,7 +66,7 @@ const ATTACKS := {
 	&"dummy_swing": {"blockable": true, "weight": Weight.HEAVY, "parry_stagger": true, "tell": true},
 	# Yellow: the torso lunge. Nothing guards or parries it; a dash through it is a perfect dodge.
 	&"dummy_lunge": {"dash_through": true, "dodge_tell": true},
-	&"computah_laser": {"dash_through": true},
+	&"computah_laser": {"dash_through": true, "dodge_tell": true},
 	# Boss 2. Computah's pounce is the grab at the end of his chase: a held guard does not stop it,
 	# a parry does and sparks him out early, and a dash through it is a perfect dodge.
 	&"computah_chase": {"damage": 0, "grab": true, "parryable": true, "parry_stagger": true, "tell": true, "dash_through": true},
@@ -87,18 +87,20 @@ const ATTACKS := {
 	&"wrestler_charge": {"blockable": true, "weight": Weight.HEAVY},
 	# Punching Carter or Josh hurts the player by design.
 	&"wrestler_punish": {},
-	&"mason_poo_blast": {"blockable": true, "weight": Weight.LIGHT},
-	&"mason_nugget": {"blockable": true, "weight": Weight.LIGHT, "from_above": true},
+	&"mason_poo_blast": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
+	# Yellow rather than red, though a guard does absorb it: it lands on a marked spot, so the answer
+	# is to be somewhere else by the time it does. No dash immunity - stepping out is the dodge.
+	&"mason_nugget": {"blockable": true, "weight": Weight.LIGHT, "from_above": true, "dodge_tell": true},
 	&"carter_elbow_drop": {"blockable": true, "weight": Weight.HEAVY, "from_above": true},
-	&"funko_blast": {"blockable": true, "weight": Weight.LIGHT},
-	&"bixby_fire_breath": {"blockable": true, "weight": Weight.LIGHT},
+	&"funko_blast": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
+	&"bixby_fire_breath": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
 	# The ground wave an erupting crack sends out.
-	&"bixby_quake_burst": {"blockable": true, "weight": Weight.LIGHT},
+	&"bixby_quake_burst": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
 	# Swept beams, like the other ones: dashing through is the dodge.
-	&"bixby_sonic_beam": {"dash_through": true},
+	&"bixby_sonic_beam": {"dash_through": true, "dodge_tell": true},
 	# Josh's cards.
 	# A giant card slamming down on a third of the arena: it can only be moved out of.
-	&"josh_card_fall": {"damage": 2},
+	&"josh_card_fall": {"damage": 2, "dodge_tell": true},
 	&"josh_card_bomb": {"blockable": true, "weight": Weight.LIGHT, "from_above": true},
 	# Three in a row, each with its own tell; a parry negates but never staggers him.
 	&"josh_card_throw": {"blockable": true, "weight": Weight.LIGHT, "tell": true},

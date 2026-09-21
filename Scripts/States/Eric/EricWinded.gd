@@ -1,7 +1,7 @@
 extends State
 
 # The window after a chain in the reworked fight (EricPacing V2): Eric stands winded for a short beat,
-# open to punches but never dazed, since a Break (EricBreakGauge) is what dazes him now. The state
+# open to punches but never dazed, since a Break (BossBreakGauge) is what dazes him now. The state
 # machine times it on its DownedTimer, as it does V1's Downed, and starts the next chain from there.
 
 const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")

@@ -125,11 +125,11 @@ var is_finishing := false
 var is_action_locked := false
 # Where a fight wants the player looking, or Vector2.INF for the usual rules.
 var facing_point := Vector2.INF
-# The reworked feel is tried out on one fight before the rest: a fight opts in by setting this before
-# it starts (only Eric's does, in BossOneScript), and every other fight plays exactly as it did.
-# Everything reworked reads it: the dash here and in PlayerDefense, its effects in PlayerDashFx, and
-# the punch's effects. Rolling it out to every fight is flipping this default.
-var feel_v2 := false
+# The reworked feel, and every fight is on it. Everything reworked reads it: the dash here and in
+# PlayerDefense, its effects in PlayerDashFx, the punch's reach and effects, PlayerFeel's numbers and
+# the finisher's own mash pair. A fight whose own retune isn't done yet opts back out with one line in
+# its _ready - `player.feel_v2 = false` - which puts that fight, and only it, back on the old feel.
+var feel_v2 := true
 
 var state_machine : Node
 var current_state : State

@@ -160,7 +160,7 @@ const JUGGLE_OUTRO_DELAY := 1.8
 # Every crash, whatever the tier. Its level is baked in.
 const CRASH_THUD_SFX := {"stream": "res://Assets/Audio/SFX/eric_crash_thud.wav", "pitch": 1.0, "volume_db": 0.0}
 
-#BREAK GAUGE (BreakGaugeUI, EricBreakGauge)
+#BREAK GAUGE (BreakGaugeUI, BossBreakGauge)
 # Positions are HUD px, and times real seconds.
 # From this share of full it pulses.
 const BREAK_GAUGE_PULSE_FROM := 0.8

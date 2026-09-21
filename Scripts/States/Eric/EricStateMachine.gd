@@ -190,7 +190,7 @@ func throw_from_whirlwind() -> void:
 	on_child_transition(current_state, "SwordThrow")
 
 
-# A full Break gauge (EricBreakGauge): whatever he was doing stops, everything he threw goes, and he is
+# A full Break gauge (BossBreakGauge): whatever he was doing stops, everything he threw goes, and he is
 # Broken until he gets up and starts a new chain.
 func enter_broken() -> void:
 	if defeated or boss.boss_health <= 0 or current_state == states.get("Broken"):

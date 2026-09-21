@@ -2,7 +2,7 @@ extends RefCounted
 
 # The player numbers the Eric pacing rework (EricPacing V2) changed with the reworked feel, today's
 # beside feel_v2's as {key: [today, feel_v2]}, read through the player's own flag
-# (PlayerScript.feel_v2, only Eric's fight for now). The dash's and the punch reach's own pairs stay
+# (PlayerScript.feel_v2, which every fight is on). The dash's and the punch reach's own pairs stay
 # where their reworks put them (PlayerDefense, PlayerScript).
 # With feel_v2 a punch also lands the moment the arm is out (PlayerPunching), not when the boss's
 # hurtbox reports it after the swing: a hit needs his hurtbox open 0.27 s after the press, not 0.40 s.

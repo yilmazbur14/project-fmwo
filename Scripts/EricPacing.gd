@@ -25,7 +25,7 @@ const TABLE := {
 	"recovery_rest": [0.6, 0.25],
 	# The window a chain ends in, and how long it lasts. V1's Downed is long enough to walk up to him
 	# and land two full three-punch combos, and dazes; V2's Winded is a short punish with no daze,
-	# since the Break gauge (EricBreakGauge) is how he is dazed there.
+	# since the Break gauge (BossBreakGauge) is how he is dazed there.
 	"window_state": ["Downed", "Winded"],
 	"window_time": [6.0, 2.0],
 	"rage_window_time": [6.0, 1.6],
@@ -116,7 +116,7 @@ const TABLE := {
 	# How fast a parry-staggered Eric glides back to where his attack started. V1 borrowed the
 	# whirlwind's chase speed, which V2 no longer has.
 	"stagger_glide_speed": [420.0, 420.0],
-	# How long a Break (EricBreakGauge) leaves him on his knees.
+	# How long a Break (BossBreakGauge) leaves him on his knees.
 	"broken_time": [null, 3.0],
 	"rage_broken_time": [null, 2.6],
 }

@@ -90,7 +90,7 @@ ships, and V1 is the fight as it was. The modes written against the old fight ar
 | `parry_cue` | | the rim that shows the window: it appears on a credited press, is drawn behind the player, lasts exactly `parry_window`, and never appears for a press that got no credit |
 | `parry_freeze` | | the parry's dead stop and its slow-motion tail, a three-parry chain at 0.90 s and 0.62 s cadences, and a parry landing on the frame the fight ends |
 | `parry_rearm` | | every press is reported through `block_pressed(credited)`, and `rearm_parry()` excuses exactly one press and never a mash inside the same window |
-| `parry_streak` | | streaks count, pay `PlayerFeel`'s hype by tier (15 / 20 / 25 under Eric's `feel_v2`, 25 / 30 / 35 today), climb through the popups and the badge, sound identical every time, end on a hit or a guard break, lapse on their own, and lengthen the stagger window by 0.2 per tier over 2, capped at 0.4 |
+| `parry_streak` | | streaks count, pay `PlayerFeel`'s hype by tier (15 / 20 / 25 under `feel_v2`, 25 / 30 / 35 for a fight opted out of it), climb through the popups and the badge, sound identical every time, end on a hit or a guard break, lapse on their own, and lengthen the stagger window by 0.2 per tier over 2, capped at 0.4 |
 | `parry_projectiles` | | **(Eric)** parrying his real projectiles on their way in, including a standing player parrying the sword as it dives into its landing spot: it is flung back, takes 1 off him, dazes him, and never plants, so there is no ring |
 | `grab_parry` | | **(Eric)** his grab can only be answered with a parry: a held guard is still grabbed |
 | `stagger` | | **(Eric)** the parry stagger, reached by parrying his sword toss: the reflect's damage, what the window opens, the hit cap, where he picks himself up |
@@ -107,22 +107,23 @@ ships, and V1 is the fight as it was. The modes written against the old fight ar
 | `dodge_near` | | a perfect dodge off an attack that reaches the spot the dash started from, through the dodge ghost |
 | `dodge_bosses` | | the dodge ghost's near-miss reporting across the roster's attacks |
 | `dodge_rollout` | `fight=greyson\|carter` | dashing out of the way of a real attack in a real fight. Only these two fights have a readable approach for the bot; the greyson case still watches for the rockets boss 2 no longer has and needs repointing at Computah's pounce, so it is expected to fail |
-| `dash_recovery` | | today's dash, with Eric's `feel_v2` switched back off: the lockout after a dash, no move, punch or dash, the guard may still go up, a parry cancels it, a plain block does not |
+| `dash_recovery` | | today's dash, with `feel_v2` switched back off: the lockout after a dash, no move, punch or dash, the guard may still go up, a parry cancels it, a plain block does not |
 | `dash_spam` | | today's dash, `feel_v2` off: mashing dash covers less ground than walking |
 
 #### feel_v2's dash
 
-The reworked dash is behind the player's `feel_v2` flag, which only Eric's fight turns on (from
-`BossOneScript`), so every mode above that loads Eric runs it. These modes pin it down; the old and new
-numbers sit side by side in `PlayerDefense`.
+The reworked dash is behind the player's `feel_v2` flag, which every fight is on: a fight whose own
+retune isn't done opts back out with `player.feel_v2 = false` in its `_ready`, and the modes below
+switch it the same way. They pin the dash down; the old and new numbers sit side by side in
+`PlayerDefense`.
 
 | mode | arguments | what it asserts |
 | --- | --- | --- |
 | `dash_v2` | | all 8 directions dash the same 250 px, nothing held still dashes in place, a diagonal whose second arrow lands after the dash key in the same frame still counts; diagonals into every corner stop flush and walk back out, and along every rope they slide inside it; 4 afterimages copying his frame, tinted cool, evenly along the path, behind him and over the mat, one dust puff at his feet, the whoosh; they fade and free themselves, and 50 dashes leak no nodes; a hit-stop and a finisher's freeze hold them; every lock (the parry-only lock, a grab, talking, a finisher, a guard break) stops the dash with its effects and sound; every `dash_through` attack is still dodged |
 | `dash_recovery_v2` | | the new timeline: 3 frames dashing, 5 standing still, then walking; a punch the first frame after; the guard inside it; a parry ends the landing and the cooldown; a plain block doesn't; mashed dashes 26 frames apart with nothing spent or flashed between; the finisher and a grab clear it |
 | `dash_spam_v2` | | 6 s of mashing, and of a deliberate dash every 0.6 s, today against v2: dash rate, presses taken, how long dash immunity is up and how far it goes. v2 mashes at today's rate, never takes a press during a dash, is never immune for longer than today, and nothing keeps immunity up 35% of the time |
-| `dash_legacy` | `fight=greyson\|mason` | a fight without `feel_v2`: today's dash frame for frame (250 px in 8 directions, 23 or 24 frames still, mashed 26 or 27 apart, the direction read on the press), with no afterimages, dust or whoosh |
-| `dash_layers` | `fight=eric\|greyson\|mason\|josh\|carter\|liam\|jordan` | forces `feel_v2` on and checks every afterimage and puff on every frame as drawn: just before MainPlayer, behind him in the y-sorted fights and over the floor layers at y 101, over the mat in Eric's, and drawn where it belongs. `carter` here is the real Carter fight, not the old Carter & Josh scene |
+| `dash_legacy` | `fight=greyson\|mason` | a fight opted out of `feel_v2`: today's dash frame for frame (250 px in 8 directions, 23 or 24 frames still, mashed 26 or 27 apart, the direction read on the press), with no afterimages, dust or whoosh |
+| `dash_layers` | `fight=eric\|greyson\|mason\|josh\|carter\|liam\|jordan` | keeps `feel_v2` on and checks every afterimage and puff on every frame as drawn: just before MainPlayer, behind him in the y-sorted fights and over the floor layers at y 101, over the mat in Eric's, and drawn where it belongs. `carter` here is the real Carter fight, not the old Carter & Josh scene |
 
 #### feel_v2's punch
 
@@ -133,8 +134,8 @@ out, so the art and the numbers change together (`art_source/punch_fx/`).
 
 | mode | arguments | what it asserts |
 | --- | --- | --- |
-| `punch_reach` | `fight=eric` | against the real Eric, held down so his hurtbox is live: even the first punch gets the v2 box, though `feel_v2` comes on after the player is ready; in all 4 facings a plain hit and a hit 3 px past today's reach land and a whiff doesn't; the swoosh plays launch, full extension, afterimage on his own position and facing row, one whoosh a swing; a landed punch's star sits inside both the reach and his hurtbox and holds its first frame through the hit-stop; the charged third punch's star is gold; a grab mid-swing leaves nothing; `feel_v2` off gives today's box on the very next swing with nothing drawn or played; the swoosh sheet's full-extension frame spans exactly each v2 box's far edge and width and no frame leaves it; PunchFx has no SceneTree timers or tweens; and nothing of the punch is on screen when a charged punch's finisher freezes the fight |
-| `punch_reach` | `fight=mason\|jordan\|...` | a fight without `feel_v2`: today's box exactly in all 4 facings, and PunchFx never draws or plays |
+| `punch_reach` | `fight=eric` | against the real Eric, held down so his hurtbox is live: even the first punch gets the v2 box, fitted as the swing starts rather than once at `_ready`; in all 4 facings a plain hit and a hit 3 px past today's reach land and a whiff doesn't; the swoosh plays launch, full extension, afterimage on his own position and facing row, one whoosh a swing; a landed punch's star sits inside both the reach and his hurtbox and holds its first frame through the hit-stop; the charged third punch's star is gold; a grab mid-swing leaves nothing; `feel_v2` off gives today's box on the very next swing with nothing drawn or played; the swoosh sheet's full-extension frame spans exactly each v2 box's far edge and width and no frame leaves it; PunchFx has no SceneTree timers or tweens; and nothing of the punch is on screen when a charged punch's finisher freezes the fight |
+| `punch_reach` | `fight=mason\|jordan\|...` | a fight opted out of `feel_v2`: today's box exactly in all 4 facings, and PunchFx never draws or plays |
 | `punch_contact` | | `feel_v2` lands a punch as the arm reaches full extension, today's once the boss's hurtbox reports it: f+16 against f+24 from the press; one resolve a swing either way, nothing waits on a report under `feel_v2`, the beat window opens and closes on `PlayerFeel`'s numbers (0.04 + 0.25 s against 0.05 + 0.35 s), and a `feel_v2` whiff ends the combo as its swing ends |
 
 ### Hype and the finisher
@@ -143,8 +144,8 @@ out, so the art and the numbers change together (`art_source/punch_fx/`).
 | --- | --- | --- |
 | `hype` | | what each action pays (`PlayerFeel`'s gains, by the player's `feel_v2`), what a hit and a guard break cost, and the full meter |
 | `hype_inert` | | a fight with nothing to spend hype on hides the meter and pays nothing |
-| `super_uppercut` | real time | the supercharged finisher: damage, the hype spend, a whiff and a fizzle keeping the hype, and the kill paths. On today's mash (Q and W): it turns off the `feel_v2` Eric's fight turns on |
-| `gamepad_mash` | real time | today's mash, with Eric's `feel_v2` turned off (`verify_controls`' `eric_mash` covers his own keys): A and B fill the meter in the same presses and the same wall-clock time as Q and W, the alternation rule still refuses a repeat, the device follows the pad although the finisher swallows the presses, and the prompt swaps to pad keys only once the finisher has ended |
+| `super_uppercut` | real time | the supercharged finisher: damage, the hype spend, a whiff and a fizzle keeping the hype, and the kill paths. On today's mash (Q and W): it opts the fight out of `feel_v2` |
+| `gamepad_mash` | real time | today's mash, with `feel_v2` turned off (`verify_controls`' `eric_mash` covers the pair that ships): A and B fill the meter in the same presses and the same wall-clock time as Q and W, the alternation rule still refuses a repeat, the device follows the pad although the finisher swallows the presses, and the prompt swaps to pad keys only once the finisher has ended |
 | `prompt_overlap` | | the hype meter gets out of the finisher prompt's way and comes back |
 | `knockback` | real time | **(Eric)** the uppercut shoves him: distance per tier, always away from the player, never out of his bounds, and the longer pause before his next attack |
 | `knockback_computah` | real time | a boss anchored to his own cycle rocks back on his sprite instead, and boss 2's near-death clamp clips the uppercut without spending the hype |

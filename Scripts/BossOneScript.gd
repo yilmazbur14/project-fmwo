@@ -5,7 +5,7 @@ var Projectile = preload("res://Scenes/Bosses/BossProjectileScene.tscn")
 const HitStop := preload("res://Scripts/HitStop.gd")
 const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
 const EricPacing := preload("res://Scripts/EricPacing.gd")
-const EricBreakGauge := preload("res://Scripts/EricBreakGauge.gd")
+const BossBreakGauge := preload("res://Scripts/BossBreakGauge.gd")
 const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
 const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
@@ -84,16 +84,17 @@ func _ready() -> void:
 	# read as the same sound.
 	downed_sfx_player.stream = load("res://Assets/Audio/SFX/downed_stinger.ogg")
 
-	# This fight tries the reworked feel out before the others (PlayerScript.feel_v2).
-	if player:
-		player.feel_v2 = true
-
 
 func _add_break_gauge(player: Node) -> void:
-	break_gauge = EricBreakGauge.new()
+	break_gauge = BossBreakGauge.new()
 	break_gauge.name = "BreakGauge"
 	break_gauge.boss = self
 	break_gauge.player = player
+	# What the gauge held as constants while it was his alone: every eric_ attack is his, and the red
+	# bear hug is the one parry worth grab_parry_gain.
+	break_gauge.owns_attack = func(id: StringName) -> bool: return str(id).begins_with("eric_")
+	var strong: Array[StringName] = [&"eric_bear_hug_grab_v2"]
+	break_gauge.strong_parry_ids = strong
 	add_child(break_gauge)
 	break_gauge.broke.connect(_on_break)
 	for sting in EricArtLayout.BREAK_STING_SFX:

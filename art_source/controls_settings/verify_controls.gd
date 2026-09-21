@@ -956,7 +956,7 @@ func test_training() -> void:
 		balloon.free()
 	await wait(3)
 	check(room.room_open and not player.is_talking, "his last line hands the room over and frees the player")
-	check(player.feel_v2, "on feel_v2, the feel the fight it leads into uses")
+	check(player.feel_v2, "on feel_v2, the feel every fight uses")
 	check(not dummy.is_sparring(), "the dummy starts as a bag, so nobody is ambushed feeling out the movement")
 	check(current_scene.get_node_or_null("Room/GroundFx") != null, "the ground layer is in the room, so the finisher doesn't build one in the lockers")
 	check(ready_button.get_parent().name == "Persistent" and cards.get_parent().name == "Screen", "the button sits outside the card wall, in the group nothing fades")
@@ -1515,7 +1515,7 @@ func test_eric_mash() -> void:
 	var right_press: Callable = tap_button.bind(JOY_BUTTON_RIGHT_SHOULDER) if pad else tap_key.bind(KEY_RIGHT)
 	var credited := [0]
 	defense.block_pressed.connect(func(_credited: bool) -> void: credited[0] += 1)
-	check(player.feel_v2 and finisher.mash_actions() == [&"mash_left", &"mash_right"], "Eric's fight is on feel_v2, so it mashes mash_left and mash_right")
+	check(player.feel_v2 and finisher.mash_actions() == [&"mash_left", &"mash_right"], "the fight is on feel_v2, so it mashes mash_left and mash_right")
 
 	log_p("-- dazed with %s" % ("A" if pad else "Q"))
 	sm.rest_timer.stop()

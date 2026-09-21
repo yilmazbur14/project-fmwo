@@ -105,8 +105,8 @@ static var LOG_HITS := false
 @export var perfect_dodge_source_lockout := 3.0
 # An attack that touched the player this recently isn't a near miss.
 @export var perfect_dodge_contact_grace := 1.0
-# The dash's lockout and re-dash cooldown: today's numbers beside feel_v2's (PlayerScript.feel_v2, only
-# Eric's fight for now), so rolling v2 out to every fight changes nothing here. Only a parry cuts
+# The dash's lockout and re-dash cooldown: today's numbers beside feel_v2's (PlayerScript.feel_v2,
+# which every fight is on), so today's are what a fight that opts back out gets. Only a parry cuts
 # either short.
 # Today: a lockout long enough that mashing dash covers less ground than walking. It is also what
 # spaces dashes out, so there is no cooldown.

@@ -1,6 +1,6 @@
 extends Node
 
-# How the dash looks and sounds in a fight that opts into the player's feel_v2: afterimages left along
+# How the dash looks and sounds in a fight on the player's feel_v2: afterimages left along
 # the path, a puff of dust where it kicked off, and a whoosh. With feel_v2 off none of it happens.
 # Everything is drawn beside the player rather than on him, as siblings of MainPlayer just before it.
 # A fight that doesn't y-sort draws them over the mat and under him. In one that does they sort at

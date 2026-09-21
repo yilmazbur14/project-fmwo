@@ -1,6 +1,6 @@
 extends State
 
-# Eric with his Break gauge full (EricBreakGauge, EricPacing V2). Whatever he was doing has stopped
+# Eric with his Break gauge full (BossBreakGauge, EricPacing V2). Whatever he was doing has stopped
 # (EricStateMachine.enter_broken): the fight stops dead for a beat, the Break knocks his sword out of
 # his grip into the mat, and he reels and drops to his knees, dazed and open to punches, driving the
 # player in beside him so there's no walk-up. A 3-hit combo landed there starts the finisher
