@@ -38,6 +38,11 @@ const MODE_COOLDOWN := 0.5
 # only a deliberate walk holds it long enough.
 const DOOR_DWELL := 0.35
 
+# Danny's theme was composed with the rest of the eight and then never played anywhere: this room
+# was the only screen in the game with no music at all. Built here rather than added to the scene,
+# the same way this room builds its walls and its refill timer.
+const DANNY_THEME := "res://Assets/Audio/Music/danny_theme.wav"
+
 const REFILL_TIME := 1.2
 const FULL_HEALTH := 6
 
@@ -159,6 +164,8 @@ func _ready() -> void:
 	callout.modulate.a = 0.0
 	danny_bark.modulate.a = 0.0
 	door_prompt.visible = false
+
+	_start_music()
 
 	refill_timer = Timer.new()
 	refill_timer.name = "RefillTimer"
@@ -365,6 +372,18 @@ func _bark(key: String) -> void:
 
 
 #THE ROOM ITSELF
+
+
+func _start_music() -> void:
+	var music := AudioStreamPlayer.new()
+	music.name = "MusicPlayer"
+	music.stream = load(DANNY_THEME)
+	if music.stream:
+		# The cut is one whole cycle, and the importer already marks it LOOP_FORWARD; this only
+		# matters for a stream that arrived some other way.
+		music.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	add_child(music)
+	music.play()
 
 func _build_walls() -> void:
 	var t := WALL_THICKNESS
