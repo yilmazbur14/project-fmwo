@@ -28,7 +28,7 @@ const THIRDS := 3
 const THIRD_WIDTH := 564.0
 
 # The cycle: he mounts his card, lays three giant ones over the arena, works the crowd from the air,
-# drops off in front of the player, throws three cards and is open while he gets his breath back.
+# drops off in front of the player, throws his volley and is open while he gets his breath back.
 # The phase is locked once, at the top of the cycle, so a hit landing mid-cycle never changes what
 # the rest of it does.
 
@@ -92,12 +92,19 @@ const THIRD_WIDTH := 564.0
 @export var throw_distance := 520.0
 @export var dive_speed := 1400.0
 @export var dismount_land_time := 0.35
-# The three thrown cards. throw_interval is release to release; PlayerDefense.parry_mash_lockout is
+# The thrown cards. throw_interval is release to release; PlayerDefense.parry_mash_lockout is
 # 0.5 s, so a player who whiffs card 1 still has a credited press in time for card 2. Do not shorten
 # it below 0.65 without re-reading PlayerDefense.on_block_pressed().
+# Four rather than three, because this volley is the fight's only parry: his bombs and his falling
+# cards can't be parried at all, and the volleys are a cycle apart, well past
+# PlayerDefense.parry_streak_timeout, so the streak always restarts at tier 1 and the hype he pays
+# is a flat 15 + 20 + 25 every time. Under the feel_v2 rates three cards leave a cycle paying 78 of
+# the meter's 100, so it no longer fills once a cycle the way it used to; the fourth card is the
+# tier-3 parry that puts it back. Its own damage is free: the cards are 0.9 s apart and the
+# i-frames are 1.0 s, so a player who eats them takes the same hits either way.
 @export var throw_tell := 0.45
 @export var throw_interval := 0.9
-@export var throw_cards := 3
+@export var throw_cards := 4
 @export var card_speed := 900.0
 @export var card_hit_size := Vector2(90, 90)
 # Off: the thrown cards fly straight. Kept as a knob in case they ever need to lead the player.

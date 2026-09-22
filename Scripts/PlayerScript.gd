@@ -46,11 +46,15 @@ var is_invincible = false
 @export var hitBox : Area2D
 
 @onready var sprite: Sprite2D = $Sprite2D
+@onready var animation_player: AnimationPlayer = $AnimationPlayer
 var sprite_base_position: Vector2
 
 @onready var combo: Node = $Combo
 var punch_buffered := false
 @onready var finisher: Node = $Finisher
+# The mash that gets them out of a hold (PlayerGrabEscape), a sibling of the finisher rather than a
+# part of it: the two share their input plumbing (MashInput) and nothing else.
+@onready var grab_escape: Node = $GrabEscape
 @onready var defense: Node = $Defense
 @onready var hype: Node = $Hype
 @onready var status: Node = $Status
@@ -123,6 +127,12 @@ var is_finishing := false
 # move, dash or punch, and the guard and its parry are all that answer. It is its own flag on
 # purpose: is_grabbed and is_talking cut the block press off before it reaches the guard.
 var is_action_locked := false
+# A TOTAL lock: as lock_actions(), and the guard and its parry are off too. For a hold the player
+# cannot answer at all (Computah's mine trap). unlock_actions() clears both kinds - there is no
+# second way out, deliberately.
+var lock_seals_guard := false
+# Set while a fight holds the player in a still pose (set_scripted_pose).
+var scripted_pose := false
 # Where a fight wants the player looking, or Vector2.INF for the usual rules.
 var facing_point := Vector2.INF
 # The reworked feel, and every fight is on it. Everything reworked reads it: the dash here and in
@@ -130,6 +140,21 @@ var facing_point := Vector2.INF
 # the finisher's own mash pair. A fight whose own retune isn't done yet opts back out with one line in
 # its _ready - `player.feel_v2 = false` - which puts that fight, and only it, back on the old feel.
 var feel_v2 := true
+# The dash cancelled into the guard, Eric's fight and the training room that feeds it for now. A dash
+# is a commitment without this: it drops the guard, runs its frames and lands, and a block press in it
+# could only ever start a parry the landing had to finish. With it on, a block press ends the dash
+# where it is and the guard goes up in its place (_cancel_dash_into_guard), so a dash is a
+# non-committal approach the player can stop into a block or a parry at any point in it.
+# The parry that follows is the ordinary guarded one - same window, same mash lockout, same guarded
+# side - so a press that is late or mashed buys a block at full stamina instead of a parry.
+# Its own flag rather than feel_v2's, which is the feel every fight already ships with: this one is
+# being tried out on one fight, and a fight opts in with `player.dash_parry = true` in its _ready.
+var dash_parry := false
+# Set while the guard the last dash was cancelled into stands in for it, from the press that ended
+# the dash until the next dash starts. Two rules read it: DashImmunity, because the i-frames end with
+# the dash, and PlayerDefense's parry, because the wait for the next dash is what the cancel does not
+# buy back.
+var dash_cancelled := false
 
 var state_machine : Node
 var current_state : State
@@ -177,8 +202,8 @@ func _physics_process(delta: float) -> void:
 		return
 
 	# Held block brings the guard back up once a dash or a punch is over; not a bumper still held from a
-	# feel_v2 mash, though (PlayerFinisher's release latch).
-	if Input.is_action_pressed("block") and not punch_buffered and not finisher.is_mash_latched():
+	# feel_v2 mash, though (the finisher's release latch, or the grab escape's).
+	if Input.is_action_pressed("block") and not punch_buffered and not _mash_latched():
 		_raise_guard()
 
 	var dash_from := Vector2.INF
@@ -240,8 +265,9 @@ func _input(event: InputEvent) -> void:
 	if defense.is_dash_recovering() and not event.is_action_pressed("block"):
 		return
 	# A parry-only sequence: the guard is the only answer the player has. Block presses go on through
-	# to on_block_pressed() and _raise_guard(), so parries read exactly as they always do.
-	if is_action_locked and not event.is_action_pressed("block"):
+	# to on_block_pressed() and _raise_guard(), so parries read exactly as they always do. A sealed
+	# lock takes that answer away too.
+	if is_action_locked and (lock_seals_guard or not event.is_action_pressed("block")):
 		return
 	if event.is_action_pressed("punch") and not is_talking and not is_grabbed and not fight_over:
 		combo.register_press()
@@ -256,8 +282,10 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if event.is_action_pressed("block"):
-		# A press during a dash still counts toward a parry; the guard goes up when the dash ends.
+		# A press during a dash still counts toward a parry; the guard goes up when the dash ends, or
+		# with dash_parry the press ends the dash itself and the guard goes up in its place.
 		defense.on_block_pressed()
+		_cancel_dash_into_guard()
 		_raise_guard()
 
 	if event.is_action_pressed("dodge"):
@@ -268,6 +296,7 @@ func _input(event: InputEvent) -> void:
 		if state_machine.current_state.name == "Blocking":
 			state_machine.on_child_transition(state_machine.current_state, "Idle")
 		is_dodging = true
+		dash_cancelled = false
 		direction = status.steer(InputSettings.move_vector())
 		previous_dodge_physics_frame = last_dodge_physics_frame
 		last_dodge_physics_frame = Engine.get_physics_frames()
@@ -280,10 +309,39 @@ func _input(event: InputEvent) -> void:
 
 
 # What walking reads: the move keys and stick, or nothing while keys held from a feel_v2 mash are
-# still down (PlayerFinisher's release latch). A dash aims with InputSettings itself: it is a fresh
-# press, so it goes wherever the player is holding.
+# still down (the release latch, whichever mash left it). A dash aims with InputSettings itself: it is
+# a fresh press, so it goes wherever the player is holding.
 func move_input() -> Vector2:
-	return Vector2.ZERO if finisher.is_mash_latched() else InputSettings.move_vector()
+	return Vector2.ZERO if _mash_latched() else InputSettings.move_vector()
+
+
+# Either mash can leave a key held: the finisher's and the one that got them out of a hold. The
+# null check is for a player scene built before GrabEscape existed - Scenes/MainPlayer.tscn still is
+# one - where this would otherwise be a hard crash on the first frame of movement.
+func _mash_latched() -> bool:
+	return finisher.is_mash_latched() or (grab_escape != null and grab_escape.is_mash_latched())
+
+
+# A block press ends a dash on the spot and puts the guard up in its place (dash_parry), so the dash
+# is a non-committal approach and the parry that follows is the ordinary one. The press edge only: a
+# block held from before the dash must not kill it on the frame it starts, which is why the held-block
+# line in _physics_process still leaves a dash alone. Nothing is cancelled unless the guard can
+# actually go up, so a dash is never spent on a cancel that leads nowhere.
+# What the dash had already earned goes with it: the i-frames a dash_through attack needs, through
+# dash_cancelled, and the dodge ghost. One press buys the guard, not the guard and the dodge as well.
+# What it does not buy is the wait for the next dash - PlayerDefense keeps dash_ready_at - so
+# cancelling can never be a free approach loop. The landing beat it never reached is skipped: the
+# guard already roots the player, and on_dash_ended() is deliberately not called.
+func _cancel_dash_into_guard() -> void:
+	if not dash_parry or not is_dodging or not defense.can_raise_guard():
+		return
+	is_dodging = false
+	dodge_timer = 0.0
+	dash_cancelled = true
+	# A dead stop. 5000 px/s bleeding off through move_toward would slide the player a few hundred px
+	# with the guard up - through the very attack the block was pressed for.
+	velocity = Vector2.ZERO
+	defense.on_dash_cancelled()
 
 
 func _raise_guard() -> void:
@@ -334,7 +392,11 @@ func dodge_ghost_position() -> Vector2:
 
 
 func _apply_damage(hit: RefCounted) -> void:
-	playerHealth = maxi(playerHealth - hit.damage, 0)
+	# The boss-select panel's playtest invincibility. Only the health loss is skipped: the combo still
+	# breaks, the i-frames still run, the hit feedback still plays and a grab still holds. So the fight
+	# behaves exactly as it does in a real run and can be watched all the way through.
+	if not GameProgress.playtest_invincible:
+		playerHealth = maxi(playerHealth - hit.damage, 0)
 	if playerHealth <= 0:
 		status.clear_all()
 		unlock_actions()
@@ -390,12 +452,49 @@ func lock_actions() -> void:
 	actions_locked.emit()
 
 
+# The same hold, with the guard and its parry sealed off as well: a beat the player cannot answer at
+# all, like Computah's mine trap. A guard already up comes down with it. Its own method rather than an
+# argument to lock_actions(): a fight guards every player call with has_method(), and an optional
+# argument is not something has_method() can tell apart.
+func lock_actions_sealed() -> void:
+	lock_actions()
+	lock_seals_guard = true
+	_lower_guard.call_deferred()
+
+
 func unlock_actions() -> void:
 	if not is_action_locked:
 		return
 	is_action_locked = false
+	lock_seals_guard = false
 	facing_point = Vector2.INF
 	actions_unlocked.emit()
+
+
+# Deferred by its callers, like PlayerDefense's guard break: a seal can land inside a physics flush,
+# where a state switch can't.
+func _lower_guard() -> void:
+	var state: State = state_machine.current_state
+	if state.name == "Blocking":
+		state_machine.on_child_transition(state, "Idle")
+
+
+# A fight holds the player in a still pose for a scripted beat: their state machine goes to Idle,
+# their AnimationPlayer stops, and the frame they are on is held until set_scripted_pose(false).
+# Paired with lock_actions(), which is what keeps them from moving: without the pose a player who
+# walked into the beat would moonwalk on the spot for the whole of it.
+func set_scripted_pose(on: bool) -> void:
+	if on == scripted_pose:
+		return
+	scripted_pose = on
+	if not on:
+		animation_player.play()
+		return
+	state_machine.on_child_transition(state_machine.current_state, "Idle")
+	# Idle's play() only queues the pose; without the seek the sprite would hold the frame whatever was
+	# running left it on.
+	animation_player.seek(0.0, true)
+	animation_player.pause()
 
 
 # The fight points the player at whatever is rushing them, and the facing holds there until the fight
@@ -450,9 +549,10 @@ func grab() -> void:
 	state_machine.on_child_transition(state_machine.current_state, "Idle")
 
 
-# A held player can't dodge, so every squeeze lands, even inside the last one's invincibility.
-func take_grab_damage() -> void:
-	receive_hit(HitInfo.make(&"eric_bear_hug_squeeze", self, global_position))
+# A held player can't dodge, so every squeeze lands, even inside the last one's invincibility. The
+# hold names its own attack: the bear hug's squeeze, or phase two's crush.
+func take_grab_damage(attack_id := &"eric_bear_hug_squeeze") -> void:
+	receive_hit(HitInfo.make(attack_id, self, global_position))
 
 
 func release_grab(push_direction: Vector2) -> void:
@@ -621,7 +721,7 @@ func punch_box(for_facing: int) -> Rect2:
 
 
 # Also called as every punch starts (PlayerPunching.Enter): a fight turns feel_v2 on after the player's
-# _ready (BossOneScript does), and the facing is locked for the whole swing, so this is what gives even
+# _ready (EricScript does), and the facing is locked for the whole swing, so this is what gives even
 # the first punch the right box. The hitbox is off until then, so refitting it loses nothing.
 func fit_punch_hitbox() -> void:
 	var box := punch_box(facing)

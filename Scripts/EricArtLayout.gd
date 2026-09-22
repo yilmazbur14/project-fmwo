@@ -2,8 +2,8 @@ extends RefCounted
 
 # Every number that depends on how Eric, his bear-hug sheet and his thrown sword are drawn, so a
 # redraw at a new frame size only needs this file. Points and boxes are in texels on a frame,
-# origin top-left. BossOneScript and EricThrownSwordScript apply the sizes, offsets and shapes at
-# runtime; the values in BossOneScene and EricThrownSwordScene are copies for the editor.
+# origin top-left. EricScript and EricThrownSwordScript apply the sizes, offsets and shapes at
+# runtime; the values in EricScene and EricThrownSwordScene are copies for the editor.
 
 const SCALE := 3.0
 
@@ -40,6 +40,12 @@ const THROW_CATCH_CENTRE := Vector2(81, 111.5)
 const THROW_CATCH_ANGLE := -11.31
 # The row his feet stand on; a flying sword's shadow is measured from it.
 const FEET_ROW := 191.0
+
+# Where the player's centre can be put inside the ropes: the floor their body fits on, kept 3 px
+# further in again so a toss never parks them flush against a rope. Read by the bear hug and the
+# phase-two hold, which put the player where his art draws them, and by EricBroken, which drives them
+# in beside him.
+const PLAYER_AREA := Rect2(126, 148.5, 1668, 783)
 
 # Bottom middle of the frame, under his feet. The bear hug's player centres are measured from it.
 const FEET_ANCHOR := Vector2(128, 192)
@@ -160,6 +166,66 @@ const JUGGLE_OUTRO_DELAY := 1.8
 # Every crash, whatever the tier. Its level is baked in.
 const CRASH_THUD_SFX := {"stream": "res://Assets/Audio/SFX/eric_crash_thud.wav", "pitch": 1.0, "volume_db": 0.0}
 
+#PHASE TWO (EricPhaseTwo, EricP2Mixup, EricBarbaricLeap)
+# There is no empty-handed Eric sheet yet. Until there is, every phase-two pose is borrowed from a
+# frame that is ALREADY DRAWN WITHOUT THE SWORD, which is the one thing a phase that opens by throwing
+# the sword out of the ring cannot get wrong:
+#   eric_bearhug_v2.png  frames 3-12. 0-2 draw the sword planted beside him and 13-14 draw him pulling
+#                        it back out, so those five are off limits; 3-12 are the lunge, the hold, the
+#                        toss and the stumble, all bare-handed.
+#   eric_juggle.png      all ten frames, none holding the sword (FINAL_JUGGLE above says so).
+# A pose is {texture, hframes, frames}; a pose drawn as several frames cycles them at `frame_time`.
+const USE_FINAL_PHASE2 := false
+const HUG_SHEET := "res://Assets/Characters/Eric/eric_bearhug_v2.png"
+const JUGGLE_SHEET := "res://Assets/Characters/Eric/eric_juggle.png"
+const PLACEHOLDER_PHASE2 := {
+	"frame_time": 0.12,
+	# The cut: he reels as the sword goes, stares at the empty grip, then sets his fists.
+	"reel": {"texture": JUGGLE_SHEET, "hframes": 10, "frames": [0]},
+	"stare": {"texture": HUG_SHEET, "hframes": HUG_FRAMES, "frames": [5]},
+	"set": {"texture": HUG_SHEET, "hframes": HUG_FRAMES, "frames": [6, 7]},
+	# The fight: idle between attacks, the shared wind-up, the strike both branches come out of.
+	"idle": {"texture": HUG_SHEET, "hframes": HUG_FRAMES, "frames": [7, 6]},
+	"windup": {"texture": HUG_SHEET, "hframes": HUG_FRAMES, "frames": [6, 7]},
+	"strike": {"texture": HUG_SHEET, "hframes": HUG_FRAMES, "frames": [3]},
+	# The hold and what ends it.
+	"hold": {"texture": HUG_SHEET, "hframes": HUG_FRAMES, "frames": [4]},
+	"crush": {"texture": HUG_SHEET, "hframes": HUG_FRAMES, "frames": [8, 9]},
+	"toss": {"texture": HUG_SHEET, "hframes": HUG_FRAMES, "frames": [11]},
+	"stumble": {"texture": HUG_SHEET, "hframes": HUG_FRAMES, "frames": [12]},
+	# The leap: the crouch, the tumble through the air, the landing and the rest after five of them.
+	"crouch": {"texture": HUG_SHEET, "hframes": HUG_FRAMES, "frames": [10]},
+	"air": {"texture": JUGGLE_SHEET, "hframes": 10, "frames": [2, 3, 4, 5]},
+	"land": {"texture": JUGGLE_SHEET, "hframes": 10, "frames": [6]},
+	"rest": {"texture": JUGGLE_SHEET, "hframes": 10, "frames": [9]},
+}
+# The drawn sheet, when there is one. Same keys as the placeholder.
+const FINAL_PHASE2 := {}
+# The centre of the player held in his phase-two grip, measured from FEET_ANCHOR the way the bear
+# hug's centres are. The placeholder borrows the hug's own hold frame, so it borrows its centre too.
+const P2_HOLD_CENTRE := Vector2(-0.5, -31)
+# And where they are thrown clear from.
+const P2_TOSS_CENTRE := HUG_RELEASE_CENTRE
+# Over his head on the phase-two frames, where the mixup's badge stands. The hug's own tell point:
+# the wind-up is on the hug sheet and his head tops out in the same place.
+const P2_TELL_HEAD_PIXEL := Vector2(150, 114)
+# His sword thrown clear of the ring when phase two starts (EricPhaseTwo): where it leaves his hand,
+# how long the flight over the ropes takes, and the spin's frame rate.
+const P2_SWORD_HAND_PIXEL := Vector2(144, 92)
+const P2_SWORD_FLIGHT := 1.1
+const P2_SWORD_SPIN_TIME := 0.05
+# How far it travels from his hand before it is gone: out to the side and well over the top of a
+# 1920x1080 view, so it leaves the frame however far up the ring he was standing. Thrown away from
+# the middle of the mat, mirrored about P2_ARENA_MIDDLE when he is on the right of it.
+const P2_SWORD_EXIT := Vector2(1500, -1100)
+const P2_ARENA_MIDDLE := 960.0
+# And the one left standing in the boards ringside afterwards, as set dressing: EricEntranceLayout's
+# planted sword, outside the right-hand rope, mirrored to the left when he threw it that way. Over
+# the mat rather than under it, the way the entrance's planted sword is: its ground contact sits
+# behind the ropes it stands past, and the y-sort would bury it.
+const P2_SWORD_RINGSIDE := Vector2(1850, 260)
+const P2_SWORD_RINGSIDE_Z := 1
+
 #BREAK GAUGE (BreakGaugeUI, BossBreakGauge)
 # Positions are HUD px, and times real seconds.
 # From this share of full it pulses.
@@ -191,7 +257,7 @@ const PLACEHOLDER_BREAK_GAUGE := {
 	"word_rise": 24.0,
 }
 # The daze meter, in the health bar's own gothic language and hung 6 px under its bottom rail, so the
-# two read as one instrument. BossOneScript places it from health_bar.break_gauge_anchor(); this
+# two read as one instrument. EricScript places it from health_bar.break_gauge_anchor(); this
 # position is the same point written out, for anything that builds the gauge on its own.
 # The _3x art is drawn at scale 1, each piece placed from the frame's top-left.
 const FINAL_BREAK_GAUGE := {
@@ -258,6 +324,16 @@ static func break_gauge() -> Dictionary:
 
 static func juggle() -> Dictionary:
 	return FINAL_JUGGLE if USE_FINAL_JUGGLE else PLACEHOLDER_JUGGLE
+
+
+# `key` names one of phase two's poses, the way EricEntranceLayout.pose() names the entrance's.
+static func phase_two(key: String) -> Dictionary:
+	var sheet: Dictionary = FINAL_PHASE2 if USE_FINAL_PHASE2 else PLACEHOLDER_PHASE2
+	return sheet[key]
+
+
+static func phase_two_frame_time() -> float:
+	return (FINAL_PHASE2 if USE_FINAL_PHASE2 else PLACEHOLDER_PHASE2).frame_time
 
 
 # Position in Eric's body space (texels, before his scale) of a point on his frames, drawn

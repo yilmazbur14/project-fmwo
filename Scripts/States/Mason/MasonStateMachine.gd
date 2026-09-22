@@ -14,8 +14,12 @@ extends Node
 @export var eat_timer: Timer
 
 const VsCard := preload("res://Scripts/VsCard.gd")
+const ParryTell := preload("res://Scripts/ParryTell.gd")
+const PRE_FIGHT_DIALOGUE := "res://Dialogue/MasonPreFight.dialogue"
 const POO_BOMB_SCENE := "res://Scenes/Bosses/PooBombScene.tscn"
 const LINE_START_SCENE := "res://Scenes/Bosses/PooLineStartScene.tscn"
+# Everything he sends out: bombs, nuggets, Carter, the driver and the line's ring.
+const HAZARD_GROUP := "mason_hazard"
 
 # Mason's walk limits: his whole sprite stays inside the ropes and below the back rope.
 const LINE_X_LEFT := 260.0
@@ -56,21 +60,24 @@ const FINISHERS := [
 # inside the blast reach of a player who stands still, while a short step clears it.
 @export var aim_offset := 50.0
 # The snake only touches the player's row at the aimed bomb and arches away from them elsewhere,
-# so a player pinned against a wall can still sidestep along it.
-@export var wiggle_amp := 60.0
+# so a player pinned against a wall can still sidestep along it. The arch is what decides how many
+# rows one line covers: it reaches twice this off the aimed row, so a line is 2 * amp + 120 px of mat.
+@export var wiggle_amp := 90.0
 @export var wiggle_length := 467.0
 # How close two bombs may sit. Below a blast's own radius (60) the line becomes one unbroken wall
 # instead of beads, which is the point - but it must stay under the tightest bomb_spacing, or every
-# other bomb of a line would be dropped as a stack.
-@export var stack_radius := 80.0
+# other bomb of a line would be dropped as a stack. A line's spacing compresses by up to 10px where
+# it turns onto the player's row, so it has to clear the tightest spacing by that much as well.
+@export var stack_radius := 72.0
 # However late a bomb is dropped, it sits on the mat at least this long before it goes off.
 @export var min_fuse := 1.4
-@export var bomb_spacing: Array[float] = [100.0, 88.0]
-@export var waddle_speed: Array[float] = [820.0, 960.0]
+@export var bomb_spacing: Array[float] = [88.0, 82.0]
+@export var waddle_speed: Array[float] = [980.0, 1120.0]
 # The wait before a laid line starts going off, and the beat between one bomb and the next. The
 # wait is what decides how much poo is on the mat at once: the longer it is, the more of the next
-# line is down before this one clears.
-@export var fuse_delay: Array[float] = [0.8, 0.65]
+# line is down before this one clears. Long enough here that a line is still down while the next is
+# being laid, so two lines cover the mat rather than one, and a bomb waits longer to go off, not less.
+@export var fuse_delay: Array[float] = [1.3, 1.1]
 @export var detonate_interval: Array[float] = [0.09, 0.07]
 @export var lines_per_cycle: Array[int] = [5, 3]
 # How far along the line the start telegraph draws its path preview, so its direction reads while
@@ -117,10 +124,6 @@ var line_start: Node2D = null
 
 
 func _ready() -> void:
-	DialogueManager.show_dialogue_balloon(load("res://Dialogue/MasonPreFight.dialogue"), "start")
-	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
-	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
-
 	for child in get_children():
 		if child is State:
 			states[child.name] = child
@@ -129,7 +132,16 @@ func _ready() -> void:
 
 	if initial_state:
 		current_state = initial_state
-		current_state.Enter()
+		# Deferred until the scene is up: his entrance moves him, the player and the gates, and
+		# reads all three off the fight scene.
+		current_state.Enter.call_deferred()
+
+
+# His entrance opens the lines once it has walked him in and shut the ring behind him.
+func show_pre_fight_dialogue() -> void:
+	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
+	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
+	DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start")
 
 
 func _process(delta: float) -> void:
@@ -295,6 +307,8 @@ func drop_bomb() -> void:
 			return
 	var first := line_bombs.is_empty()
 	var bomb := spawn_hazard(POO_BOMB_SCENE, drop_position)
+	# Its red tell only goes up for a player its blast has in it, so it needs to know where they are.
+	bomb.player = get_player()
 	line_bombs.append(bomb)
 	line_bomb_times.append(MasonCharacterBody.fight_clock)
 	spawned_bombs.append(bomb)
@@ -336,6 +350,61 @@ func next_attack(state: State) -> void:
 	on_child_transition(state, "AwaitDelivery" if finishers.is_empty() else finishers.pop_front())
 
 
+# The fight's floor layer (Arena/GroundFx, which the finisher's ground effects use too), or his scene
+# root in a scene without one.
+func ground_layer() -> Node2D:
+	var arena: Node = MasonCharacterBody.get_parent().get_parent()
+	var layer: Node2D = arena.get_node_or_null("GroundFx") if arena else null
+	return layer if layer else MasonCharacterBody.get_parent()
+
+
+# A full Break gauge (BossBreakGauge): whatever he was doing stops, everything he sent out goes, and
+# he is Broken until he gets up and starts a new cycle.
+func enter_broken() -> void:
+	if MasonCharacterBody.defeated or MasonCharacterBody.boss_health <= 0 or player_defeated:
+		return
+	if current_state == states.get("Broken"):
+		return
+	_stop_everything()
+	on_child_transition(current_state, "Broken")
+
+
+# The finisher's uppercut ends the Break window instead of its own clock: he is up, and his next cycle
+# starts `delay` after now.
+func end_break(delay: float) -> void:
+	on_child_transition(current_state, "Idle")
+	# Held on the recoil frame through the stagger instead of the idle loop Idle starts.
+	MasonCharacterBody.animation_player.play("hit")
+	MasonCharacterBody.finisher_stagger_timer.start(maxf(delay, 0.01))
+
+
+# The tiered finisher's first uppercut (MasonScript.begin_juggle).
+func enter_juggled() -> void:
+	var juggled = states["Juggled"]
+	if MasonCharacterBody.defeated or current_state == juggled:
+		return
+	_stop_everything()
+	on_child_transition(current_state, "Juggled")
+
+
+# Down after a juggle, he picks himself up where he crashed and his next cycle starts `delay` after
+# this.
+func after_juggle(delay: float) -> void:
+	on_child_transition(current_state, "Idle")
+	MasonCharacterBody.finisher_stagger_timer.start(maxf(delay, 0.01))
+
+
+# The one switch past the fight being decided: a juggled Mason, killed in the air, lands into his
+# defeat rather than snapping to its pose mid-flight.
+func land_juggled(final_state_name: String) -> void:
+	var final_state = states.get(final_state_name)
+	if final_state == states.get("Defeated"):
+		final_state.lying = true
+	current_state.Exit()
+	final_state.Enter()
+	current_state = final_state
+
+
 func enter_defeated() -> void:
 	_end_fight("Defeated")
 
@@ -347,6 +416,25 @@ func enter_player_defeated() -> void:
 
 
 func _end_fight(final_state_name: String) -> void:
+	_stop_everything()
+	var juggled = states.get("Juggled")
+	# In the air, he finishes his fall and his crash first (land_juggled).
+	if juggled and current_state == juggled:
+		juggled.final_state = final_state_name
+		return
+	on_child_transition(current_state, final_state_name)
+
+
+# Everything of his that is still running. PooSquat has no Exit() of its own and its squat_timer fires
+# an unguarded drop_bomb(), so a Break taken out of the squat lays a bomb after he is already down
+# unless the timers stop here.
+func _stop_everything() -> void:
+	ParryTell.clear(MasonCharacterBody)
 	for timer in [post_dialogue_pre_fight_timer, squat_timer, release_timer, phone_timer, eat_timer]:
 		timer.stop()
-	on_child_transition(current_state, final_state_name)
+	# Not one of the five: it would otherwise start the next cycle out from under a Break taken during
+	# the stagger after a finisher.
+	MasonCharacterBody.finisher_stagger_timer.stop()
+	# Anything he sent out that outlives what he was doing could still hurt the player.
+	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
+		hazard.queue_free()

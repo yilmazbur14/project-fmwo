@@ -37,6 +37,9 @@ var meter_fill_style: StyleBoxFlat
 var full_overlay: Sprite2D
 var text_label: Label
 var text_sprite: Sprite2D
+# MASH! is drawn; a finisher asking for any other word (PlayerFinisher.prompt_key) gets this label in
+# the drawn word's place. Only built where the drawn one is.
+var word_label: Label
 var text_textures := {}
 var prompt_size := Vector2.ZERO
 # The key to press next; empty until the first press.
@@ -189,6 +192,7 @@ func _rebuild() -> void:
 	meter_fill_style = null
 	text_label = null
 	text_sprite = null
+	word_label = null
 	text_textures = {}
 	banked_glints.clear()
 	bank_flash = null
@@ -450,18 +454,26 @@ func _build_text(spec: Dictionary, at: Vector2) -> void:
 		text_sprite.centered = false
 		text_sprite.position = at
 		add_child(text_sprite)
+		word_label = _text_label(spec, at)
+		word_label.visible = false
+		add_child(word_label)
 		return
-	text_label = Label.new()
-	text_label.theme = load("res://Assets/UI/ui_theme.tres")
-	text_label.add_theme_font_size_override("font_size", FONT_SIZE)
-	text_label.add_theme_constant_override("outline_size", OUTLINE)
-	text_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	text_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	text_label.position = at
-	text_label.size = spec.size
-	text_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text_label = _text_label(spec, at)
 	add_child(text_label)
+
+
+func _text_label(spec: Dictionary, at: Vector2) -> Label:
+	var label := Label.new()
+	label.theme = load("res://Assets/UI/ui_theme.tres")
+	label.add_theme_font_size_override("font_size", FONT_SIZE)
+	label.add_theme_constant_override("outline_size", OUTLINE)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.position = at
+	label.size = spec.size
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
 
 
 func _refresh() -> void:
@@ -563,10 +575,22 @@ func _show_text() -> void:
 			text_label.text = spec.mash
 			text_label.add_theme_color_override("font_color", spec.colors[text_frame])
 		return
+	# MASH! is the drawn word: a finisher asking for any other one has it written out in its place,
+	# until the meter fills and FULL! takes over as it always does.
+	var key := _prompt_key()
+	var written := key != &"mash" and not full
+	if word_label:
+		word_label.visible = written
+	if written:
+		var word := FinisherArtLayout.prompt_word(key)
+		var label: Label = word_label if word_label else text_label
+		label.text = word.text
+		label.add_theme_color_override("font_color", word.colors[text_frame])
 	if text_sprite:
+		text_sprite.visible = text_node.visible and not written
 		text_sprite.texture = text_textures[full]
 		text_sprite.frame = text_frame
-	else:
+	elif not written:
 		text_label.text = spec.full if full else spec.mash
 		text_label.add_theme_color_override("font_color", spec.colors[text_frame])
 	var meter_spec := FinisherArtLayout.meter()
@@ -575,6 +599,13 @@ func _show_text() -> void:
 		full_overlay.frame = full_frame
 	else:
 		meter_fill_style.bg_color = meter_spec.full_colors[full_frame] if full else meter_spec.fill_color
+
+
+# Which word the finisher wants. A build whose finisher has no prompt_key at all, or one asking for a
+# word nobody has written, still shows MASH!.
+func _prompt_key() -> StringName:
+	var key: Variant = finisher.get(&"prompt_key")
+	return key if key is StringName and FinisherArtLayout.PROMPT_WORDS.has(key) else &"mash"
 
 
 func _place() -> void:

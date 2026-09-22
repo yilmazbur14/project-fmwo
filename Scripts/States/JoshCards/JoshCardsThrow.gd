@@ -1,8 +1,8 @@
 extends State
 
-# Three cards in a row, each with its own wind-up. Held guard absorbs one for light stamina; a fresh
-# press parries it for free, pays hype and builds the streak. Nothing here staggers him - the punish
-# window comes after the third card either way.
+# His volley, one card at a time, each with its own wind-up. Held guard absorbs one for light
+# stamina; a fresh press parries it for free, pays hype and builds the streak. Nothing here staggers
+# him - the punish window comes after the last card either way.
 # throw_interval is release to release. PlayerDefense.parry_mash_lockout is 0.5 s, so a press that
 # misses card 1 still leaves a credited press in time for card 2. Do not shorten it below 0.65 s
 # without re-reading PlayerDefense.on_block_pressed().

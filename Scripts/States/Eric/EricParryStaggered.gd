@@ -1,7 +1,7 @@
 extends State
 
 # Eric after his own sword is parried back into him, or the player parries his bear-hug grab: the
-# attack stops and he's open to punches, up to BossOneScript.PARRY_STAGGER_HIT_CAP of them, then he
+# attack stops and he's open to punches, up to EricScript.PARRY_STAGGER_HIT_CAP of them, then he
 # glides back to where that attack started and carries on with his chain.
 # `from_reflect` marks the sword's version, which is the one that opens a finisher daze: the throw
 # hands straight to PlayerFinisher.begin_auto() and the uppercut fires without a mash. A parried
@@ -15,6 +15,7 @@ extends State
 @export var stagger_timer : Timer
 
 const EricPacing := preload("res://Scripts/EricPacing.gd")
+const EricPhaseTwoPose := preload("res://Scripts/EricPhaseTwoPose.gd")
 
 const FLASH := Color(1.6, 1.9, 2.6)
 const FLASH_TIME := 0.3
@@ -37,11 +38,19 @@ var drive_left := 0.0
 var drive_from := Vector2.ZERO
 var drive_to := Vector2.ZERO
 var driven: Node2D
+# Phase two: his frames come off the phase-two sheet instead of his own (EricPhaseTwoPose).
+var phase_two := false
+var sheet_texture: Texture2D
+var sheet_frames := 0
+var pose_frames: Array = []
+var pose_clock := 0.0
 
 
 func Enter() -> void:
 	glide_speed = EricPacing.value("stagger_glide_speed")
-	animation_player.play("downed")
+	# His downed and idle frames both draw the sword, which in phase two is outside the ring.
+	phase_two = character_body.phase_two
+	_pose("stumble", "downed")
 	# He can be standing on the player.
 	boss_collision_shape.disabled = true
 	var sfx: AudioStreamPlayer = character_body.get_node_or_null("WhirlwindSfxPlayer")
@@ -60,6 +69,12 @@ func Enter() -> void:
 
 
 func Exit() -> void:
+	if phase_two:
+		phase_two = false
+		var sprite: Sprite2D = character_body.sprite
+		sprite.hframes = sheet_frames
+		sprite.texture = sheet_texture
+		sheet_texture = null
 	stagger_timer.stop()
 	# Only while the window is still open: the next state may open the hurtbox itself.
 	if window_open:
@@ -86,6 +101,9 @@ func drive_player_in(player: Node2D) -> void:
 
 
 func Physics_Update(delta: float) -> void:
+	if phase_two:
+		pose_clock += delta
+		character_body.sprite.frame = EricPhaseTwoPose.frame_at(pose_frames, pose_clock)
 	if drive_left > 0.0 and is_instance_valid(driven):
 		drive_left -= delta
 		var t := clampf(1.0 - drive_left / DRIVE_TIME, 0.0, 1.0)
@@ -103,8 +121,22 @@ func _on_parry_stagger_timer_timeout() -> void:
 	if eric_state_machine.current_state != self:
 		return
 	_close_window()
-	animation_player.play("idle")
+	_pose("idle", "idle")
 	gliding = true
+
+
+# `key` is the phase-two pose, `anim` the animation his own sheet plays for the same beat.
+func _pose(key: String, anim: StringName) -> void:
+	if not phase_two:
+		animation_player.play(anim)
+		return
+	animation_player.stop()
+	var sprite: Sprite2D = character_body.sprite
+	if sheet_texture == null:
+		sheet_texture = sprite.texture
+		sheet_frames = sprite.hframes
+	pose_frames = EricPhaseTwoPose.show(sprite, key)
+	pose_clock = 0.0
 
 
 func _close_window() -> void:

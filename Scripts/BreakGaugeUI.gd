@@ -1,17 +1,22 @@
 extends Control
 
-# Eric's Break gauge (BossBreakGauge): a brass gauge on the top rope, or a thin bar under his health
-# bar while the art is off. It pulses as it nears full, shatters under a BREAK! when he breaks, and
-# sits dimmed while it takes nothing afterwards. It runs on real seconds, so it plays out through the
-# Break's own hit-stop. BossOneScript builds it at runtime, the way it builds the health bar above it.
+# A boss's Break gauge (BossBreakGauge): a brass gauge on the top rope, or a thin bar under his
+# health bar while the art is off. It pulses as it nears full, shatters under a BREAK! when he
+# breaks, and sits dimmed while it takes nothing afterwards. It runs on real seconds, so it plays out
+# through the Break's own hit-stop. The fight builds it at runtime, the way it builds the health bar
+# above it.
 # The shatter and the word run on tweens that ignore the time scale, not on _process: the Break sets
 # the hit-stop in the same frame the shatter starts, after that frame's delta was scaled, and dividing
 # it by the new time scale would skip most of the shatter.
+# Every number it draws with comes from `spec`. A fight that sets none gets Eric's, whose gauge this
+# was first, so his and Mason's builds keep working without passing one.
 
 const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
 
-# Set by BossOneScript before it is added.
+# Both set by the fight before it is added.
 var gauge: Node
+# Which boss's gauge to draw: the layout dictionary, resolved once in _ready.
+var spec: Dictionary = {}
 
 var bar: Range
 var fill_tween: Tween
@@ -31,11 +36,12 @@ var word_tween: Tween
 
 
 func _ready() -> void:
-	var spec := EricArtLayout.break_gauge()
+	if spec.is_empty():
+		spec = EricArtLayout.break_gauge()
 	position = spec.position
 	size = spec.size
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_build(spec)
+	_build()
 	bar.value = _bar_value(gauge.value, gauge.max_value)
 	gauge.changed.connect(_on_changed)
 	gauge.broke.connect(_on_broke)
@@ -44,8 +50,7 @@ func _ready() -> void:
 # The pulse is a loop, so a frame where the time scale changed only shifts its phase.
 func _process(delta: float) -> void:
 	clock += delta / maxf(Engine.time_scale, 0.001)
-	var spec := EricArtLayout.break_gauge()
-	var hot: bool = not gauge.locked and gauge.value >= gauge.max_value * EricArtLayout.BREAK_GAUGE_PULSE_FROM
+	var hot: bool = not gauge.locked and gauge.value >= gauge.max_value * spec.get("pulse_from", 0.8)
 	bar.modulate = spec.locked_modulate if gauge.locked else Color.WHITE
 	if pulse:
 		pulse.visible = hot
@@ -60,7 +65,7 @@ func _on_changed(value: float, max_value: float) -> void:
 	if fill_tween:
 		fill_tween.kill()
 	fill_tween = create_tween().set_ignore_time_scale(true)
-	fill_tween.tween_property(bar, "value", _bar_value(value, max_value), EricArtLayout.BREAK_GAUGE_FILL_TIME)
+	fill_tween.tween_property(bar, "value", _bar_value(value, max_value), spec.get("fill_time", 0.15))
 
 
 # The bar counts in the art's whole texels where it has them, so the fill steps a texel at a time.
@@ -73,8 +78,7 @@ func _on_broke() -> void:
 	if fill_tween:
 		fill_tween.kill()
 	bar.value = 0.0
-	var spec := EricArtLayout.break_gauge()
-	_play_word(spec)
+	_play_word()
 	if shatter:
 		_play_shatter(spec.shatter_frame_times)
 		return
@@ -127,20 +131,20 @@ func _clear_shards() -> void:
 
 
 # It flips its frames or colours, holds, then fades over its last third.
-func _play_word(spec: Dictionary) -> void:
+func _play_word() -> void:
 	if word_tween:
 		word_tween.kill()
 	var word := _word()
 	word.modulate.a = 1.0
-	_pose_word(0.0, spec)
+	_pose_word(0.0)
 	word.show()
 	word_tween = word.create_tween().set_ignore_time_scale(true).set_parallel(true)
-	word_tween.tween_method(_pose_word.bind(spec), 0.0, spec.word_time, spec.word_time)
+	word_tween.tween_method(_pose_word, 0.0, spec.word_time, spec.word_time)
 	word_tween.tween_property(word, "modulate:a", 0.0, spec.word_time / 3.0).set_delay(spec.word_time * 2.0 / 3.0)
 	word_tween.chain().tween_callback(word.hide)
 
 
-func _pose_word(time: float, spec: Dictionary) -> void:
+func _pose_word(time: float) -> void:
 	var step := int(time / spec.word_frame_time)
 	var rise := Vector2(0, spec.word_rise * time / spec.word_time)
 	if word_sheet:
@@ -168,7 +172,7 @@ func _looped_frame(frame_times: Array, time: float) -> int:
 	return frame_times.size() - 1
 
 
-func _build(spec: Dictionary) -> void:
+func _build() -> void:
 	if spec.has("frame"):
 		var texture_bar := TextureProgressBar.new()
 		texture_bar.texture_under = load(spec.frame)

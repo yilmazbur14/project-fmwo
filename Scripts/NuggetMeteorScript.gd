@@ -14,7 +14,16 @@ const FALL_ANGLE_DEGREES := 20.0
 # Just above the top of the screen, so the whole fall is in view wherever the nugget lands.
 const FALL_START_Y := -80.0
 const METEOR_FRAME_TIME := 0.08
-# nugget_target.png's ring, 44x22 texels at 3x on every frame.
+# nugget_target.png's ring, 44x22 texels at 3x on every frame. It is the same oval as HIT_SIZE, on the
+# landing spot, for the whole warning: this marker IS the nugget's warning, which is why there is no
+# ParryTell on top of it. AttackCatalog carries `dodge_tell` for mason_nugget and it is deliberately
+# left unwired - a yellow ring drawn over this ring would be the same silhouette twice on the same
+# spot, and yellow everywhere else in the game (Eric's whirlwind and charge, the dummy's lunge,
+# Computah's laser, Bixby's beam) means "dash through it". The nugget has no `dash_through` and
+# nothing here reports a near miss, so a dash out of the way earns neither i-frames nor a perfect
+# dodge - the badge would promise a move the attack does not have. What the nugget does have is a
+# guard: it is blockable from any facing, so a fresh press parries it, which is the red half of the
+# vocabulary, not the yellow one.
 const MARKER_SIZE := Vector2(132, 66)
 # The marker shows frames 0 and 1 for a quarter of the warning each, then flashes between 2 and 3.
 const MARKER_FLASH_TIME := 0.12

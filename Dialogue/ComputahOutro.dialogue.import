@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://oliqg0ur2754"
+path="res://.godot/imported/ComputahOutro.dialogue-82f10c538f5c57d0a8c85b96c16b6205.tres"
+
+[deps]
+
+source_file="res://Dialogue/ComputahOutro.dialogue"
+dest_files=["res://.godot/imported/ComputahOutro.dialogue-82f10c538f5c57d0a8c85b96c16b6205.tres"]
+
+[params]
+
+defaults=true

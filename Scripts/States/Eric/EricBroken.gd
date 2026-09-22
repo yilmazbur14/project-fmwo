@@ -4,7 +4,7 @@ extends State
 # (EricStateMachine.enter_broken): the fight stops dead for a beat, the Break knocks his sword out of
 # his grip into the mat, and he reels and drops to his knees, dazed and open to punches, driving the
 # player in beside him so there's no walk-up. A 3-hit combo landed there starts the finisher
-# (BossOneScript.can_be_dazed). When his time is up, or the finisher's uppercut ends it (recover()), he
+# (EricScript.can_be_dazed). When his time is up, or the finisher's uppercut ends it (recover()), he
 # gets up and calls his sword back to his hand before his next chain. A juggle (EricJuggled) takes him
 # out of here and hands him back for that last part alone (EricStateMachine.after_juggle).
 
@@ -218,7 +218,7 @@ func _drive_player_in() -> void:
 		return
 	var shape: CollisionShape2D = hurtbox.get_node("CollisionShape2D")
 	var box: Rect2 = shape.global_transform * shape.shape.get_rect()
-	var area: Rect2 = eric_state_machine.states["BearHug"].PLAYER_AREA
+	var area: Rect2 = EricArtLayout.PLAYER_AREA
 	var side := signf(player.global_position.x - box.get_center().x)
 	if is_instance_valid(eric_state_machine.dropped_sword):
 		side = -1.0 if eric_state_machine.dropped_sword.flip_h else 1.0

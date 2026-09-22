@@ -6,6 +6,9 @@ extends Node2D
 # It reports its own hits rather than letting the player's hurtbox find it, because the throw needs
 # the result: a parried sword stops dead and is flung back at Eric instead of finishing its arc. The
 # dodge-ghost branch is mandatory, or the sword would silently eat perfect dodges.
+# The outgoing throw only resolves anything - damage, parry or near miss - from `hot_from`, the
+# progress its floor mark lights its commit frame on: what the mark promises is where and when it
+# lands, and a blade that could hurt them somewhere else on the way in would be a tell that lies.
 
 signal landed
 signal returned
@@ -78,6 +81,10 @@ var returning := false
 var reflecting := false
 var catch_lean := 0.0
 var planted_time := -1.0
+# The flight progress from which the outgoing throw's blade may hurt the player: the mark's commit
+# frame, which is what the player is reading. Before it the blade is only passing through. 0 on the
+# recall and the flung-back sword, which are aimed at Eric and have no mark to keep faith with.
+var hot_from := 0.0
 # The floor mark under the landing spot, while the outgoing throw is in the air.
 var mark: Node2D
 
@@ -122,12 +129,9 @@ func throw(hand: Vector2, ground_y: float, target: Vector2) -> void:
 func mark_landing() -> Node2D:
 	mark = EricSwordMark.new()
 	mark.name = "SwordMark"
-	# The commit frame is lit for exactly the parry window, so the hot ring is the window. It is timed
-	# off when the blade reaches them rather than off the end of the flight: the two are the same thing
-	# from across the ring, but the blade is 108 px across and dives in tip first, so a throw from close
-	# up touches them with a third of its flight still to run. 0 if it arrives inside a window of the
-	# release, which is the truth there: press at once.
-	mark.commit_at = maxf(_contact_progress() - player.defense.parry_window / duration, 0.0)
+	# The ring goes hot on the frame the blade does, because they are the same number: the throw sets
+	# it in _fly() and the mark only borrows it.
+	mark.commit_at = hot_from
 	return mark
 
 
@@ -176,16 +180,23 @@ func _fly(start_ground: Vector2, start_height: float, end_ground: Vector2, end_h
 	sword.visible = true
 	shadow.visible = true
 	planted.visible = false
-	# A flung-back sword is the player's: it mustn't hurt them on its way out.
+	# A flung-back sword is the player's: it mustn't hurt them on its way out. Monitoring then stays on
+	# for the whole of a leg that can hurt anyone; the outgoing throw's hot window is a test on the
+	# flight's own clock rather than a switch here, because an Area2D takes a physics flush to start
+	# reporting overlaps again and the window opens on the one frame that can't afford to be deaf.
 	hitbox.monitoring = not reflecting and not (returning and returns_harmless)
+	hot_from = _commit_progress() if not returning and not reflecting else 0.0
 	_place()
 
 
 func _physics_process(delta: float) -> void:
 	if flying:
 		elapsed = minf(elapsed + delta, duration)
-		_place()
-		if hitbox.monitoring:
+		var t := _place()
+		# The same t the mark was just given, so the blade goes hot on the frame the ring does and
+		# neither can drift from the other. Until then the throw is only a tell, whatever it is
+		# passing through: the dodge ghost included, since there is nothing there to dodge yet.
+		if hitbox.monitoring and t >= hot_from:
 			_resolve_hits()
 		# A parry stops it where it was caught, so it may not be flying any more.
 		if flying and elapsed >= duration:
@@ -229,7 +240,7 @@ func _hit() -> RefCounted:
 	return HitInfo.make(&"eric_thrown_sword", hitbox, hitbox.global_position, thrower)
 
 
-func _place() -> void:
+func _place() -> float:
 	var t := _progress()
 	global_position = from_ground.lerp(to_ground, t)
 	# The mark runs off this same clock, so the ring closing on it can't drift from the blade.
@@ -255,6 +266,22 @@ func _place() -> void:
 	shadow.frame = clampi(int((height - PLANTED_HEIGHT) / SHADOW_STEP), 0, SHADOW_FRAMES - 1)
 	if shadow.get_parent() != self:
 		shadow.global_position = global_position
+	return t
+
+
+# The fraction of the flight the blade goes hot at, and the one the mark lights its commit frame on.
+# It is a parry window's worth of flight before the blade reaches the player, so a press on the ring
+# always has a blade to catch, and nothing before it: the throw promises a spot and a moment, and a
+# blade that clipped them on the way in would be breaking that promise wherever their read said to
+# press. A window, not a fraction: the flight is as long as the throw is (duration), so the window is
+# whatever share of it PlayerDefense.parry_window comes to.
+# Timed off when the blade reaches them rather than off the end of the flight: the two are the same
+# thing from across the ring, but the blade is 108 px across and dives in tip first, so a throw from
+# close up touches them with a third of its flight still to run. 0 if it arrives inside a window of
+# the release, which is the truth there: press at once, and the blade is hot from the moment it
+# leaves his hand.
+func _commit_progress() -> float:
+	return maxf(_contact_progress() - player.defense.parry_window / duration, 0.0)
 
 
 # The fraction of the flight at which the blade first reaches the player standing where this throw is

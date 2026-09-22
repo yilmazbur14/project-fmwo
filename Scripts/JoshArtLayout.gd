@@ -90,7 +90,7 @@ const FINAL_ANIMS := {
 	&"bomb": {sheet = "res://Assets/Characters/Josh/josh_drop_bomb.png",
 		frames = [0, 1, 2], times = [0.09, 0.08, 0.13], loop = false, flips = true},
 	# 0 is the wind-up, and it is held for the whole tell rather than the artist's 0.14 s, because the
-	# tell length is what makes the three cards parryable (JoshCardsStateMachine.throw_tell). 1 is the
+	# tell length is what makes his cards parryable (JoshCardsStateMachine.throw_tell). 1 is the
 	# release, 2 the follow-through, 3 ready, held until the next card.
 	&"throw": {sheet = "res://Assets/Characters/Josh/josh_throw.png",
 		frames = [0, 1, 2, 3], times = [0.45, 0.07, 0.11, 0.13], loop = false, flips = true},

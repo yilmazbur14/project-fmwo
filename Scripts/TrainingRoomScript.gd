@@ -3,9 +3,10 @@ extends Node2D
 # The practice floor on the Controls screen. Danny finishes his lines, the balloon closes and the
 # player is left alone with a sparring dummy to punch, combo, parry, dodge, guard-break and mash for
 # as long as they like before walking into Arena #1.
-# Everything here is the real system: the room switches the player onto feel_v2 exactly as
-# BossOneScript does, because its only exit is Eric's fight, and the dummy answers every contract a
-# boss does. The two things it changes are that the dummy cannot die and neither can the player.
+# Everything here is the real system: the room switches the player onto Eric's own player flags
+# exactly as EricScript does, because its only exit is Eric's fight, and the dummy answers every
+# contract a boss does. The two things it changes are that the dummy cannot die and neither can the
+# player.
 #
 # The player MUST NOT be able to lose in here. PlayerScript._process fires FightOutro.finish_fight
 # at zero health, and FightOutro.PLAYER_PATH is hard-coded to "Arena/MainPlayer/CharacterBody2D",
@@ -155,6 +156,10 @@ func _ready() -> void:
 	# the dummy's physics step, which is what can take it down there.
 	process_priority = -10
 	process_physics_priority = -10
+
+	# What Eric's fight turns on, so the room practises the move set the fight it opens into has
+	# (PlayerScript.dash_parry, set the same way in EricScript).
+	player.dash_parry = true
 
 	dummy.player = player
 	dummy.set_sparring(false)

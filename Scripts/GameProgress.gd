@@ -14,7 +14,7 @@ var next_boss_scene: String = ""
 const BOSSES: Array[Dictionary] = [
 	{"scene": "res://Scenes/Bosses/BurakBossFightScene.tscn", "name": "BURAK", "rank": "@member"},
 	{"scene": "res://Scenes/Bosses/EricBossFightScene.tscn", "name": "ERIC", "rank": "@regular"},
-	{"scene": "res://Scenes/Bosses/GreysonBossFightScene.tscn", "name": "GREYSON & COMPUTAH", "rank": "@active"},
+	{"scene": "res://Scenes/Bosses/ComputahBossFightScene.tscn", "name": "COMPUTAH", "rank": "@active"},
 	{"scene": "res://Scenes/Bosses/MattBossFightScene.tscn", "name": "MATT", "rank": "@veteran"},
 	{"scene": "res://Scenes/Bosses/MasonBossFightScene.tscn", "name": "MASON", "rank": "@trusted"},
 	{"scene": "res://Scenes/Bosses/JoshBossFightScene.tscn", "name": "JOSH", "rank": "@vip"},
@@ -42,6 +42,14 @@ var bosses_cleared := 0
 # here because this is an autoload: a retry after a loss reloads the fight scene, and nobody wants to
 # watch the same walk-in twice in a row.
 var entrances_seen := {}
+# A playtest shortcut asking a fight to open in its second phase rather than at its start
+# (MainMenuScript's boss select). The fight scene's own path, cleared by the fight when it takes it,
+# so it can never leak into the next one. Empty for a normal jump into a fight.
+var start_in_phase_two := ""
+# A playtest toggle from the same panel: the player takes no health damage, so a whole fight can be
+# watched end to end. Deliberately NOT cleared by reset_progress() - it is a setting the user leaves
+# on while they look at a boss, not run state, so starting a new run must not silently turn it off.
+var playtest_invincible := false
 
 
 func _ready() -> void:
@@ -54,6 +62,7 @@ func reset_progress() -> void:
 	fight_index = -1
 	bosses_cleared = 0
 	entrances_seen.clear()
+	start_in_phase_two = ""
 
 
 # Returns how many bosses the Victory screen's ladder should show as beaten.

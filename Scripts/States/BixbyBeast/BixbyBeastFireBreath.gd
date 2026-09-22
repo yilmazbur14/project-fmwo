@@ -1,6 +1,7 @@
 extends State
 
 const HitInfo := preload("res://Scripts/HitInfo.gd")
+const ParryTell := preload("res://Scripts/ParryTell.gd")
 
 @export var body : CharacterBody2D
 @export var windup_sfx_player : AudioStreamPlayer
@@ -32,6 +33,7 @@ func Enter() -> void:
 
 func Exit() -> void:
 	breath_sfx_player.stop()
+	ParryTell.clear(body)
 
 
 func Physics_Update(delta: float) -> void:
@@ -47,10 +49,13 @@ func Physics_Update(delta: float) -> void:
 				_start(Phase.WINDUP)
 				body.play_anim(&"windup")
 				windup_sfx_player.play()
+				ParryTell.telegraph(body, &"bixby_fire_breath", state_machine.breath_windup, _tell_anchor)
 		# The aim is locked: he only settles onto it.
 		Phase.WINDUP:
 			body.fly_toward(_ground_under(aim), state_machine.breath_approach_speed, delta)
 			if elapsed >= state_machine.breath_windup:
+				# The stream is out: the warning has done its job.
+				ParryTell.clear(body)
 				_start(Phase.BREATH)
 				aim = body.feet_position()
 				body.fly_velocity = Vector2.ZERO
@@ -114,6 +119,17 @@ func _lay_trail() -> void:
 
 func _hit() -> RefCounted:
 	return HitInfo.make(&"bixby_fire_breath", body.fire_hitbox, body.feet_position(), body)
+
+
+# Where the stream is aimed, not where he is: he winds up hovering with his horns most of a screen
+# above the floor, so a badge over his head would be nowhere near the fire the player has to answer.
+# breath_aim puts a player breath_aim_depth below his feet, so that row is where one standing in the
+# stream is, and the badge hangs a body's height above it - over their head, as every other tell in
+# the game does. It follows him: he is still settling onto his aim while it is up, and if the player
+# walks out from under him it stays with the fire rather than with them.
+func _tell_anchor() -> Vector2:
+	var aim_depth: float = state_machine.breath_aim_depth - state_machine.PLAYER_HALF_BODY.y
+	return body.feet_position() + Vector2(0, aim_depth)
 
 
 func _ground_under(feet: Vector2) -> Vector2:

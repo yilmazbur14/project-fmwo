@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://b5axamsa3h7hx"]
 
 [ext_resource type="PackedScene" uid="uid://4pqund3nukl7" path="res://Scenes/Core/ArenaScene.tscn" id="1_vsluw"]
-[ext_resource type="PackedScene" uid="uid://bva0fygw12gyi" path="res://Scenes/Bosses/BossOneScene.tscn" id="2_bd0gm"]
+[ext_resource type="PackedScene" uid="uid://bva0fygw12gyi" path="res://Scenes/Bosses/EricScene.tscn" id="2_bd0gm"]
 
 [node name="EricBossFight" type="Node2D" unique_id=466149210]
 y_sort_enabled = true

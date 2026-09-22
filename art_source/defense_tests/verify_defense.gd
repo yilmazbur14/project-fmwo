@@ -18,7 +18,7 @@ extends SceneTree
 
 const SCENES := {
 	"eric": "res://Scenes/Bosses/EricBossFightScene.tscn",
-	"greyson": "res://Scenes/Bosses/GreysonBossFightScene.tscn",
+	"computah": "res://Scenes/Bosses/ComputahBossFightScene.tscn",
 	# Deliberately the LEGACY combined scene, not the shipped CarterBossFightScene: test_smoke,
 	# test_blocks, test_approach and test_dodge_rollout all reach into Arena/CarterAndJoshScene/Carter
 	# and would break against the split fight. The shipped Carter is covered by clone_cadence, which
@@ -48,6 +48,10 @@ var fight := "eric"
 var tier := "normal"
 # Eric's pacing (EricPacing.version) for smoke and approach: 1 or 2, or 0 for the one that ships.
 var ver := 0
+# Which of Eric's phases smoke drives: 0 for the fight as it starts, 2 for after his sword has been
+# knocked out of the ring. His health never moves in smoke - the player is parked and never punches
+# him - so phase two would otherwise get no smoke coverage at all.
+var phase := 0
 
 # The modes written against Eric's fight as it was (EricPacing V1): they run on it, whatever ships. With
 # V1 pinned his punish window is Downed, and the mash and the uppercut are the ones they expect.
@@ -71,6 +75,8 @@ func _initialize() -> void:
 			tier = arg.substr(5)
 		elif arg.begins_with("ver="):
 			ver = int(arg.substr(4))
+		elif arg.begins_with("phase="):
+			phase = int(arg.substr(6))
 	_main.call_deferred()
 
 
@@ -270,8 +276,35 @@ func load_eric(keep_balloon := false) -> void:
 	await load_fight("eric", keep_balloon)
 	boss = current_scene.get_node("Arena/EricBossScene/CharacterBody2D")
 	sm = boss.state_machine
+	guard_phase_cut()
 	if not keep_balloon:
 		sm.post_dialogue_pre_fight_timer.stop()
+
+
+# Eric's phase-two cut (EricPhaseTwo) stops the fight for a cutscene and three lines nobody in a test
+# is going to read. Any mode that takes half his health off walks into it - pace_bot does it every
+# run, and the juggle, Break and mash modes can - so it is cut here on every frame it is up, the way
+# a player cuts it, with a tap to read the lines through behind it. Installed globally rather than per
+# mode: a mode that has never heard of phase two is exactly the one that would hang in it.
+# Keyed off the state, not a scene path: a fight without a PhaseTwo simply has nothing to watch.
+var phase_cut_frames := 0
+
+
+func guard_phase_cut() -> void:
+	if not physics_frame.is_connected(_cut_phase_two):
+		physics_frame.connect(_cut_phase_two)
+
+
+func _cut_phase_two() -> void:
+	if sm == null or not is_instance_valid(sm):
+		return
+	var cut = sm.states.get("PhaseTwo")
+	if cut == null or sm.current_state != cut:
+		return
+	phase_cut_frames += 1
+	if phase_cut_frames % 4 == 0:
+		tap(KEY_ENTER)
+	cut.skip()
 
 
 func _main() -> void:
@@ -312,11 +345,11 @@ func _main() -> void:
 		"smoke": await test_smoke()
 		"blocks": await test_blocks()
 		"dodge_rollout": await test_dodge_rollout()
+		"beam": await test_beam()
 		"prompt_overlap": await test_prompt_overlap()
 		"grab_parry": await test_grab_parry()
 		"parry_streak": await test_parry_streak()
 		"knockback": await test_knockback()
-		"knockback_computah": await test_knockback_computah()
 		"knockback_boss": await test_knockback_boss()
 		"kill_shove": await test_kill_shove()
 		"status": await test_status()
@@ -324,18 +357,22 @@ func _main() -> void:
 		"status_dialogue": await test_status_dialogue()
 		"locked": await test_locked()
 		"locked_end": await test_locked_end()
+		"scripted": await test_scripted()
 		"parry_rearm": await test_parry_rearm()
 		"parry_window": await test_parry_window()
 		"parry_freeze": await test_parry_freeze()
 		"parry_cue": await test_parry_cue()
 		"approach": await test_approach()
 		"clone_cadence": await test_clone_cadence()
+		"beam_rush": await test_beam_rush()
+		"beam_rush_live": await test_beam_rush_live()
 		"auto_finisher": await test_auto_finisher()
 		"auto_kill": await test_auto_kill()
 		"tells": await test_tells()
 		"dash_v2": await test_dash_v2()
 		"dash_recovery_v2": await test_dash_recovery_v2()
 		"dash_spam_v2": await test_dash_spam_v2()
+		"dash_parry": await test_dash_parry()
 		"dash_legacy": await test_dash_legacy()
 		"dash_layers": await test_dash_layers()
 		"punch_reach": await test_punch_reach()
@@ -353,12 +390,21 @@ func _main() -> void:
 		"juggle_kill": await test_juggle_kill()
 		"juggle_super": await test_juggle_super()
 		"reflect_auto_v2": await test_reflect_auto_v2()
+		"sword_gate": await test_sword_gate()
+		"phase_cut": await test_phase_cut()
+		"p2_mixup": await test_p2_mixup()
+		"p2_leap": await test_p2_leap()
+		"p2_grab_escape": await test_p2_grab_escape()
+		"mine_trap": await test_mine_trap()
+		"mine_mash": await test_mine_mash()
+		"computah_overload": await test_computah_overload()
 		"pace_bot": await test_pace_bot()
 		"pause_basic": await test_pause_basic()
 		"pause_hitstop": await test_pause_hitstop()
 		"pause_freeze": await test_pause_freeze()
 		"pause_mash": await test_pause_mash()
 		"pause_barrage": await test_pause_barrage()
+		"pause_beam_rush": await test_pause_beam_rush()
 		"pause_dialogue": await test_pause_dialogue()
 		"pause_no_leak": await test_pause_no_leak()
 		"pause_blocked": await test_pause_blocked()
@@ -1238,7 +1284,7 @@ func test_stagger_chain() -> void:
 	check(await wait_until(func(): return finisher.phase == FINISHER_OFF and boss.boss_health < boss.max_health - 1, 400), "the finisher lands")
 	check(await wait_until(func(): return not hurtbox.monitoring, 240), "it closed the punish window")
 	check(sm.states["ParryStaggered"].stagger_timer.is_stopped(), "the stagger timer is done with")
-	check(await wait_until(func(): return sm.ATTACKS.has(sm.current_state.name), 400), "the chain carries on with the next attack (%s)" % sm.current_state.name)
+	check(await wait_until(func(): return sm.attacks().has(sm.current_state.name), 400), "the chain carries on with the next attack (%s)" % sm.current_state.name)
 	await wait_until(func(): return sm.current_state.name == "Downed", 900)
 	sm.downed_state_timer.stop()
 
@@ -1980,11 +2026,11 @@ func catalogue_block_cost(id: StringName) -> float:
 		return 0.0
 	return defense.heavy_block_cost if entry.weight == CATALOG.Weight.HEAVY else defense.light_block_cost
 # Hits that land inside the i-frames on purpose, because the player is held and cannot dodge.
-const IGNORES_IFRAMES := [&"eric_bear_hug_squeeze", &"greyson_combo_jab", &"greyson_combo_finish", &"computah_slam"]
+const IGNORES_IFRAMES := [&"eric_bear_hug_squeeze", &"eric_p2_crush", &"computah_slam"]
 
 const SMOKE_SPOTS := {
 	"eric": Vector2(972, 700),
-	"greyson": Vector2(960, 700),
+	"computah": Vector2(960, 700),
 	"carter": Vector2(960, 560),
 	"mason": Vector2(960, 640),
 	"jordan": Vector2(960, 640),
@@ -2002,6 +2048,16 @@ func test_smoke() -> void:
 	var settled := await clear_intro(fight)
 	if settled != "":
 		log_p("%s's intro ended in %s" % [fight, settled])
+	# His health never moves here - the player is parked and never punches him - so the phase-two
+	# latch has to be set by hand, before his first chain, or phase two gets no smoke at all. The cut
+	# is not played: enter_phase_two() is the flag on its own, and the fight after it is what smoke is
+	# for.
+	if fight == "eric" and phase == 2:
+		boss = current_scene.get_node("Arena/EricBossScene/CharacterBody2D")
+		sm = boss.state_machine
+		guard_phase_cut()
+		boss.enter_phase_two()
+		log_p("eric in phase two: %s" % [sm.attacks()])
 	player.playerHealth = 1000
 	track()
 	track_parries()
@@ -2048,7 +2104,25 @@ func test_smoke() -> void:
 		if gap < 1.0 - 0.001 and not IGNORES_IFRAMES.has(hits[i].id):
 			bad_gaps.append("%s after %.3f s" % [hits[i].id, gap])
 	check(bad_gaps.is_empty(), "every hit is followed by a second of i-frames (%s)" % [bad_gaps])
-	if fight == "eric":
+	if fight == "eric" and phase == 2:
+		# The two attacks phase two has, and the ids only they can produce.
+		var p2_ids := [&"eric_p2_haymaker", &"eric_p2_grab", &"eric_p2_crush", &"eric_p2_tremor"]
+		var strays: Array = ids.keys().filter(func(id): return not p2_ids.has(id))
+		check(strays.is_empty(), "nothing but his phase-two attacks lands (%s)" % [strays])
+		check(ids.has(&"eric_p2_tremor"), "the leap's tremors land")
+		check(ids.has(&"eric_p2_haymaker") or ids.has(&"eric_p2_grab"), "and the mixup connects")
+		var holds := []
+		for e in hits:
+			if e.id == &"eric_p2_grab":
+				holds.append(0)
+			elif e.id == &"eric_p2_crush" and not holds.is_empty():
+				holds[-1] += 1
+		var still_held: bool = player.is_grabbed and not holds.is_empty()
+		if still_held:
+			holds.pop_back()
+		log_p("holds that finished: %s%s" % [holds, ", and one still holding at the cut-off" if still_held else ""])
+		check(holds.all(func(count): return count == 3), "a player who never mashes is crushed three times and tossed (%s)" % [holds])
+	elif fight == "eric":
 		# Each hold's squeezes belong to the grab before them. The 45 s window can close mid-hold, which
 		# V2 hugs often enough to do regularly, so a hold still on at the cut-off isn't counted.
 		var hugs := []
@@ -2068,7 +2142,7 @@ func test_smoke() -> void:
 
 
 # What each attack should cost the guard, and what should never be blockable at all.
-const UNBLOCKABLE := [&"computah_laser", &"computah_chase", &"greyson_combo_jab", &"greyson_combo_finish", &"computah_slam", &"wrestler_punish", &"eric_quake_ring", &"eric_bear_hug_squeeze"]
+const UNBLOCKABLE := [&"computah_beam", &"computah_chase", &"computah_slam", &"computah_overload_blast", &"wrestler_punish", &"eric_quake_ring", &"eric_bear_hug_squeeze", &"eric_p2_haymaker", &"eric_p2_grab", &"eric_p2_crush"]
 
 
 func test_blocks() -> void:
@@ -2124,7 +2198,7 @@ func test_blocks() -> void:
 	await past_window()
 	clear_iframes()
 	defense.stamina = defense.max_stamina
-	var front := front_hit(&"greyson_throw", dummy_source())
+	var front := front_hit(&"josh_card_throw", dummy_source())
 	clear_iframes()
 	defense.stamina = defense.max_stamina
 	var side := side_hit(&"wrestler_charge", dummy_source())
@@ -2204,54 +2278,11 @@ func test_knockback() -> void:
 	check(results[1].pause > results[0].pause, "a supercharged uppercut buys more time")
 
 
-# A boss anchored to his own cycle rocks back on his sprite instead, and his body stays put.
-# Boss 2's Computah, whose near-death clamp is the floor that clips the uppercut: he cannot be
-# killed while Greyson is above GreysonComputahScript.SWAP_GUARD_RATIO, so the blow lands on 1 and
-# the supercharge, having added nothing, is not spent.
-func test_knockback_computah() -> void:
-	await load_fight("greyson")
-	player.playerHealth = 100
-	var pair: Node = current_scene.get_node("Arena/GreysonComputahScene")
-	var computah: Node = pair.computah
-	var machine: Node = pair.get_node("StateManager")
-	# swing() reads the boss's health to report what it dealt.
-	boss = computah
-	var hype: Node = player.get_node("Hype")
-	var finisher: Node = player.get_node("Finisher")
-	machine.post_dialogue_pre_fight_timer.stop()
-	hype._set_hype(100.0)
-	# Greyson untouched, so the clamp holds Computah at 1. Six leaves the three daze punches - the
-	# third is charged and worth two - taking him to 2, one above the clamp, so the uppercut lands
-	# and is then clipped by it.
-	computah.boss_health = 6
-	pair.on_body_damaged(computah)
-	machine.open_window(computah, 60.0, computah.MAX_HITS_PER_WINDOW, &"collapse", &"down", &"reboot")
-	await wait(5)
-	place_under(computah.get_node("Hurtbox"))
-	await wait(6)
-	for i in 3:
-		await swing()
-		if i < 2:
-			await wait(6)
-	check(await wait_until(func(): return finisher.phase == 2 and finisher.prompt_visible, 120), "dazed")
-	var body_at: Vector2 = computah.global_position
-	var rest: Vector2 = computah.sprite.offset
-	var health: int = computah.boss_health
-	await mash_finisher()
-	check(await wait_until(func(): return computah.boss_health < health, 90), "the uppercut lands")
-	await wait(8)
-	log_p("computah %d -> %d, body moved %.1f px, sprite offset %s -> %s" % [health, computah.boss_health, body_at.distance_to(computah.global_position), rest, computah.sprite.offset])
-	check(computah.boss_health == 1, "it stops at the near-death clamp (%d)" % computah.boss_health)
-	check(hype.is_full(), "no hype spent: the supercharge added nothing past the clamp")
-	check(body_at.distance_to(computah.global_position) < 1.0, "his body stays where his fight expects it")
-	check(computah.sprite.offset != rest, "he rocks back on his sprite")
-	check(computah.on_brink, "and the clamp puts him visibly on the brink")
-	await wait(120)
-	check(computah.sprite.offset.distance_to(rest) < 1.0, "the recoil settles back (%s)" % computah.sprite.offset)
-
-
 # The rest of the roster, one fight per run: [boss body, punish state].
 const PUNISH_WINDOWS := {
+	# Boss 2's vent. His punish state's exported defaults ARE the vent, so a bare transition into it
+	# opens a working window without going through open_window().
+	"computah": ["Arena/ComputahScene/ComputahCharacterBody", "Punish"],
 	"mason": ["Arena/MasonScene/MasonCharacterBody", "Eat"],
 	"jordan": ["Arena/JordanScene/JordanCharacterBody", "Taunt"],
 	"liam": ["Arena/BixbyBeastScene/BixbyBeastCharacterBody", "Recover"],
@@ -2603,13 +2634,13 @@ const WINDUP_READS := {
 	# over the last 0.6 s. The two later cracks burn quake_stagger longer again, so the first one is
 	# the number here: it is the one that can fall under the bar.
 	&"bixby_quake_burst": 1.200,
-	# Computah's pounce, the grab at the end of his chase. GcStateMachine.pounce_tell is 0.45, but
-	# the second lunge of a high-power double pounce runs on double_pounce_tell, and that is the one
-	# that can fall under the bar. Both are floored at POUNCE_TELL_FLOOR.
+	# Computah's pounce, the grab at the end of his chase: ComputahStateMachine.pounce_tell, floored
+	# at POUNCE_TELL_FLOOR. The chase is not in his rotation yet, so nothing drives this today.
 	&"computah_chase": 0.320,
-	# The twin sweep's aim lines, GcStateMachine.laser_telegraph. It never scales with the surge or
-	# with `power`, so this is the number in every phase.
-	&"computah_laser": 0.500,
+	# THE LOCK-TO-FIRE HOLD, NOT THE CHARGE. ComputahStateMachine.beam_lock, floored at
+	# BEAM_LOCK_FLOOR. The charge before it is longer but gives no read at all: the aim follows the
+	# player for the whole of it, so there is nothing to be somewhere else from until it latches.
+	&"computah_beam": 0.450,
 	# Eric's reworked fight (EricPacing V2), each at its enraged value, the one that can fall under the
 	# bar. The slam's red tell comes up exactly slam_tell_time before the waves, delayed or not.
 	&"eric_quake_wave_v2": 0.360,
@@ -3124,6 +3155,175 @@ func test_locked_end() -> void:
 	check(not player.is_action_locked, "the lock released")
 	player.lock_actions()
 	check(not player.is_action_locked, "and nothing can lock them again")
+
+
+# What a fight builds a scripted beat out of: the sealed lock, which takes the guard away too, the
+# still pose it holds the player in, and the mash it runs on its own account, with no boss behind it.
+func test_scripted() -> void:
+	await load_eric()
+	park_eric()
+	health_ok()
+	var finisher: Node = player.get_node("Finisher")
+	var hype: Node = player.get_node("Hype")
+	var prompt: Node2D = current_scene.get_node("Arena/MainPlayer/CanvasLayer/FinisherPrompt")
+	var animation_player: AnimationPlayer = player.get_node("AnimationPlayer")
+	var presses := []
+	defense.block_pressed.connect(func(credited: bool): presses.append(credited))
+	await settle_player(Vector2(972, 700))
+
+	log_p("-- the parry-only lock still answers a block press")
+	player.lock_actions()
+	press(KEY_SHIFT)
+	await wait(6)
+	check(defense.is_guarding(), "the guard goes up under lock_actions()")
+	release(KEY_SHIFT)
+	player.unlock_actions()
+	await wait(40)
+
+	log_p("-- a sealed lock does not")
+	presses.clear()
+	player.lock_actions_sealed()
+	check(player.is_action_locked and player.lock_seals_guard, "sealed (%s, %s)" % [player.is_action_locked, player.lock_seals_guard])
+	press(KEY_SHIFT)
+	await wait(8)
+	check(not defense.is_guarding() and player.state_machine.current_state.name != "Blocking", "no guard goes up (%s)" % player.state_machine.current_state.name)
+	check(presses.is_empty(), "and the press never reaches the parry (%s)" % [presses])
+	release(KEY_SHIFT)
+	var held: Vector2 = await walk_offset(KEY_RIGHT, 15)
+	check(held.length() < 1.0, "the rest of the hold is as it was: no walking (%s)" % held)
+
+	log_p("-- a guard already up comes down as the seal lands")
+	player.unlock_actions()
+	await wait(40)
+	press(KEY_SHIFT)
+	await wait(6)
+	check(defense.is_guarding(), "guarding before the seal")
+	player.lock_actions_sealed()
+	await wait(6)
+	check(not defense.is_guarding() and player.state_machine.current_state.name != "Blocking", "and not after it (%s)" % player.state_machine.current_state.name)
+	release(KEY_SHIFT)
+
+	log_p("-- unlocking clears both kinds")
+	player.unlock_actions()
+	check(not player.is_action_locked and not player.lock_seals_guard, "both clear (%s, %s)" % [player.is_action_locked, player.lock_seals_guard])
+	await wait(40)
+	presses.clear()
+	player.lock_actions()
+	press(KEY_SHIFT)
+	await wait(8)
+	check(defense.is_guarding() and presses.size() == 1, "a plain lock answers a press again (%s, %s)" % [defense.is_guarding(), presses])
+	release(KEY_SHIFT)
+	player.unlock_actions()
+	await wait(20)
+
+	log_p("-- the scripted pose")
+	await settle_player(Vector2(972, 700))
+	press(KEY_RIGHT)
+	check(await wait_until(func(): return player.state_machine.current_state.name == "Walking", 20), "walking into the beat")
+	await wait(12)
+	var mid_stride: int = player.sprite.frame_coords.x
+	log_p("mid-stride on walk frame %d" % mid_stride)
+	check(mid_stride > 0, "mid-stride, off the standing frame (%d)" % mid_stride)
+	player.lock_actions()
+	player.set_scripted_pose(true)
+	await wait(6)
+	check(player.state_machine.current_state.name == "Idle", "the pose puts them in Idle (%s)" % player.state_machine.current_state.name)
+	check(not animation_player.is_playing(), "with the animation stopped")
+	check(player.sprite.frame_coords.x == 0, "standing, not stopped mid-stride (%d)" % player.sprite.frame_coords.x)
+	var posed: Vector2i = player.sprite.frame_coords
+	await wait(30)
+	check(player.sprite.frame_coords == posed, "holding the frame they are on (%s against %s)" % [player.sprite.frame_coords, posed])
+	player.set_scripted_pose(false)
+	await wait(4)
+	check(animation_player.is_playing(), "and the AnimationPlayer runs again once the pose ends")
+	release(KEY_RIGHT)
+	player.unlock_actions()
+	await wait(20)
+
+	log_p("-- a scripted charge: no boss, no daze, no freeze, no hype")
+	hype._set_hype(100.0)
+	var spends := [0]
+	hype.hype_spent.connect(func(): spends[0] += 1)
+	var ended := []
+	finisher.charge_ended.connect(func(filled: bool): ended.append(filled))
+	var boss_health: int = boss.boss_health
+	await settle_player(Vector2(972, 700))
+	player.lock_actions()
+	check(finisher.begin_scripted_charge({"press_gain": 0.25, "floor_time": 10.0}), "the charge starts")
+	check(not finisher.begin_scripted_charge(), "and a second one is refused while it runs")
+	await wait(3)
+	check(finisher.is_charging() and finisher.boss == null, "it charges with no boss (%s)" % finisher.boss)
+	check(not player.is_finishing and not finisher.tiered, "no player pose and no tiers")
+	check(current_scene.process_mode != Node.PROCESS_MODE_DISABLED, "and nothing is frozen")
+	check(prompt.visible, "the prompt is up")
+
+	log_p("-- presses fill it")
+	var pair: Array = finisher.mash_actions()
+	var before: float = finisher.meter
+	tap(MASH_KEYS[pair[0]])
+	await wait(4)
+	var gained: float = finisher.meter - before
+	check(gained > 0.2, "a press pays press_gain (%.3f)" % gained)
+	var repeated: float = finisher.meter
+	tap(MASH_KEYS[pair[0]])
+	await wait(4)
+	check(finisher.meter - repeated < 0.2, "the same key twice does not (%.3f)" % (finisher.meter - repeated))
+	var steps := 0
+	while finisher.is_charging() and not finisher.scripted_filled and steps < 40:
+		tap(MASH_KEYS[pair[steps % 2]])
+		steps += 1
+		await wait(4)
+	log_p("filled over %d presses, meter %.3f" % [steps, finisher.meter])
+	check(finisher.scripted_filled, "the mash fills it")
+	check(ended == [true], "charge_ended(true), once (%s)" % [ended])
+	check(finisher.is_input_locked(), "and input is locked from the fill")
+	press(MASH_KEYS[pair[0]])
+	check(await wait_until(func(): return not finisher.is_charging(), 120), "the charge ends after the prompt's FULL flash")
+	check(finisher.is_mash_latched(), "a key still held is latched, so leftover mashing can't walk the player off")
+	release(MASH_KEYS[pair[0]])
+	check(spends[0] == 0 and hype.is_full(), "no hype spent (%d, %.0f)" % [spends[0], hype.hype])
+	check(boss.boss_health == boss_health, "the boss took nothing (%d)" % boss.boss_health)
+
+	log_p("-- with nobody pressing anything it still fills, inside floor_time")
+	ended.clear()
+	await wait(60)
+	var started := Time.get_ticks_usec()
+	check(finisher.begin_scripted_charge({"floor_time": 1.0}), "a charge with a one-second floor")
+	check(await wait_until(func(): return finisher.scripted_filled, 300), "it fills with no press at all")
+	var took := (Time.get_ticks_usec() - started) / 1000000.0
+	log_p("filled in %.2f s, meter %.3f" % [took, finisher.meter])
+	check(took >= 0.85 and took <= 1.8, "in about its floor_time (%.2f s)" % took)
+	check(ended == [true], "and ends filled (%s)" % [ended])
+	check(await wait_until(func(): return not finisher.is_charging(), 120), "the charge ends")
+
+	log_p("-- ESCAPE!: the same widget, the opposite meaning")
+	ended.clear()
+	finisher.prompt_key = &"escape"
+	check(finisher.begin_scripted_charge({"press_gain": 0.25, "floor_time": 20.0}), "a charge asking for the escape word")
+	await wait(4)
+	check(prompt.word_label != null and prompt.word_label.visible and prompt.word_label.text == "ESCAPE!", "the prompt says ESCAPE!")
+	check(not prompt.text_sprite.visible, "with the drawn MASH! out of the way")
+	steps = 0
+	while finisher.is_charging() and not finisher.scripted_filled and steps < 40:
+		tap(MASH_KEYS[pair[steps % 2]])
+		steps += 1
+		await wait(4)
+	await wait(2)
+	check(ended == [true], "it fills like any other word (%s)" % [ended])
+	check(prompt.text_sprite.visible and not prompt.word_label.visible, "and FULL! takes it back as it always does")
+	check(await wait_until(func(): return not finisher.is_charging(), 120), "the charge ends")
+
+	log_p("-- and the usual word for everyone else")
+	finisher.prompt_key = &"mash"
+	ended.clear()
+	check(finisher.begin_scripted_charge({"floor_time": 20.0}), "a charge on the usual word")
+	await wait(4)
+	check(prompt.text_sprite.visible and not prompt.word_label.visible, "shows the drawn MASH!")
+	finisher.cancel_scripted_charge()
+	await wait(4)
+	check(not finisher.is_charging() and ended == [false], "and the caller can take it back (%s)" % [ended])
+	player.unlock_actions()
+	await wait(10)
 
 
 # ------------------------------------------------------------------ status effects
@@ -3644,7 +3844,7 @@ func test_prompt_overlap() -> void:
 	prompt.finisher.finished.emit()
 
 
-# Dashing out of the way of a rocket (Computah) or a charge (Carter and Josh).
+# Dashing out of the way of Computah's beam or a charge (Carter and Josh).
 func test_dodge_rollout() -> void:
 	await load_fight(fight)
 	player.playerHealth = 1000
@@ -3660,10 +3860,15 @@ func test_dodge_rollout() -> void:
 		if not dashed:
 			player.global_position = spot
 		var incoming := false
-		if fight == "greyson":
-			for area in get_nodes_in_group("enemy projectile"):
-				if area.name == "RocketHitbox" and area.get_parent().global_position.distance_to(spot) < 130.0:
-					incoming = true
+		if fight == "computah":
+			# The locked aim line IS the incoming cue: it stops following them and the yellow ring
+			# comes up, and from there the beam is coming down that exact line. The beam has no
+			# flight - it is simply there at the end of the hold - so the dash is timed to the end
+			# of the hold rather than to its start, or the ghost has expired before it arrives.
+			var beam: Node = current_scene.get_node("Arena/ComputahScene/ComputahCharacterBody/StateManager/Beam")
+			var bsm: Node = beam.get_parent()
+			var fires_at: float = bsm.beam_charge + maxf(bsm.beam_lock, bsm.BEAM_LOCK_FLOOR)
+			incoming = beam.phase == beam.Phase.LOCKED and beam.elapsed >= fires_at - 0.10
 		else:
 			for name_of in ["Carter", "Josh"]:
 				var wrestler: Node = current_scene.get_node_or_null("Arena/CarterAndJoshScene/" + name_of)
@@ -3687,6 +3892,85 @@ func test_dodge_rollout() -> void:
 	check(not dodges.is_empty(), "dashing out of the way earns a perfect dodge")
 
 
+# Computah's cannon beam, boss 2's attack 1. THE READ IS THE LOCK, NOT THE CHARGE: the aim follows
+# the player for the whole charge, so there is nothing to be somewhere else from until it latches.
+# What is checked is exactly that - the line tracks, the latch freezes it, the yellow ring lives for
+# the latched-to-fired hold and no longer, the fired beam goes through the spot it locked on rather
+# than the spot they walked to, and a dash out of that line pays a perfect dodge.
+func test_beam() -> void:
+	await load_fight("computah")
+	player.playerHealth = 1000
+	track()
+	track_dodges()
+	boss = current_scene.get_node("Arena/ComputahScene/ComputahCharacterBody")
+	var bsm: Node = boss.state_machine
+	var beam: Node = bsm.states["Beam"]
+	# The fight drives itself from here rather than off its own opening timer.
+	bsm.post_dialogue_pre_fight_timer.stop()
+
+	log_p("-- the aim tracks while it charges")
+	await settle_player(Vector2(600, 760))
+	bsm.on_child_transition(bsm.current_state, "Beam")
+	await wait(3)
+	check(beam.phase == beam.Phase.TRACK, "he braces and the cannon charges")
+	check(tell_node() == null, "no badge while it tracks: there is nothing to answer yet")
+	var opening: float = beam.beam.rotation
+	await settle_player(Vector2(1400, 500))
+	await wait(20)
+	var tracked: float = beam.beam.rotation
+	var onto: float = (beam._aim_point(player) - boss.muzzle_point()).angle()
+	log_p("aim %.1f deg -> %.1f deg, the player at %.1f deg" % [rad_to_deg(opening), rad_to_deg(tracked), rad_to_deg(onto)])
+	check(absf(rad_to_deg(angle_difference(opening, tracked))) > 5.0, "the aim followed them across the ring")
+	check(absf(rad_to_deg(angle_difference(tracked, onto))) < 5.0, "and it is on them, not on their feet or their old spot")
+
+	log_p("-- it latches, and nothing moves after that")
+	check(await wait_until(func(): return beam.phase == beam.Phase.LOCKED, 200), "the aim latches")
+	var lock_at: float = defense.clock
+	var locked_angle: float = beam.locked_angle
+	var locked_origin: Vector2 = beam.locked_origin
+	var aimed_at: Vector2 = beam._aim_point(player)
+	var ring := tell_node()
+	check(ring != null and ring.dodge, "the yellow dodge ring comes up on the lock, not before it")
+	await settle_player(Vector2(420, 900))
+	await wait(8)
+	check(beam.beam.rotation == locked_angle, "the line does not follow them any more")
+	check(beam.locked_origin == locked_origin, "and it fires from where the muzzle was, not where it is")
+
+	log_p("-- the shot goes down the latched line")
+	check(await wait_until(func(): return beam.phase == beam.Phase.FIRE, 120), "it fires")
+	var hold: float = defense.clock - lock_at
+	log_p("locked for %.3f s before firing (floor %.2f s)" % [hold, bsm.BEAM_LOCK_FLOOR])
+	check(hold >= bsm.BEAM_LOCK_FLOOR, "the lock-to-fire hold is at least the read floor")
+	await wait(2)
+	check(tell_node() == null, "the ring goes the moment the beam does")
+	var along := Vector2.from_angle(locked_angle)
+	var off_locked: float = absf((aimed_at - locked_origin).cross(along))
+	var off_now: float = absf((beam._aim_point(player) - locked_origin).cross(along))
+	log_p("the fired line passes %.0f px from where they were at the lock, %.0f px from where they are now" % [off_locked, off_now])
+	check(off_locked < 40.0, "it goes through the spot it locked on")
+	check(off_now > 200.0, "and not through the spot they walked to")
+
+	log_p("-- a dash out of the line is a perfect dodge")
+	check(await wait_until(func(): return bsm.current_state.name == "Beam", 900), "the next beam comes round")
+	dodges.clear()
+	events.clear()
+	# Beside him, so the line it locks runs across the ring and a dash down clears it.
+	await settle_player(Vector2(1500, 380))
+	defense.stamina = defense.max_stamina
+	check(await wait_until(func(): return beam.phase == beam.Phase.LOCKED, 400), "it locks on them where they stand")
+	# A few frames before the shot: far enough out to be clear of it, close enough that the ghost
+	# they left behind is still live when it arrives (PlayerDefense.perfect_dodge_window).
+	await wait_until(func(): return beam.elapsed >= bsm.beam_charge + 0.36, 60)
+	press(KEY_DOWN)
+	tap(KEY_W)
+	await wait(4)
+	release(KEY_DOWN)
+	await wait(30)
+	log_p("dodges %s, hits %s" % [dodges.map(func(d): return d.id), events.map(func(e): return e.kind)])
+	check(dodges.size() >= 1 and dodges[0].id == &"computah_beam", "dashing out of the beam earns a perfect dodge")
+	check(events_of("HIT").is_empty(), "and it never touched them")
+
+
 # A punch that doesn't care what it hits.
 func swing_any() -> void:
 	tap(KEY_Q)
@@ -3708,7 +3992,7 @@ func swing_any() -> void:
 # The seven fights, and where each keeps its boss so it can be switched off.
 const DASH_FIGHTS := {
 	"eric": ["res://Scenes/Bosses/EricBossFightScene.tscn", "Arena/EricBossScene"],
-	"greyson": ["res://Scenes/Bosses/GreysonBossFightScene.tscn", "Arena/GreysonComputahScene"],
+	"computah": ["res://Scenes/Bosses/ComputahBossFightScene.tscn", "Arena/ComputahScene"],
 	"mason": ["res://Scenes/Bosses/MasonBossFightScene.tscn", "Arena/MasonScene"],
 	"josh": ["res://Scenes/Bosses/JoshBossFightScene.tscn", "Arena/JoshCardsScene"],
 	"carter": ["res://Scenes/Bosses/CarterBossFightScene.tscn", "Arena/CarterAkumaScene"],
@@ -4103,11 +4387,11 @@ func test_dash_v2() -> void:
 		clear_iframes()
 		health_ok()
 	log_p("inside a v2 dash: %s" % [results])
-	check(not through.is_empty() and results.values().all(func(result): return result == "DODGED"), "every dash_through attack is dodged, Computah's laser included")
+	check(not through.is_empty() and results.values().all(func(result): return result == "DODGED"), "every dash_through attack is dodged, Computah's beam included")
 	await wait(40)
 	var control := dummy_source()
-	var landed: int = player.receive_hit(hit_info.make(&"computah_laser", control, player.global_position + Vector2(80, 0)))
-	check(landed == hit_info.Result.HIT, "and without a dash the laser lands (%s)" % hit_info.Result.keys()[landed])
+	var landed: int = player.receive_hit(hit_info.make(&"computah_beam", control, player.global_position + Vector2(80, 0)))
+	check(landed == hit_info.Result.HIT, "and without a dash the beam lands (%s)" % hit_info.Result.keys()[landed])
 	clear_iframes()
 	health_ok()
 
@@ -4285,6 +4569,289 @@ func test_dash_spam_v2() -> void:
 	check(v2.taken == v2.dashes and today.taken > today.dashes, "today a press during a dash is taken and paid for again; v2 takes none (%d of %d against %d of %d)" % [v2.taken, v2.dashes, today.taken, today.dashes])
 	check(v2.immune <= today.immune, "mashing v2 is never immune for longer than mashing today (%d frames against %d)" % [v2.immune, today.immune])
 	check(runs.values().all(func(run: Dictionary): return float(run.immune) / run.frames < 0.35), "no way of dashing keeps dash immunity up for even 35% of the time")
+
+
+# ------------------------------------------------------------------ the dash parry
+# The dash cancelled into the guard (PlayerScript.dash_parry, on in Eric's fight and in the training
+# room whose only exit is that fight). A block press ends the dash where it is and the guard goes up
+# in its place, so the dash is a non-committal approach: the player can stop it into a block or a
+# parry at any point in it. The parry itself is the ordinary guarded one, so everything that bounds a
+# standing parry bounds this - and a press that is late or mashed buys a block at full stamina.
+# What the cancel gives up is what the dash had not paid out: its i-frames and its dodge ghost. What
+# it keeps is the wait for the next dash, so cancelling is never a free approach loop.
+
+# In front of Eric, so the facing is up and front_hit comes down at them: parry_rules' own spot.
+const DASH_PARRY_SPOT := Vector2(972, 800)
+
+
+# The dash is 3 frames long, which dash_recovery_v2 pins, and a test can only reach two of them. A
+# check that has to press inside a dash and then wait out a whole window inside the same dash needs
+# more room than that, and stretches it: what those checks are about is the rule, not the length.
+func stretch_dash(frames: int) -> void:
+	player.dodge_time = frames / 60.0
+
+
+# Dashes on the spot, then presses block inside the dash: [dashing, guarding] once the press has
+# landed. Nothing is held, so the dash doesn't move the player and the hit that follows meets them
+# where they already stand.
+func dash_then_press() -> Array:
+	await dash_ready()
+	tap(KEY_W)
+	await wait_until(func(): return player.is_dodging, 20)
+	press(KEY_SHIFT)
+	await wait(1)
+	return [player.is_dodging, defense.is_guarding()]
+
+
+# Back to a standing player at full health with a full bar, whatever the last check left behind. It
+# waits out parry_mash_lockout too: every check below presses block, and a press inside the lockout of
+# the check before it would be uncredited for that reason rather than for the one under test.
+func dash_parry_reset() -> void:
+	release(KEY_SHIFT)
+	await wait_until(func(): return Engine.time_scale == 1.0, 180)
+	await wait_until(func(): return not player.is_dodging, 60)
+	clear_iframes()
+	health_ok()
+	await settle_player(DASH_PARRY_SPOT)
+	await wait_until(func(): return defense.clock - defense.last_press_time > defense.parry_mash_lockout, 120)
+
+
+# Taps dash every frame until one comes out: physics frames from `from_frame`, the frame the last dash
+# was pressed on, to the frame the next one is.
+func redash_gap(from_frame: int) -> int:
+	for i in 90:
+		tap(KEY_W)
+		await physics_frame
+		if player.last_dodge_physics_frame != from_frame:
+			return player.last_dodge_physics_frame - from_frame
+	return -1
+
+
+func test_dash_parry() -> void:
+	await load_eric()
+	park_eric()
+	health_ok()
+	track()
+	track_parries()
+	track_dodges()
+	var immunity = load("res://Scripts/DashImmunity.gd")
+	var catalog = load("res://Scripts/AttackCatalog.gd")
+	var dash_length: float = player.dodge_time
+	check(player.dash_parry, "Eric's fight turns the dash parry on")
+	await settle_player(DASH_PARRY_SPOT)
+
+	log_p("-- the press ends the dash and the guard goes up in its place, with the flag off and on")
+	var results := []
+	for on in [false, true]:
+		player.dash_parry = on
+		var state: Array = await dash_then_press()
+		var blocking: bool = player.state_machine.current_state.name == "Blocking"
+		var result := front_hit(&"eric_quake_wave", dummy_source())
+		log_p("dash_parry %s: still dashing %s, guarding %s, state %s, result %d" % [on, state[0], state[1], player.state_machine.current_state.name, result])
+		if on:
+			check(not state[0] and state[1] and blocking, "the press ended the dash and put the guard up")
+		else:
+			check(state[0] and not state[1], "without it the dash runs on and the guard stays down")
+		results.append(result)
+		await dash_parry_reset()
+	check(results == [1, 3], "off it is a hit, on it is a parry: %s (1 HIT, 3 PARRIED)" % [results])
+	player.dash_parry = true
+
+	log_p("-- it is a dead stop: no momentum carries into the guard")
+	await dash_ready()
+	press(KEY_RIGHT)
+	await wait(2)
+	var from: Vector2 = player.global_position
+	tap(KEY_W)
+	await wait_until(func(): return player.is_dodging, 20)
+	press(KEY_SHIFT)
+	await wait(1)
+	var at_cancel: Vector2 = player.global_position
+	await wait(10)
+	var slid: float = at_cancel.distance_to(player.global_position)
+	log_p("cancelled after 1 dash frame: %.0f px travelled of the dash's %.0f, then %.1f px in the next 10 frames" % [from.distance_to(at_cancel), DASH_LENGTH, slid])
+	check(from.distance_to(at_cancel) < DASH_LENGTH - 60.0, "the dash stopped well short of its %.0f px" % DASH_LENGTH)
+	check(slid < 1.0, "and nothing slid on afterwards (%.1f px)" % slid)
+	release(KEY_RIGHT)
+	await dash_parry_reset()
+
+	log_p("-- the landing beat is skipped, and the wait for the next dash is not")
+	await dash_ready()
+	tap(KEY_W)
+	await wait_until(func(): return player.is_dodging, 20)
+	var pressed_on: int = player.last_dodge_physics_frame
+	press(KEY_SHIFT)
+	await wait(1)
+	log_p("after the cancel: recovering %s, cooling down %s, state %s" % [defense.is_dash_recovering(), defense.is_dash_cooling_down(), player.state_machine.current_state.name])
+	check(not defense.is_dash_recovering() and player.state_machine.current_state.name == "Blocking", "no landing beat: the guard is what they land in")
+	check(defense.is_dash_cooling_down(), "the wait for the next dash still runs")
+	release(KEY_SHIFT)
+	var gap: int = await redash_gap(pressed_on)
+	log_p("mashing dash from the cancel: the next one came %d frames after the first was pressed" % gap)
+	check(gap == MASH_PERIOD_FRAMES, "cancelling buys no dash back: still %d frames apart (%d)" % [MASH_PERIOD_FRAMES, gap])
+	await dash_parry_reset()
+
+	log_p("-- the i-frames go with the dash: a dash-through attack lands after the cancel")
+	dodges.clear()
+	# Past perfect_dodge_min_dash_gap, so the dash that follows is a clean one.
+	await wait(45)
+	await dash_ready()
+	tap(KEY_W)
+	await wait_until(func(): return player.is_dodging, 20)
+	check(immunity.is_immune(player, catalog.DASH_IMMUNITY_TIME, catalog.DASH_IMMUNITY_COOLDOWN), "dashing, the i-frames are up")
+	check(defense.ghost_active, "and the dodge ghost is out")
+	press(KEY_SHIFT)
+	await wait(1)
+	log_p("after the cancel: immune %s, ghost %s" % [immunity.is_immune(player, catalog.DASH_IMMUNITY_TIME, catalog.DASH_IMMUNITY_COOLDOWN), defense.ghost_active])
+	check(not immunity.is_immune(player, catalog.DASH_IMMUNITY_TIME, catalog.DASH_IMMUNITY_COOLDOWN), "cancelled, they are gone")
+	check(not defense.ghost_active and player.dodge_ghost_position() == Vector2.INF, "and so is the ghost, so no near miss can pay either")
+	var yellow := front_hit(&"eric_shoulder_charge", dummy_source())
+	log_p("his yellow charge, which only a dash answers: result %d, %d dodges" % [yellow, dodges.size()])
+	check(yellow == 1 and dodges.is_empty(), "it lands: the press bought the guard, not the guard and the dodge (%d)" % yellow)
+	await dash_parry_reset()
+
+	log_p("-- with no cancel the perfect dodge still wins over the parry")
+	dodges.clear()
+	parries.clear()
+	await wait(45)
+	await dash_ready()
+	press(KEY_SHIFT)
+	await wait(1)
+	tap(KEY_W)
+	await wait_until(func(): return player.is_dodging, 20)
+	var through := front_hit(&"eric_whirlwind_v2", dummy_source())
+	log_p("a blockable dash-through attack inside an uncancelled dash: result %d, %d dodges, %d parries" % [through, dodges.size(), parries.size()])
+	check(through == 4 and dodges.size() == 1 and parries.is_empty(), "dodged, never parried (%d)" % through)
+	await dash_parry_reset()
+
+	log_p("-- a late press cancels the dash and buys a block, not a parry")
+	stretch_dash(40)
+	await dash_ready()
+	var bar: float = defense.stamina
+	tap(KEY_W)
+	await wait_until(func(): return player.is_dodging, 20)
+	press(KEY_SHIFT)
+	await past_window()
+	var late := front_hit(&"eric_quake_wave", dummy_source())
+	log_p("stamina %.0f -> %.0f, result %d" % [bar, defense.stamina, late])
+	check(late == 2, "past the window it is a block (%d)" % late)
+	check(is_equal_approx(bar - defense.stamina, defense.dash_stamina_cost + defense.light_block_cost), "and it costs the dash and the block, %.0f in all (%.1f)" % [defense.dash_stamina_cost + defense.light_block_cost, bar - defense.stamina])
+	player.dodge_time = dash_length
+	await dash_parry_reset()
+
+	log_p("-- a mashed press cancels it and buys a block too: the lockout still bites")
+	for i in 3:
+		press(KEY_SHIFT)
+		await wait(6)
+		release(KEY_SHIFT)
+		await wait(6)
+	var mashed_state: Array = await dash_then_press()
+	var mashed := front_hit(&"eric_quake_wave", dummy_source())
+	log_p("still dashing %s, press credited %s, result %d" % [mashed_state[0], defense.press_credited, mashed])
+	check(not mashed_state[0] and mashed == 2 and not defense.press_credited, "the dash ends, the guard blocks, nothing parries (%d)" % mashed)
+	await dash_parry_reset()
+
+	log_p("-- and a cancel leaves parry credit exactly where a standing press would")
+	var credited := []
+	await dash_ready()
+	tap(KEY_W)
+	await wait_until(func(): return player.is_dodging, 20)
+	press(KEY_SHIFT)
+	await wait(1)
+	credited.append(defense.press_credited)
+	release(KEY_SHIFT)
+	await wait(12)
+	press(KEY_SHIFT)
+	await wait(1)
+	credited.append(defense.press_credited)
+	log_p("a press that cancelled a dash and parried nothing, then one 0.2 s later: credited %s" % [credited])
+	check(credited == [true, false], "the cancel sets parry_mash_lockout the way any other press does %s" % [credited])
+	await dash_parry_reset()
+
+	log_p("-- the guarded side still decides it")
+	var behind_state: Array = await dash_then_press()
+	var behind := front_hit(&"eric_quake_wave", dummy_source(), true)
+	check(not behind_state[0] and behind == 1, "an attack behind the guard the dash became is neither parried nor blocked (%d)" % behind)
+	await dash_parry_reset()
+	var omni_state: Array = await dash_then_press()
+	var omni := omni_hit(&"eric_quake_wave", dummy_source())
+	check(not omni_state[0] and omni == 3, "one landed on top of them, with no direction to face, is (%d)" % omni)
+	await dash_parry_reset()
+
+	log_p("-- the dash is still paid for, and a parry off a cancel buys no dash back")
+	await dash_ready()
+	var before: float = defense.stamina
+	tap(KEY_W)
+	await wait_until(func(): return player.is_dodging, 20)
+	var parry_from: int = player.last_dodge_physics_frame
+	press(KEY_SHIFT)
+	await wait(1)
+	var paid := front_hit(&"eric_quake_wave", dummy_source())
+	log_p("stamina %.0f -> %.0f across a cancel and a parry" % [before, defense.stamina])
+	check(paid == 3 and is_equal_approx(before - defense.stamina, defense.dash_stamina_cost), "the dash's %.0f stands and the parry costs nothing more (%.1f)" % [defense.dash_stamina_cost, before - defense.stamina])
+	check(defense.is_dash_cooling_down(), "the wait for the next dash survived the parry")
+	release(KEY_SHIFT)
+	await wait_until(func(): return Engine.time_scale == 1.0, 180)
+	var parry_gap: int = await redash_gap(parry_from)
+	log_p("mashing dash after a parry off a cancel: the next one came %d frames after the first" % parry_gap)
+	check(parry_gap >= MASH_PERIOD_FRAMES, "still at least %d frames apart (%d): parrying can't unwind the cancel" % [MASH_PERIOD_FRAMES, parry_gap])
+	await dash_parry_reset()
+
+	log_p("-- a block already held is not a cancel: dashing out of the guard still dashes")
+	stretch_dash(20)
+	await dash_ready()
+	press(KEY_SHIFT)
+	await wait(2)
+	check(defense.is_guarding(), "guarding before the dash")
+	tap(KEY_W)
+	await wait_until(func(): return player.is_dodging, 20)
+	await wait(10)
+	log_p("10 frames into a dash out of a held guard: dashing %s, guarding %s" % [player.is_dodging, defense.is_guarding()])
+	check(player.is_dodging and not defense.is_guarding(), "the held block leaves the dash alone, exactly as it always has")
+	player.dodge_time = dash_length
+	await dash_parry_reset()
+
+	log_p("-- live: his thrown sword, parried by cancelling a dash into the guard")
+	parries.clear()
+	events.clear()
+	# Stretched so the sword's own arrival decides when the press lands inside the dash rather than a
+	# 3-frame budget: the real dash's frames are what every check above ran on.
+	stretch_dash(10)
+	unpark_eric()
+	sm.chain = []
+	sm.rest_timer.stop()
+	sm.downed_state_timer.stop()
+	await settle_player(Vector2(1480, 700))
+	sm.on_child_transition(sm.current_state, "SwordThrow")
+	var throw_state: Node = sm.states["SwordThrow"]
+	check(await wait_until(func(): return is_instance_valid(throw_state.sword), 200), "he throws it")
+	var sword: Node2D = throw_state.sword
+	var sword_hitbox: Area2D = sword.get_node("Hitbox")
+	var shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var off_a_cancel := [false]
+	var note := func(_hit, _point, _staggered, _streak): off_a_cancel[0] = player.dash_cancelled and not player.is_dodging
+	defense.parried.connect(note)
+	await wait_until(func(): return sword_hitbox.global_position.distance_to(shape.global_position) < 108.0 + 27.0 + sword.speed * 0.10, 200)
+	defense._set_stamina(defense.max_stamina)
+	tap(KEY_W)
+	await wait_until(func(): return player.is_dodging, 20)
+	press(KEY_SHIFT)
+	check(await wait_until(func(): return parries.size() > 0 or not events.is_empty(), 60), "the sword reaches them")
+	defense.parried.disconnect(note)
+	log_p("parries %s, hits %s, off a cancelled dash %s" % [parries, events, off_a_cancel[0]])
+	check(parries.size() == 1 and parries[0].id == &"eric_thrown_sword" and off_a_cancel[0], "his sword parried out of a cancelled dash")
+	check(player.playerHealth == 100 and events.is_empty(), "no damage and no block")
+	check(sword.reflecting, "and it is a whole parry: the sword is flung back at him")
+	release(KEY_SHIFT)
+	player.dodge_time = dash_length
+
+	log_p("-- and it is his fight's alone: a fight that never turns it on has it off")
+	await load_quiet("josh")
+	check(not player.dash_parry, "Josh's fight leaves the dash parry off")
+	var still := await dash_then_press()
+	var elsewhere := front_hit(&"josh_card_throw", dummy_source())
+	log_p("the same press in the same dash there: still dashing %s, result %d" % [still[0], elsewhere])
+	check(still[0] and elsewhere == 1, "the press leaves the dash alone and the hit lands (%d)" % elsewhere)
 
 
 # A fight that opts out of feel_v2, the one line a fight whose retune isn't done puts in its _ready:
@@ -4679,7 +5246,7 @@ const V2_PACE := {
 }
 # Every tell's floor: a red timing tell is 1.5x the parry window, a single-answer read 0.40 s, and a
 # colour decision 0.40 s with its margin.
-const TELL_FLOORS := {"Earthquake": 0.36, "Whirlwind": 0.40, "BearHug": 0.45, "SwordThrow": 0.40}
+const TELL_FLOORS := {"Earthquake": 0.36, "Whirlwind": 0.40, "BearHug": 0.45, "SwordThrow": 0.40, "P2Mixup": 0.45}
 # Far enough from his spawn that his bear hug's lunge falls short and a lunge's sweep starts well off.
 const OUT_OF_REACH := Vector2(1780, 940)
 
@@ -4694,7 +5261,10 @@ func paced(key: String) -> float:
 	return load(ERIC_PACING).raged(key, sm.rage)
 
 
+# A fight whose boss builds no gauge has nothing to hold.
 func hold_gauge() -> void:
+	if not ("break_gauge" in boss) or boss.break_gauge == null:
+		return
 	boss.break_gauge.locked = true
 	boss.break_gauge.set_physics_process(false)
 
@@ -5617,6 +6187,10 @@ func time_stumble(hug: Node, hurtbox: Area2D) -> Array:
 # The Break gauge: what fills and drains it, that it holds 100 and never decays, the Break that empties
 # it and the wait before it fills again, its bar, and that V1 has none.
 func test_break_gauge() -> void:
+	# A second fight with a gauge of its own reads its expectations off its boss.
+	if fight != "eric":
+		await test_break_gauge_fight()
+		return
 	await load_eric_v2()
 	park_eric()
 	health_ok()
@@ -5693,7 +6267,7 @@ func test_break_gauge() -> void:
 
 	log_p("-- what isn't his counts for nothing")
 	var before_other: float = gauge.value
-	check(await parry_once(&"greyson_throw") == 3, "someone else's attack parried")
+	check(await parry_once(&"josh_card_throw") == 3, "someone else's attack parried")
 	clear_iframes()
 	front_hit(&"wrestler_charge", dummy_source())
 	clear_iframes()
@@ -5805,6 +6379,10 @@ func test_break_gauge() -> void:
 # stops cleanly. Then the Break frame; Broken itself, with the player driven in beside him; how long it
 # lasts; the opener that starts the finisher; the parried sword's reflect; and what can't break him.
 func test_break_entry() -> void:
+	# A second fight with a gauge of its own reads its expectations off its boss.
+	if fight != "eric":
+		await test_break_entry_fight()
+		return
 	await load_eric_v2()
 	health_ok()
 	var layout = load("res://Scripts/EricArtLayout.gd")
@@ -6247,10 +6825,40 @@ func test_mash_tiers_live() -> void:
 	check(player.get_node("Finisher").mash_actions() == [&"mash_left", &"mash_right"], "Mason's fight mashes the pair too")
 	player.feel_v2 = false
 	check(player.get_node("Finisher").mash_actions() == [&"punch", &"dodge"], "opted out of feel_v2, it mashes punch and dodge")
+	player.feel_v2 = true
+
+	log_p("-- and the tiered mash is the Break's payout alone: Mason's eat window gives the plain one")
+	boss = current_scene.get_node(PUNISH_WINDOWS["mason"][0])
+	sm = boss.state_machine
+	finisher = player.get_node("Finisher")
+	player.playerHealth = 1000
+	await reset_gauged(GAUGE_FIGHTS["mason"].home)
+	sm.on_child_transition(sm.current_state, "Eat")
+	await wait(5)
+	stop_boss_timers()
+	place_under(boss.get_finisher_hurtbox())
+	await wait(6)
+	check(finisher.begin_auto(boss), "the finisher takes his eat window")
+	check(await wait_until(func(): return finisher.phase == FINISHER_DAZED, 120), "and reaches the daze")
+	check(not finisher.tiered, "from the eat window: the plain single-bar finisher")
+	await wait_until(func(): return finisher.phase == FINISHER_OFF, 400)
+	await reset_gauged(GAUGE_FIGHTS["mason"].home)
+	await settle_player(GAUGE_FIGHTS["mason"].home + Vector2(-320, 60))
+	boss.break_gauge.add(boss.break_gauge.max_value)
+	check(await wait_until(func(): return sm.current_state.name == "Broken", 30), "and a Break")
+	await wait_until(func(): return not player.is_action_locked, 120)
+	check(finisher.begin_auto(boss), "the finisher takes the Break")
+	check(await wait_until(func(): return finisher.phase == FINISHER_DAZED, 120), "and reaches the daze")
+	check(finisher.tiered, "from the Break: the three-bar mash and the juggle")
+	await wait_until(func(): return finisher.phase == FINISHER_OFF, 400)
 
 
 # Tier 3 from start to finish, watched frame by frame.
 func test_juggle() -> void:
+	# A second fight with a gauge of its own reads its expectations off its boss.
+	if fight != "eric":
+		await test_juggle_fight()
+		return
 	await load_eric_v2()
 	health_ok()
 	var finisher: Node = player.get_node("Finisher")
@@ -6308,6 +6916,10 @@ func eric_art() -> GDScript:
 
 # The uppercut numbered `tier` kills him: nothing follows, one outro, and his defeat once he has landed.
 func test_juggle_kill() -> void:
+	# A second fight with a gauge of its own reads its expectations off its boss.
+	if fight != "eric":
+		await test_juggle_kill_fight()
+		return
 	await load_eric_v2()
 	health_ok()
 	var n := int(tier) if tier.is_valid_int() else 3
@@ -6399,6 +7011,228 @@ func test_reflect_auto_v2() -> void:
 			check(await wait_until(func(): return sm.current_state.name == "Broken" and sm.states["Broken"].retrieving, 120), "down, he gets up for the sword the uppercut knocked away")
 		finisher.prompt_shown.disconnect(on_prompt)
 		finisher.juggle_hit.disconnect(on_hit)
+
+
+# ------------------------------------------------------------------ the thrown sword's hot window
+
+# Where the player stands for the throw, and so the spot he aims it at and the mark lands on.
+const SWORD_SPOT := Vector2(1480, 700)
+# Far enough up-arena to put them back inside the blade's path with the throw still in the air, and
+# no further than one dash and a step: what a player who read the mark and moved actually covers.
+const SWORD_STEP := Vector2(-212.0, -212.0)
+# Beside the blade's path early on, for the dash that gets nothing: the blade sweeps this spot and is
+# clear of it again well before its mark's commit frame lights.
+const SWORD_EARLY := Vector2(1111, 433)
+
+
+# His SwordThrow on its own, started in the idle step the way attack_v2 starts one, and the sword it
+# puts in the air.
+func throw_sword() -> Node2D:
+	var throw_state: Node = sm.states["SwordThrow"]
+	sm.chain = []
+	sm.rest_timer.stop()
+	sm.downed_state_timer.stop()
+	await process_frame
+	sm.on_child_transition(sm.current_state, "SwordThrow")
+	await wait_until(func(): return is_instance_valid(throw_state.sword), 300)
+	return throw_state.sword
+
+
+# Whether the floor mark is drawing its commit frame, on either art path.
+func mark_lit(mark: Node2D) -> bool:
+	if mark.sprite:
+		return mark.sprite.frame == mark.spec.commit_frame
+	return mark.target_ring.default_color == mark.spec.commit_color
+
+
+# Watches one outgoing throw the whole way in, on the flight's own clock: the progress the blade
+# first covers the player's hurtbox at, the progress it first covers the ghost a dash left behind,
+# the progress the ring lights its commit frame on, the progress a hit or a perfect dodge resolves
+# on, and how far the drawn blade ever strays from the curve _contact_progress() put it on.
+func fly_out(sword: Node2D) -> Dictionary:
+	var blade: Area2D = sword.get_node("Hitbox")
+	var body: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var radius: float = blade.get_node("CollisionShape2D").shape.radius
+	var seen := {"cover": -1.0, "lit": -1.0, "hit": -1.0, "ghost": -1.0, "dodge": -1.0, "drift": 0.0}
+	var health: int = player.playerHealth
+	var had_dodges: int = dodges.size()
+	# To the end of the outgoing leg, however it ends: a parry stops it dead and the throw flings it
+	# back, which is a flight of its own on a clock of its own.
+	while is_instance_valid(sword) and sword.flying and not sword.returning and not sword.reflecting:
+		var t: float = sword.elapsed / sword.duration
+		var rect: Rect2 = body.global_transform * body.shape.get_rect()
+		var at: Vector2 = blade.global_position
+		if seen.cover < 0.0 and at.clamp(rect.position, rect.end).distance_to(at) <= radius:
+			seen.cover = t
+		if seen.lit < 0.0 and is_instance_valid(sword.mark) and mark_lit(sword.mark):
+			seen.lit = t
+		if seen.hit < 0.0 and player.playerHealth < health:
+			seen.hit = t
+		if seen.ghost < 0.0 and defense.ghost_active:
+			var ghost: CollisionShape2D = player.dodge_ghost.get_node("CollisionShape2D")
+			var left: Rect2 = ghost.global_transform * ghost.shape.get_rect()
+			if at.clamp(left.position, left.end).distance_to(at) <= radius:
+				seen.ghost = t
+		if seen.dodge < 0.0 and dodges.size() > had_dodges:
+			seen.dodge = t
+		seen.drift = maxf(seen.drift, sword._blade_at(t).distance_to(at))
+		await physics_frame
+	return seen
+
+
+# Back to Idle with his sword back in his hand, whatever the throw ended as.
+func sword_reset() -> void:
+	clear_iframes()
+	await wait_until(func(): return sm.current_state.name == "Winded" or sm.current_state.name == "Idle", 900)
+	sm.on_child_transition(sm.current_state, "Idle")
+	await wait(6)
+
+
+# His thrown sword promises a spot and a moment: EricSwordMark's ring closes onto the landing spot and
+# lights its commit frame exactly PlayerDefense.parry_window before the blade reaches the player. The
+# blade has to keep that promise, because the ring is the whole read - it may only hurt them from the
+# frame that ring goes hot, never wherever it happens to clip them on the way in. The recall and the
+# flung-back sword have no mark and are not gated: they are aimed at Eric.
+func test_sword_gate() -> void:
+	await load_eric_v2()
+	hold_gauge()
+	track()
+	track_parries()
+	track_dodges()
+	# Long enough that a mode full of his sword can never end the fight under a check.
+	player.playerHealth = 100000
+	var throw_state: Node = sm.states["SwordThrow"]
+	var window: float = defense.parry_window
+
+	log_p("-- the blade, the ring and the prediction all run off one clock")
+	await settle_player(SWORD_SPOT)
+	var sword: Node2D = await throw_sword()
+	var contact: float = sword._contact_progress()
+	var duration: float = sword.duration
+	var hot: float = sword.hot_from
+	var step: float = 1.0 / 60.0 / duration
+	log_p("duration %.3f s at %.0f px/s, contact %.4f, hot from %.4f, mark commit %.4f; the %.2f s window is %.4f of the flight, and the dive covers %.0f%% of its %.0f px path" % [duration, sword.speed, contact, hot, sword.mark.commit_at, window, window / duration, 100.0 * minf(sword.DIVE_TIME * sword.speed / sword.from_ground.distance_to(sword.to_ground), 1.0), sword.from_ground.distance_to(sword.to_ground)])
+	check(is_equal_approx(hot, maxf(contact - window / duration, 0.0)), "the blade goes hot a parry window of flight before it reaches them (%.4f)" % hot)
+	check(is_equal_approx((contact - hot) * duration, window), "which is %.3f s of air, the window itself" % ((contact - hot) * duration))
+	check(is_instance_valid(sword.mark) and sword.mark.commit_at == hot, "and the ring's commit frame is that same number, not one of its own")
+	var standing := await fly_out(sword)
+	log_p("standing still: covered from %.4f, ring lit %.4f, hit %.4f, blade off its predicted curve by at most %.4f px" % [standing.cover, standing.lit, standing.hit, standing.drift])
+	check(standing.drift < 0.01, "the drawn blade rides the curve _contact_progress() walks, dive and all (%.4f px)" % standing.drift)
+	check(standing.lit >= hot and standing.lit - hot < step, "the ring lights on the first frame at or past the hot mark (%.4f)" % standing.lit)
+	check(standing.hit >= 0.0 and standing.hit >= standing.lit, "a player who stays on the spot is hit, and never before the ring lit (%.4f against %.4f)" % [standing.hit, standing.lit])
+	check(standing.cover >= hot, "standing on the spot there is nothing to gate: it only covers them inside the window (%.4f)" % standing.cover)
+	check(await wait_until(func(): return is_instance_valid(throw_state.sword) and throw_state.sword.returning, 300), "it plants and he calls it back")
+	check(throw_state.sword.hot_from == 0.0 and throw_state.sword.get_node("Hitbox").monitoring, "the recall is ungated and still live: it is aimed at Eric and has no mark to keep faith with")
+	await sword_reset()
+
+	log_p("-- it does not hurt them mid-flight, away from the mark")
+	# Standing in for a player who read the ring and moved 300 px up-arena while the blade was out.
+	await settle_player(SWORD_SPOT)
+	sword = await throw_sword()
+	hot = sword.hot_from
+	player.global_position = SWORD_SPOT + SWORD_STEP
+	var moved := await fly_out(sword)
+	log_p("moved %s: covered from %.4f, ring lit %.4f, hit %.4f, hot from %.4f" % [SWORD_STEP, moved.cover, moved.lit, moved.hit, hot])
+	check(moved.cover >= 0.0 and moved.cover < hot, "the blade does pass through them early, so there is something to gate (%.4f before %.4f)" % [moved.cover, hot])
+	check(moved.hit >= 0.0, "they are still hit: gated, not switched off")
+	check(moved.hit >= hot, "but only from the hot mark on (%.4f)" % moved.hit)
+	check(moved.hit == moved.lit, "which is the very frame the ring lit (%.4f against %.4f)" % [moved.hit, moved.lit])
+	log_p("the hit landed %.3f s later into the flight than the blade first covered them" % ((moved.hit - moved.cover) * duration))
+	await sword_reset()
+
+	log_p("-- a press on the frame the ring lights still catches it in the air")
+	await settle_player(SWORD_SPOT)
+	sword = await throw_sword()
+	var unhurt: int = player.playerHealth
+	var caught: int = parries.size()
+	# reflect() overwrites the flight, so the spot it was going to land on is kept here.
+	var aimed_at: Vector2 = sword.to_ground
+	# The earliest press the mark asks for, and so the tightest one it has to honour.
+	check(await wait_until(func(): return is_instance_valid(sword.mark) and mark_lit(sword.mark), 300), "the ring lights its commit frame")
+	press(KEY_SHIFT)
+	check(await wait_until(func(): return parries.size() > caught, 60), "and a press on that very frame still has a blade to catch")
+	release(KEY_SHIFT)
+	check(parries[-1].id == &"eric_thrown_sword" and player.playerHealth == unhurt, "it is the sword that was parried, and it never touches them (%s)" % [parries.map(func(p): return p.id)])
+	check(not is_instance_valid(sword.mark), "the mark it cancelled went with it, so nothing lands there")
+	check(await wait_until(func(): return is_instance_valid(throw_state.sword) and throw_state.sword.reflecting, 60), "and it is flung back at him")
+	var short_of: float = sword.from_ground.distance_to(aimed_at)
+	check(short_of > 50.0, "from where they caught it, %.0f px short of the spot it was aimed at" % short_of)
+	check(sword.hot_from == 0.0 and not sword.get_node("Hitbox").monitoring, "the flung-back sword is the player's: ungated, and harmless to them")
+	await sword_reset()
+
+	log_p("-- a dash off the spot is still a perfect dodge")
+	defense.last_perfect_dodge_time = -INF
+	await settle_player(SWORD_SPOT)
+	sword = await throw_sword()
+	hot = sword.hot_from
+	var body: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var edge: Area2D = sword.get_node("Hitbox")
+	var lead: float = 108.0 + 27.0 + sword.speed * 0.07
+	await wait_until(func(): return not sword.flying or edge.global_position.distance_to(body.global_position) < lead, 300)
+	press(KEY_DOWN)
+	tap(KEY_W)
+	var dodged := await fly_out(sword)
+	release(KEY_DOWN)
+	log_p("dashed clear: ghost covered %.4f, dodge %.4f, hit %.4f, hot from %.4f" % [dodged.ghost, dodged.dodge, dodged.hit, hot])
+	check(dodged.dodge >= 0.0 and dodges[-1].id == &"eric_thrown_sword", "the blade passing the ghost they left pays a perfect dodge (%s)" % [dodges.map(func(d): return d.id)])
+	check(dodged.dodge >= hot, "on the same gate as the damage, so the reward is inside the window too (%.4f)" % dodged.dodge)
+	check(dodged.hit < 0.0, "and no hit")
+	await sword_reset()
+
+	log_p("-- and a dash out of its path early pays nothing: there was nothing there to dodge")
+	defense.last_perfect_dodge_time = -INF
+	var had: int = dodges.size()
+	await settle_player(SWORD_SPOT)
+	sword = await throw_sword()
+	hot = sword.hot_from
+	# Off to one side of the blade's path, near enough that it sweeps the spot they leave while the
+	# ghost is still up and far enough that it is clear of it again before the ring goes hot.
+	player.global_position = SWORD_EARLY
+	await wait_until(func(): return not sword.flying or sword.elapsed >= 0.10, 60)
+	press(KEY_DOWN)
+	tap(KEY_W)
+	var early := await fly_out(sword)
+	release(KEY_DOWN)
+	log_p("dashed early: ghost covered %.4f, dodge %.4f, hit %.4f, hot from %.4f" % [early.ghost, early.dodge, early.hit, hot])
+	check(early.ghost >= 0.0 and early.ghost < hot, "the blade does sweep the ghost they left, before the ring lit (%.4f before %.4f)" % [early.ghost, hot])
+	check(dodges.size() == had, "and pays no perfect dodge for it (%d)" % (dodges.size() - had))
+	check(early.hit < 0.0, "nor hurts them")
+	await sword_reset()
+
+	log_p("-- enraged, where he throws it harder")
+	sm.rage = 1.0
+	await settle_player(SWORD_SPOT)
+	sword = await throw_sword()
+	hot = sword.hot_from
+	log_p("enraged: %.0f px/s over %.3f s, contact %.4f, hot from %.4f, mark commit %.4f; the window is %.4f of this flight, and the dive covers %.0f%% of its %.0f px path" % [sword.speed, sword.duration, sword._contact_progress(), hot, sword.mark.commit_at, window / sword.duration, 100.0 * minf(sword.DIVE_TIME * sword.speed / sword.from_ground.distance_to(sword.to_ground), 1.0), sword.from_ground.distance_to(sword.to_ground)])
+	check(is_equal_approx(hot, maxf(sword._contact_progress() - window / sword.duration, 0.0)), "the window is worked out from this flight, not a fraction carried over from the last one (%.4f)" % hot)
+	check(is_instance_valid(sword.mark) and sword.mark.commit_at == hot, "and the ring is on it as before")
+	var raged := await fly_out(sword)
+	log_p("enraged, standing still: covered from %.4f, ring lit %.4f, hit %.4f, off its predicted curve by at most %.4f px" % [raged.cover, raged.lit, raged.hit, raged.drift])
+	check(raged.drift < 0.01, "a faster blade still rides the curve it is predicted on (%.4f px)" % raged.drift)
+	check(raged.hit >= 0.0 and raged.hit >= raged.lit, "and still hits no earlier than the ring lit (%.4f against %.4f)" % [raged.hit, raged.lit])
+	sm.rage = 0.0
+	await sword_reset()
+
+	log_p("-- the whirlwind's own release is gated the same way, on its own tell")
+	# Across the ring from him, so his lunges cannot close the whole gap and the release has a flight
+	# to gate; the spin ends on a throw either way. His own lunges are the read up to it, and the
+	# wind-up before it is WHIRL_TELL_TIME's, not the mark's.
+	boss.global_position = Vector2(300, 450)
+	await settle_player(Vector2(1780, 470))
+	sm.chain = []
+	sm.rest_timer.stop()
+	sm.downed_state_timer.stop()
+	await process_frame
+	sm.on_child_transition(sm.current_state, "Whirlwind")
+	check(await wait_until(func(): return is_instance_valid(throw_state.sword), 600), "the spin ends in a throw")
+	var spun: Node2D = throw_state.sword
+	log_p("spin release: plants %s, returns harmless %s, hot from %.4f, mark commit %.4f" % [spun.plants, spun.returns_harmless, spun.hot_from, spun.mark.commit_at if is_instance_valid(spun.mark) else -1.0])
+	check(not spun.plants and spun.returns_harmless, "it skips off the mat and comes back harmless, as it did")
+	check(spun.hot_from > 0.0 and is_instance_valid(spun.mark) and spun.mark.commit_at == spun.hot_from, "and its outgoing leg is gated on the very number its own mark lights on")
+	check(is_equal_approx(spun.hot_from, maxf(spun._contact_progress() - window / spun.duration, 0.0)), "by the same window (%.4f)" % spun.hot_from)
+	check(await wait_until(func(): return not is_instance_valid(throw_state.sword) or throw_state.sword.returning, 300), "and it still comes back")
+	check(not throw_state.sword.get_node("Hitbox").monitoring, "harmless on the way back, as before")
 
 
 # ------------------------------------------------------------------ pace_bot
@@ -7393,3 +8227,1864 @@ func test_entrance() -> void:
 	check(not gates.is_open(), "and the ring was never opened")
 	check(await wait_until(func(): return live_balloon() != null, 120), "and his lines start straight away")
 	check(player.state_machine.is_processing(), "with the player's state machine running")
+
+
+# ---- phase two
+
+# Eric with his sword already out of the ring and the cut skipped: the fight as it is from there.
+func load_eric_p2() -> void:
+	await load_eric_v2()
+	boss.enter_phase_two()
+	await wait(2)
+
+
+# His rage, set the way a chain sets it, so the phase-two numbers (EricPacing.p2) read at the end of
+# their range the test asks for. `ratio` is his health ratio: 0.5 is the moment the sword goes, 0 is
+# his last half-heart.
+func rage_at(ratio: float) -> void:
+	sm.rage = clampf(1.0 - ratio, 0.0, 1.0)
+
+
+# Puts the next mixup's colour where the test wants it, the way test_hug_mixup does with the hug's.
+func next_mixup(yellow: bool) -> void:
+	var mixup: Node = sm.states["P2Mixup"]
+	if yellow:
+		# Two reds in a row: the next one must be yellow.
+		mixup.mixups_started = 1
+		mixup.recent_yellows.assign([false, false])
+	else:
+		# The fight's first mixup is always red.
+		mixup.mixups_started = 0
+		mixup.recent_yellows.clear()
+
+
+# Starts a mixup of the colour asked for, from Idle, with his rage left where the caller set it.
+func start_mixup(yellow: bool) -> void:
+	next_mixup(yellow)
+	sm.chain = []
+	sm.rest_timer.stop()
+	sm.downed_state_timer.stop()
+	await process_frame
+	var rage: float = sm.rage
+	sm.on_child_transition(sm.current_state, "P2Mixup")
+	sm.rage = rage
+
+
+# Runs one mixup through and hands back what it looked like: its colour, its badge, when the wind-up
+# started, when the rush started and when his arms arrived.
+func run_mixup(yellow: bool) -> Dictionary:
+	var mixup: Node = sm.states["P2Mixup"]
+	var seen := {"windup": -1.0, "rush": -1.0, "contact": -1.0, "look": "", "id": &"", "yellow": false}
+	var probe := func():
+		if seen.windup < 0.0 and mixup.phase == mixup.Phase.WINDUP:
+			seen.windup = defense.clock
+			seen.id = mixup.hit_id()
+			seen.yellow = mixup.yellow
+		var tell := tell_node()
+		if seen.look.is_empty() and tell != null:
+			seen.look = "yellow" if tell.dodge else ("strong red" if tell.strong else "red")
+		if seen.rush < 0.0 and mixup.phase == mixup.Phase.RUSH:
+			seen.rush = defense.clock
+		if seen.contact < 0.0 and mixup.phase == mixup.Phase.CONTACT:
+			seen.contact = defense.clock
+	physics_frame.connect(probe)
+	await start_mixup(yellow)
+	await wait_until(func(): return sm.current_state != mixup, 900)
+	physics_frame.disconnect(probe)
+	return seen
+
+
+func settle_mixup() -> void:
+	await wait_until(func(): return not player.is_grabbed, 600)
+	sm.downed_state_timer.stop()
+	sm.rest_timer.stop()
+	sm.on_child_transition(sm.current_state, "Idle")
+	clear_iframes()
+	health_ok()
+	await wait(20)
+
+
+# The transition itself: the latch, the cut, and what the cut refuses to be interrupted by.
+func test_phase_cut() -> void:
+	await load_eric_v2()
+	health_ok()
+	hold_gauge()
+	var pacing = load(ERIC_PACING)
+	var cut: Node = sm.states["PhaseTwo"]
+	var ratio: float = pacing.value("phase_two_health_ratio")
+
+	log_p("-- the latch")
+	check(not boss.phase_two and sm.attacks() == sm.PHASE_ONE_ATTACKS, "he starts the fight in phase one (%s)" % [sm.attacks()])
+	boss.boss_health = int(boss.max_health * ratio) - 1
+	await wait(2)
+	check(not boss.phase_two, "poking his health straight through the line does NOT latch it (%d of %d)" % [boss.boss_health, boss.max_health])
+	boss.boss_health = boss.max_health
+	boss.take_punch(boss.max_health - int(boss.max_health * ratio))
+	await wait(2)
+	check(boss.phase_two and boss.phase_two_pending, "a hit that takes him across %.0f%% does (%d of %d)" % [100.0 * ratio, boss.boss_health, boss.max_health])
+	check(sm.attacks() == sm.PHASE_TWO_ATTACKS and sm.attacks() == ["P2Mixup", "BarbaricLeap"], "and his attacks are phase two's (%s)" % [sm.attacks()])
+	var strong: Array = boss.break_gauge.strong_parry_ids
+	check(strong == [&"eric_p2_haymaker"], "the parry worth grab_parry_gain moves to the haymaker (%s)" % [strong])
+	boss.enter_phase_two()
+	check(boss.phase_two, "it is a one-way latch: entering again changes nothing")
+	check(not cut.has_method("finish_entrance"), "PhaseTwo has no finish_entrance(): skip_entrance() must keep finding the entrance")
+
+	log_p("-- the cut, at the start of the next chain")
+	await settle_player(Vector2(972, 800))
+	boss.break_gauge.locked = false
+	boss.break_gauge.value = boss.break_gauge.max_value - 1.0
+	sm.chain = []
+	sm.rest_timer.stop()
+	sm.downed_state_timer.stop()
+	sm.start_chain(0.0)
+	await wait(2)
+	check(sm.current_state == cut and not boss.phase_two_pending, "start_chain plays it instead of the chain (%s)" % sm.current_state.name)
+	check(boss.break_gauge.locked, "the Break gauge is locked for it")
+	check(cut.entered and is_instance_valid(cut.sword), "his sword is in the air, out of the ring")
+	check(not cut.sword.get_node("Hitbox").monitoring, "and it cannot touch anyone on the way")
+	check(player.is_talking, "the player is held through it")
+	sm.enter_broken()
+	sm.enter_juggled()
+	await wait(2)
+	check(sm.current_state == cut, "a Break and a juggle both bounce off it (%s)" % sm.current_state.name)
+
+	log_p("-- its lines, then phase two")
+	# The watchdog (guard_phase_cut) is already cutting it and reading the lines through, which is
+	# exactly how every other mode meets it.
+	var done: bool = await wait_until(func(): return cut.finished, 1800)
+	check(done and cut.dialogue_started, "the lines run and finish_phase() ends it")
+	check(not is_instance_valid(cut.sword), "the thrown sword is gone")
+	var ringside: Array = current_scene.find_children("EricRingsideSword", "Sprite2D", true, false)
+	check(ringside.size() == 1 and not ringside[0].is_in_group(sm.HAZARD_GROUP), "a sword is left standing ringside, out of the hazard group")
+	check(player.state_machine.is_processing() and not player.is_talking, "the player has themselves back")
+	var reached: bool = await wait_until(func(): return sm.attacks().has(sm.current_state.name), 600)
+	check(reached, "and he goes straight into a phase-two chain (%s)" % sm.current_state.name)
+	var sheet: String = str(boss.sprite.texture.resource_path).get_file()
+	check(sheet != "eric_sheet_v2.png", "he is drawn off his sworded sheet from here (%s)" % sheet)
+	cut.finish_phase()
+	check(current_scene.find_children("EricRingsideSword", "Sprite2D", true, false).size() == 1, "finish_phase() is idempotent")
+
+
+# The mixup: the colours swapped over, one wind-up, and two contacts that land together so the timing
+# says nothing about which branch it is.
+func test_p2_mixup() -> void:
+	await load_eric_p2()
+	health_ok()
+	hold_gauge()
+	track()
+	track_parries()
+	track_dodges()
+	var pacing = load(ERIC_PACING)
+	var catalog = load("res://Scripts/AttackCatalog.gd")
+	var mixup: Node = sm.states["P2Mixup"]
+	var hurtbox: Area2D = boss.get_node("Hurtbox")
+	var entry: float = pacing.value("phase_two_health_ratio")
+
+	log_p("-- the catalogue: one answer each, and neither answers the other")
+	var red: Dictionary = catalog.get_attack(&"eric_p2_haymaker")
+	var yellow: Dictionary = catalog.get_attack(&"eric_p2_grab")
+	var crush: Dictionary = catalog.get_attack(&"eric_p2_crush")
+	check(red.parryable and red.parry_stagger and red.tell and not red.blockable and not red.dash_through and red.damage == 2, "eric_p2_haymaker: red, parry-only, staggers, 2 damage")
+	check(yellow.grab and yellow.dash_through and yellow.dodge_tell and not yellow.parryable and not yellow.blockable and yellow.damage == 0, "eric_p2_grab: yellow, dash-only, no parry, no range cutoff")
+	check(crush.bypass_invincibility and not crush.hype_loss and crush.damage == 1, "eric_p2_crush: 1 a tick, inside the i-frames, no hype lost")
+
+	log_p("-- the read's arithmetic, at both ends of his rage")
+	var travels := {}
+	for ratio in [entry, 0.0]:
+		for want_yellow in [false, true]:
+			boss.global_position = Vector2(500, 380)
+			await settle_player(Vector2(1500, 800))
+			rage_at(ratio)
+			player.is_invincible = true
+			var seen: Dictionary = await run_mixup(want_yellow)
+			var windup: float = seen.rush - seen.windup
+			var travel: float = seen.contact - seen.rush
+			travels["%.2f %s" % [ratio, "Y" if want_yellow else "R"]] = travel
+			var own: float = pacing.p2("p2_windup", 1.0 - ratio)
+			log_p("at %.0f%% health, %s: a %s wind-up of %.3f s (its own %.2f), then %.3f s of rush" % [100.0 * ratio, "yellow" if want_yellow else "red", seen.look, windup, own, travel])
+			check(seen.yellow == want_yellow and seen.id == (&"eric_p2_grab" if want_yellow else &"eric_p2_haymaker"), "the branch is the one asked for (%s)" % seen.id)
+			check(seen.look == ("yellow" if want_yellow else "strong red"), "red is the haymaker, yellow the grab - the colours swapped sides")
+			check(absf(windup - own) <= 2.0 * FRAME_TIME + 0.001 and own >= TELL_FLOORS["P2Mixup"] - 0.001, "its wind-up is %.2f s, at or over the %.2f s colour-read floor (%.3f)" % [own, TELL_FLOORS["P2Mixup"], windup])
+			await settle_mixup()
+	var nominal: float = pacing.value("p2_strike_travel")
+	log_p("travels %s (nominal %.2f)" % [travels, nominal])
+	for key in travels:
+		check(absf(travels[key] - nominal) <= 2.0 * FRAME_TIME + 0.001, "%s reaches the player %.2f s after the wind-up (%.3f)" % [key, nominal, travels[key]])
+	for ratio in [entry, 0.0]:
+		var r: float = travels["%.2f R" % ratio]
+		var y: float = travels["%.2f Y" % ratio]
+		check(r <= y + FRAME_TIME + 0.001, "at %.0f%% health the RED branch lands at or before the yellow one (%.3f vs %.3f), so the press that parries the haymaker is always at or before the grab's own contact and giving the dash's i-frames up for it is the choice" % [100.0 * ratio, r, y])
+	var immunity: float = float(roundi(catalog.DASH_IMMUNITY_TIME * 60.0)) / 60.0
+	var dash_window: float = immunity - pacing.value("p2_strike_hot")
+	log_p("the grab's arms stay open %.3f s, out of %.3f s of dash immunity: %.3f s to place the dash in" % [pacing.value("p2_strike_hot"), immunity, dash_window])
+	check(dash_window >= 0.10, "a dash answering the grab has at least 0.10 s to start in (%.3f)" % dash_window)
+
+	log_p("-- red: a parry staggers him, a held guard does not")
+	for answer in ["guard", "parry"]:
+		boss.global_position = Vector2(700, 380)
+		await settle_player(Vector2(1100, 800))
+		rage_at(entry)
+		events.clear()
+		parries.clear()
+		clear_iframes()
+		health_ok()
+		await start_mixup(false)
+		if answer == "guard":
+			press(KEY_SHIFT)
+			await past_window()
+		await wait_until(func(): return mixup.phase == mixup.Phase.RUSH, 300)
+		if answer == "parry":
+			await wait(roundi(pacing.value("p2_strike_travel") * 60.0) - 6)
+			press(KEY_SHIFT)
+		await wait_until(func(): return mixup.phase != mixup.Phase.RUSH, 120)
+		await wait(4)
+		release(KEY_SHIFT)
+		log_p("%s: events %s, parries %s, health %d, state %s" % [answer, events.map(func(e): return "%s %s" % [e.kind, e.id]), parries.map(func(p): return p.id), player.playerHealth, sm.current_state.name])
+		if answer == "guard":
+			check(events_of("HIT", &"eric_p2_haymaker").size() == 1 and parries.is_empty() and events_of("BLOCKED").is_empty() and player.playerHealth == 98, "red, held guard: it lands anyway, for 2")
+		else:
+			check(parries.size() == 1 and parries[0].id == &"eric_p2_haymaker" and parries[0].staggered and player.playerHealth == 100, "red, parried: negated, and it staggers him")
+			check(await wait_until(func(): return sm.current_state.name == "ParryStaggered", 20), "and he picks himself up where the mixup started")
+		await settle_mixup()
+
+	log_p("-- yellow: a dash goes through it and earns a perfect dodge, a held guard is grabbed")
+	for answer in ["guard", "dash"]:
+		boss.global_position = Vector2(700, 380)
+		await settle_player(Vector2(1100, 800))
+		rage_at(entry)
+		events.clear()
+		parries.clear()
+		dodges.clear()
+		clear_iframes()
+		health_ok()
+		defense._set_stamina(defense.max_stamina)
+		defense.clear_dash_recovery()
+		await start_mixup(true)
+		if answer == "guard":
+			press(KEY_SHIFT)
+		await wait_until(func(): return mixup.phase == mixup.Phase.RUSH, 300)
+		if answer == "dash":
+			# The dash has to cover the whole of the grab's contact window out of its own immunity.
+			await wait(roundi(pacing.value("p2_strike_travel") * 60.0) - 5)
+			press(KEY_UP)
+			tap(KEY_W)
+		else:
+			await past_window()
+		var grabbed: bool = await wait_until(func(): return player.is_grabbed, 60)
+		release(KEY_SHIFT)
+		release(KEY_UP)
+		log_p("%s: grabbed %s, events %s, dodges %s, health %d" % [answer, grabbed, events.map(func(e): return "%s %s" % [e.kind, e.id]), dodges.map(func(d): return d.id), player.playerHealth])
+		if answer == "guard":
+			check(grabbed and events_of("HIT", &"eric_p2_grab").size() == 1 and parries.is_empty(), "yellow, held guard: grabbed all the same")
+		else:
+			check(not grabbed and events_of("HIT").is_empty(), "yellow, dashed: it closes on nobody")
+			check(dodges.any(func(d): return d.id == &"eric_p2_grab"), "and it is a perfect dodge (%s)" % [dodges.map(func(d): return d.id)])
+			check(await wait_until(func(): return mixup.phase == mixup.Phase.STUMBLE and hurtbox.monitoring, 120), "and he stumbles, open to punches")
+		await settle_mixup()
+
+
+# The barbaric leap: five jumps at the player, a tremor from every landing, and never two landings
+# closer together than a dash can answer.
+func test_p2_leap() -> void:
+	await load_eric_p2()
+	health_ok()
+	hold_gauge()
+	track()
+	var pacing = load(ERIC_PACING)
+	var catalog = load("res://Scripts/AttackCatalog.gd")
+	var leap: Node = sm.states["BarbaricLeap"]
+	var hurtbox: Area2D = boss.get_node("Hurtbox")
+	var tremor: Dictionary = catalog.get_attack(&"eric_p2_tremor")
+	check(tremor.blockable and tremor.weight == catalog.Weight.LIGHT and tremor.dash_through and tremor.tell, "eric_p2_tremor: red, blocked light, and a dash beats it")
+
+	for ratio in [pacing.value("phase_two_health_ratio"), 0.0]:
+		boss.global_position = Vector2(500, 380)
+		await settle_player(Vector2(1400, 800))
+		rage_at(ratio)
+		player.is_invincible = true
+		var trace := []
+		var marks := []
+		var rings := []
+		var probe := func():
+			var mark = leap.mark
+			if is_instance_valid(mark) and (marks.is_empty() or marks[-1].mark != mark):
+				marks.append({"mark": mark, "commit_at": mark.commit_at, "air": leap.air_time, "committed": -1.0})
+			if not marks.is_empty() and is_instance_valid(marks[-1].mark) and marks[-1].committed < 0.0 and mark_committed(marks[-1].mark):
+				marks[-1].committed = defense.clock
+			trace.append({"t": defense.clock, "phase": leap.phase, "lift": boss.sprite.offset.y, "open": hurtbox.monitoring})
+			for ring in hazards_of("EricQuakeRingScript.gd"):
+				if not rings.any(func(r): return r.ring == ring):
+					rings.append({"ring": ring, "t": defense.clock, "id": ring.attack_id, "speed": ring.speed})
+		sm.chain = []
+		sm.rest_timer.stop()
+		sm.downed_state_timer.stop()
+		await process_frame
+		physics_frame.connect(probe)
+		var rage: float = sm.rage
+		sm.on_child_transition(sm.current_state, "BarbaricLeap")
+		sm.rage = rage
+		await wait_until(func(): return sm.current_state != leap, 2400)
+		physics_frame.disconnect(probe)
+		var landings := []
+		for i in range(1, trace.size()):
+			if trace[i].phase == leap.Phase.LAND and trace[i - 1].phase != leap.Phase.LAND:
+				landings.append(trace[i].t)
+		var gaps := []
+		for i in range(1, landings.size()):
+			gaps.append(snappedf(landings[i] - landings[i - 1], 0.001))
+		var floor_gap: float = catalog.DASH_IMMUNITY_COOLDOWN + pacing.value("p2_leap_dodge_lead")
+		var want_speed: float = pacing.p2("p2_tremor_speed", 1.0 - ratio)
+		log_p("at %.0f%% health: %d leaps, %d tremors, landing-to-landing %s (floor %.2f)" % [100.0 * ratio, landings.size(), rings.size(), gaps, floor_gap])
+		check(landings.size() == pacing.value("p2_leaps"), "%d leaps (%d)" % [pacing.value("p2_leaps"), landings.size()])
+		check(rings.size() == landings.size(), "one tremor from every landing (%d of %d)" % [rings.size(), landings.size()])
+		check(rings.all(func(r): return r.id == &"eric_p2_tremor" and absf(r.speed - want_speed) < 1.0), "every tremor is his, at %.0f px/s" % want_speed)
+		check(not gaps.is_empty() and gaps.all(func(g): return g >= floor_gap - 0.001), "no two landings closer than the dash cooldown plus its lead (%.2f s), so every tremor can be dashed" % floor_gap)
+		var airborne: Array = trace.filter(func(s): return s.phase == leap.Phase.AIR)
+		check(airborne.all(func(s): return not s.open) and airborne.any(func(s): return s.lift < trace[0].lift - 1.0), "he is off the mat and untouchable through the air")
+		var flat: Array = trace.filter(func(s): return s.phase == leap.Phase.LAND or s.phase == leap.Phase.REST)
+		check(flat.all(func(s): return absf(s.lift - trace[0].lift) < 0.001), "and back on his ground line the moment he lands")
+		var rest: Array = trace.filter(func(s): return s.phase == leap.Phase.REST)
+		var want_rest: float = pacing.p2("p2_leap_rest", 1.0 - ratio)
+		check(rest.size() > 0 and rest.all(func(s): return s.open) and absf(rest.size() * FRAME_TIME - want_rest) <= 2.0 * FRAME_TIME + 0.001, "then a %.2f s rest, open to punches (%.3f)" % [want_rest, rest.size() * FRAME_TIME])
+		var leads: Array = marks.map(func(m): return snappedf((1.0 - m.commit_at) * m.air, 0.001))
+		var measured := []
+		for i in mini(marks.size(), landings.size()):
+			if marks[i].committed >= 0.0:
+				measured.append(snappedf(landings[i] - marks[i].committed, 0.001))
+		log_p("marks %d, commit lead %s, measured commit-to-landing %s (parry window %.2f)" % [marks.size(), leads, measured, defense.parry_window])
+		check(marks.size() == landings.size(), "a floor marker for every leap (%d)" % marks.size())
+		check(leads.all(func(l): return absf(l - defense.parry_window) < 0.001), "its commit frame lights exactly a parry window before he touches down")
+		check(measured.size() == landings.size() and measured.all(func(m): return absf(m - defense.parry_window) <= 2.0 * FRAME_TIME + 0.001), "measured on the mark itself (%s)" % [measured])
+		clear_iframes()
+		health_ok()
+		sm.downed_state_timer.stop()
+		sm.on_child_transition(sm.current_state, "Idle")
+		await wait(20)
+
+
+# Whether a landing mark is showing its commit look, drawn art or placeholder rings.
+func mark_committed(mark: Node) -> bool:
+	if mark.sprite != null:
+		return mark.sprite.frame == mark.spec.commit_frame
+	return not mark.closing_ring.visible
+
+
+# The hold: the mash that gets them out, what it costs them if they don't, and that he always lets go.
+func test_p2_grab_escape() -> void:
+	await load_eric_p2()
+	health_ok()
+	hold_gauge()
+	track()
+	var pacing = load(ERIC_PACING)
+	var escape: Node = player.get_node("GrabEscape")
+	var layout = load("res://Scripts/FinisherArtLayout.gd")
+	var ticks: int = pacing.value("p2_crush_ticks")
+	# Real seconds gate the finisher's mash too, and a headless frame is far shorter than one. This
+	# presses on physics frames, so the interval that de-duplicates one input flush is switched off
+	# and the rate below is what the meter is actually measured against.
+	escape.min_press_interval = 0.0
+	check(escape.prompt_key == &"escape" and layout.PROMPT_WORDS.has(&"escape"), "the prompt is the alarm-red ESCAPE!, not the finisher's gold MASH!")
+	check(escape.mash_actions() == player.get_node("Finisher").mash_actions(), "on the same keys the finisher mashes (%s)" % [escape.mash_actions()])
+	var prompt: Node = current_scene.get_node("Arena/MainPlayer/CanvasLayer/EscapePrompt")
+	check(prompt != null and prompt.finisher == escape, "and it has its own prompt, wired to it")
+
+	for answer in ["mash", "still"]:
+		boss.global_position = Vector2(700, 380)
+		await settle_player(Vector2(1100, 800))
+		rage_at(pacing.value("phase_two_health_ratio"))
+		events.clear()
+		clear_iframes()
+		health_ok()
+		await hold_the_player()
+		check(escape.is_active() and prompt.visible, "%s: the hold starts the escape mash and puts its prompt up" % answer)
+		var keys := [KEY_LEFT, KEY_RIGHT]
+		var step := 0
+		var frames := 0
+		while player.is_grabbed and frames < 600:
+			if answer == "mash" and frames % 6 == 0:
+				tap(keys[step % 2])
+				step += 1
+			frames += 1
+			await physics_frame
+		await wait(2)
+		var crushes: int = events_of("HIT", &"eric_p2_crush").size()
+		log_p("%s: held %.2f s, %d crushes, escaped %s, health %d" % [answer, frames * FRAME_TIME, crushes, escape.escaped, player.playerHealth])
+		check(not player.is_grabbed, "%s: he always lets go" % answer)
+		check(not escape.is_active() and not prompt.visible, "%s: and the prompt goes with the hold" % answer)
+		if answer == "mash":
+			check(escape.escaped and crushes < ticks, "mashing at ten presses a second gets them out before the ticks run out (%d of %d)" % [crushes, ticks])
+		else:
+			check(not escape.escaped and crushes == ticks, "never mashing is crushed the full %d times and tossed anyway (%d)" % [ticks, crushes])
+		check(player.playerHealth == 100 - crushes, "%s: one half-heart a tick, %d in all" % [answer, crushes])
+		for k in keys:
+			release(k)
+		await settle_mixup()
+
+	log_p("-- the grab can kill: at three half-hearts and no mash it is the whole bar")
+	boss.global_position = Vector2(700, 380)
+	await settle_player(Vector2(1100, 800))
+	rage_at(pacing.value("phase_two_health_ratio"))
+	events.clear()
+	clear_iframes()
+	player.playerHealth = ticks
+	await hold_the_player()
+	await wait_until(func(): return player.playerHealth <= 0 or not player.is_grabbed, 600)
+	await wait(6)
+	log_p("at %d half-hearts: %d crushes, health %d, fight over %s" % [ticks, events_of("HIT", &"eric_p2_crush").size(), player.playerHealth, player.fight_over])
+	check(player.playerHealth == 0, "it kills them")
+	check(not player.is_grabbed, "and he still lets go")
+
+
+# Runs a yellow mixup on a player standing still, and waits for his arms to close on them.
+func hold_the_player() -> void:
+	await start_mixup(true)
+	await wait_until(func(): return player.is_grabbed, 300)
+	await wait(1)
+
+
+# ------------------------------------------------------------------ the gauge, the Break and the juggle in a second fight
+# Everything above was written against Eric, the only fight that had a Break gauge. Mason is the
+# second, with his own numbers, so these read every expectation off the boss - his BREAK table, his
+# get_max_health(), the finisher's shares of it - rather than off Eric's literals, and the modes above
+# hand over to them for any fight= but his. Adding a third fight means one row here.
+
+# Per fight: one of his own light attacks, the one worth grab_parry_gain, one that isn't his at all,
+# and the spot he is parked on. The spot has to be somewhere he is allowed to stand, with room over
+# his head for a juggle and room beside him for the player.
+const GAUGE_FIGHTS := {
+	"mason": {
+		"light": &"mason_poo_blast",
+		"strong": &"carter_elbow_drop",
+		"foreign": &"josh_card_throw",
+		"home": Vector2(960, 700),
+		"art": "res://Scripts/MasonArtLayout.gd",
+	},
+}
+
+
+func load_gauged() -> void:
+	await load_fight(fight, STATE_INTROS.has(fight))
+	await clear_intro(fight)
+	boss = current_scene.get_node(PUNISH_WINDOWS[fight][0])
+	sm = boss.state_machine
+	# His fight goes on around these checks, and its bombs and nuggets would whittle the player down.
+	player.playerHealth = 1000
+
+
+# Every clock of his: the state machine's own, and the stagger the finisher starts.
+func stop_boss_timers() -> void:
+	for timer in boss.find_children("*", "Timer", true, false):
+		timer.stop()
+
+
+# Back at `home`, idle, with an empty open gauge, full health, nothing of his left on the mat and the
+# Break's own effects over.
+func reset_gauged(home: Vector2) -> void:
+	load("res://Scripts/HitStop.gd").clear()
+	load("res://Scripts/ScreenView.gd").reset(self)
+	sm.on_child_transition(sm.current_state, "Idle")
+	stop_boss_timers()
+	for hazard in get_nodes_in_group(sm.HAZARD_GROUP):
+		hazard.queue_free()
+	player.unlock_actions()
+	boss.global_position = home
+	boss.boss_health = boss.get_max_health()
+	if "phase_two" in boss:
+		boss.phase_two = false
+	boss.break_gauge.locked = false
+	boss.break_gauge.value = 0.0
+	boss.break_gauge.set_physics_process(true)
+	clear_iframes()
+	player.playerHealth = 1000
+	await wait(20)
+
+
+# Every parry badge still up anywhere in the fight. A spent one renames itself and is on its way out.
+func live_tells() -> Array:
+	return current_scene.find_children("ParryTell*", "", true, false).filter(func(t): return not t.name.ends_with("Spent") and not t.is_queued_for_deletion())
+
+
+# A Break, the player driven in beside him, and the opener landed: the finisher's prompt is up.
+func break_into_prompt_fight(spec: Dictionary) -> bool:
+	var finisher: Node = player.get_node("Finisher")
+	sm.on_child_transition(sm.current_state, "Idle")
+	stop_boss_timers()
+	await settle_player(spec.home + Vector2(-320, 60))
+	boss.break_gauge.locked = false
+	boss.break_gauge.value = 0.0
+	boss.break_gauge.add(boss.break_gauge.max_value)
+	await wait_until(func(): return sm.current_state.name == "Broken", 30)
+	await wait_until(func(): return not player.is_action_locked, 120)
+	for i in 3:
+		await swing()
+		if i < 2:
+			await wait(6)
+	return await wait_until(func(): return finisher.phase == FINISHER_DAZED and finisher.prompt_visible, 120)
+
+
+func test_break_gauge_fight() -> void:
+	await load_gauged()
+	var spec: Dictionary = GAUGE_FIGHTS[fight]
+	var numbers: Dictionary = boss.BREAK
+	var gauge: Node = boss.break_gauge
+	check(gauge != null, "%s has a Break gauge" % fight)
+	if gauge == null:
+		return
+	await reset_gauged(spec.home)
+	track()
+	track_parries()
+	var bars: Array = boss.hud_layer.get_children().filter(func(c): return c.get_script() != null and str(c.get_script().resource_path).ends_with("BreakGaugeUI.gd"))
+	var ui: Control = bars[0] if bars.size() == 1 else null
+	var gauge_art: Dictionary = load("res://Scripts/EricArtLayout.gd").break_gauge()
+	log_p("his numbers %s, bar at %s" % [numbers, ui.position if ui else Vector2.ZERO])
+	check(ui != null and ui.size == gauge_art.size and ui.position == boss.health_bar.break_gauge_anchor(), "a gauge bar hung under his health bar")
+	check(gauge.max_value == 100.0 and gauge.value == 0.0, "it holds 100 and starts empty")
+	await settle_player(Vector2(500, 700))
+
+	log_p("-- what fills it")
+	check(await parry_once(spec.light) == 3 and gauge.value == numbers.parry_gain, "a parry: %.0f (%.0f)" % [numbers.parry_gain, gauge.value])
+	clear_iframes()
+	defense._set_stamina(defense.max_stamina)
+	await wait(40)
+	press(KEY_SHIFT)
+	await wait(3)
+	var strong := front_hit(spec.strong, dummy_source())
+	release(KEY_SHIFT)
+	check(strong == 3 and gauge.value == numbers.parry_gain + numbers.grab_parry_gain, "a parry of %s: %.0f (%.0f)" % [spec.strong, numbers.grab_parry_gain, gauge.value])
+	clear_iframes()
+	defense._set_stamina(defense.max_stamina)
+	await wait(40)
+	sm.on_child_transition(sm.current_state, PUNISH_WINDOWS[fight][1])
+	await wait(5)
+	stop_boss_timers()
+	boss.daze_used = true
+	place_under(boss.get_finisher_hurtbox())
+	await wait(6)
+	var steps := []
+	for i in 3:
+		var before: float = gauge.value
+		await swing()
+		steps.append(gauge.value - before)
+		if i < 2:
+			await wait(6)
+	check(steps == [8.0, 8.0, 14.0], "punches that land: 8 each, 14 for the charged third (%s)" % [steps])
+
+	log_p("-- what drains it")
+	await reset_gauged(spec.home)
+	await settle_player(Vector2(500, 700))
+	gauge.value = numbers.guard_break_loss + numbers.hit_loss + 10.0
+	var before_hit: float = gauge.value
+	front_hit(spec.light, dummy_source())
+	check(gauge.value == before_hit - numbers.hit_loss, "a hit: -%.0f (%.0f -> %.0f)" % [numbers.hit_loss, before_hit, gauge.value])
+	clear_iframes()
+	player.playerHealth = 1000
+	await wait(40)
+	var before_break: float = gauge.value
+	defense.stamina = 20.0
+	defense.last_spend_time = defense.clock
+	press(KEY_SHIFT)
+	await past_window()
+	front_hit(spec.strong, dummy_source())
+	release(KEY_SHIFT)
+	check(defense.is_guard_broken and gauge.value == before_break - numbers.guard_break_loss, "a guard break: -%.0f (%.0f -> %.0f)" % [numbers.guard_break_loss, before_break, gauge.value])
+	defense.clear_guard_break()
+	clear_iframes()
+	player.playerHealth = 1000
+	await wait(45)
+
+	log_p("-- what isn't his counts for nothing")
+	gauge.value = 40.0
+	check(await parry_once(spec.foreign) == 3, "someone else's attack parried")
+	clear_iframes()
+	front_hit(&"wrestler_charge", dummy_source())
+	clear_iframes()
+	player.playerHealth = 1000
+	check(gauge.value == 40.0, "and one that lands: the gauge doesn't move (%.0f)" % gauge.value)
+	await wait(45)
+
+	log_p("-- it stops at 0 and never decays")
+	gauge.value = numbers.hit_loss - 1.0
+	front_hit(spec.light, dummy_source())
+	clear_iframes()
+	player.playerHealth = 1000
+	check(gauge.value == 0.0, "a hit from under its cost takes it to 0, not under (%.0f)" % gauge.value)
+	gauge.add(40.0)
+	await wait(300)
+	check(gauge.value == 40.0, "5 s later it still holds 40 (%.0f)" % gauge.value)
+
+	log_p("-- the Break")
+	await reset_gauged(spec.home)
+	await settle_player(Vector2(640, 700))
+	var broke := [0]
+	gauge.broke.connect(func(): broke[0] += 1)
+	gauge.value = gauge.max_value - numbers.parry_gain
+	check(await parry_once(spec.light) == 3, "the parry that fills it")
+	await wait(2)
+	log_p("gauge %.0f locked %s, state %s, broke %d" % [gauge.value, gauge.locked, sm.current_state.name, broke[0]])
+	check(broke[0] == 1 and gauge.value == 0.0 and gauge.locked and sm.current_state.name == "Broken", "breaks him, and it empties")
+	await wait_until(func(): return not player.is_action_locked, 120)
+	clear_iframes()
+	await wait(40)
+	check(await parry_once(spec.light) == 3 and gauge.value == 0.0, "a parry now fills nothing (%.0f)" % gauge.value)
+
+	log_p("-- it fills again %.0f s after he is back up" % gauge.unlock_delay)
+	await wait_until(func(): return sm.current_state.name != "Broken", 400)
+	var got_up: float = defense.clock
+	await wait_until(func(): return not gauge.locked, 400)
+	var unlocked_after: float = defense.clock - got_up
+	check(absf(unlocked_after - gauge.unlock_delay) <= FRAME_TIME + 0.001, "%.1f s after he got up (%.3f)" % [gauge.unlock_delay, unlocked_after])
+
+	log_p("-- what can't break him")
+	await reset_gauged(spec.home)
+	await settle_player(Vector2(640, 700))
+	var breaks := [0]
+	gauge.broke.connect(func(): breaks[0] += 1)
+	gauge.add(gauge.max_value)
+	await wait(2)
+	var time_left: float = sm.states["Broken"].time_left
+	sm.enter_broken()
+	gauge.add(500.0)
+	await wait(2)
+	check(breaks[0] == 1 and sm.current_state.name == "Broken" and sm.states["Broken"].time_left < time_left, "Broken, he can't be broken again: the gauge takes nothing and his time runs on")
+	sm.on_child_transition(sm.current_state, "Idle")
+	gauge.add(500.0)
+	await wait(2)
+	check(breaks[0] == 1 and sm.current_state.name != "Broken", "nor while the gauge waits to fill again")
+	boss.boss_health = 0
+	await wait(3)
+	gauge.locked = false
+	gauge.add(500.0)
+	await wait(2)
+	check(sm.current_state.name != "Broken", "nor once he is beaten (%s)" % sm.current_state.name)
+
+
+# A Break from inside each of his attacks, his windows and the gap between them. Mason's own table,
+# not Eric's: the squat is the case that matters, because MasonPooSquat has no Exit() and its squat
+# timer drops a bomb whether or not he is still standing over it.
+func test_break_entry_fight() -> void:
+	await load_gauged()
+	var spec: Dictionary = GAUGE_FIGHTS[fight]
+	var gauge: Node = boss.break_gauge
+	var timers: Array = [sm.post_dialogue_pre_fight_timer, sm.squat_timer, sm.release_timer, sm.phone_timer, sm.eat_timer]
+	var cases := [
+		["the squat, before the bomb drops", func(): sm.start_cycle(), func(): return sm.current_state.name == "PooSquat" and not sm.squat_timer.is_stopped()],
+		["a line being laid", func(): sm.start_cycle(), func(): return sm.current_state.name == "Waddle" and sm.line_bombs.size() >= 2],
+		["a nugget shower in the sky", func(): sm.on_child_transition(sm.current_state, "NuggetShower"), func(): return hazards_of("NuggetMeteorScript.gd").size() >= 2],
+		["Carter's drop in the air", func(): sm.on_child_transition(sm.current_state, "CallCarter"), func():
+			var drops := hazards_of("CarterElbowDropScript.gd")
+			return not drops.is_empty() and drops[0].carter_sprite.visible],
+		["waiting for the delivery", func(): sm.on_child_transition(sm.current_state, "AwaitDelivery"), func(): return not hazards_of("UberDriverScript.gd").is_empty()],
+		["the eat window", func(): sm.on_child_transition(sm.current_state, "Eat"), func(): return sm.current_state.name == "Eat"],
+		["between two attacks", func(): sm.on_child_transition(sm.current_state, "Idle"), func(): return sm.current_state.name == "Idle"],
+	]
+	for case in cases:
+		await reset_gauged(spec.home)
+		await settle_player(OUT_OF_REACH)
+		case[1].call()
+		var reached := await wait_until(case[2], 600)
+		gauge.value = gauge.max_value - 1.0
+		gauge.add(1.0)
+		await wait(2)
+		var left := live_hazards()
+		var tells := live_tells()
+		var running := timers.filter(func(t): return not t.is_stopped())
+		log_p("%s: reached %s, now %s, hazards left %d, tells %d, timers running %d" % [case[0], reached, sm.current_state.name, left.size(), tells.size(), running.size()])
+		check(reached and sm.current_state.name == "Broken", "%s: broken out of it" % case[0])
+		check(left.is_empty(), "%s: everything he sent out is gone (%s)" % [case[0], left.map(func(h): return h.name)])
+		check(tells.is_empty(), "%s: no parry badge survives" % case[0])
+		check(running.is_empty(), "%s: every one of his timers is stopped" % case[0])
+		check(await wait_until(func(): return sm.current_state.name == "PooSquat", 400), "%s: and his cycle starts again" % case[0])
+
+
+# Tier 3 from start to finish in a fight of its own, watched frame by frame.
+func test_juggle_fight() -> void:
+	await load_gauged()
+	var spec: Dictionary = GAUGE_FIGHTS[fight]
+	var finisher: Node = player.get_node("Finisher")
+	var anim: AnimationPlayer = boss.get_node("AnimationPlayer")
+	var art: GDScript = load(spec.art)
+	await reset_gauged(spec.home)
+	var juggled: Node = sm.states["Juggled"]
+	check(await break_into_prompt_fight(spec), "a Break and the opener put up the prompt")
+	check(finisher.tiered, "the Break's mash is the tiered one")
+	var want := []
+	for k in 3:
+		want.append(maxi(1, roundi(boss.get_max_health() * finisher.juggle_shares[k])))
+	var hits := []
+	finisher.juggle_hit.connect(func(index, last): hits.append({"t": defense.clock, "index": index, "last": last, "health": boss.boss_health}))
+	var trace := []
+	var watch := func():
+		trace.append({"t": defense.clock, "drawn": juggled.drawn_lift, "airborne": finisher.airborne, "phase": finisher.phase, "state": sm.current_state.name, "anim": anim.assigned_animation})
+	physics_frame.connect(watch)
+	var health: int = boss.boss_health
+	await mash_tiered(5)
+	await wait_until(func(): return sm.current_state.name != "Juggled" and hits.size() > 0, 600)
+	physics_frame.disconnect(watch)
+	var dealt := []
+	var before := health
+	for hit in hits:
+		dealt.append(before - hit.health)
+		before = hit.health
+	log_p("headroom %.0f px, lift scale %.2f, hits %s, dealt %s of %d" % [boss.juggle_headroom(), finisher.lift_scale, hits.map(func(h): return snappedf(h.t, 0.001)), dealt, boss.get_max_health()])
+	check(hits.size() == 3 and hits[2].last, "three uppercuts, the third the last")
+	check(dealt == want, "%s of his %d, the finisher's shares of it (%s)" % [want, boss.get_max_health(), dealt])
+	check(not dealt.has(0), "and not one of them deals 0 (%s)" % [dealt])
+	var gaps := []
+	for k in range(1, hits.size()):
+		gaps.append(hits[k].t - hits[k - 1].t)
+	check(gaps.size() == 2 and gaps.all(func(g): return absf(g - 0.55) <= FRAME_TIME + 0.001), "0.55 s apart (%s)" % [gaps])
+	var first: float = hits[0].t if hits.size() > 0 else 0.0
+	var last: float = hits[-1].t if hits.size() > 0 else 0.0
+	var up: Array = trace.filter(func(s): return s.t > first and s.t <= last)
+	check(not up.is_empty() and up.all(func(s): return s.drawn > 0.0), "he never touches the ground between the first and the last")
+	var landed_at: Array = trace.filter(func(s): return s.phase == FINISHER_JUGGLE_FALL)
+	var crashed_at: Array = trace.filter(func(s): return s.t > last and not s.airborne and s.state == "Juggled")
+	check(not landed_at.is_empty() and not crashed_at.is_empty() and landed_at[0].t < crashed_at[0].t, "the player lands before he does")
+	check(trace.any(func(s): return s.anim == art.juggle().crash), "he crashes")
+	check(await wait_until(func(): return sm.current_state.name == "PooSquat", 400), "then he gets up and his cycle starts again")
+
+
+# The uppercut numbered `tier` kills him: nothing follows, one outro, and his defeat once he has landed.
+func test_juggle_kill_fight() -> void:
+	await load_gauged()
+	var spec: Dictionary = GAUGE_FIGHTS[fight]
+	var n := int(tier) if tier.is_valid_int() else 3
+	var finisher: Node = player.get_node("Finisher")
+	var anim: AnimationPlayer = boss.get_node("AnimationPlayer")
+	var art: GDScript = load(spec.art)
+	await reset_gauged(spec.home)
+	check(await break_into_prompt_fight(spec), "a Break and the opener put up the prompt")
+	# Past the phase floor: under it the uppercuts after the one that reaches it deal nothing, which
+	# is what the floor fix is for and not what this mode is about.
+	if "phase_two" in boss:
+		boss.phase_two = true
+	# The damage the uppercuts before this one deal, and one more.
+	var health := 1
+	for k in n - 1:
+		health += maxi(1, roundi(boss.get_max_health() * finisher.juggle_shares[k]))
+	boss.boss_health = health
+	var hits := []
+	finisher.juggle_hit.connect(func(index, last): hits.append({"index": index, "last": last, "health": boss.boss_health, "at": boss.global_position}))
+	var states := []
+	var watch := func():
+		if states.is_empty() or states[-1] != sm.current_state.name:
+			states.append(sm.current_state.name)
+	physics_frame.connect(watch)
+	await mash_tiered(5)
+	await wait_until(func(): return sm.current_state.name == "Defeated", 400)
+	var defeat_anim: String = anim.assigned_animation
+	await wait(90)
+	physics_frame.disconnect(watch)
+	var outros: int = root.get_children().filter(func(c): return c.name == "FightOutro").size()
+	var moved: float = hits[0].at.distance_to(boss.global_position) if not hits.is_empty() else -1.0
+	log_p("tier=%d from %d: hits %s, states %s, defeat anim %s, outros %d, moved %.1f px" % [n, health, hits.map(func(h): return [h.index, h.last, h.health]), states, defeat_anim, outros, moved])
+	check(hits.size() == n and hits[-1].health == 0 and hits[-1].last, "the uppercut numbered %d kills him, and none follows (%d)" % [n, hits.size()])
+	check(outros == 1, "one outro (%d)" % outros)
+	check(states.find("Juggled") >= 0 and states.find("Juggled") < states.find("Defeated") and defeat_anim == art.juggle().down, "he finishes his fall and crash, then lies there beaten (%s)" % [states])
+	check(moved >= 0.0 and moved < 1.0, "the killing uppercut doesn't shove him (%.1f px)" % moved)
+
+
+# ------------------------------------------------------------------ Carter's Beam Rush
+
+# The fight's own numbers, mirrored here the way clone_cadence mirrors the barrage's, so a mode still
+# has something to hold his fight to if his scripts aren't in a build. beam_rush reads the live ones
+# off CarterStateMachine and checks these still match them.
+const BEAM_SUMMON := 0.70
+const BEAM_CHARGE := 0.45
+const STRIKE_SHOW := 0.36
+const STRIKE_DASH := 0.08
+const STRIKE_GAP := 0.06
+const STRIKE_CAP := 12
+const STRIKE_REACH := 120.0
+const BEAM_RECOVER_BREAK := 5.0
+const BEAM_RECOVER_SPENT := 1.5
+# The player's hurtbox, from Scenes/MainPlayer.tscn: 36 px across.
+const PLAYER_WIDTH := 36.0
+const DEFEAT_SCENE := "res://Scenes/Core/DefeatScene.tscn"
+
+
+# The Beam Rush against the parry window and the ring's own geometry, modelled rather than run, so it
+# needs no Carter scene: the strikes are dealt to a parked Eric through the same player path.
+# THE ATTACK HAS NO TIMEOUT AND MUST NEVER GROW ONE. The numbers here are the ones that decide whether
+# its read is a read and whether a player who answers it by walking can stay in their lane.
+func test_beam_rush() -> void:
+	await load_eric()
+	health_ok()
+	park_eric()
+	await settle_player(Vector2(972, 800))
+	var show_time := STRIKE_SHOW
+	var dash_time := STRIKE_DASH
+	var gap_time := STRIKE_GAP
+	var cap := STRIKE_CAP
+	var reach := STRIKE_REACH
+	if ResourceLoader.exists(CARTER_STATE_MACHINE):
+		var probe: Node = load(CARTER_STATE_MACHINE).new()
+		show_time = probe.strike_show
+		dash_time = probe.strike_dash
+		gap_time = probe.strike_gap
+		cap = probe.strike_cap
+		reach = probe.strike_reach
+		var live_period: float = probe.strike_period()
+		probe.free()
+		log_p("read off his fight: show %.2f, dash %.2f, gap %.2f, period %.2f, cap %d, reach %.0f" % [show_time, dash_time, gap_time, live_period, cap, reach])
+		check(is_equal_approx(show_time, STRIKE_SHOW) and is_equal_approx(dash_time, STRIKE_DASH) and is_equal_approx(gap_time, STRIKE_GAP) and cap == STRIKE_CAP and is_equal_approx(reach, STRIKE_REACH), "the numbers in this file still mirror his fight (%.2f/%.2f/%.2f/%d/%.0f)" % [show_time, dash_time, gap_time, cap, reach])
+		check(is_equal_approx(live_period, show_time + dash_time + gap_time), "strike_period() is show + dash + gap (%.2f)" % live_period)
+	else:
+		log_p("his fight is not in this build, so the numbers in this file are what is modelled")
+	var window: float = defense.parry_window
+	var strike: float = show_time + dash_time
+	var period: float = strike + gap_time
+	log_p("badge %.2f s, dash %.2f s, contact at %.2f s, period %.2f s, window %.2f s" % [show_time, dash_time, strike, period, window])
+	check(show_time >= 0.36, "the read is at its floor or above it (%.2f s)" % show_time)
+	check(strike < period, "one strike is done before the next starts (%.2f s of life, %.2f s period)" % [strike, period])
+
+	log_p("-- pressing the instant he appears is too early")
+	defense.rearm_parry()
+	var on_sight: int = await parry_at(clone_frames(strike))
+	check(on_sight == 2, "a press on sight only blocks (%d)" % on_sight)
+	check(strike > window + 1.0 / 60.0, "contact is %.2f s past the badge, the window covers %.2f s" % [strike, window])
+
+	log_p("-- and the read, as he lunges, parries")
+	defense.rearm_parry()
+	var on_dash: int = await parry_at(clone_frames(dash_time))
+	check(on_dash == 3, "a press as he lunges parries (%d)" % on_dash)
+
+	# 0.50 s lands EXACTLY on parry_mash_lockout, so the rearm the fight makes as each strike appears
+	# is load-bearing rather than a safety net: without it a press that whiffed on one strike leaves
+	# the next one mathematically unparryable.
+	log_p("-- the period sits on the lockout, so the rearm is what keeps strikes answerable")
+	check(period <= defense.parry_mash_lockout + 0.0001, "the period %.2f s is inside the %.2f s lockout" % [period, defense.parry_mash_lockout])
+	var whiff_at := clone_frames(show_time + dash_time * 0.5)
+	var to_next_read := clone_frames(period + strike - window) - whiff_at
+	log_p("  a whiffed press %.2f s into a strike, then the next strike's read %.2f s later" % [whiff_at / 60.0, to_next_read / 60.0])
+	press(KEY_SHIFT)
+	await wait(2)
+	release(KEY_SHIFT)
+	await wait(to_next_read)
+	var spilled: int = await parry_at(clone_frames(window))
+	check(spilled == 2, "with nothing rearming it, the whiff costs the next strike too (%d)" % spilled)
+	clear_iframes()
+	defense._set_stamina(defense.max_stamina)
+	await past_window()
+	await wait(40)
+	press(KEY_SHIFT)
+	await wait(2)
+	release(KEY_SHIFT)
+	await wait(to_next_read)
+	# What the fight does as each strike appears.
+	defense.rearm_parry()
+	var saved: int = await parry_at(clone_frames(window))
+	check(saved == 3, "the rearm gives the next strike back (%d)" % saved)
+
+	# The curtains are lane dividers, and a strike is answered by stepping out of its box. Both are
+	# geometry, and neither works if a lane is too narrow to stand a sidestep in.
+	log_p("-- the ring, divided")
+	var art: GDScript = load(CARTER_ART_LAYOUT)
+	var machine: GDScript = load(CARTER_STATE_MACHINE)
+	var ropes: Rect2 = machine.ROPES
+	var lane: float = (ropes.size.x - art.BEAM_COUNT * art.BEAM_HIT_WIDTH) / (art.BEAM_COUNT + 1)
+	log_p("%d curtains at %s, %.0f px drawn and %.0f px of each hurting, leaving %d lanes of %.1f px" % [art.BEAM_COUNT, art.BEAM_X, art.BEAM_DRAW_WIDTH, art.BEAM_HIT_WIDTH, art.BEAM_COUNT + 1, lane])
+	check(art.BEAM_HIT_WIDTH < art.BEAM_DRAW_WIDTH, "what hurts is narrower than what is drawn: %.0f px of forgiveness a side" % ((art.BEAM_DRAW_WIDTH - art.BEAM_HIT_WIDTH) / 2.0))
+	check(lane >= 6.0 * PLAYER_WIDTH, "a lane holds six players across (%.1f px against %.0f)" % [lane, 6.0 * PLAYER_WIDTH])
+	check(lane / 2.0 >= reach, "and a sidestep out of a strike stays inside it: %.1f px to the nearest edge against a reach of %.0f" % [lane / 2.0, reach])
+	for i in art.BEAM_COUNT:
+		var want: float = ropes.position.x + ropes.size.x * (i + 1) / float(art.BEAM_COUNT + 1)
+		check(absf(art.BEAM_X[i] - want) <= 1.0, "curtain %d is spaced off the ropes, not written down (%.0f against %.1f)" % [i + 1, art.BEAM_X[i], want])
+	check(art.BEAM_TOP_Y <= ropes.position.y and art.BEAM_BOTTOM_Y >= ropes.end.y - 1.0, "they run the whole ring, so there is no free lane change at the top (%.0f to %.0f against %.0f to %.0f)" % [art.BEAM_TOP_Y, art.BEAM_BOTTOM_Y, ropes.position.y, ropes.end.y])
+
+	log_p("-- what the attack costs a player who does nothing")
+	var catalog: Dictionary = CATALOG.get_attack(&"carter_teleport_strike")
+	check(not catalog.bypass_invincibility, "the strike does NOT bypass the i-frames, unlike the barrage's clones")
+	check(catalog.blockable and catalog.tell, "it is blockable and it advertises itself")
+	var iframes: float = player.invincibility_timer.wait_time
+	var landing := 0
+	var free_until := -1000.0
+	for i in cap:
+		var contact: float = i * period + strike
+		if contact >= free_until:
+			landing += 1
+			free_until = contact + iframes
+	log_p("%d strikes %.2f s apart against %.2f s of i-frames: %d of them land" % [cap, period, iframes, landing])
+	check(landing >= 6, "a player who does nothing at all dies to it (%d landing strikes against 6 half-hearts)" % landing)
+
+
+# The shipped Carter, set up the way test_pause_barrage does it: his machine fills its states and
+# defers the entrance, so a cycle is forced a frame later rather than in the middle of the scene
+# coming up. Returns his BeamRush state.
+func load_carter_akuma() -> Node:
+	change_scene_to_file(CARTER_AKUMA)
+	while current_scene == null or current_scene.scene_file_path != CARTER_AKUMA:
+		await process_frame
+	await wait(3)
+	player = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
+	defense = player.get_node("Defense")
+	boss = current_scene.get_node("Arena/CarterAkumaScene/CarterAkumaCharacterBody")
+	sm = boss.get_node("StateManager")
+	await wait_until(func(): return sm.states.has("Intro"), 120)
+	sm.states["Intro"].process_mode = Node.PROCESS_MODE_DISABLED
+	player.is_talking = false
+	await wait(2)
+	return sm.get_node("BeamRush")
+
+
+# Straight into a Beam Rush. Cycle 1 is always the barrage, so the counter is nudged and the cycle
+# started, which is also the alternation doing its job.
+func start_beam_rush(rush: Node) -> bool:
+	sm.cycles_started = 1
+	sm.start_cycle()
+	return await wait_until(func(): return sm.current_state == rush and rush.beat == rush.Beat.RUSH, 900)
+
+
+# Presses the guard as a strike lunges, which is the read: the badge has just gone and contact is
+# strike_dash away. Waits for a strike past `index`, so each call answers a fresh one.
+func parry_strike(rush: Node, index: int) -> bool:
+	if not await wait_until(func(): return rush.strike_index > index, 240):
+		return false
+	if not await wait_until(func(): return rush.strike_shown, 240):
+		return false
+	press(KEY_SHIFT)
+	# Held through the contact: a parry needs the guard up when the blow arrives, not just at the press.
+	await wait_until(func(): return rush.strike_landed, 60)
+	release(KEY_SHIFT)
+	await wait(2)
+	return true
+
+
+# The real thing, in his real fight. The check that matters most is the first: twelve strikes with no
+# input at all end the attack, because the strike cap is its only loop bound and there is no clock
+# anywhere in it.
+func test_beam_rush_live() -> void:
+	var rush: Node = await load_carter_akuma()
+	check(rush != null, "his fight carries a BeamRush state")
+	var gauge: Node = boss.break_gauge
+	check(gauge != null, "and a Break gauge")
+	# next_attack() is read after start_cycle() has counted the cycle, so cycle 1 is cycles_started 1.
+	sm.cycles_started = 1
+	check(sm.next_attack() == "RagingDemon", "cycle 1 is always the barrage, which teaches the read this attack assumes")
+	sm.cycles_started = 2
+	check(sm.next_attack() == "BeamRush", "and the two alternate after it")
+	sm.cycles_started = 3
+	check(sm.next_attack() == "RagingDemon", "and back, strictly, rather than by a random pick")
+	sm.cycles_started = 0
+
+	log_p("-- twelve strikes with nothing pressed end it")
+	player.playerHealth = 9999
+	await settle_player(Vector2(959, 800))
+	check(await start_beam_rush(rush), "the rush is running")
+	check(is_equal_approx(gauge.value, 0.0) and not gauge.locked, "the gauge reads 0 on entry and takes fills (%.0f)" % gauge.value)
+	check(rush.beams.size() == 4 and rush.clones.size() == 4, "four curtains and four clones are up (%d, %d)" % [rush.beams.size(), rush.clones.size()])
+	var lanes := []
+	for curtain in rush.beams:
+		lanes.append(roundi(curtain.global_position.x))
+	log_p("the curtains stand at %s" % [lanes])
+	var still := [true]
+	var seen := [-1]
+	var watch_lanes := func() -> void:
+		seen[0] = maxi(seen[0], rush.strike_index)
+		var now := []
+		for curtain in rush.beams:
+			if is_instance_valid(curtain):
+				now.append(roundi(curtain.global_position.x))
+		if now.size() == lanes.size() and now != lanes:
+			still[0] = false
+	physics_frame.connect(watch_lanes)
+	var left: bool = await wait_until(func(): return sm.current_state != rush, 1800)
+	physics_frame.disconnect(watch_lanes)
+	log_p("he got to strike %d of %d, and the state settled in %s" % [seen[0] + 1, STRIKE_CAP, sm.current_state.name])
+	check(left, "the attack ended on its own with no input")
+	check(seen[0] + 1 == STRIKE_CAP, "on the twelfth strike and not on a clock (%d)" % (seen[0] + 1))
+	check(still[0], "and the curtains never moved a pixel while it ran")
+	check(sm.current_state.name == "Recover", "into his punish window")
+	check(is_equal_approx(sm.recover_timer.wait_time, BEAM_RECOVER_SPENT), "a rush simply sat through earns the short window: %.2f s" % sm.recover_timer.wait_time)
+	check(get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), "nothing is left on the mat")
+
+	log_p("-- seven parries break him")
+	sm.recover_timer.stop()
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	await settle_player(Vector2(959, 800))
+	clear_iframes()
+	check(await start_beam_rush(rush), "a second rush is running")
+	var parried := []
+	defense.parried.connect(func(hit, _at, _staggered, _streak): parried.append(hit.attack_id))
+	var gains := []
+	var index := -1
+	for i in 7:
+		if not await parry_strike(rush, index):
+			break
+		index = rush.strike_index
+		gains.append(roundi(gauge.value))
+		defense._set_stamina(defense.max_stamina)
+		if rush.broke:
+			break
+	log_p("gauge after each parry: %s, ids %s" % [gains, parried])
+	check(parried.size() == 7 and parried.all(func(id): return id == &"carter_teleport_strike"), "seven strikes parried, all his (%d)" % parried.size())
+	check(rush.broke, "and the seventh broke him")
+	check(await wait_until(func(): return sm.current_state.name == "Recover", 240), "which ends the attack")
+	check(is_equal_approx(sm.recover_timer.wait_time, BEAM_RECOVER_BREAK), "into the long window a Break earns: %.2f s" % sm.recover_timer.wait_time)
+	check(get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), "and nothing is left on the mat")
+
+	log_p("-- a player beaten in the middle of it leaves nothing behind")
+	sm.recover_timer.stop()
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	await settle_player(Vector2(959, 800))
+	clear_iframes()
+	player.playerHealth = 6
+	var opened: float = defense.clock
+	check(await start_beam_rush(rush), "a third rush is running")
+	var first: float = defense.clock
+	var died: bool = await wait_until(func(): return player.fight_over or player.playerHealth <= 0, 1800)
+	var took: float = defense.clock - first
+	log_p("TIME TO DEATH with nothing pressed: %.2f s from the first strike, %.2f s from the top of the attack, on strike %d" % [took, defense.clock - opened, rush.strike_index + 1])
+	check(died, "a player who never parries dies to it")
+	check(took < STRIKE_CAP * (STRIKE_SHOW + STRIKE_DASH + STRIKE_GAP), "inside the twelve strikes he gets (%.2f s)" % took)
+	await wait(20)
+	check(rush.released, "the rush was released by the end of the fight")
+	check(rush.beams.is_empty() and rush.clones.is_empty(), "no curtain and no clone is left")
+	check(get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), "nothing is left on the mat")
+	check(boss.get_parent().get_node_or_null("ParryTell%d" % boss.get_instance_id()) == null, "no badge is left over his head")
+	check(not player.is_action_locked, "and the player was never locked by it anyway")
+	check(root.has_node(^"FightOutro") and not root.get_node(^"FightOutro").player_won, "the loss is running")
+	# The rest of the way to the screen: his pose, his outro line read the way a player reads one, and
+	# the fade behind it.
+	for i in 200:
+		if current_scene != null and current_scene.scene_file_path == DEFEAT_SCENE:
+			break
+		if live_balloon() != null:
+			await read_line()
+		else:
+			await wait(6)
+	check(current_scene != null and current_scene.scene_file_path == DEFEAT_SCENE, "and it reaches the loss screen (%s)" % [current_scene.scene_file_path if current_scene else "<none>"])
+
+
+# Four live curtains and a Carter halfway through a teleport, under a pause and under a finisher's
+# freeze. Every wait in the attack is a physics accumulator and every ramp a node-bound tween, so
+# both have to stop the whole of it dead.
+func test_pause_beam_rush() -> void:
+	var rush: Node = await load_carter_akuma()
+	player.playerHealth = 9999
+	await settle_player(Vector2(959, 800))
+	var pause: Node = pause_menu()
+
+	# The one moment the curtains are on a live tween rather than sitting at full: catching the ramp
+	# is what proves it is node-bound and not a tree-level one, which a pause would not hold.
+	log_p("-- paused with the curtains still coming up")
+	sm.cycles_started = 1
+	sm.start_cycle()
+	check(await wait_until(func(): return sm.current_state == rush and rush.beat == rush.Beat.CHARGE and rush.beams.size() == 4, 300), "the charge is running and four curtains are building")
+	await tap_pause()
+	var ramping := []
+	for curtain in rush.beams:
+		ramping.append(curtain.modulate.a)
+	check(pause.is_open() and ramping.max() < 1.0, "paused mid-ramp (%s)" % [ramping])
+	await wait(40)
+	var still_ramping := []
+	for curtain in rush.beams:
+		still_ramping.append(curtain.modulate.a)
+	log_p("curtain alphas %s -> %s over 40 paused frames" % [ramping, still_ramping])
+	check(ramping == still_ramping, "no curtain brightened by a hair")
+	await tap_pause()
+	check(await wait_until(func(): return rush.beat == rush.Beat.RUSH, 300), "and the charge finishes after the resume")
+
+	log_p("-- and paused with him mid-teleport")
+	check(await wait_until(func(): return rush.beams.size() == 4 and rush.strike_shown and not rush.strike_landed, 240), "four curtains are up and he is mid-teleport")
+	await tap_pause()
+	check(pause.is_open(), "paused inside the rush")
+	var beat: float = rush.beat_clock
+	var strike: float = rush.strike_clock
+	var index: int = rush.strike_index
+	var at: Vector2 = boss.global_position
+	var spots := []
+	for curtain in rush.beams:
+		spots.append(curtain.global_position)
+	await wait(40)
+	var after := []
+	for curtain in rush.beams:
+		after.append(curtain.global_position)
+	log_p("beat %.4f -> %.4f, strike %.4f -> %.4f, index %d -> %d, %d curtains out" % [beat, rush.beat_clock, strike, rush.strike_clock, index, rush.strike_index, spots.size()])
+	check(is_equal_approx(beat, rush.beat_clock) and is_equal_approx(strike, rush.strike_clock) and index == rush.strike_index, "the rush's own clocks stopped")
+	check(spots == after and boss.global_position == at, "no curtain and no Carter moved")
+	await tap_pause()
+	check(await wait_until(func(): return not is_equal_approx(strike, rush.strike_clock), 60), "and it carries on from there")
+
+	log_p("-- and a finisher's freeze")
+	check(await wait_until(func(): return rush.strike_shown and not rush.strike_landed, 240), "he is mid-teleport again")
+	var freeze: GDScript = load("res://Scripts/FightFreeze.gd")
+	check(freeze.freeze(self, [player.get_parent()]), "the fight is frozen around the player")
+	var held: float = rush.strike_clock
+	var held_index: int = rush.strike_index
+	var held_at: Vector2 = boss.global_position
+	var held_alphas := []
+	for curtain in rush.beams:
+		held_alphas.append(curtain.modulate.a)
+	await wait(40)
+	var now_alphas := []
+	for curtain in rush.beams:
+		now_alphas.append(curtain.modulate.a)
+	log_p("frozen: strike %.4f -> %.4f, index %d -> %d, alphas %s -> %s" % [held, rush.strike_clock, held_index, rush.strike_index, held_alphas, now_alphas])
+	check(is_equal_approx(held, rush.strike_clock) and held_index == rush.strike_index, "40 frozen frames don't advance the rush")
+	check(boss.global_position == held_at, "and don't move him")
+	check(held_alphas == now_alphas, "and no curtain ramps under it")
+	freeze.unfreeze(self)
+	await wait(2)
+	check(await wait_until(func(): return not is_equal_approx(held, rush.strike_clock), 60), "and it carries on after the unfreeze")
+	rush.release()
+
+
+# ------------------------------------------------------------------ Computah's mine field
+# His second attack: pods on the mat, then a high-speed chase to herd the player over them. A pod
+# that closes SEALS the player - no move, no dash, no punch, and the guard and its parry are sealed
+# off too - and he walks over and charges an uppercut while they mash out of it.
+
+const COMPUTAH_SCENE := "Arena/ComputahScene"
+const COMPUTAH_MINE_SCENE := "res://Scenes/Bosses/ComputahMineScene.tscn"
+
+
+# His fight, driving itself from here rather than off its own opening timer.
+func load_computah_fight() -> void:
+	await load_fight("computah")
+	boss = current_scene.get_node(COMPUTAH_SCENE + "/ComputahCharacterBody")
+	sm = boss.state_machine
+	sm.post_dialogue_pre_fight_timer.stop()
+	# Out of the intro pose, which trap_allowed() refuses on purpose, and off the beat clock: from
+	# here the test drives his states itself.
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	player.playerHealth = 1000
+	track()
+
+
+# One pod, laid by hand where the test wants it. lob() from its own spot, so the flight is a
+# formality; the phases run on its own clock either way.
+func lay_mine_at(at: Vector2) -> Node2D:
+	var mine: Node2D = load(COMPUTAH_MINE_SCENE).instantiate()
+	mine.state_machine = sm
+	sm.add_hazard(mine, at, current_scene.get_node(COMPUTAH_SCENE + "/HazardLayer"))
+	mine.lob(at)
+	return mine
+
+
+func armed_mine_at(at: Vector2) -> Node2D:
+	var mine := lay_mine_at(at)
+	await wait_until(func(): return mine.is_armed(), 180)
+	return mine
+
+
+# Out of the mine field and back to a standing start, with the mat cleared.
+func park_computah() -> void:
+	for hazard in get_nodes_in_group(sm.HAZARD_GROUP):
+		hazard.queue_free()
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	sm.window_timer.stop()
+	sm.last_release_time = -INF
+	boss.global_position = sm.COMPUTAH_HOME
+	await wait(2)
+
+
+func test_mine_trap() -> void:
+	await load_computah_fight()
+	var trapped: Node = sm.states["Trapped"]
+	var punish: Node = sm.states["Punish"]
+	var layout: GDScript = load("res://Scripts/ComputahArtLayout.gd")
+
+	log_p("-- the picker: the mine field never runs twice in a row, and never straight after a catch")
+	sm.last_attack = "LayMines"
+	sm.caught_since_cycle = false
+	check(sm._next_attack() == "Beam", "after a mine field, the beam")
+	sm.last_attack = "Beam"
+	check(sm._next_attack() == "LayMines", "after the beam, the mine field")
+	sm.caught_since_cycle = true
+	check(sm._next_attack() == "Beam", "and a catch is always followed by the beam")
+	sm.caught_since_cycle = false
+
+	log_p("-- the trigger is the drawn ring, to the texel")
+	var ring: Rect2 = layout.mine_ring()
+	log_p("ring box %s texels -> %s px" % [layout.MINE_RING_BOX, ring])
+	check(ring.size == layout.MINE_RING_BOX.size * layout.SCALE, "the trigger is the measured ring at SCALE (%s)" % ring.size)
+	check(is_equal_approx(ring.size.x, 72.0) and is_equal_approx(ring.size.y, 36.0), "which is 72 x 36 px (%s)" % ring.size)
+
+	log_p("-- he lays a field")
+	await settle_player(Vector2(500, 800))
+	var stood_at: Vector2 = player.global_position
+	sm.on_child_transition(sm.current_state, "LayMines")
+	check(await wait_until(func(): return sm.current_state.name == "Chase", 300), "the lay hands over to the chase")
+	var mines: Array = sm.live_mines()
+	log_p("%d pods at %s" % [mines.size(), mines.map(func(m): return m.global_position)])
+	check(mines.size() > 0 and mines.size() <= sm.mine_count, "at most mine_count pods went down (%d of %d)" % [mines.size(), sm.mine_count])
+	var bounds: Rect2 = sm.runner_bounds()
+	check(mines.all(func(m): return bounds.has_point(m.global_position)), "every pod is inside runner_bounds(), not just inside the ropes")
+	var apart := true
+	for i in mines.size():
+		for j in range(i + 1, mines.size()):
+			if mines[i].global_position.distance_to(mines[j].global_position) < sm.mine_spacing:
+				apart = false
+	check(apart, "no two pods are inside mine_spacing (%.0f px) of each other" % sm.mine_spacing)
+	check(mines.all(func(m): return m.global_position.distance_to(stood_at) >= sm.mine_min_from_player),
+		"and none was dropped inside mine_min_from_player (%.0f px) of the player" % sm.mine_min_from_player)
+
+	log_p("-- the cap holds across cycles")
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	for round_number in 3:
+		sm.on_child_transition(sm.current_state, "LayMines")
+		await wait_until(func(): return sm.current_state.name == "Chase", 300)
+		sm.on_child_transition(sm.current_state, "Idle")
+		sm.beat_timer.stop()
+	var live: int = sm.live_mines().size()
+	log_p("after four fields laid back to back, %d pods are live (cap %d)" % [live, sm.mine_cap])
+	check(live <= sm.mine_cap, "the field never goes over mine_cap (%d)" % live)
+	await park_computah()
+
+	log_p("-- the arming beat")
+	await settle_player(Vector2(500, 800))
+	var mine := lay_mine_at(Vector2(1200, 700))
+	check(not mine.is_armed(), "a pod that has just landed is not armed")
+	check(await wait_until(func(): return mine.is_armed(), 180), "it arms")
+	check(mine.phase == mine.Phase.ARMED, "into the armed phase (%d)" % mine.phase)
+
+	log_p("-- Computah cannot set off his own pod, and a punch cannot clear one")
+	boss.global_position = mine.global_position
+	await wait(6)
+	check(sm.current_state.name != "Trapped" and mine.is_armed(), "he stands in it and nothing happens")
+	boss.global_position = sm.COMPUTAH_HOME
+	await settle_player(mine.global_position + Vector2(200, 0))
+	swing_any()
+	await wait(20)
+	check(is_instance_valid(mine) and mine.is_armed(), "a punch beside it leaves it armed")
+
+	log_p("-- refused, and NOT consumed: a guard-broken player")
+	defense._start_guard_break()
+	await wait(2)
+	check(defense.is_guard_broken, "the guard is broken")
+	check(not sm.trap_allowed(), "trap_allowed() refuses")
+	await settle_player(mine.global_position)
+	await wait(6)
+	check(sm.current_state.name != "Trapped", "standing in it does nothing")
+	check(mine.is_armed(), "and the pod is still armed for whatever they do next")
+	# Off the pod BEFORE the stun ends, and a few frames for the overlap list to catch up: an area's
+	# overlaps are a physics step behind, and teleporting off one is not something a fight does.
+	await settle_player(Vector2(500, 800))
+	await wait(6)
+	defense.clear_guard_break()
+	await wait(4)
+
+	log_p("-- refused: a grabbed player, and a finishing one")
+	player.is_grabbed = true
+	check(not sm.trap_allowed(), "a grabbed player is refused")
+	player.is_grabbed = false
+	player.is_finishing = true
+	check(not sm.trap_allowed(), "a finishing one too")
+	player.is_finishing = false
+	check(sm.trap_allowed(), "and a free player is not")
+
+	log_p("-- refused: the beam, once its aim has latched")
+	var beam: Node = sm.states["Beam"]
+	sm.on_child_transition(sm.current_state, "Beam")
+	await wait(3)
+	check(beam.phase == beam.Phase.TRACK and sm.trap_allowed(), "the tracking charge is fine: nothing is answerable yet")
+	check(await wait_until(func(): return beam.phase == beam.Phase.LOCKED, 200), "the aim latches")
+	check(not sm.trap_allowed(), "and from there a pod may not close: being somewhere else is the only answer left")
+	await park_computah()
+
+	log_p("-- triggers: an invincible player, and a dashing one")
+	player.is_invincible = true
+	check(sm.trap_allowed(), "being hit a moment ago is not a reason to walk through a bear trap")
+	clear_iframes()
+	var walked := await armed_mine_at(Vector2(900, 800))
+	boss.global_position = Vector2(900, 400)
+	defense.stamina = defense.max_stamina
+	await settle_player(Vector2(900 - 260, 800))
+	press(KEY_RIGHT)
+	tap(KEY_W)
+	var caught := await wait_until(func(): return sm.current_state.name == "Trapped", 120)
+	release(KEY_RIGHT)
+	log_p("dashed into it: state %s" % sm.current_state.name)
+	check(caught, "a dash through a pod still springs it - lock_actions() cuts the dash")
+	check(not is_instance_valid(walked) or walked.phase == walked.Phase.SPRUNG, "and the pod snaps shut")
+	# Before the lock is tested below: by the time those presses are done he has already crossed.
+	var started_at: Vector2 = boss.global_position
+
+	log_p("-- THE TOTAL LOCK")
+	check(player.is_action_locked and player.lock_seals_guard, "sealed (%s, %s)" % [player.is_action_locked, player.lock_seals_guard])
+	var held_at: Vector2 = player.global_position
+	var presses := []
+	var watch_press := func(credited: bool): presses.append(credited)
+	defense.block_pressed.connect(watch_press)
+	press(KEY_RIGHT)
+	await wait(15)
+	release(KEY_RIGHT)
+	log_p("held at %s, now %s" % [held_at, player.global_position])
+	check(player.global_position.distance_to(held_at) < 1.0, "no walking")
+	var before_dash: int = player.last_dodge_physics_frame
+	tap(KEY_W)
+	await wait(6)
+	check(player.last_dodge_physics_frame == before_dash and not player.is_dodging, "no dash")
+	tap(KEY_Q)
+	await wait(6)
+	check(player.state_machine.current_state.name != "Punching", "no punch (%s)" % player.state_machine.current_state.name)
+	press(KEY_SHIFT)
+	await wait(8)
+	check(not defense.is_guarding() and player.state_machine.current_state.name != "Blocking", "the block press raises no guard (%s)" % player.state_machine.current_state.name)
+	check(presses.is_empty(), "and earns no parry credit at all (%s)" % [presses])
+	release(KEY_SHIFT)
+	defense.block_pressed.disconnect(watch_press)
+
+	log_p("-- the walk-over")
+	check(await wait_until(func(): return trapped.phase == trapped.Phase.CHARGE, 300), "he crosses and charges")
+	var reach: float = boss.global_position.distance_to(player.global_position)
+	log_p("crossed %.0f px, stopped %.0f px away (pounce_range %.0f)" % [started_at.distance_to(boss.global_position), reach, sm.pounce_range])
+	check(started_at.distance_to(boss.global_position) > 100.0, "he actually crossed to them")
+	check(reach <= sm.pounce_range + 32.0, "and stopped at pounce_range")
+	check(boss.current_anim == &"uppercut_wind", "on the uppercut's load (%s)" % boss.current_anim)
+
+	log_p("-- the whiff, and the window it opens")
+	trapped.meter = 1.0 - sm.escape_gain * 0.5
+	tap(MASH_KEYS[trapped.mash_actions()[0]])
+	await wait(2)
+	check(trapped.escaped, "the last press fills the meter and they are out")
+	check(not player.is_action_locked and not player.lock_seals_guard, "and free on the instant, both kinds of lock cleared")
+	var health_at_escape: int = player.playerHealth
+	check(await wait_until(func(): return sm.current_state.name == "Punish", 400), "he swings anyway and overbalances into a window")
+	check(player.playerHealth == health_at_escape, "the swing had NO hitbox on it at all (%d)" % player.playerHealth)
+	log_p("window %.2f s, cap %d, poses %s/%s/%s" % [punish.window_time, punish.window_cap, punish.enter_anim, punish.hold_anim, punish.exit_anim])
+	check(is_equal_approx(punish.window_time, sm.mine_fall_window), "it is mine_fall_window long (%.2f)" % punish.window_time)
+	check(punish.window_cap == sm.mine_fall_cap, "with mine_fall_cap punches in it (%d)" % punish.window_cap)
+	check(punish.enter_anim == &"uppercut_fall" and punish.hold_anim == &"fallen" and punish.exit_anim == &"uppercut_up", "on the felled poses")
+	check(boss.body_pose == &"fallen", "and the hurtbox is on the floor pose (%s)" % boss.body_pose)
+	var box: Vector2 = boss.hurtbox_shape.shape.size
+	check(box == layout.C_DOWN_BODY_BOX.size * layout.SCALE, "swapped to the down box, not left on the standing chassis (%s)" % box)
+	await park_computah()
+
+	log_p("-- a failed mash: the uppercut lands, and he is NOT punishable for it")
+	clear_iframes()
+	player.playerHealth = 10
+	var pod := await armed_mine_at(Vector2(960, 800))
+	boss.global_position = Vector2(1100, 800)
+	await settle_player(pod.global_position)
+	check(await wait_until(func(): return sm.current_state.name == "Trapped", 120), "a pod closes on them")
+	var health_before: int = player.playerHealth
+	check(await wait_until(func(): return trapped.swung, 400), "the uppercut connects")
+	await wait(2)
+	log_p("health %d -> %d" % [health_before, player.playerHealth])
+	check(player.playerHealth == health_before - 2, "computah_uppercut costs 2 half-hearts (%d)" % player.playerHealth)
+	check(not player.is_action_locked, "and the launch that frees them is the knockdown")
+	var back := await wait_until(func(): return sm.current_state.name != "Trapped", 300)
+	log_p("he goes to %s" % sm.current_state.name)
+	check(back and sm.current_state.name != "Punish", "no punish window follows an uppercut that landed")
+	await park_computah()
+
+	log_p("-- a catch's three costs, landing through i-frames")
+	clear_iframes()
+	player.playerHealth = 10
+	defense.stamina = defense.max_stamina
+	boss.break_gauge.value = 60.0
+	await settle_player(Vector2(960, 800))
+	# THE GAUGE DRAINS OFF THE GRAB, not off the slam: computah_chase carries hype_loss, the slam does
+	# not, and BossBreakGauge subtracts hit_loss itself off PlayerDefense.hit_taken. Nothing in the
+	# fight calls it by hand - two sources for one number is how they drift.
+	player.is_invincible = true
+	var gauge_in: float = boss.break_gauge.value
+	check(front_hit(&"computah_chase", boss) == 1, "the pounce lands through the i-frames")
+	await wait(2)
+	log_p("gauge %.0f -> %.0f (hit_loss %.0f)" % [gauge_in, boss.break_gauge.value, boss.break_gauge.hit_loss])
+	check(is_equal_approx(gauge_in - boss.break_gauge.value, boss.break_gauge.hit_loss), "and drains %.0f Break gauge, by the gauge's own rule (%.1f)" % [boss.break_gauge.hit_loss, gauge_in - boss.break_gauge.value])
+	player.is_invincible = true
+	var health_in: int = player.playerHealth
+	var stamina_in: float = defense.stamina
+	sm.states["Caught"].grabber = boss
+	sm.on_child_transition(sm.current_state, "Caught")
+	check(await wait_until(func(): return player.playerHealth < health_in, 90), "the slam lands inside the i-frames too")
+	await wait(6)
+	log_p("health %d -> %d, stamina %.0f -> %.0f" % [health_in, player.playerHealth, stamina_in, defense.stamina])
+	check(player.playerHealth == health_in - 2, "2 half-hearts (%d)" % player.playerHealth)
+	check(is_equal_approx(stamina_in - defense.stamina, sm.catch_stamina_drain), "%.0f stamina (%.1f)" % [sm.catch_stamina_drain, stamina_in - defense.stamina])
+	check(not defense.is_guard_broken, "and a catch never guard-breaks them: a stun on top of a grab is a double punish")
+	check(await wait_until(func(): return not player.is_action_locked, 120), "the catch lets go")
+	await park_computah()
+
+	log_p("-- the grace after a hold")
+	sm.note_release()
+	check(sm.in_catch_grace(), "inside catch_grace the pounce arms nothing")
+	check(not sm.trap_allowed(), "and inside trap_grace no pod may close either")
+	await wait(int(sm.trap_grace * 60.0) + 8)
+	check(sm.trap_allowed(), "past trap_grace a pod may close again")
+
+	log_p("-- a full Break gauge drops him where he stands")
+	check(boss.break_gauge != null, "he has a Break gauge at all")
+	sm.on_child_transition(sm.current_state, "Beam")
+	await wait(4)
+	boss.break_gauge.locked = false
+	boss.break_gauge.value = 0.0
+	check(boss.break_gauge.add(boss.break_gauge.max_value), "filling it breaks him")
+	check(await wait_until(func(): return sm.current_state.name == "Punish", 120), "which drops him into a window - the daze his finisher needs")
+	check(boss.break_gauge.locked, "and the gauge locks behind it")
+	check(boss.is_down(), "is_down() reads that window, which is what the gauge's own wait runs on")
+	check(not player.is_action_locked, "the player is untouched by it")
+	await park_computah()
+
+	log_p("-- every release path leaves them free")
+	await mine_release_path("the fight ending under them", func(): sm.enter_defeated())
+	await mine_release_path("the player being beaten under them", func(): player.playerHealth = 0)
+	await mine_release_path("a finisher starting under them", func(): player.is_finishing = true)
+	await mine_release_path("the state leaving the tree under them", func():
+		var manager: Node = sm.states["Trapped"].get_parent()
+		manager.remove_child(sm.states["Trapped"]))
+
+
+# One trap, one way of ending it, and the only thing that matters: the player is not left sealed.
+func mine_release_path(what: String, end_it: Callable) -> void:
+	await load_computah_fight()
+	var trapped: Node = sm.states["Trapped"]
+	clear_iframes()
+	var pod := await armed_mine_at(Vector2(960, 800))
+	boss.global_position = Vector2(1400, 800)
+	await settle_player(pod.global_position)
+	if not await wait_until(func(): return sm.current_state.name == "Trapped", 120):
+		check(false, "%s: a pod closed on them" % what)
+		return
+	check(player.is_action_locked and player.lock_seals_guard, "%s: sealed first" % what)
+	end_it.call()
+	await wait(20)
+	check(not player.is_action_locked and not player.lock_seals_guard, "%s: and free after (%s, %s)" % [what, player.is_action_locked, player.lock_seals_guard])
+	check(trapped.released, "%s: through the one funnel" % what)
+	# The scene-change path pulls the state out of the tree; put it back so nothing is left orphaned.
+	if trapped.get_parent() == null:
+		sm.add_child(trapped)
+
+
+# The mash itself. REAL seconds: the press rule (MashInput.counts) gates on a real interval, so this
+# mode runs with --max-fps rather than --fixed-fps.
+func test_mine_mash() -> void:
+	await load_computah_fight()
+	var trapped: Node = sm.states["Trapped"]
+	var finisher: Node = player.get_node("Finisher")
+
+	log_p("-- it runs on the player's own mash pair, and the prompt says ESCAPE!")
+	clear_iframes()
+	var pod := await armed_mine_at(Vector2(960, 800))
+	boss.global_position = Vector2(1080, 800)
+	await settle_player(pod.global_position)
+	check(await wait_until(func(): return sm.current_state.name == "Trapped", 120), "a pod closes on them")
+	var pair: Array = trapped.mash_actions()
+	log_p("the pair is %s" % [pair])
+	check(pair == finisher.mash_actions(), "the same pair the finisher mashes, read off it rather than named here")
+	check(trapped.prompt_key == &"escape", "the prompt asks for the alarm-red ESCAPE!, not the finisher's gold MASH!")
+	var layout: GDScript = load("res://Scripts/FinisherArtLayout.gd")
+	check(layout.PROMPT_WORDS.has(&"escape"), "and that word is already written")
+	var prompt: Node2D = trapped.prompt
+	check(prompt != null and prompt.finisher == trapped, "it has a prompt of its own, wired to the trap")
+	check(prompt.visible, "and it is up from the moment the jaws shut")
+
+	log_p("-- alternation, and two presses in one flush")
+	trapped.meter = 0.0
+	trapped.last_action = &""
+	trapped.last_press_usec = 0
+	tap(MASH_KEYS[pair[0]])
+	await wait(4)
+	var after_one: float = trapped.meter
+	check(after_one > 0.0, "the first press pays escape_gain (%.3f)" % after_one)
+	tap(MASH_KEYS[pair[0]])
+	await wait(1)
+	log_p("the same key again: %.3f -> %.3f" % [after_one, trapped.meter])
+	check(trapped.meter <= after_one, "the same key twice pays nothing")
+	trapped.meter = 0.0
+	trapped.last_action = &""
+	trapped.last_press_usec = 0
+	press(MASH_KEYS[pair[0]])
+	press(MASH_KEYS[pair[1]])
+	release(MASH_KEYS[pair[0]])
+	release(MASH_KEYS[pair[1]])
+	await wait(2)
+	log_p("both keys in one flush: %.3f (one press is %.3f)" % [trapped.meter, sm.escape_gain])
+	check(trapped.meter <= sm.escape_gain + 0.001, "both keys pressed together count once")
+	trapped.meter = 0.0
+	trapped.last_action = &""
+	trapped.last_press_usec = 0
+
+	log_p("-- ten presses a second gets out; three does not")
+	var trap_seconds: float = trapped.CLOSE_TIME + sm.mine_charge
+	var boundary: float = ((1.0 / trap_seconds) + sm.escape_drain) / sm.escape_gain
+	log_p("gain %.2f, drain %.2f/s, about %.2f s of trap: the boundary is %.1f presses a second"
+		% [sm.escape_gain, sm.escape_drain, trap_seconds, boundary])
+	check(boundary > 3.5 and boundary < 9.0, "and both test rates are clear of it (%.1f/s)" % boundary)
+	check(await mash_out(trapped, pair, 6), "at ten a second they are out before the uppercut")
+	await park_computah()
+
+	await load_computah_fight()
+	trapped = sm.states["Trapped"]
+	clear_iframes()
+	player.playerHealth = 10
+	pod = await armed_mine_at(Vector2(960, 800))
+	boss.global_position = Vector2(1080, 800)
+	await settle_player(pod.global_position)
+	check(await wait_until(func(): return sm.current_state.name == "Trapped", 120), "a second pod closes on them")
+	var slow := await mash_out(trapped, trapped.mash_actions(), 20)
+	check(not slow, "at three a second they are not")
+	check(player.playerHealth < 10, "and they wear the uppercut (%d)" % player.playerHealth)
+
+
+# Alternating presses every `every` frames until the trap resolves. Returns whether they got out.
+func mash_out(trapped: Node, pair: Array, every: int) -> bool:
+	var step := 0
+	for i in 600:
+		if trapped.escaped:
+			return true
+		if trapped.done or sm.current_state.name != "Trapped":
+			return trapped.escaped
+		tap(MASH_KEYS[pair[step % 2]])
+		step += 1
+		await wait(every)
+	return trapped.escaped
+
+
+# ------------------------------------------------------------------ Computah's overload
+# HIS DPS CHECK, AND THE ONE ATTACK IN THE GAME THAT ASKS FOR OFFENCE. He stands still and winds
+# himself up; the player has to rush him and land overload_threshold half-hearts before his clock runs
+# out. Break it and he is left dazed, which is the uppercut. Fail it and the charge covers the whole
+# mat for a full heart that nothing answers - no guard, no parry, no dash - which is exactly why it
+# carries no tell of either colour: a badge is an answer key naming a button, and this has no button.
+
+const OVERLOAD_BLAST := &"computah_overload_blast"
+const DASH_IMMUNITY := "res://Scripts/DashImmunity.gd"
+
+
+func overload() -> Node:
+	return sm.states["Overload"]
+
+
+# His own entry, not a hand-built one, from wherever the player is standing.
+func begin_overload() -> Node:
+	sm.on_child_transition(sm.current_state, "Overload")
+	await wait(2)
+	return overload()
+
+
+# Back to a standing start with his health, his gauge and the mat all clean, so one section can never
+# decide the next one.
+func overload_reset() -> void:
+	await park_computah()
+	boss.boss_health = boss.max_health
+	if boss.break_gauge:
+		boss.break_gauge.locked = false
+		boss.break_gauge.value = 0.0
+	boss.begin_window(boss.MAX_HITS_PER_WINDOW)
+	clear_iframes()
+	player.playerHealth = 1000
+	player.is_grabbed = false
+	player.is_finishing = false
+	player.is_talking = false
+	player.is_action_locked = false
+	defense.clear_guard_break()
+	defense.stamina = defense.max_stamina
+	await wait(2)
+
+
+# Exactly overload_start_range away, to his RIGHT and a little above his feet so the punch box lands
+# in the middle of his hurtbox band rather than on its bottom edge. The 60 px of lift comes out of the
+# horizontal run-in, so the straight-line distance is the gate's own number to the pixel.
+func overload_start_spot() -> Vector2:
+	var lift := 60.0
+	var range_px: float = sm.overload_start_range
+	return boss.global_position + Vector2(sqrt(range_px * range_px - lift * lift), -lift)
+
+
+# The gap between their origins at which a punch first reaches him, with the player standing to his
+# RIGHT: the far edge of the fitted punch box against the near face of his hurtbox, both read off the
+# live shapes rather than assumed.
+func overload_reach() -> float:
+	player.fit_punch_hitbox()
+	var box: Rect2 = fitted_punch_box()
+	var hurt: CollisionShape2D = boss.hurtbox_shape
+	var near: float = hurt.position.x + (hurt.shape as RectangleShape2D).size.x / 2.0
+	return near - box.position.x * player.global_scale.x
+
+
+# THE BOT. It rushes him from where it stands and punches until the charge resolves, the way a player
+# does: the walk held all the way in, then presses either on the combo's own beat window (a rhythm
+# player) or as fast as the game will take them (a masher). Nothing is teleported and nothing is
+# handed to it - what it measures is whether the attack is winnable from where it started.
+func rush_and_punch(on_beat: bool, max_frames := 400) -> Dictionary:
+	var out := {"damage": 0, "seconds": 0.0, "presses": 0, "contact": -1.0, "arrived": -1.0,
+		"reach": overload_reach(), "from": player.global_position.distance_to(boss.global_position)}
+	var start: float = defense.clock
+	var ov: Node = overload()
+	var walking := true
+	press(KEY_LEFT)
+	for i in max_frames:
+		if sm.current_state != ov or ov.phase != ov.Phase.CHARGE:
+			break
+		if walking and player.global_position.x - boss.global_position.x <= out.reach:
+			walking = false
+			out.arrived = defense.clock - start
+			release(KEY_LEFT)
+		if not walking:
+			var punching: bool = player.state_machine.current_state.name == "Punching"
+			# A rhythm player waits for the beat window; with no combo yet there is no window to wait
+			# for, so the opening punch is thrown either way.
+			var beat: bool = player.combo.window_open or player.combo.count == 0
+			if not punching and (beat or not on_beat):
+				tap(KEY_Q)
+				out.presses += 1
+		if out.contact < 0.0 and boss.damage_this_window > 0:
+			out.contact = defense.clock - start
+		out.damage = maxi(out.damage, boss.damage_this_window)
+		await physics_frame
+	if walking:
+		release(KEY_LEFT)
+	out.seconds = defense.clock - start
+	return out
+
+
+func test_computah_overload() -> void:
+	await load_computah_fight()
+	var ov: Node = overload()
+	var catalogue: Dictionary = CATALOG.get_attack(OVERLOAD_BLAST)
+	var blast_damage: int = catalogue.damage
+
+	log_p("-- the numbers, and the one that would make it unwinnable by construction")
+	var needed: int = sm.overload_threshold
+	log_p("threshold %d half-hearts, hit cap %d, %.2f s, from %.0f px, every %d cycles"
+		% [needed, sm.overload_hit_cap, sm.overload_time, sm.overload_start_range, sm.overload_every_cycles])
+	# take_punch() returns 0 past the cap, and a punch that returns 0 makes PlayerCombo.resolve_punch()
+	# call reset(): a cap anywhere near the threshold leaves the player hitting a boss that has stopped
+	# reacting with a combo that has silently died. THE THRESHOLD ENDS THE CHARGE, NEVER THE CAP.
+	check(sm.overload_hit_cap > needed, "overload_hit_cap (%d) strictly exceeds the %d punches the threshold needs at 1 damage each" % [sm.overload_hit_cap, needed])
+	check(sm.overload_hit_cap > boss.MAX_HITS_PER_WINDOW, "and it is not the window's usual cap of %d" % boss.MAX_HITS_PER_WINDOW)
+	check(needed <= boss.max_health / 4, "the threshold is a check, not a second health bar (%d of %d)" % [needed, boss.max_health])
+
+	log_p("-- the catalogue entry: a full heart, and no answer of any kind")
+	var halves: int = load("res://Scripts/PlayerHealthArtLayout.gd").CONTAINERS * 2
+	log_p("%s: %s" % [OVERLOAD_BLAST, catalogue])
+	check(blast_damage == 2 and halves == 6, "one full heart: damage %d of the player's %d halves" % [blast_damage, halves])
+	check(not catalogue.blockable and not catalogue.parryable and not catalogue.dash_through, "no guard, no parry, no dash")
+	check(not catalogue.tell and not catalogue.dodge_tell, "and NEITHER tell: a badge is an answer key, and this has no answer")
+	check(catalogue.hype_loss, "hype_loss stays on: no grab took a toll first, so the blast IS the toll")
+	check(not catalogue.bypass_invincibility, "it does not bypass i-frames: it closes no exploit, and it protects being hit just before an undodgeable blast")
+	check(UNBLOCKABLE.has(OVERLOAD_BLAST), "the suite's UNBLOCKABLE list has it")
+	check(not IGNORES_IFRAMES.has(OVERLOAD_BLAST), "IGNORES_IFRAMES does not")
+	check(not WINDUP_READS.has(OVERLOAD_BLAST), "and the tell-timing table does not: there is no wind-up to read, because reading it is not the answer")
+
+	log_p("-- the entry: the race gauge, his body, and no badge of either colour")
+	await overload_reset()
+	await settle_player(boss.global_position + Vector2(300, -60))
+	var seen_tell := [false]
+	var watch_tell := func():
+		if tell_node() != null:
+			seen_tell[0] = true
+	physics_frame.connect(watch_tell)
+	await begin_overload()
+	check(boss.overload.visible, "the race gauge is up over his head")
+	check(boss.overload_cells.size() == needed, "its bottom row is one cell per half-heart of the threshold (%d)" % boss.overload_cells.size())
+	check(boss.aura.visible, "the overcharge aura is on")
+	check(boss.is_open() and boss.hurtbox.monitoring, "and he is punchable from the first frame")
+	check(boss.window_cap == sm.overload_hit_cap, "on the overload's own cap (%d)" % boss.window_cap)
+	check(boss.damage_this_window == 0, "with the damage counter cleared")
+	var rows := {}
+	var watch_rows := func(): rows[boss.charge_state] = true
+	physics_frame.connect(watch_rows)
+	check(await wait_until(func(): return ov.phase != ov.Phase.CHARGE, 400), "the charge runs out on its own")
+	physics_frame.disconnect(watch_rows)
+	physics_frame.disconnect(watch_tell)
+	log_p("his charge rows over the whole charge: %s" % [rows.keys()])
+	# computah_overload_charge is 4 frames x 3 rows and runs the OPPOSITE way to the battery sheets:
+	# row 0 is barely charged and row 2 is white-hot.
+	check(rows.has(0) and rows.has(1) and rows.has(2), "his body steps all three charge rows, 0 barely -> 2 white-hot (%s)" % [rows.keys()])
+	check(not seen_tell[0], "and no ParryTell badge ever goes up: red would say parry and yellow would say dodge, and both lose a heart here")
+
+	log_p("-- FAIL: the blast fires once, and nothing answers it")
+	await overload_reset()
+	# load_computah_fight() already tracks hits; a second track() would connect a second handler and
+	# log every hit twice.
+	track_parries()
+	track_dodges()
+	player.playerHealth = 6
+	await settle_player(boss.global_position + Vector2(300, -60))
+	events.clear()
+	await begin_overload()
+	press(KEY_SHIFT)
+	check(await wait_until(func(): return ov.phase == ov.Phase.RELEASE, 400), "the charge runs out and he releases")
+	await wait(6)
+	release(KEY_SHIFT)
+	var blasts := events_of("HIT", OVERLOAD_BLAST)
+	log_p("health 6 -> %d, %d blast(s), %d blocked, %d parried, %d dodged"
+		% [player.playerHealth, blasts.size(), events_of("BLOCKED").size(), parries.size(), dodges.size()])
+	check(ov.blast_fired and blasts.size() == 1, "the blast lands exactly once (%d)" % blasts.size())
+	check(player.playerHealth == 6 - blast_damage, "for the catalogue's %d half-hearts (%d left of 6)" % [blast_damage, player.playerHealth])
+	check(events_of("BLOCKED").is_empty(), "a guard held through the whole charge absorbs nothing")
+	check(parries.is_empty(), "and the press that raised it parries nothing")
+	check(dodges.is_empty(), "nothing about it is a perfect dodge")
+	check(await wait_until(func(): return sm.current_state.name == "Punish", 200), "he vents afterwards")
+	check(is_equal_approx(sm.states["Punish"].window_time, sm.overload_vent), "on the stingy overload_vent window (%.2f s)" % sm.states["Punish"].window_time)
+
+	log_p("-- FAIL: a dash onto the release dodges nothing either")
+	await overload_reset()
+	player.playerHealth = 6
+	defense.stamina = defense.max_stamina
+	await settle_player(boss.global_position + Vector2(300, -60))
+	events.clear()
+	dodges.clear()
+	await begin_overload()
+	# Inside the dash's immunity window when the charge runs out, so what is under test is a player who
+	# really is dash-immune rather than one who mistimed it.
+	check(await wait_until(func(): return ov.clock >= sm.overload_time - 0.12, 400), "the charge reaches its last tenth")
+	tap(KEY_W)
+	var immune := [false]
+	var dash_immunity: GDScript = load(DASH_IMMUNITY)
+	var watch_dash := func():
+		if ov.blast_fired and not immune[0]:
+			immune[0] = dash_immunity.is_immune(player, CATALOG.DASH_IMMUNITY_TIME, CATALOG.DASH_IMMUNITY_COOLDOWN)
+	physics_frame.connect(watch_dash)
+	check(await wait_until(func(): return ov.blast_fired, 120), "it goes off mid-dash")
+	await wait(4)
+	physics_frame.disconnect(watch_dash)
+	log_p("dash-immune as it landed: %s, health 6 -> %d, %d dodges" % [immune[0], player.playerHealth, dodges.size()])
+	check(immune[0], "the player really was inside the dash's i-frames")
+	check(player.playerHealth == 6 - blast_damage, "and still paid the full heart (%d left of 6)" % player.playerHealth)
+	check(dodges.is_empty(), "with no perfect dodge to show for it")
+
+	log_p("-- BREAK: punching through the threshold drops him, and hands over the uppercut")
+	await overload_reset()
+	player.playerHealth = 6
+	await settle_player(boss.global_position + Vector2(300, -60))
+	events.clear()
+	await begin_overload()
+	var dazeable := [false]
+	var watch_daze := func():
+		if sm.current_state == ov and boss.can_be_dazed():
+			dazeable[0] = true
+	physics_frame.connect(watch_daze)
+	var run := await rush_and_punch(false)
+	log_p("put in %d of %d in %.2f s over %d presses" % [run.damage, needed, run.seconds, run.presses])
+	check(run.damage >= needed, "the threshold is reached (%d of %d)" % [run.damage, needed])
+	check(ov.phase == ov.Phase.BROKEN, "which breaks the charge rather than the hit cap ending it (%d)" % ov.phase)
+	check(await wait_until(func(): return sm.current_state.name == "Punish", 200), "and he drops into a window")
+	physics_frame.disconnect(watch_daze)
+	log_p("gauge %.0f of %.0f, locked %s; blast fired %s; health %d" % [boss.break_gauge.value, boss.break_gauge.max_value, boss.break_gauge.locked, ov.blast_fired, player.playerHealth])
+	check(not ov.blast_fired and events_of("HIT", OVERLOAD_BLAST).is_empty(), "no blast went off at all")
+	check(player.playerHealth == 6, "so the player's health never moved (%d of 6)" % player.playerHealth)
+	check(boss.break_gauge.locked and boss.break_gauge.value == 0.0, "it went down the Break gauge's own road: filled, broken and locked behind it")
+	check(not dazeable[0], "can_be_dazed() was false for every frame of the charge: no finisher may start mid-charge")
+	check(boss.can_be_dazed(), "and true in the window it opened, which is the daze his uppercut needs")
+
+	log_p("-- BREAK: with no Break gauge at all, the reward still exists")
+	await overload_reset()
+	var gauge: Node = boss.break_gauge
+	boss.break_gauge = null
+	await settle_player(boss.global_position + Vector2(300, -60))
+	await begin_overload()
+	run = await rush_and_punch(false)
+	check(await wait_until(func(): return sm.current_state.name == "Punish", 200), "the fallback window opens (%d damage in)" % run.damage)
+	check(is_equal_approx(sm.states["Punish"].window_time, sm.overload_break_window), "on overload_break_window (%.2f s)" % sm.states["Punish"].window_time)
+	boss.break_gauge = gauge
+
+	log_p("-- REACHABILITY: from exactly overload_start_range, both ways of punching clear it")
+	for on_beat in [true, false]:
+		await overload_reset()
+		var how := "on the beat" if on_beat else "mashing"
+		await settle_player(overload_start_spot())
+		await wait(4)
+		await begin_overload()
+		run = await rush_and_punch(on_beat)
+		var spare: float = sm.overload_time - run.seconds
+		log_p("%s from %.0f px: reach %.0f px, arrived at %.2f s, first contact %.2f s, %d of %d in %.2f s over %d presses (%.2f s spare of %.2f)"
+			% [how, run.from, run.reach, run.arrived, run.contact, run.damage, needed, run.seconds, run.presses, spare, sm.overload_time])
+		check(absf(run.from - sm.overload_start_range) < 1.0, "%s: it started at the gate's own range (%.0f px)" % [how, run.from])
+		check(run.damage >= needed, "%s: the threshold is cleared from the worst legal start (%d of %d)" % [how, run.damage, needed])
+		check(ov.phase == ov.Phase.BROKEN and spare > 0.0, "%s: the charge broke with %.2f s to spare" % [how, spare])
+		await wait_until(func(): return sm.current_state.name == "Punish", 200)
+
+	log_p("-- FAIRNESS: every way of being unable to answer refuses the start")
+	await overload_reset()
+	await settle_player(boss.global_position + Vector2(300, -60))
+	check(sm.can_start_overload(), "a free player in range, with nothing on the mat, is allowed")
+	var gates := [
+		["a grabbed player", func(): player.is_grabbed = true, func(): player.is_grabbed = false],
+		["a trapped one - anything that locks their actions", func(): player.is_action_locked = true, func(): player.is_action_locked = false],
+		["a finishing one", func(): player.is_finishing = true, func(): player.is_finishing = false],
+		["a talking one", func(): player.is_talking = true, func(): player.is_talking = false],
+		["a beaten one", func(): player.playerHealth = 0, func(): player.playerHealth = 1000],
+		["one whose fight is over", func(): player.fight_over = true, func(): player.fight_over = false],
+		["a locked Break gauge, which is the whole of the pacing gate", func(): boss.break_gauge.locked = true, func(): boss.break_gauge.locked = false],
+	]
+	for gate in gates:
+		gate[1].call()
+		var refused: bool = not sm.can_start_overload()
+		gate[2].call()
+		check(refused, "refused: %s" % gate[0])
+	var stood: Vector2 = player.global_position
+	player.global_position = boss.global_position + Vector2(sm.overload_start_range + 40.0, 0)
+	check(not sm.can_start_overload(), "refused: a player further than overload_start_range (%.0f px)" % sm.overload_start_range)
+	player.global_position = boss.global_position + Vector2(sm.overload_start_range - 40.0, 0)
+	check(sm.can_start_overload(), "and allowed just inside it")
+	player.global_position = stood
+	await wait(2)
+	defense._start_guard_break()
+	await wait(2)
+	check(defense.is_guard_broken and not sm.can_start_overload(), "refused: a guard break is a stun with no input in it")
+	defense.clear_guard_break()
+	await wait(2)
+	var pod := await armed_mine_at(boss.global_position + Vector2(400, 0))
+	check(pod.is_live() and sm.can_start_overload(), "a live pod does NOT refuse the start: the field is built to overlap itself, so refusing on one refuses forever")
+
+	log_p("-- instead he WIPES THE MAT as he plants, so nobody is ever asked to cross a minefield")
+	var flying := lay_mine_at(boss.global_position + Vector2(-400, 0))
+	await settle_player(boss.global_position + Vector2(300, -60))
+	await begin_overload()
+	check(not pod.is_live() and pod.phase == pod.Phase.FADING, "the armed pod is EXPIRING, not freed: it breaks up through its own frames (%d)" % pod.phase)
+	check(not flying.is_live() and flying.phase == flying.Phase.FADING, "and a pod still in flight goes with it (%d)" % flying.phase)
+	check(not pod.trigger.monitoring and not flying.trigger.monitoring, "neither can catch anything from the first frame of the charge")
+	check(await wait_until(func(): return get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), int(sm.mine_fade * 60.0) + 30),
+		"and the mat is clear inside mine_fade (%.2f s), under the 0.98 s run-in from the furthest legal start" % sm.mine_fade)
+
+	log_p("-- a player sealed in a pod still refuses the start, and the sweep never takes their pod")
+	await overload_reset()
+	var held_pod := await armed_mine_at(Vector2(960, 800))
+	boss.global_position = Vector2(1400, 800)
+	await settle_player(held_pod.global_position)
+	check(await wait_until(func(): return sm.current_state.name == "Trapped", 120), "a pod closes on them")
+	check(player.is_action_locked and not sm.can_start_overload(), "refused while they are sealed in it, on the lock rather than on the pod")
+	sm.sweep_field()
+	await wait(3)
+	check(is_instance_valid(held_pod) and held_pod.phase == held_pod.Phase.SPRUNG, "a sweep run anyway leaves the SPRUNG pod alone: ComputahTrapped.release() owns its life")
+	check(player.is_action_locked, "so nobody is ever stranded by a pod freeing itself out from under them")
+	sm.states["Trapped"].release()
+	await wait(4)
+	check(not player.is_action_locked and not is_instance_valid(held_pod), "and the trap's own release frees the player and the pod together")
+
+	log_p("-- FAIRNESS: the blast is DISARMED by anything that takes their inputs away mid-charge")
+	await overload_reset()
+	player.playerHealth = 6
+	await settle_player(boss.global_position + Vector2(300, -60))
+	events.clear()
+	await begin_overload()
+	await wait(60)
+	defense._start_guard_break()
+	check(await wait_until(func(): return ov.phase == ov.Phase.DISARM, 120), "the guard break disarms it mid-charge (%d)" % ov.phase)
+	check(await wait_until(func(): return sm.current_state.name == "Punish", 300), "he vents it into the floor instead")
+	log_p("health %d of 6, blast fired %s, gauge %.0f" % [player.playerHealth, ov.blast_fired, boss.break_gauge.value])
+	check(not ov.blast_fired and player.playerHealth == 6, "NO BLAST AND NO DAMAGE: failing a check they were never given a turn in is not their fault")
+	check(not boss.break_gauge.locked, "and it does not drop him either: being guard-broken is not a thing to be rewarded for")
+	defense.clear_guard_break()
+
+	log_p("-- the picker: it takes a turn without spending one")
+	await overload_reset()
+	await settle_player(boss.global_position + Vector2(300, -60))
+	sm.last_attack = "LayMines"
+	sm.cycles_started = sm.overload_every_cycles - 1
+	sm.start_cycle()
+	check(sm.current_state.name == "Overload", "every overload_every_cycles cycles it comes round (%s)" % sm.current_state.name)
+	check(sm.last_attack == "LayMines", "and leaves the beam/mine alternation exactly where it was")
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	sm.start_cycle()
+	check(sm.current_state.name == "Beam", "so the mine field is still always followed by the beam (%s)" % sm.current_state.name)
+	await park_computah()
+	boss.break_gauge.locked = true
+	sm.last_attack = "Beam"
+	sm.cycles_started = sm.overload_every_cycles - 1
+	sm.start_cycle()
+	check(sm.current_state.name == "LayMines", "a cycle it is refused on is a plain one (%s)" % sm.current_state.name)
+	boss.break_gauge.locked = false
+	await park_computah()

@@ -349,7 +349,7 @@ func _start_music() -> void:
 		boss.start_music()
 
 
-# Built here rather than wired into the scene, the way BossOneScript builds its Break stings: the
+# Built here rather than wired into the scene, the way EricScript builds its Break stings: the
 # table in EricEntranceLayout is the only place they are named.
 func _build_sfx() -> void:
 	if not sfx_players.is_empty():

@@ -15,7 +15,7 @@ extends Node2D
 # centre, inside PlayerDefense.block_omni_radius, so a clone arriving from behind is as answerable as
 # one from the front. This is a timing check, not an aiming one.
 # Each clone is its own node and so its own hit source: PlayerDefense keeps absorbed_until per source
-# for blocked_rehit_interval (1.0 s) and the clones come 0.70 s apart, so sharing one source would
+# for blocked_rehit_interval (1.0 s) and the clones come 0.62 s apart, so sharing one source would
 # make every clone after a blocked or parried one free - which is exactly what the barrage is not
 # allowed to do.
 

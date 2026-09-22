@@ -1,14 +1,23 @@
 extends Node
 
-# Carter's fight, boss 5. His cycle is one move: Intro once, then RagingDemon -> Recover -> Idle ->
-# RagingDemon for as long as he is standing. It is shaped so a second attack slots in beside
-# RagingDemon without any of this changing.
+# Carter's fight, boss 5. Intro once, then attack -> Recover -> Idle -> attack for as long as he is
+# standing. He has two attacks and they strictly alternate (next_attack): the Raging Demon barrage,
+# then the Beam Rush, then the barrage again.
 #
-# THE DIFFICULTY AXIS IS THE NUMBER OF YELLOWS, AND NOTHING ELSE. Fifteen clones, identical rhythm,
-# every round forever - that is what makes the fight learnable. To make it harder, raise what
-# yellow_count() returns. Never shorten clone_show: 0.44 s is a red/yellow DISCRIMINATION reaction
-# (~0.35-0.40 s), which is slower than a simple one, and cutting it makes the move a coin flip
-# rather than a read.
+# THE BARRAGE'S DIFFICULTY AXIS IS THE NUMBER OF YELLOWS, AND NOTHING ELSE. Fifteen clones,
+# identical rhythm, every round forever - that is what makes the fight learnable. To make it harder,
+# raise what yellow_count() returns. Never shorten clone_show: 0.36 s is a red/yellow DISCRIMINATION
+# reaction (~0.35-0.40 s), which is slower than a simple one, and cutting it makes the move a coin
+# flip rather than a read.
+#
+# THERE IS NO PER-BOSS HYPE TABLE HERE, AND THAT IS A MEASURED RESULT RATHER THAN AN OVERSIGHT.
+# PlayerFeel's feel_v2 cuts a parry from [25, 30, 35] to [15, 20, 25], which is 40% off the first
+# parry but only 29% off a barrage: fifteen clones spend almost all of it on the third tier. A
+# perfect first barrage pays 360 against V1's 510 and a whole fight 1040 against 1480, and the meter
+# only holds 100 - so it fills on the 5th clean parry instead of the 4th, both inside barrage one,
+# and still does at 50% reads with the guard down between clones. The reworked dash and punch reach
+# change nothing during the barrage at all: the player is is_action_locked and the guard is the only
+# answer they have.
 #
 # THE PLAYER-API WRAPPERS BELOW ARE THE ONLY PLACE THIS FIGHT TOUCHES THE PLAYER'S LOCK, PARRY OR
 # STAMINA. Each is has_method-guarded with a one-shot push_warning, like JoshCardsStateMachine's
@@ -90,6 +99,45 @@ const ARENA_CENTRE := Vector2(959, 540)
 # guard break fires, which is self-inflicted and legible.
 @export var feint_stamina := 40.0
 
+#BEAM RUSH (CarterBeamRush, seconds and px)
+# Four clones hold a curtain of light each across the ring, and he teleports in beside the player and
+# strikes until a parry has filled his Break gauge. The player is NOT locked here, unlike the
+# barrage: free movement is what makes the curtains exist at all, and it is what gives the strike a
+# second answer - 0.36 s of tell against 600 px/s of walking is 216 px against a strike_reach of 120,
+# so committing early sidesteps it entirely. Sidestepping does NOT fill the gauge, though, so the
+# player who never parries eats all twelve strikes and earns the short window instead of the long one.
+#
+# THE ATTACK ENDS ON A STRIKE COUNT, NOT A CLOCK, AND NOT ON A TIMEOUT. A parry costs
+# PlayerDefense.parry_hit_stop plus parry_slow_time at parry_slow_scale - about 0.73 s of wall clock
+# each - so seven parries is five seconds of real time the player spent SUCCEEDING. A wall-clock cap
+# would cut the attack short for the player reading it and run long for the one doing nothing.
+# strike_cap is the sequence's own loop variable: frame-rate-, freeze- and hit-stop-independent by
+# construction. A player who never parries does not escape it; they die to it.
+#
+# STRIKE_SHOW IS AT THE SAME FLOOR AS CLONE_SHOW AND MUST NOT GO BELOW IT: 0.36 s is the last value
+# at which the read is a read.
+# strike_period() is show + dash + gap = 0.50 s, which sits EXACTLY ON
+# PlayerDefense.parry_mash_lockout (0.5 s). The rearm_parry() this attack makes as each strike
+# appears is therefore load-bearing and not a safety net, exactly as it is at the barrage's 0.62 s:
+# without it, whiffing a press on strike N leaves strike N+1 mathematically unparryable. Do not
+# shorten strike_gap without re-reading that.
+@export var beam_summon := 0.70
+@export var beam_charge := 0.45
+@export var strike_show := 0.36
+@export var strike_dash := 0.08
+@export var strike_gap := 0.06
+# How far beside the player he materialises, along x, and how far off their line on y.
+@export var strike_range := Vector2(190, 260)
+@export var strike_y_jitter := 40.0
+# Half-width of the box around the latched point the player has to still be in for it to connect.
+@export var strike_reach := 120.0
+@export var strike_cap := 12
+@export var beam_end := 0.40
+# The punish window: five seconds for a Break, and a second and a half for a rush simply sat through.
+# His Break IS his punish window, which is why the gauge unlocks 0.5 s after it rather than Eric's 3.
+@export var recover_break := 5.0
+@export var recover_spent := 1.5
+
 var player_defeated := false
 var cycles_started := 0
 # Locked once, at the top of each cycle, so a hit landing mid-sequence can't change what the rest of
@@ -160,7 +208,15 @@ func _on_post_dialogue_pre_fight_timer_timeout() -> void:
 func start_cycle() -> void:
 	cycles_started += 1
 	cycle_yellows = yellow_count()
-	on_child_transition(current_state, "RagingDemon")
+	on_child_transition(current_state, next_attack())
+
+
+# Strict alternation, never a random pick. Cycle 1 is always the barrage: it is the teaching round,
+# and the Beam Rush assumes the player already knows what a red badge on Carter means. After that the
+# two take turns. A fight is about three attacks long, and a random picker serves the same one three
+# times often enough to matter.
+func next_attack() -> String:
+	return "RagingDemon" if cycles_started % 2 == 1 else "BeamRush"
 
 
 # The one difficulty dial. Cycle 1 is all red - it teaches the rhythm - and after that it is his
@@ -178,11 +234,17 @@ func yellow_count() -> int:
 	return 6
 
 
-# Light to light. At 0.70 s this is inside PlayerDefense.parry_mash_lockout's reach, so a press that
+# Light to light. At 0.62 s this is inside PlayerDefense.parry_mash_lockout's reach, so a press that
 # whiffs late on one clone WOULD lock the guard out of the next one if the fight didn't re-arm the
 # parry as each light comes up.
 func clone_interval() -> float:
 	return clone_show + clone_dash + clone_gap
+
+
+# Strike to strike. At 0.50 s this lands exactly ON parry_mash_lockout, so the rearm_parry() the Beam
+# Rush makes as each strike appears is what keeps consecutive strikes answerable - see the block above.
+func strike_period() -> float:
+	return strike_show + strike_dash + strike_gap
 
 
 # The punish window the round earned. Later rounds have fewer reds to parry, so the longest possible
@@ -200,6 +262,14 @@ func is_recovering() -> bool:
 func flinch() -> void:
 	if is_recovering():
 		current_state.flinch()
+
+
+# His Break gauge filled, which is the only thing that ends the Beam Rush. Called deferred from
+# CarterAkumaScript._on_break: the gauge fills inside a physics flush, where states can't switch.
+func break_beam_rush() -> void:
+	var rush: State = states.get("BeamRush")
+	if rush and current_state == rush:
+		rush.on_broke()
 
 
 # The finisher ended his recovery early: he stays down, staggered, then starts the next cycle.
@@ -284,7 +354,7 @@ func player_stage_z() -> int:
 	return stage.z_index if stage is CanvasItem else 0
 
 
-# Called on the exact frame each clone's light comes up, all five, every round. PlayerDefense counts
+# Called on the exact frame each clone's light comes up, all fifteen, every round. PlayerDefense counts
 # a press that didn't parry against the next one for parry_mash_lockout (0.5 s), and every further
 # press inside that pushes the clock forward, so without this a player who whiffs on clone N can be
 # mathematically unable to parry clone N+1.
@@ -366,6 +436,11 @@ func _end_fight(final_state_name: String, keep_dark := false) -> void:
 	var demon: State = states.get("RagingDemon")
 	if demon:
 		demon.release(keep_dark)
+	# The same for the Beam Rush, and for the same reason: a terminal path that skips its Exit()
+	# would leave four live curtains and a parry tell standing on a finished fight.
+	var beam_rush: State = states.get("BeamRush")
+	if beam_rush:
+		beam_rush.release()
 	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
 		hazard.queue_free()
 	on_child_transition(current_state, final_state_name)

@@ -1,0 +1,13 @@
+# The end of boss 2, said before the fade to the Victory or Defeat screen. STILL TO BE WRITTEN
+# BY THE USER: these are the old two-hander's lines, written when Greyson was a boss too.
+# player_won: the player beat Computah. player_lost: Computah beat the player.
+
+~ player_won
+Computah: Bzzzt... critical failure... Mister Greyson, I have been... outplayed.
+Greyson: Get UP, Computah! I skipped the gym for this!
+=> END
+
+~ player_lost
+Computah: Target neutralised. Bzzzt. Shall I remove another heart, sir?
+Greyson: HAHAHA! Look at his face, Computah!
+=> END

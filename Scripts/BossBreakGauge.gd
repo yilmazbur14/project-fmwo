@@ -6,7 +6,7 @@ extends Node
 # finisher needs. It never decays. After a Break it empties and takes nothing until unlock_delay after
 # the finisher that followed has ended, or after he got up again if none came.
 # It listens only to signals the player already has, and counts only the attacks its fight owns: the
-# fight sets owns_attack and strong_parry_ids before the gauge is added. Eric's (BossOneScript,
+# fight sets owns_attack and strong_parry_ids before the gauge is added. Eric's (EricScript,
 # EricPacing V2) is the fight on it today, and the gains below are still the ones he was tuned on, so a
 # second fight taking one wants its own.
 
@@ -34,7 +34,7 @@ var strong_parry_ids: Array[StringName] = []
 # Game seconds.
 @export var unlock_delay := 3.0
 
-# Both set by BossOneScript before the gauge is added.
+# Both set by EricScript before the gauge is added.
 var boss: Node
 var player: Node
 

@@ -1,6 +1,6 @@
 extends Node2D
 
-# One of the three cards Josh throws once he is back on the floor. It flies straight at where the
+# One of the cards Josh throws once he is back on the floor. It flies straight at where the
 # player's hurtbox was when he let go, spinning, with the parry aura on it.
 # It reports its own hits rather than letting the player's hurtbox find it, because it needs the
 # result: a parried or blocked card shatters, a card that lands puffs out. The dodge-ghost branch is

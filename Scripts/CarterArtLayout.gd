@@ -33,6 +33,8 @@ const USE_FINAL_ANIMS := {
 	&"intro": true,
 	&"eye_flash": true,
 	&"summon": true,
+	&"rush": true,
+	&"rush_pass": true,
 	&"vanish": true,
 	&"reappear": true,
 	&"recover": true,
@@ -53,6 +55,10 @@ const PLACEHOLDER_ANIMS := {
 	# The eyes go: he drops the crossed arms and squares up.
 	&"eye_flash": {sheet = AKUMA_SHEET, frames = [1, 0], times = [0.18, 0.37], loop = false},
 	&"summon": {sheet = AKUMA_SHEET, frames = [0], times = [0.35], loop = false},
+	# He is squared up while the tell is over his head, then his back is to the player once the
+	# strike has gone through them.
+	&"rush": {sheet = AKUMA_SHEET, frames = [0], times = [0.21], loop = false},
+	&"rush_pass": {sheet = AKUMA_SHEET, frames = [2], times = [0.165], loop = false},
 	&"vanish": {sheet = AKUMA_SHEET, frames = [2], times = [0.45], loop = false},
 	&"reappear": {sheet = AKUMA_SHEET, frames = [2, 1], times = [0.18, 0.32], loop = false},
 	&"recover": {sheet = AKUMA_SHEET, frames = [0], times = [1.0], loop = true},
@@ -90,6 +96,14 @@ const FINAL_ANIMS := {
 	# a hard downward glare with the jaw open: it reads as him doing this to you.
 	&"summon": {sheet = "res://Assets/Characters/Carter/carter_eye_flash.png",
 		frames = [3], times = [0.4], loop = false},
+	# The Beam Rush's strike, in two halves. Both sheets are drawn travelling RIGHT, so a strike from
+	# the player's right mirrors them; their timings are the ones build_combat.py quotes.
+	# `rush` is 0.21 s of a 0.36 s read, so it holds its last frame - him committed, about to go -
+	# for the rest of the window, which is exactly what the player is reading.
+	&"rush": {sheet = "res://Assets/Characters/Carter/carter_rush.png",
+		frames = [0, 1, 2, 3], times = [0.05, 0.045, 0.06, 0.055], loop = false},
+	&"rush_pass": {sheet = "res://Assets/Characters/Carter/carter_rush_pass.png",
+		frames = [0, 1, 2], times = [0.045, 0.05, 0.07], loop = false},
 	# No vanish sheet either. The entrance draws him materialising out of his aura, so its first five
 	# frames run backwards are him dissolving back into it, retimed to the length of the blackout.
 	&"vanish": {sheet = "res://Assets/Characters/Carter/carter_intro.png",
@@ -138,10 +152,9 @@ const FINAL_ANIMS := {
 		frames = [3, 4, 5], times = [0.2], loop = true},
 }
 
-# carter_rush.png and carter_rush_pass.png are also drawn, and nothing here plays them: they are his
-# full-size lunge, and the clones are half his height by the user's own call. Demon/demon_clone.png
-# is that same lunge redrawn at 48x48 with its own gather and scatter frames, and that is what the
-# clones use. The full-size pair is there for a later attack that has HIM rush.
+# The clones are half his height by the user's own call, so Demon/demon_clone.png is his lunge
+# redrawn at 48x48 with its own gather and scatter frames; the full-size carter_rush pair above is
+# the Beam Rush, where the one doing the rushing is him.
 
 #HIS AURA
 # Drawn UNDER him on its own node, a sibling of his sprite rather than a child: boss.sprite has to
@@ -283,7 +296,7 @@ const PLACEHOLDER_CLONE := {
 }
 # Three phases off one 12-frame strip: it gathers out of nothing, holds full strength while it
 # commits and travels, then scatters away behind. The gather is 200 ms, which fits inside the FRONT
-# of the 0.44 s read window: the clone is fully resolved while the player is still deciding, which is
+# of the 0.36 s read window: the clone is fully resolved while the player is still deciding, which is
 # the whole reason the window is that long. Never let it creep toward clone_show.
 const FINAL_CLONE := {
 	"sheet": "res://Assets/Characters/Carter/Demon/demon_clone.png",
@@ -422,6 +435,147 @@ const FINAL_FINISH := {
 	"at": Vector2(960, 540),
 	"flash": [0.15, 0.45, 0.8, 0.3, 0.06],
 }
+
+#THE BEAM RUSH
+# His second attack (CarterBeamRush): four clones hold a curtain of light each across the ring while
+# he teleports in beside the player and strikes, over and over, until a parry has filled his Break
+# gauge seven times over.
+# THE CURTAINS ARE STATIC, VERTICAL AND UNCHANGING FOR THE WHOLE ATTACK, and that is load-bearing
+# rather than a simplification. PlayerDefense.block_move_speed_ratio is 0.0, so a player holding the
+# guard for the parry is ROOTED: a sweeping or pulsing beam would ask them to move out of something
+# they physically cannot move away from while doing the thing the attack is about. They divide the
+# ring into lanes to be stood in, and they are never a dodge.
+# Their x comes from the inside of the ropes (CarterStateMachine.ROPES) and nowhere else: four evenly
+# spaced curtains leave five lanes of 280.8 px against a 36 px player, about 104 px from a lane's
+# centre to the nearest edge that hurts.
+const BEAM_COUNT := 4
+const BEAM_X := [451.0, 790.0, 1128.0, 1467.0]
+# Drawn 32 texels across at SCALE, of which 24 texels hurt: 12 px of forgiveness down each side, so
+# what a player grazes is light and not damage.
+const BEAM_DRAW_WIDTH := 96.0
+const BEAM_HIT_WIDTH := 72.0
+# From the top of the view to the bottom rope. It runs past the top of the ropes on purpose: a strip
+# of floor up there with no curtain in it would be a free lane change, which is the one thing the
+# curtains exist to prevent. The 960 px between them is exactly 320 texels at SCALE, which is what
+# lets one drawn frame be the whole curtain instead of a stack of tiles.
+const BEAM_TOP_Y := 7.0
+const BEAM_BOTTOM_Y := 967.0
+# Where the four stand, high in the ring: far enough down that a whole 288 px figure is on screen,
+# and each is drawn over its own curtain so it reads as the thing holding it up.
+const BEAM_CLONE_Y := 300.0
+# Relative to the clone layer, which both are added to: the curtains as light over the fighters, and
+# the figure holding one over its own curtain.
+const BEAM_Z := 0
+const BEAM_CLONE_Z := 2
+
+# THESE FOUR ARE NOT THE BARRAGE'S CLONES AND MUST NEVER BE MISTAKEN FOR THEM. They are full size,
+# not the 48x48 halflings; they carry no light over the head, no hurtbox and no strike of their own,
+# and nothing the player does answers them. This fight already teaches one clone read - red parry,
+# yellow feint - and a second, contradictory clone vocabulary would poison the first.
+const USE_FINAL_BEAM_CLONE := false
+# Until they have a sheet of their own: his own standing frame at full size under BEAM_CLONE_TINT.
+const PLACEHOLDER_BEAM_CLONE := {sheet = AKUMA_SHEET, frames = [0], times = [1.0], loop = true}
+const FINAL_BEAM_CLONE := {sheet = "res://Assets/Characters/Carter/carter_beam_clone.png",
+	frames = [0, 1, 2, 3], times = [0.12], loop = true}
+# Dark and violet, the barrage wraith's own colour, so they read as apparitions rather than as four
+# more Carters. The placeholder only: the final sheet will be authored with it.
+const BEAM_CLONE_TINT := Color(0.42, 0.26, 0.56, 0.88)
+
+# The curtain itself, drawn as light.
+const USE_FINAL_BEAM := false
+# A wide translucent body with a hot core down the middle of it, both stretched to the full height.
+const PLACEHOLDER_BEAM := {
+	"color": Color(0.86, 0.22, 0.32, 0.45),
+	"core_color": Color(1.0, 0.88, 0.82, 0.7),
+	"core_width": 24.0,
+}
+# One frame is the whole curtain, top to bottom: 32 x 320 texels at SCALE is exactly
+# BEAM_DRAW_WIDTH x (BEAM_BOTTOM_Y - BEAM_TOP_Y), so nothing is stretched or tiled.
+const FINAL_BEAM := {
+	"texture": "res://Assets/Characters/Carter/Demon/demon_beam.png",
+	"frame_size": Vector2(32, 320),
+	"hframes": 4,
+	"frame_time": 0.07,
+	"scale": 3.0,
+}
+
+
+static func beam() -> Dictionary:
+	return FINAL_BEAM if USE_FINAL_BEAM else PLACEHOLDER_BEAM
+
+
+static func beam_clone() -> Dictionary:
+	return FINAL_BEAM_CLONE if USE_FINAL_BEAM_CLONE else PLACEHOLDER_BEAM_CLONE
+
+
+# A curtain `width` px across, centred on `x`: BEAM_DRAW_WIDTH for what is drawn, BEAM_HIT_WIDTH for
+# what hurts. Nothing may build either rect by hand.
+static func beam_rect(x: float, width: float) -> Rect2:
+	return Rect2(x - width / 2.0, BEAM_TOP_Y, width, BEAM_BOTTOM_Y - BEAM_TOP_Y)
+
+
+#HIS BREAK GAUGE (BreakGaugeUI, BossBreakGauge)
+# The daze meter the Beam Rush fills and nothing else does, hung under his health bar. The art is the
+# game's shared Break gauge chrome in Assets/UI, the same pieces Eric's gauge draws with - it is one
+# instrument, not a per-boss redraw - so a redraw of those files is a redraw of both gauges.
+# `position` is only a fallback: CarterAkumaScript places it from health_bar.break_gauge_anchor(),
+# which is the same point.
+# From this share of full it pulses, and this many real seconds for the fill to catch up. At 15 a
+# parry, 0.8 puts the pulse on the seventh strike read well, which is the one that ends the attack.
+const USE_FINAL_BREAK_GAUGE := true
+const PLACEHOLDER_BREAK_GAUGE := {
+	"position": Vector2(770, 96),
+	"size": Vector2(380, 10),
+	"pulse_from": 0.8,
+	"fill_time": 0.15,
+	"fill_color": Color(1.0, 0.34, 0.3),
+	"pulse_modulate": Color(1.8, 1.8, 1.8),
+	"pulse_time": 0.12,
+	"locked_modulate": Color(0.5, 0.5, 0.5),
+	"shards": 12,
+	"shard_size": Vector2(18, 10),
+	"shard_speed": Vector2(220, 520),
+	"shatter_time": 0.45,
+	"word": "BREAK!",
+	"word_size": Vector2(380, 60),
+	"font_size": 44,
+	"outline": 8,
+	"word_colors": [Color(1.0, 0.36, 0.3), Color(1, 1, 1)],
+	"word_frame_time": 0.08,
+	"word_time": 1.0,
+	"word_rise": 24.0,
+}
+const FINAL_BREAK_GAUGE := {
+	"position": Vector2(768, 160),
+	"size": Vector2(384, 21),
+	"pulse_from": 0.8,
+	"fill_time": 0.15,
+	"frame": "res://Assets/UI/break_gauge_frame_3x.png",
+	"fill": "res://Assets/UI/break_gauge_fill_3x.png",
+	"fill_offset": Vector2(21, 6),
+	"fill_steps": 114,
+	"pulse": "res://Assets/UI/break_gauge_pulse_3x.png",
+	"pulse_hframes": 4,
+	"pulse_offset": Vector2(-18, 0),
+	"pulse_frame_times": [0.10, 0.09, 0.11, 0.09],
+	"fill_hot": "res://Assets/UI/break_gauge_fill_hot_3x.png",
+	"locked_modulate": Color(0.5, 0.5, 0.5),
+	"shatter": "res://Assets/UI/break_gauge_shatter_3x.png",
+	"shatter_hframes": 6,
+	"shatter_offset": Vector2(-24, -36),
+	"shatter_frame_times": [0.05, 0.05, 0.06, 0.06, 0.07, 0.07],
+	"word_texture": "res://Assets/UI/break_text_3x.png",
+	"word_hframes": 2,
+	"word_offset": Vector2(84, 27),
+	"word_frame_time": 0.08,
+	"word_time": 1.0,
+	"word_rise": 0.0,
+}
+
+
+static func break_gauge() -> Dictionary:
+	return FINAL_BREAK_GAUGE if USE_FINAL_BREAK_GAUGE else PLACEHOLDER_BREAK_GAUGE
+
 
 #HIS VICTORY POSE
 # The mirror of his entrance. He arrives with his back turned and the mark flaring, and he sends the

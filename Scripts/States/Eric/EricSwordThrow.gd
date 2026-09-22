@@ -136,7 +136,7 @@ func release_sword() -> void:
 	_play_whoosh()
 
 
-# Called by the boss once the player parries the sword in the air (BossOneScript.parry_stagger). It
+# Called by the boss once the player parries the sword in the air (EricScript.parry_stagger). It
 # is already stopped where they caught it; from here it only flies at him, and nothing interrupts it
 # short of the fight ending, which frees every hazard.
 func reflect(stagger_duration: float) -> void:

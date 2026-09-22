@@ -957,6 +957,7 @@ func test_training() -> void:
 	await wait(3)
 	check(room.room_open and not player.is_talking, "his last line hands the room over and frees the player")
 	check(player.feel_v2, "on feel_v2, the feel every fight uses")
+	check(player.dash_parry, "and on the dash parry, which the fight this room opens into turns on")
 	check(not dummy.is_sparring(), "the dummy starts as a bag, so nobody is ambushed feeling out the movement")
 	check(current_scene.get_node_or_null("Room/GroundFx") != null, "the ground layer is in the room, so the finisher doesn't build one in the lockers")
 	check(ready_button.get_parent().name == "Persistent" and cards.get_parent().name == "Screen", "the button sits outside the card wall, in the group nothing fades")
