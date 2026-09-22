@@ -7,7 +7,7 @@ extends State
 #                  ghosts behind it are what make it read as him grabbing you rather than as a bug.
 #   DARKEN 0.45 s  the crowd hushes, the music ducks, the dark comes in, a pool opens under them and
 #                  he is swallowed by it.
-#   RUSH  10.50 s  fifteen clones, one at a time and 0.70 s apart, each with a RED light (parry it)
+#   RUSH   9.30 s  fifteen clones, one at a time and 0.62 s apart, each with a RED light (parry it)
 #                  or a YELLOW one (a feint - parrying it punishes you). Identical timing either way;
 #                  only the colour and the outcome differ, or the player would read the timing
 #                  instead of the colour and the move would die. Bite on a feint and the clone after
@@ -215,7 +215,7 @@ func _build_pattern() -> void:
 	for attempt in PATTERN_TRIES:
 		slots.shuffle()
 		pick = slots.slice(0, yellows)
-		# No two feints adjacent, at every tier. At a 0.70 s cadence two lies back to back are
+		# No two feints adjacent, at every tier. At a 0.62 s cadence two lies back to back are
 		# unreadable rather than hard, and a bitten feint turns the clone after it into a punish -
 		# which would eat the second feint and waste it. yellow_count() is capped so this always has
 		# an answer.
@@ -333,7 +333,7 @@ func _begin_darken() -> void:
 	body.play_anim(&"vanish")
 
 
-#THE FIVE RUSHES
+#THE FIFTEEN RUSHES
 
 func _begin_rush() -> void:
 	beat = Beat.RUSH
@@ -389,7 +389,7 @@ func _next_clone() -> void:
 	state_machine.add_hazard(rush, from_point, body.clone_layer)
 	clone = rush
 	# The light comes up on the frame the clone appears, and the parry is re-armed on that same
-	# frame, all five, every round. Without it a whiffed press on one clone can leave the next one
+	# frame, all fifteen, every round. Without it a whiffed press on one clone can leave the next one
 	# mathematically unparryable (PlayerDefense.parry_mash_lockout).
 	clone.show_light()
 	state_machine.rearm_parry()
@@ -505,10 +505,7 @@ func _recover_spot() -> Vector2:
 func _hand_over() -> void:
 	var recover: State = state_machine.states.get("Recover")
 	if recover:
-		recover.reds_parried = reds_parried
-		recover.reds_missed = reds_missed
-		recover.feints_parried = feints_parried
-		recover.reds_total = reds_total
+		recover.prepare(reds_parried, reds_missed, feints_parried, reds_total)
 	state_machine.on_child_transition(self, "Recover")
 
 

@@ -273,6 +273,17 @@ const FINAL_PROMPT_TEXT := {
 	"full_frame_time": 0.08,
 }
 
+# The word under the meter, by PlayerFinisher.prompt_key. The same widget means opposite things: MASH!
+# and CHARGE! are the player's own beat, a dazed boss or a cannon, while ESCAPE! is a hold the player
+# is being held in, so it is alarm red rather than gold - a gold prompt reads as "you have won, cash it
+# in" when something is actually winding up on you. Only MASH! is drawn (FINAL_PROMPT_TEXT); the rest
+# are written out in these two colours, alternating as the drawn one does.
+const PROMPT_WORDS := {
+	&"mash": {"text": "MASH!", "colors": [Color(1.0, 0.72, 0.1), Color(1.0, 0.95, 0.6)]},
+	&"charge": {"text": "CHARGE!", "colors": [Color(1.0, 0.72, 0.1), Color(1.0, 0.95, 0.6)]},
+	&"escape": {"text": "ESCAPE!", "colors": [Color(1.0, 0.25, 0.2), Color(1.0, 0.92, 0.88)]},
+}
+
 const USE_FINAL_METER := true
 # A bar styled like the boss health bars, inside the meter's slot.
 const PLACEHOLDER_METER := {
@@ -452,6 +463,11 @@ static func keys(gamepad := false) -> Dictionary:
 
 static func prompt_text() -> Dictionary:
 	return FINAL_PROMPT_TEXT if USE_FINAL_PROMPT_TEXT else PLACEHOLDER_PROMPT_TEXT
+
+
+# A key nobody has a word for falls back to MASH!, rather than leaving the prompt blank.
+static func prompt_word(key: StringName) -> Dictionary:
+	return PROMPT_WORDS.get(key, PROMPT_WORDS[&"mash"])
 
 
 static func meter() -> Dictionary:

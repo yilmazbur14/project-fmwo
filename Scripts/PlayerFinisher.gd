@@ -44,9 +44,11 @@ const ScreenView := preload("res://Scripts/ScreenView.gd")
 const HitStop := preload("res://Scripts/HitStop.gd")
 const FinisherArtLayout := preload("res://Scripts/FinisherArtLayout.gd")
 const FinisherTierMeter := preload("res://Scripts/FinisherTierMeter.gd")
+const MashInput := preload("res://Scripts/MashInput.gd")
 
-# JUGGLE_FALL: the juggle's last uppercut has landed and the boss is still falling.
-enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE, JUGGLE_FALL }
+# JUGGLE_FALL: the juggle's last uppercut has landed and the boss is still falling. CHARGE: a mash a
+# fight runs on its own account (begin_scripted_charge), with no boss and no uppercut behind it.
+enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE, JUGGLE_FALL, CHARGE }
 
 # Seconds are game time unless noted.
 # Time for the charged punch's hit-stop, flash and shake to play out before the fight stops.
@@ -157,6 +159,13 @@ enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE, JUGGLE_FALL }
 @export var juggle_recovery := 1.5
 @export var long_juggle_recovery := 2.0
 
+# What a scripted charge takes when its caller doesn't say (begin_scripted_charge).
+const SCRIPTED_PRESS_GAIN := 0.12
+const SCRIPTED_FLOOR_TIME := 6.0
+# The prompt's FULL! flash and its fade (FinisherPromptUI.FULL_HOLD + FADE_TIME), which a scripted
+# charge waits out before it ends, exactly as the uppercut a mashed finisher fires does.
+const SCRIPTED_FULL_HOLD := 0.5
+
 # Straight above or below the boss's middle, the player keeps the side they were facing.
 const SIDE_DEAD_ZONE := 8.0
 const IMPACT_SHAKE_STEPS := 6
@@ -240,10 +249,13 @@ var punch_tween: Tween
 var charge_loop: AudioStreamPlayer
 var bar_sounds: Array[AudioStreamPlayer] = []
 var knight_breaker_sound: AudioStreamPlayer
-
-# In a feel_v2 fight the mash runs on keys movement and the guard share, so while it runs they are
-# kept from everything else.
-const V2_MASH_SWALLOWS: Array[StringName] = [&"mash_left", &"mash_right", &"move_up", &"move_down", &"move_left", &"move_right", &"block"]
+# The scripted charge: its caller's dials, and the FULL! flash it ends on.
+var scripted_gain := SCRIPTED_PRESS_GAIN
+var scripted_floor := SCRIPTED_FLOOR_TIME
+var scripted_filled := false
+var scripted_hold_left := 0.0
+# Which word FinisherPromptUI shows. &"mash" everywhere else; the caller sets it.
+var prompt_key := &"mash"
 
 
 func _ready() -> void:
@@ -276,12 +288,10 @@ func is_input_locked() -> bool:
 	return input_lock_left > 0.0
 
 
-# The pair the mash alternates between. A fight on the player's feel_v2 mashes on its own keys, the
-# arrows or the bumpers, clear of attack and dash; every other fight mashes attack and dash.
+# The pair the mash alternates between, and the rest of its input plumbing, shared with the grab
+# escape's mash (MashInput).
 func mash_actions() -> Array[StringName]:
-	if player.feel_v2:
-		return [&"mash_left", &"mash_right"]
-	return [&"punch", &"dodge"]
+	return MashInput.actions(player)
 
 
 func is_mash_latched() -> bool:
@@ -302,10 +312,7 @@ func _exit_tree() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	var action := &""
-	for candidate in mash_actions():
-		if action.is_empty() and event.is_action_pressed(candidate):
-			action = candidate
+	var action := MashInput.pressed_action(player, event)
 	var attack_or_dash := event.is_action_pressed("punch") or event.is_action_pressed("dodge")
 	if phase == Phase.OFF:
 		if not (attack_or_dash and is_input_locked()):
@@ -316,16 +323,16 @@ func _input(event: InputEvent) -> void:
 	# propagation order and would never see the presses that drive the mash.
 	InputSettings.note_device(event)
 	get_viewport().set_input_as_handled()
-	if not action.is_empty() and ((phase == Phase.DAZED and prompt_visible) or phase == Phase.CHARGING):
+	if not action.is_empty() and ((phase == Phase.DAZED and prompt_visible) or phase == Phase.CHARGING or phase == Phase.CHARGE):
 		_press(action)
 
 
 func _v2_swallows(event: InputEvent) -> bool:
-	return V2_MASH_SWALLOWS.any(func(swallowed: StringName) -> bool: return event.is_action(swallowed))
+	return MashInput.swallows(event)
 
 
 func _mash_keys_held() -> bool:
-	return mash_actions().any(func(action: StringName) -> bool: return Input.is_action_pressed(action))
+	return MashInput.keys_held(player)
 
 
 # The hit is reported inside a physics flush, where collision can't be taken out of physics.
@@ -364,6 +371,68 @@ func begin_auto(target: Node, hold := 0.35) -> bool:
 	return true
 
 
+# A fight runs the mash on its own account: the same keys, the same prompt, the same camera, and
+# NOTHING else. No boss, no daze, no FightFreeze, no player pose, no uppercut, no damage, no hype.
+# The caller owns all of that. Returns false if a finisher is already running.
+# Two beats, as in a mashed finisher: charge_ended(true) is the meter filling, and `finished` about
+# SCRIPTED_FULL_HOLD later is the prompt's FULL! flash having played out, the mash keys stopping being
+# swallowed and the player being theirs again. A caller who hands them back does it on `finished`.
+#   config, all optional:
+#     "press_gain"  meter per alternating press             default 0.12
+#     "floor_time"  seconds to fill with no presses at all  default 6.0
+#     "zoom"        the view's zoom                         default charge_zoom
+#     "focus"       a Vector2 the view centres on, or Vector2.INF for the player
+func begin_scripted_charge(config := {}) -> bool:
+	if phase != Phase.OFF:
+		return false
+	scripted_gain = config.get("press_gain", SCRIPTED_PRESS_GAIN)
+	scripted_floor = maxf(config.get("floor_time", SCRIPTED_FLOOR_TIME), 0.001)
+	scripted_filled = false
+	scripted_hold_left = 0.0
+	meter = 0.0
+	last_action = &""
+	last_press_usec = 0
+	# What arms the release latch at the end: this beat is mashed, whoever asked for it.
+	mashed = true
+	prompt_visible = true
+	zoomed = true
+	_set_phase(Phase.CHARGE)
+	var focus: Vector2 = config.get("focus", Vector2.INF)
+	ScreenView.zoom_to(get_tree(), config.get("zoom", charge_zoom), player.global_position if focus == Vector2.INF else focus, zoom_in_time)
+	prompt_shown.emit()
+	return true
+
+
+# The caller takes it back, however far it got: the prompt goes and the view comes back out.
+func cancel_scripted_charge() -> void:
+	if phase != Phase.CHARGE:
+		return
+	if not scripted_filled:
+		_end_scripted_charge(false)
+	_finish()
+
+
+func is_charging() -> bool:
+	return phase == Phase.CHARGE
+
+
+# The meter is full. The prompt's FULL! flash and fade play out before the charge ends, as they do
+# over the uppercut a mashed finisher fires.
+func _fill_scripted_charge() -> void:
+	scripted_filled = true
+	scripted_hold_left = SCRIPTED_FULL_HOLD
+	_end_scripted_charge(true)
+
+
+func _end_scripted_charge(filled: bool) -> void:
+	charge_ended.emit(filled)
+	if zoomed:
+		ScreenView.zoom_to(get_tree(), 1.0, ScreenView.focus, zoom_out_time)
+	# From here leftover hammering can't throw a punch or walk the player off, exactly as after a
+	# mashed finisher.
+	_lock_input()
+
+
 func _process(delta: float) -> void:
 	if phase == Phase.OFF:
 		input_lock_left = maxf(input_lock_left - delta, 0.0)
@@ -372,8 +441,13 @@ func _process(delta: float) -> void:
 			latch_left = maxf(latch_left - delta, 0.0) if _mash_keys_held() else 0.0
 		return
 	phase_time += delta
+	# A scripted charge has no boss to lose, so only the fight ending takes it away.
+	if phase == Phase.CHARGE:
+		if player.fight_over:
+			cancel_scripted_charge()
+			return
 	# The uppercut always plays out to its landing, and a juggled boss to his, even past a kill.
-	if phase != Phase.UPPERCUT and phase != Phase.JUGGLE_FALL and (player.fight_over or not _boss_valid()):
+	elif phase != Phase.UPPERCUT and phase != Phase.JUGGLE_FALL and (player.fight_over or not _boss_valid()):
 		_abort()
 		return
 	match phase:
@@ -423,6 +497,17 @@ func _process(delta: float) -> void:
 		Phase.FIZZLE:
 			if phase_time >= fizzle_time:
 				_end_fizzle()
+		Phase.CHARGE:
+			if scripted_filled:
+				scripted_hold_left -= delta
+				if scripted_hold_left <= 0.0:
+					_finish()
+			else:
+				# No drain, and the meter rises on its own: with nobody pressing anything it still fills
+				# inside floor_time, which is what makes the beat unfailable.
+				meter = minf(meter + delta / scripted_floor, 1.0)
+				if meter >= 1.0:
+					_fill_scripted_charge()
 	if juggling and phase != Phase.OFF:
 		_follow_juggle(delta)
 	if phase == Phase.OFF:
@@ -473,11 +558,13 @@ func _begin_daze() -> void:
 
 func _press(action: StringName) -> void:
 	var now := Time.get_ticks_usec()
-	if action == last_action or now - last_press_usec < roundi(min_press_interval * 1000000.0):
+	if not MashInput.counts(action, last_action, now, last_press_usec, min_press_interval):
 		return
 	last_action = action
 	last_press_usec = now
-	if tiered:
+	if phase == Phase.CHARGE:
+		meter = minf(meter + scripted_gain, 1.0)
+	elif tiered:
 		var banked: int = tier_meter.press()
 		meter = tier_meter.meter
 		if banked > 0:
@@ -993,6 +1080,7 @@ func _finish() -> void:
 	juggling = false
 	airborne = false
 	special = false
+	scripted_filled = false
 	charge_loop.stop()
 	finished.emit()
 

@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://Scripts/States/MainPlayer/PlayerFinishing.gd" id="12_finishing"]
 [ext_resource type="Script" path="res://Scripts/PlayerFinisher.gd" id="13_finisher"]
 [ext_resource type="Script" path="res://Scripts/FinisherPromptUI.gd" id="14_finisher_prompt"]
+[ext_resource type="Script" path="res://Scripts/PlayerGrabEscape.gd" id="28_grab_escape"]
 [ext_resource type="Script" path="res://Scripts/PlayerDefense.gd" id="15_defense"]
 [ext_resource type="Script" path="res://Scripts/StaminaBarUI.gd" id="16_stamina_bar"]
 [ext_resource type="Script" path="res://Scripts/PlayerCombatFx.gd" id="17_combat_fx"]
@@ -237,6 +238,9 @@ script = ExtResource("9_combo")
 [node name="Finisher" type="Node" parent="CharacterBody2D"]
 script = ExtResource("13_finisher")
 
+[node name="GrabEscape" type="Node" parent="CharacterBody2D"]
+script = ExtResource("28_grab_escape")
+
 [node name="Defense" type="Node" parent="CharacterBody2D"]
 script = ExtResource("15_defense")
 
@@ -287,6 +291,11 @@ combo = NodePath("../../CharacterBody2D/Combo")
 [node name="FinisherPrompt" type="Node2D" parent="CanvasLayer" node_paths=PackedStringArray("finisher", "player")]
 script = ExtResource("14_finisher_prompt")
 finisher = NodePath("../../CharacterBody2D/Finisher")
+player = NodePath("../../CharacterBody2D")
+
+[node name="EscapePrompt" type="Node2D" parent="CanvasLayer" node_paths=PackedStringArray("finisher", "player")]
+script = ExtResource("14_finisher_prompt")
+finisher = NodePath("../../CharacterBody2D/GrabEscape")
 player = NodePath("../../CharacterBody2D")
 
 [node name="StaminaBar" type="Control" parent="CanvasLayer" node_paths=PackedStringArray("defense")]

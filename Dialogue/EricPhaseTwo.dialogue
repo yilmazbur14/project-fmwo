@@ -1,0 +1,18 @@
+# Eric's phase-two lines, played over the cut where his sword is knocked out of the arena
+# (EricPhaseTwo.gd). The "do" lines call its beats and the dialogue waits for each one before the
+# next line, exactly as EricPreFight.dialogue drives his entrance.
+#
+# LINES STILL TO WRITE - the three placeholders below are structure, not dialogue:
+#   1. as the sword goes, before look_at_hands()
+#   2. looking at his empty hands, before set_fists()
+#   3. as he sets his fists, the line the rest of the fight starts on
+# Keep them in Eric's pre-fight voice (the self-righteous server moderator) and keep the third one
+# short: the fight starts 0.6 s after it clears.
+
+~ start
+Eric: TODO: his line as the greatsword leaves his hand and the ring.
+do look_at_hands()
+Eric: TODO: his line looking at his empty hands.
+do set_fists()
+Eric: TODO: his line as he puts his fists up.
+=> END

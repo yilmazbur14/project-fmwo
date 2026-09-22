@@ -116,15 +116,15 @@ const CARDS := {
 		"ramp": ["#525A74", "#7A86A0", "#A3B1C2", "#CDD7E2", "#EAF0F6"],
 		"portrait": "res://Assets/Characters/Eric/portrait.png",
 	},
-	"greyson": {
-		"fight": "res://Scenes/Bosses/GreysonBossFightScene.tscn",
+	"computah": {
+		"fight": "res://Scenes/Bosses/ComputahBossFightScene.tscn",
 		"number": 2,
-		"name": "GREYSON & COMPUTAH",
+		"name": "COMPUTAH",
 		"epithet": "",
 		"rank": "@active",
 		"rank_icon": 3,
-		"ramp": ["#12211B", "#1F3A2C", "#2F6B4A", "#6ABE30", "#C7ED8A"],
-		"portrait": "res://Assets/Characters/Greyson/portrait.png",
+		"ramp": ["#0B1620", "#12304A", "#1F5C8A", "#35A6D8", "#A9E4FF"],
+		"portrait": "res://Assets/Characters/Computah/portrait.png",
 	},
 	"mason": {
 		"fight": "res://Scenes/Bosses/MasonBossFightScene.tscn",
@@ -208,7 +208,7 @@ const FRAME_ART := {
 # rank; nothing under FINAL_DIR is loaded for a fight whose flag is off.
 const USE_FINAL_CARDS := {
 	"eric": true,
-	"greyson": false,
+	"computah": false,
 	"mason": false,
 	"josh": false,
 	"carter": false,

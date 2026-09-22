@@ -59,6 +59,19 @@ const ATTACKS := {
 	# The yellow bear hug, a shoulder charge on the same art and timing: no guard or parry stops it, a
 	# dash goes through it.
 	&"eric_shoulder_charge": {"dash_through": true, "dodge_tell": true},
+	# Eric, phase two: he has lost the sword and the colours have swapped sides. Red is now the
+	# haymaker, yellow the grab - the same two answers the fight taught, behind the opposite attacks.
+	# Parry-only, exactly as the phase-one grab was: a held guard is not an answer to the red branch,
+	# or hedging with the guard up would beat the read for free.
+	&"eric_p2_haymaker": {"damage": 2, "parryable": true, "parry_stagger": true, "tell": true},
+	# The grab: no range cutoff and no parry. A dash through it is the dodge - the flag V1's
+	# eric_bear_hug_grab carried and the V2 rework took off.
+	&"eric_p2_grab": {"damage": 0, "grab": true, "dash_through": true, "dodge_tell": true},
+	# The hold's crush, ticking while the player mashes out. eric_bear_hug_squeeze's flags exactly.
+	&"eric_p2_crush": {"bypass_invincibility": true, "hype_loss": false},
+	# The leap's shockwave. Red, and a dash also beats it - computah_chase is the precedent for a red
+	# tell with dash_through. Its tell is the floor marker (EricSwordMark), not a badge: he is airborne.
+	&"eric_p2_tremor": {"blockable": true, "weight": Weight.LIGHT, "tell": true, "dash_through": true},
 	# The sparring dummy in the controls room, which teaches the same red-and-yellow vocabulary Eric's
 	# fight is built on, one attack each.
 	# Red: the padded arm. HEAVY is deliberate - three blocks in a row empty the bar, so the guard
@@ -66,39 +79,65 @@ const ATTACKS := {
 	&"dummy_swing": {"blockable": true, "weight": Weight.HEAVY, "parry_stagger": true, "tell": true},
 	# Yellow: the torso lunge. Nothing guards or parries it; a dash through it is a perfect dodge.
 	&"dummy_lunge": {"dash_through": true, "dodge_tell": true},
-	&"computah_laser": {"dash_through": true},
-	# Boss 2. Computah's pounce is the grab at the end of his chase: a held guard does not stop it,
-	# a parry does and sparks him out early, and a dash through it is a perfect dodge.
-	&"computah_chase": {"damage": 0, "grab": true, "parryable": true, "parry_stagger": true, "tell": true, "dash_through": true},
-	# The junk Greyson throws over the chase, and the phase-two burst that costs more to block. A
-	# parry negates either but never staggers him - he is standing still to begin with, Josh's rule.
-	&"greyson_throw": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
-	&"greyson_throw_hard": {"blockable": true, "weight": Weight.HEAVY, "tell": true},
-	# The five-hit combo a caught player is put through. It is unblockable BY CONSTRUCTION rather
-	# than by a new kind of lock: the player keeps the parry-only lock, and with nothing blockable or
-	# parryable there is nothing for the guard to answer. The first four deal nothing and the fifth
-	# launches. Neither costs hype - the pounce that caught them already did, exactly as Eric's
-	# squeeze leaves the cost on his grab.
-	&"greyson_combo_jab": {"damage": 0, "bypass_invincibility": true, "hype_loss": false},
-	&"greyson_combo_finish": {"damage": 3, "bypass_invincibility": true, "hype_loss": false},
-	# Phase two with Greyson gone: a landed pounce has nobody to hand the player to, so Computah
-	# slams them himself for what the fifth punch would have dealt.
-	&"computah_slam": {"damage": 3, "bypass_invincibility": true, "hype_loss": false},
+	# Boss 2. Computah's cannon beam: it tracks while it charges, latches its aim, and fires down a
+	# fixed line. No guard and no parry answers it, so the badge is yellow and a dash is the dodge.
+	&"computah_beam": {"dash_through": true, "dodge_tell": true},
+	# His pounce, the grab at the end of his chase: a held guard does not stop it, a parry does and
+	# sparks him out early, and a dash through it is a perfect dodge.
+	# bypass_invincibility because he does not care about i-frames while he chases: the mine field is
+	# meant to herd the player into him, and a catch that fell out of the last hit's i-frames would
+	# make being hit the safest place to stand. Both counters survive - only the passive window goes.
+	&"computah_chase": {"damage": 0, "grab": true, "parryable": true, "parry_stagger": true, "tell": true, "dash_through": true, "bypass_invincibility": true},
+	# A landed pounce: he holds the player and slams them himself. Two rather than three, because a
+	# catch now also costs 30 stamina and 30 Break gauge, and three half-hearts on top of that is a
+	# fight-losing bill for one mistake on an attack built to herd you into it.
+	&"computah_slam": {"damage": 2, "bypass_invincibility": true, "hype_loss": false},
+	# Computah's mine pods. Once one closes there is no answer at all - that is what the attack IS - so
+	# it is neither blockable nor parryable and carries no tell of either colour. Its warning is the pod
+	# on the floor, drawn from the moment it lands, exactly as Mason's nugget marker is its own warning.
+	# `grab` is the honest shape: the caller takes the player, a held guard does not stop it, and a
+	# player who is already grabbed is IGNORED by resolve_hit for free.
+	# NO dash_through, deliberately: a spatial threat is answered by not being there, and one dash
+	# clearing any minefield would end the attack.
+	&"computah_mine": {"damage": 0, "grab": true, "hype_loss": false},
+	# The charged uppercut on a player who failed the mash. Unblockable and unparryable BY CONSTRUCTION,
+	# so the total lock never has to be load-bearing for correctness. It lands inside the i-frames
+	# because the trap can follow a hit and the bill must arrive.
+	&"computah_uppercut": {"damage": 2, "bypass_invincibility": true},
+	# Boss 2. The overload blast: the punish for failing his charge check. It covers the whole arena, so
+	# there is nowhere to be - no guard, no parry, no dash. It carries NEITHER tell: a badge is an answer
+	# key and this has no answer, exactly as carter_clone_punish has none. One full heart (damage 2 of the
+	# player's six halves). hype_loss stays true: no grab took a toll first, so the blast IS the toll, and
+	# the Break gauge it drains is the thing the player failed to fill.
+	# NOT bypass_invincibility: it closes no exploit, since the only way to be in i-frames is to have been
+	# hit moments earlier and trading a heart to avoid a heart is not a trade. What it protects is the one
+	# genuinely unfair case - being hit just before an undodgeable blast and eating both.
+	&"computah_overload_blast": {"damage": 2},
 	&"wrestler_charge": {"blockable": true, "weight": Weight.HEAVY},
 	# Punching Carter or Josh hurts the player by design.
 	&"wrestler_punish": {},
-	&"mason_poo_blast": {"blockable": true, "weight": Weight.LIGHT},
-	&"mason_nugget": {"blockable": true, "weight": Weight.LIGHT, "from_above": true},
-	&"carter_elbow_drop": {"blockable": true, "weight": Weight.HEAVY, "from_above": true},
-	&"funko_blast": {"blockable": true, "weight": Weight.LIGHT},
-	&"bixby_fire_breath": {"blockable": true, "weight": Weight.LIGHT},
+	&"mason_poo_blast": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
+	# Yellow rather than red, though a guard does absorb it: it lands on a marked spot, so the answer
+	# is to be somewhere else by the time it does. No dash immunity - stepping out is the dodge.
+	&"mason_nugget": {"blockable": true, "weight": Weight.LIGHT, "from_above": true, "dodge_tell": true},
+	# Red, and told over Mason rather than over the landing spot: the floor marker already says where
+	# it lands, the badge says the slam can be answered. Only Mason's called-in Carter uses this id.
+	&"carter_elbow_drop": {"blockable": true, "weight": Weight.HEAVY, "from_above": true, "tell": true},
+	# from_above because a funko's blast is a radius with no direction to face, exactly like the
+	# nugget and the elbow drop above it. Without it the guard only answers a blast inside +/-60 deg
+	# of facing, and facing auto-aims at the NEAREST figure while the one detonating usually is not
+	# it - measured, a standing player parried 0-1 of 7-10 landing blasts. That made the red tell a
+	# lie: it promised an answer the fight did not offer. Omni-blockable is what the attack already
+	# was in every other respect.
+	&"funko_blast": {"blockable": true, "weight": Weight.LIGHT, "from_above": true, "tell": true},
+	&"bixby_fire_breath": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
 	# The ground wave an erupting crack sends out.
-	&"bixby_quake_burst": {"blockable": true, "weight": Weight.LIGHT},
+	&"bixby_quake_burst": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
 	# Swept beams, like the other ones: dashing through is the dodge.
-	&"bixby_sonic_beam": {"dash_through": true},
+	&"bixby_sonic_beam": {"dash_through": true, "dodge_tell": true},
 	# Josh's cards.
 	# A giant card slamming down on a third of the arena: it can only be moved out of.
-	&"josh_card_fall": {"damage": 2},
+	&"josh_card_fall": {"damage": 2, "dodge_tell": true},
 	&"josh_card_bomb": {"blockable": true, "weight": Weight.LIGHT, "from_above": true},
 	# Three in a row, each with its own tell; a parry negates but never staggers him.
 	&"josh_card_throw": {"blockable": true, "weight": Weight.LIGHT, "tell": true},
@@ -112,6 +151,21 @@ const ATTACKS := {
 	# The clone right after a feint the player bit on. Nothing answers it - that is the whole point -
 	# so it is neither blockable nor parryable. The bait was the mistake; this is the bill.
 	&"carter_clone_punish": {"weight": Weight.HEAVY, "bypass_invincibility": true},
+	# Carter's Beam Rush, his second attack. The real Carter materialises beside the player and strikes:
+	# a held guard absorbs it heavily, a fresh press parries it, and only a parry feeds his Break gauge,
+	# which is the only thing that ends the attack.
+	# Its origin is the player's own hurtbox centre, inside PlayerDefense.block_omni_radius, so any
+	# facing answers it. The player is FREE to move here, unlike the barrage, so a facing test would make
+	# it an aiming check instead of a timing one.
+	# NOT bypass_invincibility, and that is the difference from carter_clone_rush. The barrage roots the
+	# player and every one of its fifteen clones must count; here the player can walk out of a strike, so
+	# the standard i-frames are what keeps twelve strikes 0.50 s apart from being unsurvivable.
+	&"carter_teleport_strike": {"blockable": true, "weight": Weight.HEAVY, "tell": true},
+	# The four clones' beams, live from the charge to the end. No badge on purpose: a tell is for
+	# something about to change, and these are 96 px of light standing still for ten seconds. No
+	# dash_through either - a dash across one is MEANT to cost, since that is what stops the player
+	# outrunning the attack.
+	&"carter_beam": {},
 	# Anything that hits without an id: exactly the old behaviour.
 	&"untagged": {},
 }

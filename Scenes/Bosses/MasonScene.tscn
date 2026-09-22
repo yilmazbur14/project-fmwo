@@ -11,6 +11,9 @@
 [ext_resource type="Script" path="res://Scripts/States/Mason/MasonEat.gd" id="9_eat"]
 [ext_resource type="Script" path="res://Scripts/States/Mason/MasonDefeated.gd" id="10_defeated"]
 [ext_resource type="Script" path="res://Scripts/States/Mason/MasonNuggetShower.gd" id="11_nugget_shower"]
+[ext_resource type="Script" path="res://Scripts/States/Mason/MasonBroken.gd" id="12_broken"]
+[ext_resource type="Script" path="res://Scripts/States/Mason/MasonJuggled.gd" id="13_juggled"]
+[ext_resource type="Script" path="res://Scripts/States/Mason/MasonIntro.gd" id="14_intro"]
 
 [sub_resource type="Animation" id="Animation_mason_reset"]
 length = 0.001
@@ -199,13 +202,179 @@ tracks/0/keys = {
 "values": [18]
 }
 
+[sub_resource type="Animation" id="Animation_mason_broken"]
+resource_name = "broken"
+length = 0.7
+loop_mode = 1
+step = 0.35
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.35),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [13, 14]
+}
+
+[sub_resource type="Animation" id="Animation_mason_juggle_hit"]
+resource_name = "juggle_hit"
+length = 0.12
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [12]
+}
+
+[sub_resource type="Animation" id="Animation_mason_juggle_tumble"]
+resource_name = "juggle_tumble"
+length = 0.44
+loop_mode = 1
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.11, 0.22, 0.33),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [12, 6, 12, 7]
+}
+
+[sub_resource type="Animation" id="Animation_mason_juggle_crash"]
+resource_name = "juggle_crash"
+length = 0.3
+step = 0.15
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [12, 13]
+}
+
+[sub_resource type="Animation" id="Animation_mason_juggle_down"]
+resource_name = "juggle_down"
+length = 0.1
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [14]
+}
+
+[sub_resource type="Animation" id="Animation_mason_juggle_hit_final"]
+resource_name = "juggle_hit_final"
+length = 0.13
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.06),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [0, 1]
+}
+
+[sub_resource type="Animation" id="Animation_mason_juggle_tumble_final"]
+resource_name = "juggle_tumble_final"
+length = 0.45
+loop_mode = 1
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2, 0.28, 0.33, 0.38),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 1,
+"values": [2, 3, 4, 5, 6]
+}
+
+[sub_resource type="Animation" id="Animation_mason_juggle_crash_final"]
+resource_name = "juggle_crash_final"
+length = 0.26
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.05, 0.14),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [7, 8, 9]
+}
+
+[sub_resource type="Animation" id="Animation_mason_juggle_down_final"]
+resource_name = "juggle_down_final"
+length = 1.1
+loop_mode = 1
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.55),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [10, 11]
+}
+
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_mason"]
 _data = {
 &"RESET": SubResource("Animation_mason_reset"),
+&"broken": SubResource("Animation_mason_broken"),
 &"defeated": SubResource("Animation_mason_defeated"),
 &"eat": SubResource("Animation_mason_eat"),
 &"hit": SubResource("Animation_mason_hit"),
 &"idle": SubResource("Animation_mason_idle"),
+&"juggle_crash": SubResource("Animation_mason_juggle_crash"),
+&"juggle_crash_final": SubResource("Animation_mason_juggle_crash_final"),
+&"juggle_down": SubResource("Animation_mason_juggle_down"),
+&"juggle_down_final": SubResource("Animation_mason_juggle_down_final"),
+&"juggle_hit": SubResource("Animation_mason_juggle_hit"),
+&"juggle_hit_final": SubResource("Animation_mason_juggle_hit_final"),
+&"juggle_tumble": SubResource("Animation_mason_juggle_tumble"),
+&"juggle_tumble_final": SubResource("Animation_mason_juggle_tumble_final"),
 &"nugget_hold": SubResource("Animation_mason_nugget_hold"),
 &"nugget_toss": SubResource("Animation_mason_nugget_toss"),
 &"phone": SubResource("Animation_mason_phone"),
@@ -246,13 +415,18 @@ shape = SubResource("RectangleShape2D_mason_hurtbox")
 
 [node name="StateManager" type="Node" parent="MasonCharacterBody" node_paths=PackedStringArray("initial_state", "MasonCharacterBody", "post_dialogue_pre_fight_timer", "squat_timer", "release_timer", "phone_timer", "eat_timer")]
 script = ExtResource("3_state_machine")
-initial_state = NodePath("Idle")
+initial_state = NodePath("Intro")
 MasonCharacterBody = NodePath("..")
 post_dialogue_pre_fight_timer = NodePath("../PostDialoguePreFightTimer")
 squat_timer = NodePath("../SquatTimer")
 release_timer = NodePath("../ReleaseTimer")
 phone_timer = NodePath("../PhoneTimer")
 eat_timer = NodePath("../EatTimer")
+
+[node name="Intro" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "body")]
+script = ExtResource("14_intro")
+animation_player = NodePath("../../AnimationPlayer")
+body = NodePath("../..")
 
 [node name="Idle" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player")]
 script = ExtResource("4_idle")
@@ -294,9 +468,24 @@ downed_sfx_player = NodePath("../../DownedSfxPlayer")
 eat_timer = NodePath("../../EatTimer")
 body = NodePath("../..")
 
-[node name="Defeated" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player")]
+[node name="Broken" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox", "mason_state_machine")]
+script = ExtResource("12_broken")
+animation_player = NodePath("../../AnimationPlayer")
+character_body = NodePath("../..")
+hurtbox = NodePath("../../Hurtbox")
+mason_state_machine = NodePath("..")
+
+[node name="Juggled" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox", "mason_state_machine")]
+script = ExtResource("13_juggled")
+animation_player = NodePath("../../AnimationPlayer")
+character_body = NodePath("../..")
+hurtbox = NodePath("../../Hurtbox")
+mason_state_machine = NodePath("..")
+
+[node name="Defeated" type="Node" parent="MasonCharacterBody/StateManager" node_paths=PackedStringArray("animation_player", "body")]
 script = ExtResource("10_defeated")
 animation_player = NodePath("../../AnimationPlayer")
+body = NodePath("../..")
 
 [node name="PostDialoguePreFightTimer" type="Timer" parent="MasonCharacterBody"]
 wait_time = 2.0
@@ -334,3 +523,5 @@ volume_db = -4.0
 [connection signal="timeout" from="MasonCharacterBody/ReleaseTimer" to="MasonCharacterBody/StateManager/PooSquat" method="_on_release_timer_timeout"]
 [connection signal="timeout" from="MasonCharacterBody/PhoneTimer" to="MasonCharacterBody/StateManager/CallCarter" method="_on_phone_timer_timeout"]
 [connection signal="timeout" from="MasonCharacterBody/EatTimer" to="MasonCharacterBody/StateManager/Eat" method="_on_eat_timer_timeout"]
+[connection signal="animation_finished" from="MasonCharacterBody/AnimationPlayer" to="MasonCharacterBody/StateManager/Broken" method="_on_animation_player_animation_finished"]
+[connection signal="animation_finished" from="MasonCharacterBody/AnimationPlayer" to="MasonCharacterBody/StateManager/Juggled" method="_on_animation_player_animation_finished"]

@@ -4,6 +4,10 @@ extends RefCounted
 # where dashing through is the intended dodge. A dash only grants immunity if the previous
 # dash started at least `cooldown` before it, so mashing dash can't chain immunity windows.
 static func is_immune(player: Node, immunity_time: float, cooldown: float) -> bool:
+	# A dash ended early by a block press (PlayerScript.dash_parry) gives its i-frames up with it:
+	# that one press buys the guard, and must not buy the dodge as well.
+	if player.dash_cancelled:
+		return false
 	var dodge_frame: int = player.last_dodge_physics_frame
 	if dodge_frame < 0:
 		return false

@@ -5,15 +5,27 @@ extends Control
 # no keyboard focus.
 const SHOW_BOSS_SELECT := true
 
-# Under the volume slider, inside the column the menu art keeps clear of the boss tower. Two
-# columns, because ten rows in one would run off the bottom of the screen.
+# Under the volume slider, inside the column the menu art keeps clear of the boss tower. Three
+# columns: ten rows in one would run off the bottom of the screen, and two no longer fit either now
+# that a fight can have a second row under it (PHASE_TWO_FIGHTS). The slider ends at y 820 and the
+# screen at 1080, so this panel can grow neither up nor down - the column count is the only knob.
 const BOSS_SELECT_RECT := Rect2(156, 830, 664, 240)
-const BOSS_SELECT_COLUMNS := 2
+const BOSS_SELECT_COLUMNS := 3
 # Pixelify Sans is only crisp at multiples of its 11 px design size.
 const BOSS_SELECT_FONT_SIZE := 22
 const BOSS_SELECT_BUTTON_HEIGHT := 34
 
 const ControlsArtLayout := preload("res://Scripts/ControlsArtLayout.gd")
+const EricPacing := preload("res://Scripts/EricPacing.gd")
+
+# Fights that get a second row under their own, jumping straight into their second phase rather than
+# the start of the fight: the phase is at half health, so testing it otherwise means winning most of
+# the fight first, every time. Keyed by fight scene, valued by the row's label. Eric's is the only one
+# today; Computah's phase two is the next, and only needs a row here plus its own availability test in
+# _phase_two_available().
+const PHASE_TWO_FIGHTS := {
+	"res://Scenes/Bosses/EricBossFightScene.tscn": "ERIC PHASE 2",
+}
 
 @export var arena_scene = "res://Scenes/Core/ArenaScene.tscn"
 var intro_scene = "res://Scenes/Core/IntroCutsceneScene.tscn"
@@ -120,6 +132,18 @@ func _build_boss_select() -> void:
 	title.add_theme_color_override("font_color", Color(0.65, 0.68, 0.74))
 	rows.add_child(title)
 
+	# The player takes no damage, so a whole fight can be watched without dying. It sits above the
+	# fight list because it applies to whichever of them you pick, and it is the head of the focus
+	# chain below for the same reason.
+	var invincible := CheckBox.new()
+	invincible.text = "INVINCIBLE"
+	invincible.button_pressed = GameProgress.playtest_invincible
+	invincible.add_theme_font_size_override("font_size", BOSS_SELECT_FONT_SIZE)
+	invincible.add_theme_color_override("font_color", Color(0.88, 0.9, 0.93))
+	invincible.add_theme_color_override("font_hover_color", Color(1, 1, 1))
+	invincible.toggled.connect(func(on: bool) -> void: GameProgress.playtest_invincible = on)
+	rows.add_child(invincible)
+
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 8)
 	rows.add_child(columns)
@@ -127,7 +151,9 @@ func _build_boss_select() -> void:
 	var count := GameProgress.BOSSES.size()
 	var per_column := ceili(float(count) / BOSS_SELECT_COLUMNS)
 	var column: VBoxContainer = null
-	var chain: Array[Button] = []
+	# CheckBox is a Button, so the toggle rides the same hand-wired chain as the fights and keyboard
+	# and pad navigation reach it. It is first: the volume slider hands down into it, then the fights.
+	var chain: Array[Button] = [invincible]
 	for i in count:
 		if i % per_column == 0:
 			column = VBoxContainer.new()
@@ -137,17 +163,7 @@ func _build_boss_select() -> void:
 		var boss: Dictionary = GameProgress.BOSSES[i]
 		var scene: String = boss["scene"]
 		var built: bool = ResourceLoader.exists(scene)
-		var button := Button.new()
-		button.text = "%d  %s" % [i + 1, boss["name"]]
-		button.custom_minimum_size = Vector2(0, BOSS_SELECT_BUTTON_HEIGHT)
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.clip_text = true
-		button.add_theme_font_size_override("font_size", BOSS_SELECT_FONT_SIZE)
-		for style_name in ["normal", "hover", "pressed", "disabled", "focus"]:
-			button.add_theme_stylebox_override(style_name, _boss_select_button_style(style_name))
-		button.add_theme_color_override("font_color", Color(0.88, 0.9, 0.93))
-		button.add_theme_color_override("font_hover_color", Color(1, 1, 1))
-		button.add_theme_color_override("font_disabled_color", Color(0.42, 0.44, 0.48))
+		var button := _boss_select_button("%d  %s" % [i + 1, boss["name"]])
 		button.disabled = not built
 		button.focus_mode = Control.FOCUS_ALL if built else Control.FOCUS_NONE
 		if built:
@@ -156,6 +172,8 @@ func _build_boss_select() -> void:
 		else:
 			button.tooltip_text = "%s hasn't been built yet" % scene
 		column.add_child(button)
+		if PHASE_TWO_FIGHTS.has(scene):
+			_add_phase_two_row(column, chain, scene, built)
 
 	# Walk the list in table order whichever key is used, stepping over the fights that aren't
 	# built yet and over the break between the two columns, which neither Godot's geometric
@@ -172,6 +190,46 @@ func _build_boss_select() -> void:
 	if not chain.is_empty():
 		volume_slider.focus_neighbor_bottom = chain[0].get_path()
 		volume_slider.focus_next = chain[0].get_path()
+
+
+# The second row under a fight that has a phase-two shortcut, drawn as one of its own rows and
+# indented so it reads as belonging to the fight above it rather than as another fight.
+func _add_phase_two_row(column: VBoxContainer, chain: Array[Button], scene: String, built: bool) -> void:
+	var button := _boss_select_button("    %s" % PHASE_TWO_FIGHTS[scene])
+	var available: bool = built and _phase_two_available(scene)
+	button.disabled = not available
+	button.focus_mode = Control.FOCUS_ALL if available else Control.FOCUS_NONE
+	if available:
+		button.pressed.connect(_on_phase_two_select_pressed.bind(scene))
+		chain.append(button)
+	elif not built:
+		button.tooltip_text = "%s hasn't been built yet" % scene
+	else:
+		button.tooltip_text = "No second phase in this build"
+	column.add_child(button)
+
+
+# Whether the fight actually has the phase the row jumps to right now. Eric's is the reworked fight's
+# alone (EricPacing V2): on V1 there is no sword to knock out of the ring and no phase two behind it.
+func _phase_two_available(scene: String) -> bool:
+	if scene == "res://Scenes/Bosses/EricBossFightScene.tscn":
+		return EricPacing.is_v2()
+	return false
+
+
+func _boss_select_button(text: String) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(0, BOSS_SELECT_BUTTON_HEIGHT)
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.clip_text = true
+	button.add_theme_font_size_override("font_size", BOSS_SELECT_FONT_SIZE)
+	for style_name in ["normal", "hover", "pressed", "disabled", "focus"]:
+		button.add_theme_stylebox_override(style_name, _boss_select_button_style(style_name))
+	button.add_theme_color_override("font_color", Color(0.88, 0.9, 0.93))
+	button.add_theme_color_override("font_hover_color", Color(1, 1, 1))
+	button.add_theme_color_override("font_disabled_color", Color(0.42, 0.44, 0.48))
+	return button
 
 
 func _boss_select_panel_style() -> StyleBoxFlat:
@@ -204,6 +262,17 @@ func _boss_select_button_style(style_name: String) -> StyleBoxFlat:
 # earlier boss is marked cleared, so the ladder only ever shows fights that were really fought.
 func _on_boss_select_pressed(scene_path: String) -> void:
 	GameProgress.reset_progress()
+	get_tree().change_scene_to_file(scene_path)
+
+
+# Straight into a fight's second phase. It ASKS for the phase rather than setting anything itself:
+# the fight takes the request in its own _ready through the same entry point a crossing punch takes
+# (EricScript.enter_phase_two) and leaves the transition cut owed, so what plays is exactly what the
+# fight plays for real - the entrance, then the sword thrown out of the ring, its lines, then phase
+# two. Nobody's health is touched, so he is in phase two on a full bar.
+func _on_phase_two_select_pressed(scene_path: String) -> void:
+	GameProgress.reset_progress()
+	GameProgress.start_in_phase_two = scene_path
 	get_tree().change_scene_to_file(scene_path)
 
 

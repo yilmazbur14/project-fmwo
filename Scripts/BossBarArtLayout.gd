@@ -212,6 +212,7 @@ const BOSS_BARS := {
 const PLATE_NAMES := {
 	&"eric": "res://Assets/UI/boss_plate_name_eric_3x.png",
 	&"greyson_pair": "res://Assets/UI/boss_plate_name_greyson_pair_3x.png",
+	&"computah": "res://Assets/UI/boss_plate_name_computah_3x.png",
 	&"mason": "res://Assets/UI/boss_plate_name_mason_3x.png",
 	&"josh": "res://Assets/UI/boss_plate_name_josh_3x.png",
 	&"danny": "res://Assets/UI/boss_plate_name_danny_3x.png",
@@ -259,6 +260,13 @@ const PLACEHOLDER_BLOCKS := {
 		"rows": [Rect2(50, 10, 380, 22)],
 	},
 	&"jordan": {
+		"size": Vector2(380, 56),
+		"name_offset": Vector2(50, -24),
+		"name_font_size": 0,
+		"name_outline": 6,
+		"rows": [Rect2(50, 10, 380, 22)],
+	},
+	&"computah": {
 		"size": Vector2(380, 56),
 		"name_offset": Vector2(50, -24),
 		"name_font_size": 0,

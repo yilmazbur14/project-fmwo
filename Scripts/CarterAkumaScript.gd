@@ -1,9 +1,11 @@
 extends CharacterBody2D
 
-# Carter, boss 5. He has one move: he flashes his eyes, drags the player to the middle of the ring,
-# puts the lights out and sends five clones through them one at a time, then stands there open while
-# the lights come back. Everything about the sequence itself lives in CarterRagingDemon; this node is
-# his body, his health, his art and the darkness it borrows.
+# Carter, boss 5. He has two moves. The Raging Demon: he flashes his eyes, drags the player to the
+# middle of the ring, puts the lights out and sends fifteen clones through them one at a time, then
+# stands there open while the lights come back. The Beam Rush: four clones hold a curtain of light
+# each across the ring while he teleports in beside the player and strikes, until a parry has filled
+# the Break gauge below. Each sequence lives in its own state - CarterRagingDemon, CarterBeamRush -
+# and this node is his body, his health, his art and the darkness the barrage borrows.
 # Not to be confused with Scripts/CarterScript.gd, the wrestler Mason calls in - a different
 # character with his own art and script.
 
@@ -15,14 +17,20 @@ const FightOutro := preload("res://Scripts/FightOutro.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
 const CarterArtLayout := preload("res://Scripts/CarterArtLayout.gd")
 const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
+const BossBreakGauge := preload("res://Scripts/BossBreakGauge.gd")
+const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
 # What he says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/CarterOutro.dialogue"
 const FIGHT_SCENE := "res://Scenes/Bosses/CarterBossFightScene.tscn"
 
 #CONSTANTS
-# Josh is 14 and Mason 10; Carter is fight 5 of 7. A perfect round plus three punches and a finisher
-# takes 11 of these, a good round plus three punches 5, a sloppy one 2.
-@export var max_health := 20
+# Josh is 14 and Mason 10; Carter is fight 5 of 7, and he has two attacks rather than one.
+# A perfect Raging Demon takes 24 of these: seven banked for the parries, three punches on the beat
+# in the window it earns (1 + 1 + 2) and a 13-point finisher. A Beam Rush ended by a Break takes 17 -
+# the rush banks nothing, so all of it is the five-second window - and a Beam Rush simply sat through
+# earns a 1.5 s window and almost nothing. The finisher alone is 13, supercharged 20.
+# So a good player needs three attacks read well, which is what the alternation gives them.
+@export var max_health := 50
 var boss_health := max_health
 const MAX_HITS_PER_WINDOW := 3
 const PHANTOM_HIT_WINDOW := 0.5
@@ -30,17 +38,21 @@ const VIEW_SIZE := Vector2(1920, 1080)
 # Fading in decibels sounds even all the way down; by this level nothing can be heard.
 const SILENT_DB := -60.0
 
-# Three takes of one rush, rotated by clone, so five of them a round don't sound like one sound
-# played five times.
+# Three takes of one rush, rotated by clone, so fifteen of them a round don't sound like one sound
+# played fifteen times.
 const RUSH_SFX := [
 	"res://Assets/Audio/SFX/carter_rush_1.wav",
 	"res://Assets/Audio/SFX/carter_rush_2.wav",
 	"res://Assets/Audio/SFX/carter_rush_3.wav",
 ]
 
-#UI (BossHealthBarUI builds it at runtime)
+#UI (BossHealthBarUI and BreakGaugeUI build it at runtime)
 var hud_layer: CanvasLayer
 var health_bar: Control
+# His daze meter (BossBreakGauge), and the gauge that draws it. Built once and hidden: it is a
+# PER-ATTACK meter that only the Beam Rush ever shows, not a fight-long one.
+var break_gauge: Node
+var break_gauge_bar: Control
 
 # The yank's ghosts, its dust and the entrance's ground ring. It sits one px below the top edge of
 # the arena floor, so it y-sorts over the mat and under every character wherever its children are put.
@@ -115,6 +127,10 @@ func _ready() -> void:
 
 	sprite_base_position = sprite.position
 	_apply_art_layout()
+	# Before the HUD: the HUD builds the gauge's bar, and only if there is a gauge to draw.
+	var player: Node = get_tree().current_scene.get_node_or_null(FightOutro.PLAYER_PATH) if get_tree().current_scene else null
+	if player:
+		_add_break_gauge(player)
 	_build_hud()
 	_build_dark_stage()
 	_build_ko_light()
@@ -154,6 +170,52 @@ func _ready() -> void:
 	var ko := CarterArtLayout.ko_ding()
 	ko_sfx_player.stream = load(ko.stream)
 	ko_sfx_player.volume_db = ko.volume_db
+
+
+#HIS BREAK GAUGE
+# The Beam Rush's exit condition and nothing else: it is the only attack whose parries feed it, and
+# filling it is the only thing that ends that attack. The gains are his own and every one of them is
+# a consequence of that.
+func _add_break_gauge(player: Node) -> void:
+	break_gauge = BossBreakGauge.new()
+	break_gauge.name = "BreakGauge"
+	break_gauge.boss = self
+	break_gauge.player = player
+	# ONLY the teleport strike. The barrage's fifteen clones at 15 apiece would be 225 and would Break
+	# him in the middle of a sequence that has no Break in it.
+	break_gauge.owns_attack = func(id: StringName) -> bool: return id == &"carter_teleport_strike"
+	# Seven parries fills it, which is a 58% read rate over the twelve strikes he gets.
+	break_gauge.parry_gain = 15.0
+	# One hit costs exactly one parry. Eric's 20 would put the Break out of reach at this cadence.
+	break_gauge.hit_loss = 15.0
+	# Nothing in the Beam Rush is dodgeable, and punches only land in the window AFTER it - where a
+	# gain would leak straight into the next rush's meter.
+	break_gauge.perfect_dodge_gain = 0.0
+	break_gauge.punch_gain = 0.0
+	break_gauge.charged_punch_gain = 0.0
+	# Eric's 3.0 measures from him getting up. Carter's Break IS his punish window, so the wait is
+	# only the breath after it.
+	break_gauge.unlock_delay = 0.5
+	add_child(break_gauge)
+	break_gauge.broke.connect(_on_break)
+
+
+# The gauge fills inside a physics flush, where states can't switch.
+func _on_break() -> void:
+	state_machine.break_beam_rush.call_deferred()
+
+
+# BossBreakGauge._physics_process asks this every step. Down, for him, is the punish window: that is
+# what a Break buys, and the wait before the gauge takes anything again starts when it ends.
+func is_down() -> bool:
+	return state_machine.is_recovering()
+
+
+# Only the Beam Rush calls this. A meter on screen through the barrage, which can never move it,
+# would read as an instrument that is broken.
+func show_break_gauge(on: bool) -> void:
+	if break_gauge_bar:
+		break_gauge_bar.visible = on
 
 
 func start_music() -> void:
@@ -788,6 +850,15 @@ func _build_hud() -> void:
 		"text": GameProgress.boss_name(FIGHT_SCENE),
 	})
 	hud_layer.add_child(health_bar)
+
+	if break_gauge:
+		break_gauge_bar = BreakGaugeUI.new()
+		break_gauge_bar.gauge = break_gauge
+		# Set before it is added: BreakGaugeUI reads it in _ready and falls back to Eric's otherwise.
+		break_gauge_bar.spec = CarterArtLayout.break_gauge()
+		hud_layer.add_child(break_gauge_bar)
+		break_gauge_bar.position = health_bar.break_gauge_anchor()
+		break_gauge_bar.hide()
 
 
 func _hit_feedback() -> void:

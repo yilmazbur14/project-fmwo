@@ -1,0 +1,14 @@
+# Computah's pre-fight lines, and they are Greyson's joke rather than his: Computah is sitting in the
+# ring with a flat battery and says nothing at all. Greyson is not in the arena - he is a
+# dialogue-only character now - so these are shouted down from the stands.
+# The "do" lines play the entrance's beats (in ComputahIntro.gd) and the dialogue waits for each one
+# to finish before the next line. THE DEAD AIR IS THE PUNCHLINE: "go get him buddy" is not the
+# robot's command syntax, so nothing_happens() holds an empty ring for three seconds before Greyson
+# works out why, and the command that IS his syntax is what charges him.
+~ start
+Greyson: go get him buddy
+do nothing_happens()
+Greyson: oh right my bad
+Greyson: computah, kill this gay freaking bald idiot
+do battery_charges_up()
+=> END

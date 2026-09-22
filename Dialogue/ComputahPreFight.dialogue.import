@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://m08hfcki5pmg"
+path="res://.godot/imported/ComputahPreFight.dialogue-81eb05b00a2a93487604cfbe024194db.tres"
+
+[deps]
+
+source_file="res://Dialogue/ComputahPreFight.dialogue"
+dest_files=["res://.godot/imported/ComputahPreFight.dialogue-81eb05b00a2a93487604cfbe024194db.tres"]
+
+[params]
+
+defaults=true

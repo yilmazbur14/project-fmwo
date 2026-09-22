@@ -6,13 +6,15 @@ extends SceneTree
 #     --script res://art_source/hud_bars/capture_boss_bar.gd -- fight=eric out=<dir>
 # --max-fps 60 is not optional: uncapped, this scene runs frames far faster than the HUD's
 # real-seconds feedback plays, and a settled shot catches the chip trail still crossing the bar.
-# fight=eric is the single-bar block with its daze meter under it; fight=greyson is the two-bar pair.
+# Both fights here are single-bar blocks; eric's is the one with a daze meter under it. The two-bar
+# pair block has no live fight behind it any more - boss 2 is Computah alone - so it is only
+# reachable through art_source/hud_pass/verify_hud_live.gd, which builds one by hand.
 # Each shot is the whole 1920x1080 frame plus a crop of the block, and the block's measured geometry
 # is printed alongside.
 
 const FIGHTS := {
 	"eric": "res://Scenes/Bosses/EricBossFightScene.tscn",
-	"greyson": "res://Scenes/Bosses/GreysonBossFightScene.tscn",
+	"computah": "res://Scenes/Bosses/ComputahBossFightScene.tscn",
 }
 # The block and its daze meter, with room for the plate above and the crest below.
 const CROP := Rect2i(690, 0, 540, 300)
@@ -116,7 +118,7 @@ func _main() -> void:
 # over an empty rail.
 func _fill_daze(amount: float) -> void:
 	for node in root.find_children("*", "Node", true, false):
-		if node.get_script() != null and str(node.get_script().resource_path).ends_with("EricBreakGauge.gd"):
+		if node.get_script() != null and str(node.get_script().resource_path).ends_with("BossBreakGauge.gd"):
 			node.locked = false
 			node.add(amount)
 

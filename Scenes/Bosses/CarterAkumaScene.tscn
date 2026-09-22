@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterIdle.gd" id="5_idle"]
 [ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterRagingDemon.gd" id="6_raging_demon"]
 [ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterRecover.gd" id="7_recover"]
+[ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterBeamRush.gd" id="10_beam_rush"]
 [ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterDefeated.gd" id="8_defeated"]
 [ext_resource type="Script" path="res://Scripts/States/CarterAkuma/CarterVictory.gd" id="9_victory"]
 
@@ -87,6 +88,10 @@ beat_timer = NodePath("../../BeatTimer")
 
 [node name="RagingDemon" type="Node" parent="CarterAkumaCharacterBody/StateManager" node_paths=PackedStringArray("body")]
 script = ExtResource("6_raging_demon")
+body = NodePath("../..")
+
+[node name="BeamRush" type="Node" parent="CarterAkumaCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("10_beam_rush")
 body = NodePath("../..")
 
 [node name="Recover" type="Node" parent="CarterAkumaCharacterBody/StateManager" node_paths=PackedStringArray("body", "recover_timer", "recover_sfx_player")]

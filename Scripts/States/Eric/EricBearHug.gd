@@ -25,10 +25,8 @@ const PLANTED_SWORD_TEXTURE := preload("res://Assets/Characters/Eric/eric_bearhu
 @export var eric_state_machine : Node
 
 const EricPacing := preload("res://Scripts/EricPacing.gd")
+const EricColourRule := preload("res://Scripts/EricColourRule.gd")
 const TOSS_DIRECTION := Vector2(0.7071, -0.7071)
-# Where the player's centre can be inside the ropes: the floor their body fits on, kept 3 px further
-# in again so a toss never parks them flush against a rope.
-const PLAYER_AREA := Rect2(126, 148.5, 1668, 783)
 
 enum Phase { PLANT, CHARGE, LUNGE, WHIFF, STUMBLE, HOLD, RETURN, RETRIEVE }
 
@@ -66,15 +64,7 @@ func Enter() -> void:
 
 # The fight's first hug is red, never three of one colour in a row, and otherwise a coin toss.
 func _next_is_yellow() -> bool:
-	var pick := false
-	if hugs_started > 0:
-		pick = randf() < EricPacing.value("hug_yellow_chance")
-		if recent_yellows.size() == 2 and recent_yellows[0] == recent_yellows[1]:
-			pick = not recent_yellows[1]
-	recent_yellows.append(pick)
-	if recent_yellows.size() > 2:
-		recent_yellows.pop_front()
-	return pick
+	return EricColourRule.next_is_yellow(hugs_started, recent_yellows, EricPacing.value("hug_yellow_chance"))
 
 
 func Exit() -> void:
@@ -189,7 +179,7 @@ func _release_player() -> void:
 
 
 func _player_point(offset: Vector2) -> Vector2:
-	return (character_body.global_position + offset).clamp(PLAYER_AREA.position, PLAYER_AREA.end)
+	return (character_body.global_position + offset).clamp(EricArtLayout.PLAYER_AREA.position, EricArtLayout.PLAYER_AREA.end)
 
 
 # The planted sword isn't in his frames while he's away from it; it lines up with his sprite

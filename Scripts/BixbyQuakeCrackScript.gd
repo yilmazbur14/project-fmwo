@@ -7,11 +7,19 @@ extends Node2D
 
 const CombinedLayout := preload("res://Scripts/BixbyCombinedArtLayout.gd")
 const HitInfo := preload("res://Scripts/HitInfo.gd")
+const ParryTell := preload("res://Scripts/ParryTell.gd")
 const BURST_SCENE := preload("res://Scenes/Bosses/BixbyQuakeBurstScene.tscn")
 const WAVE_SCENE := preload("res://Scenes/Bosses/BixbyQuakeWaveScene.tscn")
 
 # How far out of the ropes a wave still hurts, so hugging a rope is no safer than the rest of the floor.
 const WAVE_AREA := Rect2(105, 105, 1710, 870)
+# The crack wears the red badge itself rather than his head wearing it: he flies, he is three pounds
+# away by the time this goes off, and there are up to three of these lit at once. Each one carries its
+# own warning where it will erupt, which is also what a parry has to be timed against.
+# It comes up exactly as the throb tightens, so the beat that says "this one next" and the colour that
+# says "parry it" are one warning and not two. Their fuses are a pound apart and stagger further again
+# (BixbyBeastStateMachine.quake_stagger), so the badges never overlap: one crack is up at a time.
+const TELL_TIME := CombinedLayout.CRACK_RUSH_TIME
 
 enum Phase { MARK, WAVE }
 
@@ -26,6 +34,7 @@ var clock := 0.0
 var throbs := 0.0
 # How long after the eruption starts the wave tears out of it.
 var wave_delay := 0.0
+var told := false
 var burst: Area2D
 var burst_hurts := false
 # The tiles of the wave's crest, and each one's place across it, which it keeps the whole way out.
@@ -63,9 +72,13 @@ func _warn(delta: float) -> void:
 	if clock < opening:
 		crack.frame = 1
 		return
+	var left := warning_time - clock
 	var beat_time: float = CombinedLayout.CRACK_THROB_TIME
-	if warning_time - clock < CombinedLayout.CRACK_RUSH_TIME:
+	if left < CombinedLayout.CRACK_RUSH_TIME:
 		beat_time = CombinedLayout.CRACK_RUSH_THROB_TIME
+	if not told and left <= TELL_TIME:
+		told = true
+		ParryTell.telegraph(self, &"bixby_quake_burst", left)
 	throbs += delta / beat_time
 	var throb: Array = CombinedLayout.CRACK_THROB_FRAMES
 	crack.frame = throb[int(throbs) % throb.size()]
@@ -75,6 +88,8 @@ func _erupt() -> void:
 	phase = Phase.WAVE
 	clock = 0.0
 	crack.hide()
+	# The eruption is the threat now.
+	ParryTell.clear(self)
 	erupt_sfx.play()
 	burst = _hazard(BURST_SCENE, CombinedLayout.BURST_SHEET, CombinedLayout.BURST_FRAME_SIZE,
 		CombinedLayout.BURST_OFFSET, CombinedLayout.BURST_HIT_SIZE)

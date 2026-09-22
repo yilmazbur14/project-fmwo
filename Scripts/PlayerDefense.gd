@@ -12,6 +12,13 @@ extends Node
 # can only be answered this way: a held guard doesn't stop it.
 # Parries in a row build a streak, which pays more hype, louder feedback and a longer stagger window.
 # A hit, a guard break or parry_streak_timeout without a parry ends it.
+# Dash parry: with the player's dash_parry (PlayerScript.dash_parry, Eric's fight for now) a block
+# press ends a dash where it is and raises the guard in its place, so a dash can be turned into a
+# guard at any point in it and a dash into an attack can parry it. Nothing here changes for the parry
+# itself - it is the ordinary guarded one, on the ordinary window, mash lockout and guarded side - so
+# a press that is late or mashed buys a block at full stamina instead. What the cancel gives up is
+# everything the dash had not yet paid out: its i-frames (DashImmunity reads player.dash_cancelled)
+# and its dodge ghost. What it keeps is dash_ready_at, the wait for the next dash.
 # Guard break: the block that empties the bar is still absorbed, then the player is stunned and every
 # hit lands; the first one ends the stun, so it isn't punished twice. Only blocks break the guard.
 # Perfect dodge: either a dash-through attack touches the player during dash immunity, or another
@@ -105,8 +112,8 @@ static var LOG_HITS := false
 @export var perfect_dodge_source_lockout := 3.0
 # An attack that touched the player this recently isn't a near miss.
 @export var perfect_dodge_contact_grace := 1.0
-# The dash's lockout and re-dash cooldown: today's numbers beside feel_v2's (PlayerScript.feel_v2, only
-# Eric's fight for now), so rolling v2 out to every fight changes nothing here. Only a parry cuts
+# The dash's lockout and re-dash cooldown: today's numbers beside feel_v2's (PlayerScript.feel_v2,
+# which every fight is on), so today's are what a fight that opts back out gets. Only a parry cuts
 # either short.
 # Today: a lockout long enough that mashing dash covers less ground than walking. It is also what
 # spaces dashes out, so there is no cooldown.
@@ -322,6 +329,15 @@ func on_dash_started() -> void:
 	ghost.set_deferred("monitorable", true)
 
 
+# Called as a block press ends a dash early (PlayerScript.dash_parry). The dash is over, so what it
+# had not paid out goes with it: the ghost, and with it the perfect dodge and the refund it would
+# have made. dash_ready_at is deliberately left alone - the cancel skips the landing beat, it does
+# not buy the dash back - and on_dash_ended() is deliberately not called, so there is no landing beat
+# to skip in the first place.
+func on_dash_cancelled() -> void:
+	clear_dodge_ghost()
+
+
 # Called as a dash's frames run out.
 func on_dash_ended() -> void:
 	dash_recovery_until = clock + (dash_recovery_time_v2 if player.feel_v2 else dash_recovery_time)
@@ -382,8 +398,12 @@ func is_parry_ready() -> bool:
 func _parry(hit: RefCounted, record: Dictionary) -> int:
 	record.absorbed_until = clock + blocked_rehit_interval
 	last_press_parried = true
-	# The reward for reading the attack: a parry cancels a dash's recovery frames.
-	clear_dash_recovery()
+	# The reward for reading the attack: a parry cancels a dash's recovery frames. A dash ended by a
+	# block press (PlayerScript.dash_parry) never reached them, and handing back the wait for the next
+	# dash on top of that would make dash, cancel, parry, dash a loop with no downtime in it at all,
+	# so a cancelled dash keeps what it is still paying.
+	if not player.dash_cancelled:
+		clear_dash_recovery()
 	parry_streak += 1
 	last_parry_time = clock
 	parry_streak_changed.emit(parry_streak)

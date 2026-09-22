@@ -1,7 +1,7 @@
 extends State
 
 # Eric thrown into the air by the tiered finisher's uppercuts (PlayerFinisher), then down on the mat.
-# Inert: the finisher lifts him (BossOneScript.juggle_lift) and picks his poses (juggle_pose); this only
+# Inert: the finisher lifts him (EricScript.juggle_lift) and picks his poses (juggle_pose); this only
 # draws them, on his juggle sheet, with his shadow on the mat while he's up. His body, hurtbox and y-sort
 # stay where the first uppercut caught him: only his sprite rises, and only the last uppercut's shove
 # moves him. His sword is out of his hands the whole time, standing in the mat (EricDroppedSword).

@@ -8,6 +8,7 @@ extends State
 
 const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
 const CombinedLayout := preload("res://Scripts/BixbyCombinedArtLayout.gd")
+const ParryTell := preload("res://Scripts/ParryTell.gd")
 const SWEEP_SCENE := preload("res://Scenes/Bosses/BixbySonicSweepScene.tscn")
 
 @export var body : CharacterBody2D
@@ -52,6 +53,7 @@ func Enter() -> void:
 
 func Exit() -> void:
 	body.set_hurtbox_active(false)
+	ParryTell.clear(body)
 	if is_instance_valid(sweep):
 		sweep.queue_free()
 	sweep = null
@@ -81,6 +83,7 @@ func Physics_Update(delta: float) -> void:
 				else:
 					_start(Phase.SPIN_UP)
 					body.play_anim(&"spin_up")
+					_tell_the_scream()
 		Phase.SPIN_UP:
 			if sweep == null and elapsed >= BixbyBeastArtLayout.time_to_step(&"spin_up", BixbyBeastArtLayout.SPIN_BEAMS_STEP):
 				_start_beams()
@@ -138,6 +141,23 @@ func _impact() -> void:
 		state_machine.plant_quake_crack(player.global_position, body.ground_position, pounds_done - 1)
 
 
+# The yellow ring, from his maws lighting up to the last sweep. Unlike a wind-up warning it stays up
+# while the beams are out: they sweep for the whole spin and cross any one spot several times over, so
+# the read is not "it is coming" but "this one is dashed, not parried", and it has to hold for as long
+# as that is true. Nothing else can carry it: the beams come off him and reach the whole floor, so
+# there is no one place they land to stand it on.
+func _tell_the_scream() -> void:
+	ParryTell.telegraph(body, &"bixby_sonic_beam",
+		BixbyBeastArtLayout.anim_time(&"spin_up") + state_machine.combined_spin_time, _spin_centre)
+
+
+# The point his maws orbit, which is where the beams come out of: his daze anchor is between the horns
+# of his downed frames, and on the spin sheet he is coiled low enough that it lands a body above him,
+# up behind the boss bar.
+func _spin_centre() -> Vector2:
+	return body.feet_position() + BixbyBeastArtLayout.local(CombinedLayout.SPIN_CENTRE)
+
+
 # His maws light up: the beams come out of them and follow them through the spin.
 func _start_beams() -> void:
 	scream_sfx_player.play()
@@ -178,6 +198,8 @@ func _stop_spin() -> void:
 	if is_instance_valid(sweep):
 		sweep.stop()
 	sweep = null
+	# The beams stop hurting the moment they start dying away.
+	ParryTell.clear(body)
 	_start(Phase.SPIN_DOWN)
 	body.play_anim(&"spin_down")
 

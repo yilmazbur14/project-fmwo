@@ -3,13 +3,19 @@ extends CharacterBody2D
 const HitStop := preload("res://Scripts/HitStop.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
 const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
+const BossBreakGauge := preload("res://Scripts/BossBreakGauge.gd")
+const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
+const MasonArtLayout := preload("res://Scripts/MasonArtLayout.gd")
 # What he says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/MasonOutro.dialogue"
 # This fight's place in the order; GameProgress decides what follows it.
 const FIGHT_SCENE := "res://Scenes/Bosses/MasonBossFightScene.tscn"
 
 #CONSTANTS
-@export var max_health := 10
+# The tiered finisher's uppercuts each take a share of this, so it is what decides whether a juggle is
+# a finisher or an execute. At 48 the three tiers are worth 7, 12 and 19, a supercharged third 24, and
+# a 3-punch eat window 4.
+@export var max_health := 48
 var boss_health := max_health
 const PHASE_TWO_RATIO := 0.5
 const MAX_HITS_PER_WINDOW := 3
@@ -17,8 +23,32 @@ const PHANTOM_HIT_WINDOW := 0.5
 # The finisher's daze stars circle here, from his origin: about 34 px over his hat.
 const DAZE_ANCHOR_OFFSET := Vector2(0, -124)
 
+#BREAK GAUGE (BossBreakGauge)
+# Not Eric's numbers: his parries arrive in bursts and his damage is a field the player threads rather
+# than a read they fluffed, so a parry is worth less and a hit costs less. The guard break is held at
+# 1.75x a hit and the grab parry at 1.4x a parry, as Eric's are, and `broken_time` is per-phase, the
+# shape the rest of his pacing already uses.
+# Measured, not reasoned: art_source/mason_tuning/measure_mason_v2.gd run=parry and run=ceiling. A
+# parrying bot breaks him twice, on cycles 1 and 3, and the fight ends in 3 cycles (65 s); one that
+# only gets the elbow drops to read (ceiling) breaks him once and finishes with the gauge at 58 of 100.
+# So: one or two Breaks a fight. A point higher on parry_gain and the second lands in cycle 2 and ends
+# the fight there, at 2 cycles, which is under the pacing this fight is meant to have.
+const BREAK := {
+	"parry_gain": 12.0,
+	"grab_parry_gain": 17.0,
+	"hit_loss": 10.0,
+	"guard_break_loss": 18.0,
+	"broken_time": [3.0, 2.6],
+}
+# The attacks this fight owns, for the gauge. Deliberately a list rather than a prefix test: Carter's
+# elbow drop is Mason's attack and carries no mason_ prefix.
+const ATTACK_IDS: Array[StringName] = [&"mason_poo_blast", &"mason_nugget", &"carter_elbow_drop"]
+
 #UI (BossHealthBarUI builds it at runtime)
 var health_bar: Control
+var hud_layer: CanvasLayer
+var break_gauge: Node
+var break_sting_players: Array[AudioStreamPlayer] = []
 
 @onready var sprite = $Sprite2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
@@ -85,6 +115,9 @@ func _ready() -> void:
 	add_child(finisher_stagger_timer)
 
 	sprite_base_position = sprite.position
+	var player := get_tree().current_scene.get_node_or_null(FightOutro.PLAYER_PATH)
+	if player:
+		_add_break_gauge(player)
 	_build_hud()
 
 	# Loaded here rather than when the fight starts, so the first play doesn't hitch.
@@ -109,6 +142,75 @@ func _ready() -> void:
 	phone_sfx_player.stream = load("res://Assets/Audio/SFX/laser_charge.ogg")
 	downed_sfx_player.stream = load("res://Assets/Audio/SFX/downed_stinger.ogg")
 	toss_sfx_player.stream = load("res://Assets/Audio/SFX/whirlwind_whoosh.ogg")
+
+
+func _add_break_gauge(player: Node) -> void:
+	break_gauge = BossBreakGauge.new()
+	break_gauge.name = "BreakGauge"
+	break_gauge.boss = self
+	break_gauge.player = player
+	break_gauge.owns_attack = func(id: StringName) -> bool: return ATTACK_IDS.has(id)
+	var strong: Array[StringName] = [&"carter_elbow_drop"]
+	break_gauge.strong_parry_ids = strong
+	break_gauge.parry_gain = BREAK.parry_gain
+	break_gauge.grab_parry_gain = BREAK.grab_parry_gain
+	break_gauge.hit_loss = BREAK.hit_loss
+	break_gauge.guard_break_loss = BREAK.guard_break_loss
+	add_child(break_gauge)
+	break_gauge.broke.connect(_on_break)
+	for sting in MasonArtLayout.BREAK_STING_SFX:
+		var sfx := AudioStreamPlayer.new()
+		sfx.stream = load(sting.stream)
+		sfx.pitch_scale = sting.pitch
+		sfx.volume_db = sting.volume_db
+		add_child(sfx)
+		break_sting_players.append(sfx)
+
+
+# The gauge fills inside physics flushes and his own physics steps, where his states can't switch.
+func _on_break() -> void:
+	state_machine.enter_broken.call_deferred()
+
+
+func is_broken() -> bool:
+	return state_machine.current_state == state_machine.states.get("Broken")
+
+
+func is_juggled() -> bool:
+	return state_machine.current_state == state_machine.states.get("Juggled")
+
+
+# Down from a Break or a juggle, until he is back on his feet: the gauge waits for this.
+func is_down() -> bool:
+	return is_broken() or is_juggled()
+
+
+func play_break_sting() -> void:
+	for sfx in break_sting_players:
+		sfx.play()
+
+
+# White over the whole view, fading in real time: it plays out through the Break's hit-stop.
+func flash_hud(color: Color, time: float) -> void:
+	var flash := ColorRect.new()
+	flash.color = color
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hud_layer.add_child(flash)
+	var fade := flash.create_tween().set_ignore_time_scale(true)
+	fade.tween_property(flash, "modulate:a", 0.0, time)
+	fade.tween_callback(flash.queue_free)
+
+
+# Global position of the centre of a pixel on Mason's sheet frames.
+func frame_point(pixel: Vector2) -> Vector2:
+	return to_global(MasonArtLayout.frame_local(pixel + Vector2(0.5, 0.5)))
+
+
+# The same for a pixel on his juggle sheet, whose frames are bigger than his main sheet's and hang
+# lower to keep his feet on the same ground line.
+func juggle_point(pixel: Vector2) -> Vector2:
+	return to_global(MasonArtLayout.juggle_local(pixel + Vector2(0.5, 0.5)))
 
 
 func start_music() -> void:
@@ -147,15 +249,20 @@ func take_punch(amount: int) -> int:
 	return dealt
 
 
-# Phase two can't be skipped: until a phase-two cycle starts, Mason can't drop past the threshold.
+# Phase two can't be skipped: until Mason crosses the threshold, he can't drop past it. Keyed off
+# phase_two, which _apply_damage sets the instant the threshold is crossed, and NOT off the cycle's
+# phase, which only catches up at the next start_cycle(): a juggle that reaches the floor mid-flight
+# would have its second and third uppercuts deal a literal zero.
+# So a supercharged third uppercut from at or under the threshold can now end the fight without a
+# phase-two cycle ever running. That is the earned finish it looks like, and is meant.
 func _lowest_health() -> int:
-	if state_machine.cycle_phase == 0:
-		return floori(max_health * PHASE_TWO_RATIO)
-	return 0
+	if phase_two:
+		return 0
+	return floori(max_health * PHASE_TWO_RATIO)
 
 
 # A hit that would carry past the threshold is cut down to reach it exactly.
-func _apply_damage(amount: int) -> int:
+func _apply_damage(amount: int, pitch := 1.0) -> int:
 	var dealt := mini(amount, boss_health - _lowest_health())
 	if dealt <= 0:
 		return 0
@@ -163,6 +270,7 @@ func _apply_damage(amount: int) -> int:
 	boss_health -= dealt
 	_refresh_health_bar()
 	_hit_feedback()
+	hit_sfx_player.pitch_scale = pitch
 	hit_sfx_player.play()
 
 	if state_machine.current_state.name == "Eat":
@@ -179,23 +287,45 @@ func _apply_damage(amount: int) -> int:
 	return dealt
 
 
-# The player's finisher (PlayerFinisher). Only the eat window can be dazed, and only while the
-# finisher can still take health past the phase floor.
+# The player's finisher (PlayerFinisher). Both of his punish windows, and only while the finisher can
+# still take health past the phase floor: the eat window he earns by landing hits, and the Break he
+# earns by reading the mat.
 func can_be_dazed() -> bool:
-	return not defeated and boss_health > _lowest_health() and not daze_used and state_machine.current_state == state_machine.states.get("Eat")
+	if defeated or boss_health <= _lowest_health() or daze_used:
+		return false
+	var state = state_machine.current_state
+	return state == state_machine.states.get("Eat") or state == state_machine.states.get("Broken")
 
 
+# The three-bar mash and the juggle are the Break's payout alone. The eat window pays the plain
+# single-bar finisher. That split is arithmetic, not taste: the juggle's shares are proportional to
+# max health, so with it on both windows the fight ends inside two cycles however much health he has.
+func can_be_juggled() -> bool:
+	return not defeated and boss_health > 0 and is_broken()
+
+
+# The finisher draws its own daze stars over Broken's.
 func enter_daze() -> void:
 	daze_used = true
+	if is_broken():
+		state_machine.current_state.show_stars(false)
 
 
-func exit_daze(_finisher_landed: bool) -> void:
-	pass
+func exit_daze(finisher_landed: bool) -> void:
+	if is_broken() and not finisher_landed:
+		state_machine.current_state.show_stars(true)
 
 
 func end_recovery(stagger_time: float) -> bool:
 	if defeated or boss_health <= 0:
 		return false
+	# Crashed from a juggle, he lies a beat before he gets up.
+	if is_juggled():
+		state_machine.current_state.recover(stagger_time)
+		return true
+	if is_broken():
+		state_machine.end_break(stagger_time)
+		return true
 	state_machine.eat_timer.stop()
 	state_machine.on_child_transition(state_machine.current_state, "Idle")
 	# Held on the recoil frame through the stagger instead of the idle loop Idle starts.
@@ -211,6 +341,63 @@ func take_finisher(amount: int) -> int:
 
 func get_max_health() -> int:
 	return max_health
+
+
+# The tiered finisher's juggle (PlayerFinisher).
+func begin_juggle() -> void:
+	state_machine.enter_juggled()
+
+
+func juggle_lift(px: float) -> void:
+	if is_juggled():
+		state_machine.current_state.lift(px)
+
+
+func juggle_pose(pose: StringName, crater := false) -> void:
+	if is_juggled():
+		state_machine.current_state.pose(pose, crater)
+
+
+# The most he can be lifted and still be seen whole: his top stays inside the arena, which is as far up
+# as the view can go. The height is measured on the juggle sheet's own rows; the ground line is his
+# either way, because both sheets stand him on it.
+func juggle_headroom() -> float:
+	var art := MasonArtLayout.juggle()
+	var ground_y: float = frame_point(Vector2(0, MasonArtLayout.FEET_ROW)).y
+	var height: float = (art.feet.y - art.top_row) * MasonArtLayout.SCALE
+	return ground_y - height - MasonArtLayout.JUGGLE_TOP_MARGIN
+
+
+# Past the hit cap, as take_finisher, with his hit sound pitched up a step each uppercut.
+func take_juggle_hit(amount: int, pitch: float) -> int:
+	return _apply_damage(amount, pitch)
+
+
+func get_juggle_point() -> Vector2:
+	return state_machine.states["Juggled"].air_point()
+
+
+# A juggle that kills him ends with him still in the air: the outro's first line would otherwise open
+# over a boss mid-fall. Holding it until he has landed is the same fix EricScript makes.
+func outro_line_delay(_player_won: bool) -> float:
+	if state_machine.current_state == state_machine.states.get("Juggled"):
+		return MasonArtLayout.JUGGLE_OUTRO_DELAY
+	return 0.0
+
+
+# The uppercut shoves him back (PlayerFinisher). He has to move for real: a boss left to the fallback
+# rocks back on sprite.offset, which is the same offset a juggle's lift rewrites every frame.
+func knock_back(push: Vector2, time: float) -> void:
+	var target := Vector2(
+		clampf(global_position.x + push.x, state_machine.LINE_X_LEFT, state_machine.LINE_X_RIGHT),
+		clampf(global_position.y + push.y, state_machine.WALK_Y_MIN, state_machine.WALK_Y_MAX))
+	var player := get_tree().current_scene.get_node_or_null(FightOutro.PLAYER_PATH)
+	# The walls must never shove him back onto the player.
+	if player and target.distance_to(player.global_position) < global_position.distance_to(player.global_position):
+		return
+	# His next line is laid from the rest point, so it moves with him or he teleports back as it starts.
+	state_machine.rest_point = target + state_machine.BOMB_SPAWN_OFFSET
+	create_tween().tween_property(self, "global_position", target, time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 func get_daze_anchor() -> Vector2:
@@ -264,15 +451,21 @@ func _refresh_health_bar() -> void:
 
 
 func _build_hud() -> void:
-	var layer := CanvasLayer.new()
-	add_child(layer)
+	hud_layer = CanvasLayer.new()
+	add_child(hud_layer)
 
 	health_bar = BossHealthBarUI.create({
 		"rows": [{"key": &"mason", "max": max_health, "value": boss_health}],
 		"plate": &"mason",
 		"text": GameProgress.boss_name(FIGHT_SCENE),
 	})
-	layer.add_child(health_bar)
+	hud_layer.add_child(health_bar)
+
+	if break_gauge:
+		var gauge_bar := BreakGaugeUI.new()
+		gauge_bar.gauge = break_gauge
+		hud_layer.add_child(gauge_bar)
+		gauge_bar.position = health_bar.break_gauge_anchor()
 
 
 func _hit_feedback() -> void:

@@ -25,7 +25,7 @@ const TABLE := {
 	"recovery_rest": [0.6, 0.25],
 	# The window a chain ends in, and how long it lasts. V1's Downed is long enough to walk up to him
 	# and land two full three-punch combos, and dazes; V2's Winded is a short punish with no daze,
-	# since the Break gauge (EricBreakGauge) is how he is dazed there.
+	# since the Break gauge (BossBreakGauge) is how he is dazed there.
 	"window_state": ["Downed", "Winded"],
 	"window_time": [6.0, 2.0],
 	"rage_window_time": [6.0, 1.6],
@@ -112,11 +112,76 @@ const TABLE := {
 	# in a row.
 	"hug_yellow_chance": [0.0, 0.5],
 
+	#PHASE TWO (EricPacing V2 only)
+	# At or below this health ratio his sword is knocked out of the ring (EricPhaseTwo) and he fights
+	# on with his fists. EricScript latches the phase the first time a hit takes him across it; nothing
+	# reads the ratio again afterwards.
+	"phase_two_health_ratio": [null, 0.5],
+	# Everything below is read through p2(), not raged(): rage only spans 0.5 -> 1.0 inside phase two,
+	# so raged() would leave every one of these numbers stuck in the top half of its own range.
+	# Much faster than phase one's 0.25/0.15: the sword was what made him slow.
+	"p2_attack_gap": [null, 0.18],
+	"rage_p2_attack_gap": [null, 0.10],
+	# He walks the gap down onto the player instead of standing in it. The clearest "agile" tell there is.
+	"p2_stalk_speed": [null, 360.0],
+	"rage_p2_stalk_speed": [null, 480.0],
+	# The mixup's wind-up, identical to hug_charge_time so phase one's colour training transfers whole.
+	"p2_windup": [null, 0.55],
+	"rage_p2_windup": [null, 0.45],
+	# THE NUMBER THE MIXUP STANDS ON. Both branches leave his hand and reach the player after exactly
+	# this long, at any range: the rush is fixed-duration and homes, so the answer window never shrinks
+	# with distance, and the moment of contact carries no information about which branch it is. Only
+	# the badge's colour does. It has no rage twin ON PURPOSE - the haymaker and the grab must arrive
+	# together at every rage, and a twin is an invitation to move one of them.
+	# Red must never land AFTER yellow: if it did, a dash for the grab followed by a press for the
+	# haymaker would beat both, because the press lands after the grab resolved and so cannot give up
+	# the dash's i-frames (DashImmunity reads player.dash_cancelled at contact).
+	"p2_strike_travel": [null, 0.30],
+	# How long his arms stay live once he arrives. A single frame would be a coin toss against a moving
+	# player; much longer and the dash answer stops being fair, since a dash has to cover the whole of
+	# it out of AttackCatalog.DASH_IMMUNITY_TIME (0.1833 s at 60 fps) and what is left is the window
+	# the player has to hit. At 0.05 that window is 0.133 s, eight frames.
+	"p2_strike_hot": [null, 0.05],
+	# The whiffed grab's stumble, open to punches, and the haymaker's own follow-through.
+	"p2_stumble_time": [null, 0.7],
+	"p2_recover_time": [null, 0.45],
+	# The hold: a crush every interval, up to p2_crush_ticks, then he lets go whether they got out or
+	# not. Three ticks of 1 against six half-hearts, so never mashing is most of a health bar and
+	# getting out on the first tick is one. PlayerGrabEscape's meter fills in about 0.8 s at ten
+	# alternating presses a second and 1.2 s at seven, which is what sets this interval.
+	"p2_crush_ticks": [null, 3],
+	"p2_crush_interval": [null, 0.8],
+	"rage_p2_crush_interval": [null, 0.65],
+	# The chance a mixup comes out yellow (the grab). Same rule as the phase-one hug: the first is
+	# always red, and never three of one colour in a row (EricColourRule).
+	"p2_yellow_chance": [null, 0.5],
+
+	#BARBARIC LEAP
+	"p2_leaps": [null, 5],
+	"p2_leap_crouch": [null, 0.35],
+	"rage_p2_leap_crouch": [null, 0.28],
+	"p2_leap_air": [null, 0.55],
+	"rage_p2_leap_air": [null, 0.48],
+	# The landing beat the tremor goes out on, before the next crouch.
+	"p2_leap_land": [null, 0.12],
+	"rage_p2_leap_land": [null, 0.10],
+	# A dash is only immune AttackCatalog.DASH_IMMUNITY_COOLDOWN after the last one, so two tremors
+	# closer together than that could not both be dashed. Landing to landing is leap_land + leap_crouch
+	# + leap_air, and the crouch holds until it clears the cooldown plus this lead - the same rule and
+	# the same reasoning as whirl_dodge_lead. At full health that sum is 1.02 s and enraged 0.86 s,
+	# both already clear of 0.6 + 0.15, so the hold is the floor rather than the usual case.
+	"p2_leap_dodge_lead": [null, 0.15],
+	# The rest at the end of the five, open to punches.
+	"p2_leap_rest": [null, 1.8],
+	"rage_p2_leap_rest": [null, 1.5],
+	"p2_tremor_speed": [null, 1100.0],
+	"rage_p2_tremor_speed": [null, 1350.0],
+
 	#STAGGER AND BREAK
 	# How fast a parry-staggered Eric glides back to where his attack started. V1 borrowed the
 	# whirlwind's chase speed, which V2 no longer has.
 	"stagger_glide_speed": [420.0, 420.0],
-	# How long a Break (EricBreakGauge) leaves him on his knees.
+	# How long a Break (BossBreakGauge) leaves him on his knees.
 	"broken_time": [null, 3.0],
 	"rage_broken_time": [null, 2.6],
 }
@@ -133,3 +198,14 @@ static func value(key: String) -> Variant:
 # `key` at `rage` (0 at full health, 1 at none), between it and its rage_ twin.
 static func raged(key: String, rage: float) -> float:
 	return lerpf(value(key), value("rage_" + key), rage)
+
+
+# A phase-two number at `rage`. Phase two only ever runs from phase_two_health_ratio downwards, so
+# rage there spans 0.5 -> 1.0 and never the bottom half: raged() would hand back a number already
+# past the middle of its range on the very first phase-two attack. This remaps that half onto the
+# whole, so a phase-two key reads its plain value the moment the sword goes and its rage_ twin at
+# his last half-heart.
+static func p2(key: String, rage: float) -> float:
+	var entry_ratio: float = value("phase_two_health_ratio")
+	var t := 1.0 if entry_ratio <= 0.0 else clampf((rage - (1.0 - entry_ratio)) / entry_ratio, 0.0, 1.0)
+	return raged(key, t)

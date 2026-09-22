@@ -6,6 +6,7 @@ extends State
 # ever dropped over the third that is warning or slamming, so there is always somewhere to stand.
 
 const GiantCard := preload("res://Scripts/JoshGiantCardScript.gd")
+const ParryTell := preload("res://Scripts/ParryTell.gd")
 
 @export var body : CharacterBody2D
 @export var glide_sfx_player : AudioStreamPlayer
@@ -39,6 +40,7 @@ func Enter() -> void:
 
 # The fallen cards stay where they landed for the whole storm; the deck clears when it ends.
 func Exit() -> void:
+	ParryTell.clear(body)
 	for card in state_machine.cards:
 		if is_instance_valid(card):
 			card.dismiss(CLEAR_TIME)
@@ -76,9 +78,18 @@ func _drop_next() -> void:
 	falling = true
 	danger_third = third
 	danger_left = INF
+	# Yellow, and over the third rather than over him: nothing parries a card this size, and he is
+	# somewhere else entirely while it comes down.
+	ParryTell.telegraph(body, &"josh_card_fall", state_machine.card_warning, _fall_anchor)
+
+
+# The committed third's centre, which is where the card itself comes to rest.
+func _fall_anchor() -> Vector2:
+	return state_machine.third_centre(danger_third)
 
 
 func _on_card_slammed() -> void:
+	ParryTell.clear(body)
 	falling = false
 	drop_index += 1
 	gap_left = state_machine.card_gap

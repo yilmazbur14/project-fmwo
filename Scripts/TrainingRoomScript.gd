@@ -3,9 +3,10 @@ extends Node2D
 # The practice floor on the Controls screen. Danny finishes his lines, the balloon closes and the
 # player is left alone with a sparring dummy to punch, combo, parry, dodge, guard-break and mash for
 # as long as they like before walking into Arena #1.
-# Everything here is the real system: the room switches the player onto feel_v2 exactly as
-# BossOneScript does, because its only exit is Eric's fight, and the dummy answers every contract a
-# boss does. The two things it changes are that the dummy cannot die and neither can the player.
+# Everything here is the real system: the room switches the player onto Eric's own player flags
+# exactly as EricScript does, because its only exit is Eric's fight, and the dummy answers every
+# contract a boss does. The two things it changes are that the dummy cannot die and neither can the
+# player.
 #
 # The player MUST NOT be able to lose in here. PlayerScript._process fires FightOutro.finish_fight
 # at zero health, and FightOutro.PLAYER_PATH is hard-coded to "Arena/MainPlayer/CharacterBody2D",
@@ -37,6 +38,11 @@ const MODE_COOLDOWN := 0.5
 # The strip under the Arena #1 door. A walk crosses it in about half a second and a dash in 0.05, so
 # only a deliberate walk holds it long enough.
 const DOOR_DWELL := 0.35
+
+# Danny's theme was composed with the rest of the eight and then never played anywhere: this room
+# was the only screen in the game with no music at all. Built here rather than added to the scene,
+# the same way this room builds its walls and its refill timer.
+const DANNY_THEME := "res://Assets/Audio/Music/danny_theme.wav"
 
 const REFILL_TIME := 1.2
 const FULL_HEALTH := 6
@@ -151,9 +157,10 @@ func _ready() -> void:
 	process_priority = -10
 	process_physics_priority = -10
 
-	# The room's only exit is Eric's fight, so it teaches Eric's feel: the V2 dash, the V2 punch
-	# reach and the finisher's own mash pair. Exactly what BossOneScript does as that fight starts.
-	player.feel_v2 = true
+	# What Eric's fight turns on, so the room practises the move set the fight it opens into has
+	# (PlayerScript.dash_parry, set the same way in EricScript).
+	player.dash_parry = true
+
 	dummy.player = player
 	dummy.set_sparring(false)
 
@@ -162,6 +169,8 @@ func _ready() -> void:
 	callout.modulate.a = 0.0
 	danny_bark.modulate.a = 0.0
 	door_prompt.visible = false
+
+	_start_music()
 
 	refill_timer = Timer.new()
 	refill_timer.name = "RefillTimer"
@@ -368,6 +377,18 @@ func _bark(key: String) -> void:
 
 
 #THE ROOM ITSELF
+
+
+func _start_music() -> void:
+	var music := AudioStreamPlayer.new()
+	music.name = "MusicPlayer"
+	music.stream = load(DANNY_THEME)
+	if music.stream:
+		# The cut is one whole cycle, and the importer already marks it LOOP_FORWARD; this only
+		# matters for a stream that arrived some other way.
+		music.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	add_child(music)
+	music.play()
 
 func _build_walls() -> void:
 	var t := WALL_THICKNESS

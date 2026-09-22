@@ -9,7 +9,7 @@ extends SceneTree
 
 const SCENES := {
 	"eric": "res://Scenes/Bosses/EricBossFightScene.tscn",
-	"greyson": "res://Scenes/Bosses/GreysonBossFightScene.tscn",
+	"computah": "res://Scenes/Bosses/ComputahBossFightScene.tscn",
 	"carter": "res://Scenes/Bosses/CarterBossFightScene.tscn",
 	"josh": "res://Scenes/Bosses/JoshBossFightScene.tscn",
 	"mason": "res://Scenes/Bosses/MasonBossFightScene.tscn",

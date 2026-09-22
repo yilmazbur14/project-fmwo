@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" path="res://Assets/Characters/CarterAndJosh/carter.png" id="1_carter_tex"]
 [ext_resource type="Texture2D" path="res://Assets/Characters/CarterAndJosh/josh.png" id="2_josh_tex"]
-[ext_resource type="Script" path="res://Scripts/BossThreeScript.gd" id="3_coord"]
+[ext_resource type="Script" path="res://Scripts/CarterAndJoshScript.gd" id="3_coord"]
 [ext_resource type="Script" path="res://Scripts/CarterScript.gd" id="4_carter_script"]
 [ext_resource type="Script" path="res://Scripts/JoshScript.gd" id="5_josh_script"]
 

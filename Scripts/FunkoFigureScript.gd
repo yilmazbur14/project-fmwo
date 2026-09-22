@@ -6,6 +6,8 @@ extends CharacterBody2D
 const PlayerScript := preload("res://Scripts/PlayerScript.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
 const HitInfo := preload("res://Scripts/HitInfo.gd")
+const ParryTell := preload("res://Scripts/ParryTell.gd")
+const DefenseHypeArtLayout := preload("res://Scripts/DefenseHypeArtLayout.gd")
 
 # The figures still in play, for spreading a swarm out. A figure leaves it once it goes off.
 const FIGURE_GROUP := "funko_figure"
@@ -128,6 +130,7 @@ var age := 0.0
 var fuse := FUSE_TIME
 # Set by the first punch and kept until the figure goes off: only a punched figure's blast hurts Jordan.
 var redirected := false
+var told := false
 var knockback := Vector2.ZERO
 var blast_hit_jordan := false
 
@@ -187,6 +190,9 @@ func _physics_process(delta: float) -> void:
 
 	if phase == Phase.EXPLODING:
 		return
+	if not told and _fuse_warning():
+		told = true
+		ParryTell.telegraph(self, &"funko_blast", fuse - age, _tell_anchor)
 	if age >= fuse:
 		_detonate()
 		return
@@ -279,8 +285,18 @@ func _tumble() -> void:
 		_set_phase(Phase.CHASING)
 
 
+# Where the red badge stands while the fuse burns down: over the figure's own head, wherever it has
+# wandered to, rather than over Jordan - the blast goes off here and he is across the ring. Its tip
+# keeps the clearance over the art that every other tell keeps over a boss's.
+func _tell_anchor() -> Vector2:
+	var frame_height := figure_sprite.texture.get_height() * ART_SCALE
+	var head := figure_sprite.offset.y * ART_SCALE - frame_height / 2.0
+	return global_position + Vector2(0, head) + DefenseHypeArtLayout.PARRY_TELL_OFFSET
+
+
 func _detonate() -> void:
 	_set_phase(Phase.EXPLODING)
+	ParryTell.clear(self)
 	remove_from_group(FIGURE_GROUP)
 	hurtbox.remove_from_group(PlayerScript.THREAT_GROUP)
 	velocity = Vector2.ZERO

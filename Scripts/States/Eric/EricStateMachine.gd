@@ -16,8 +16,14 @@ const EricPacing := preload("res://Scripts/EricPacing.gd")
 const DROPPED_SWORD := preload("res://Scripts/States/Eric/EricDroppedSword.gd")
 
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/EricPreFight.dialogue"
+# The lines over his phase-two cut (EricPhaseTwo), which call its beats the way the pre-fight ones
+# call the entrance's.
+const PHASE_TWO_DIALOGUE := "res://Dialogue/EricPhaseTwo.dialogue"
 const HAZARD_GROUP := "eric_hazard"
-const ATTACKS := ["Earthquake", "Whirlwind", "SwordThrow", "BearHug"]
+# Every phase-one attack is a sword attack, so phase two keeps none of them: the mixup and the leap
+# are the whole of it. Phase one's own colour mixup stays where it is - it is the setup this pays off.
+const PHASE_ONE_ATTACKS := ["Earthquake", "Whirlwind", "SwordThrow", "BearHug"]
+const PHASE_TWO_ATTACKS := ["P2Mixup", "BarbaricLeap"]
 
 # 0 at full health, 1 at none; set at the start of each chain. Attack states scale their
 # speeds with it (EricPacing.raged).
@@ -47,11 +53,25 @@ func _ready() -> void:
 		current_state.Enter.call_deferred()
 
 
+# What he can throw at the player right now. A method rather than a constant: phase two swaps the
+# whole list out (EricScript.phase_two).
+func attacks() -> Array:
+	return PHASE_TWO_ATTACKS if boss.phase_two else PHASE_ONE_ATTACKS
+
+
 # His entrance's lines call its beats, so it passes itself along to the dialogue.
 func show_pre_fight_dialogue(intro: State) -> void:
 	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
 	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
 	DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start", [intro])
+
+
+# The phase-two cut's lines, which call its beats. Its OWN one-shot: _on_dialogue_ended is the
+# pre-fight one, it plays the VS card and starts the fight, and it has already been spent by the
+# time this runs - reusing it would put the card back up in the middle of the fight.
+func show_phase_two_dialogue(cut: State) -> void:
+	DialogueManager.dialogue_ended.connect(_on_phase_two_dialogue_ended, CONNECT_ONE_SHOT)
+	DialogueManager.show_dialogue_balloon(load(PHASE_TWO_DIALOGUE), "start", [cut])
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -78,6 +98,12 @@ func on_child_transition(state, new_state_name):
 	new_state.Enter()
 	current_state = new_state
 
+func _on_phase_two_dialogue_ended(_dialogue: Object) -> void:
+	var cut = states.get("PhaseTwo")
+	if cut:
+		cut.finish_phase()
+
+
 func _on_dialogue_ended(dialogue: Object) -> void:
 	print("post dialogue timer started: ", post_dialogue_pre_fight_timer)
 	# The entrance's push-in on him levels off before the card takes the screen.
@@ -101,18 +127,35 @@ func _play_downed_stinger() -> void:
 			sfx.play()
 
 
-# A chain of different attacks in a random order, then the window (EricPacing's window_state).
+# A chain of attacks in a random order, then the window (EricPacing's window_state). Every chain goes
+# through here, which is why the phase-two transition hangs off it: the sword can only be knocked out
+# of the ring between chains, never in the middle of one.
 func start_chain(delay: float) -> void:
+	if not defeated and boss.boss_health > 0 and boss.phase_two_pending:
+		boss.phase_two_pending = false
+		on_child_transition(current_state, "PhaseTwo")
+		return
 	var health_ratio: float = boss.get_health_ratio()
 	rage = clampf(1.0 - health_ratio, 0.0, 1.0)
 	var enraged: bool = health_ratio <= EricPacing.value("rage_chain_health_ratio")
 	var count: int = EricPacing.value("rage_attacks_per_chain" if enraged else "attacks_per_chain")
 
-	var bag := ATTACKS.duplicate()
-	bag.shuffle()
-	if bag[0] == last_attack:
-		bag.push_back(bag.pop_front())
-	chain = bag.slice(0, count)
+	# Never the same attack twice running. Phase two has fewer attacks than a chain is long, so the
+	# bag is reshuffled and drawn again rather than the chain being cut short.
+	var pool: Array = attacks()
+	var bag: Array = []
+	var previous := last_attack
+	while bag.size() < count:
+		var draw: Array = pool.duplicate()
+		draw.shuffle()
+		if draw.size() > 1 and draw[0] == previous:
+			draw.push_back(draw.pop_front())
+		for pick in draw:
+			if bag.size() >= count:
+				break
+			bag.append(pick)
+			previous = pick
+	chain = bag
 	_next_attack(delay)
 
 
@@ -190,21 +233,25 @@ func throw_from_whirlwind() -> void:
 	on_child_transition(current_state, "SwordThrow")
 
 
-# A full Break gauge (EricBreakGauge): whatever he was doing stops, everything he threw goes, and he is
+# A full Break gauge (BossBreakGauge): whatever he was doing stops, everything he threw goes, and he is
 # Broken until he gets up and starts a new chain.
 func enter_broken() -> void:
 	if defeated or boss.boss_health <= 0 or current_state == states.get("Broken"):
+		return
+	# A gauge that filled on the same punch that started the phase-two cut must not fight it for the
+	# state machine. The cut locks the gauge on its way in; this is the frame in between.
+	if current_state == states.get("PhaseTwo"):
 		return
 	_stop_everything()
 	chain = []
 	on_child_transition(current_state, "Broken")
 
 
-# The tiered finisher's first uppercut (BossOneScript.begin_juggle): from a Break his sword stays where
+# The tiered finisher's first uppercut (EricScript.begin_juggle): from a Break his sword stays where
 # it stands; from anywhere else the uppercut knocks it out of his grip.
 func enter_juggled() -> void:
 	var juggled = states["Juggled"]
-	if defeated or current_state == juggled:
+	if defeated or current_state == juggled or current_state == states.get("PhaseTwo"):
 		return
 	if current_state == states.get("Broken"):
 		current_state.keep_sword = true
@@ -233,7 +280,9 @@ func land_juggled(final_state_name: String) -> void:
 
 
 func drop_sword() -> void:
-	if is_instance_valid(dropped_sword):
+	# Phase two: there is no sword to knock out of his grip, it went over the ropes when the phase
+	# started. EricBroken's recover() already reads "no sword on the mat" as "nothing to get up for".
+	if boss.phase_two or is_instance_valid(dropped_sword):
 		return
 	dropped_sword = DROPPED_SWORD.new()
 	dropped_sword.plant(boss, self)
@@ -252,6 +301,9 @@ func _end_fight(final_state_name: String) -> void:
 	var intro = states.get("Intro")
 	if intro:
 		intro.finish_entrance()
+	var cut = states.get("PhaseTwo")
+	if cut:
+		cut.finish_phase()
 	_stop_everything()
 	var juggled = states.get("Juggled")
 	# In the air, he finishes his fall and his crash first (land_juggled).
