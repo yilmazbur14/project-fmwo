@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://cjo0gb3e7o1nn"
+path="res://.godot/imported/BurakBossPreFight.dialogue-848f317aea54fa2fbc2715fc19ffb05f.tres"
+
+[deps]
+
+source_file="res://Dialogue/BurakBossPreFight.dialogue"
+dest_files=["res://.godot/imported/BurakBossPreFight.dialogue-848f317aea54fa2fbc2715fc19ffb05f.tres"]
+
+[params]
+
+defaults=true

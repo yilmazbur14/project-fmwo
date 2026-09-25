@@ -20,10 +20,10 @@ sys.path.insert(0, HERE)
 from pngio import write_png, upscale          # noqa: E402
 from rig import to_pix                         # noqa: E402
 import danny_small as SM                       # noqa: E402
-import danny_honda as SU                        # noqa: E402
+import evolved as EV   # the evolved form, redesigned 2026-09-23 (was danny_honda)  # noqa: E402
 
 SW = SH = 64                     # small-form frame
-BW, BH = SU.W, SU.H              # 176 x 144
+BW, BH = EV.W, EV.H              # 176 x 144
 SMALL_OX, SMALL_OY = 56, 80      # small form inside the big frame
 
 
@@ -145,9 +145,7 @@ def evolve_frames():
       2  the evolved form, landing
     Frames 0 and 1 are what the flash alternates between; the coder drives a
     flat-white treatment over them rather than needing white copies on disk."""
-    return [big_frame(to_pix(SM.build('flex_in')), SMALL_OX, SMALL_OY),
-            to_pix(SU.build('awake')),
-            to_pix(SU.build('land'))]
+    return EV.sheet_frames('danny_sumo_evolve')
 
 
 def build_all():
@@ -155,16 +153,10 @@ def build_all():
     for name, sheet in SMALL_SHEETS.items():
         pix = [to_pix(SM.build(k)) for k, _ in sheet['frames']]
         out[name] = (strip(pix, SW, SH), SW, SH, sheet)
-    for name, sheet in SUMO_SHEETS.items():
-        pix = [to_pix(SU.build('idle', dict(SU.DEFAULT, **sp)))
-               for sp, _ in sheet['frames']]
-        out[name] = (strip(pix, BW, BH), BW, BH, sheet)
-    ev = evolve_frames()
-    out['danny_sumo_evolve'] = (
-        strip(ev, BW, BH), BW, BH,
-        dict(frames=[('small flex hold', 0), ('evolved awake', 0),
-                     ('evolved land', 0)],
-             loop='driven by the transformation state machine, see the report'))
+    # the evolved form: art_source/danny_sumo_v2, the redesign approved 2026-09-23 (SUMO_SHEETS
+    # above describes the previous body's frames and is kept for reference only)
+    for name in EV.SHEETS:
+        out[name] = (strip(EV.sheet_frames(name), BW, BH), BW, BH, EV.sheet_meta(name))
     return out
 
 

@@ -47,10 +47,11 @@ const WIGGLE_RAMP := 120.0
 const RUN_SEGMENT := 2
 
 # The attacks run after a cycle's bomb lines, before the delivery. Each cycle takes the next entry of
-# its phase's list, wrapping around, so phase 1 takes turns between Carter and the nuggets.
+# its phase's list, wrapping around, so phase 1 takes turns between Carter and the nuggets. Phase 2 has
+# the one, the shower with Carter called in under it (carter_in_shower).
 const FINISHERS := [
 	[["CallCarter"], ["NuggetShower"]],
-	[["NuggetShower", "CallCarter"]],
+	[["NuggetShower"]],
 ]
 
 # Every number the fight is paced on is a knob, so it can be retuned without code edits. The
@@ -70,21 +71,21 @@ const FINISHERS := [
 # it turns onto the player's row, so it has to clear the tightest spacing by that much as well.
 @export var stack_radius := 72.0
 # However late a bomb is dropped, it sits on the mat at least this long before it goes off.
-@export var min_fuse := 1.4
+@export var min_fuse := 1.26
 @export var bomb_spacing: Array[float] = [88.0, 82.0]
 @export var waddle_speed: Array[float] = [980.0, 1120.0]
 # The wait before a laid line starts going off, and the beat between one bomb and the next. The
 # wait is what decides how much poo is on the mat at once: the longer it is, the more of the next
 # line is down before this one clears. Long enough here that a line is still down while the next is
 # being laid, so two lines cover the mat rather than one, and a bomb waits longer to go off, not less.
-@export var fuse_delay: Array[float] = [1.3, 1.1]
+@export var fuse_delay: Array[float] = [1.17, 0.99]
 @export var detonate_interval: Array[float] = [0.09, 0.07]
-@export var lines_per_cycle: Array[int] = [5, 3]
+@export var lines_per_cycle: Array[int] = [5, 4]
 # How far along the line the start telegraph draws its path preview, so its direction reads while
 # Mason is still squatting on the spot it begins at.
 @export var line_preview_length := 700.0
-@export var eat_window: Array[float] = [3.5, 3.0]
-@export var elbow_drops: Array[int] = [5, 8]
+@export var eat_window: Array[float] = [3.5, 2.55]
+@export var elbow_drops: Array[int] = [6, 8]
 @export var elbow_telegraph: Array[float] = [0.32, 0.26]
 @export var elbow_dive: Array[float] = [0.2, 0.17]
 @export var elbow_sit_up: Array[float] = [0.07, 0.05]
@@ -95,16 +96,41 @@ const FINISHERS := [
 # its pixels stay square.
 @export var elbow_hit_scale := 5.0 / 3.0
 # A nugget marker goes down every nugget_shower_time / nugget_count seconds, and its nugget lands
-# nugget_warning after that: the warning divided by that gap is how many are in the sky at once.
-@export var nugget_count: Array[int] = [28, 40]
-@export var nugget_shower_time: Array[float] = [3.2, 3.6]
+# nugget_warning after that: the warning divided by that gap is how many are in the sky at once. With
+# Carter called in under it, a marker whose nugget would land in one of his slams' clear time
+# (slam_clear_before, slam_clear_after) is skipped, so fewer than nugget_count come down, and phase
+# 2's shower runs as long as his drops do.
+@export var nugget_count: Array[int] = [35, 132]
+@export var nugget_shower_time: Array[float] = [3.2, 7.2]
 @export var nugget_warning: Array[float] = [0.9, 0.8]
+# How many open spots a nugget that isn't aimed at the player is picked from (MasonNuggetShower). The
+# one taken lies furthest from this shower's other landings, so the more it has to pick from, the more
+# evenly the rain spreads over the whole mat rather than bunching. 1 takes the first open spot.
+@export var nugget_spread: Array[int] = [1, 8]
+# Whether the shower calls Carter in while it rains (MasonNuggetShower), with the same phone call, badge
+# and drops as his own attack (MasonCallCarter), the two making one finisher.
+@export var carter_in_shower: Array[bool] = [false, true]
+# From the heave to Mason picking up the phone, so the bucket's toss plays out and the first markers are
+# down before the badge goes up.
+@export var shower_call_after := 0.3
+# Around each of Carter's slams under the shower, no nugget lands from this long before the slam to
+# this long after its hitbox goes off. The rain is timed around him rather than aimed around him
+# because every nugget that could land then is marked before he picks his spot: its warning is longer
+# than his. The lead is a whole parry window, so from the earliest press that parries him until he is
+# done, nothing new lands anywhere, whether the player stands in his marker to parry him or steps out
+# of it at the last moment.
+@export var slam_clear_before := 0.25
+@export var slam_clear_after := 0.1
 
 var cycle_phase := 0
 var lines_done := 0
 var cycles_started := 0
 var finishers : Array = []
 var player_defeated := false
+# The pre-fight lines' balloon, which a held skip takes down, and whether those lines have handed
+# over to the VS card yet.
+var pre_fight_balloon: Node
+var pre_fight_over := false
 
 # Bomb-space path of the current line: start, turn onto the player's height, far wall column,
 # and optionally the reveal step down. Mason walks it minus BOMB_SPAWN_OFFSET, clamped to his limits.
@@ -141,7 +167,17 @@ func _ready() -> void:
 func show_pre_fight_dialogue() -> void:
 	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
 	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
-	DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start")
+	pre_fight_balloon = DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start")
+
+
+# A held skip's way past the lines (BossEntrance), whether they were ever put up or not: the hand-over
+# their own end makes, made from here instead. pre_fight_over keeps it to once.
+func end_pre_fight_dialogue() -> void:
+	if pre_fight_over:
+		return
+	if DialogueManager.dialogue_ended.is_connected(_on_dialogue_ended):
+		DialogueManager.dialogue_ended.disconnect(_on_dialogue_ended)
+	_on_dialogue_ended(null)
 
 
 func _process(delta: float) -> void:
@@ -175,6 +211,10 @@ func on_child_transition(state, new_state_name):
 
 
 func _on_dialogue_ended(_dialogue: Object) -> void:
+	pre_fight_over = true
+	var intro = states.get("Intro")
+	if intro:
+		intro.lines_over()
 	VsCard.play_intro(self, "mason", post_dialogue_pre_fight_timer.start)
 
 
@@ -425,9 +465,9 @@ func _end_fight(final_state_name: String) -> void:
 	on_child_transition(current_state, final_state_name)
 
 
-# Everything of his that is still running. PooSquat has no Exit() of its own and its squat_timer fires
-# an unguarded drop_bomb(), so a Break taken out of the squat lays a bomb after he is already down
-# unless the timers stop here.
+# Everything of his that is still running. PooSquat's Exit() leaves its timers running and its
+# squat_timer fires an unguarded drop_bomb(), so a Break taken out of the squat lays a bomb after he is
+# already down unless the timers stop here.
 func _stop_everything() -> void:
 	ParryTell.clear(MasonCharacterBody)
 	for timer in [post_dialogue_pre_fight_timer, squat_timer, release_timer, phone_timer, eat_timer]:

@@ -1,0 +1,428 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/MattScript.gd" id="1_body"]
+[ext_resource type="Texture2D" uid="uid://dammn7xb4eyeh" path="res://Assets/Characters/Matt/matt.png" id="2_matt"]
+[ext_resource type="Script" path="res://Scripts/States/Matt/MattStateMachine.gd" id="3_state_machine"]
+[ext_resource type="Script" path="res://Scripts/States/Matt/MattIntro.gd" id="4_intro"]
+[ext_resource type="Script" path="res://Scripts/States/Matt/MattIdle.gd" id="5_idle"]
+[ext_resource type="Script" path="res://Scripts/States/Matt/MattMysticVolley.gd" id="6_mysticvolley"]
+[ext_resource type="Script" path="res://Scripts/States/Matt/MattTrueshotBarrage.gd" id="7_trueshotbarrage"]
+[ext_resource type="Script" path="res://Scripts/States/Matt/MattSpent.gd" id="8_spent"]
+[ext_resource type="Script" path="res://Scripts/States/Matt/MattRecover.gd" id="9_recover"]
+[ext_resource type="Script" path="res://Scripts/States/Matt/MattDefeated.gd" id="10_defeated"]
+[ext_resource type="Script" path="res://Scripts/States/Matt/MattVictory.gd" id="11_victory"]
+[ext_resource type="Script" path="res://Scripts/States/Matt/MattGlassRow.gd" id="12_glassrow"]
+
+[sub_resource type="Animation" id="Animation_matt_reset"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(3, 3)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Sprite2D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+
+[sub_resource type="Animation" id="Animation_matt_idle"]
+resource_name = "idle"
+length = 1
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.5),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [Vector2(3, 3), Vector2(2.96, 3.05)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_walk"]
+resource_name = "walk"
+length = 0.2
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [Vector2(3.06, 2.94), Vector2(2.97, 3.04)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_talk"]
+resource_name = "talk"
+length = 0.24
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.12),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [Vector2(3, 3), Vector2(3.04, 2.96)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_teleport_out"]
+resource_name = "teleport_out"
+length = 0.15
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(3, 3), Vector2(0.45, 4.2)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_teleport_in"]
+resource_name = "teleport_in"
+length = 0.15
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(0.45, 4.2), Vector2(3, 3)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_mystic_windup"]
+resource_name = "mystic_windup"
+length = 0.45
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.45),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(3, 3), Vector2(3.18, 2.85)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_mystic_fire"]
+resource_name = "mystic_fire"
+length = 0.15
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(2.8, 3.25), Vector2(3, 3)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_trueshot_charge"]
+resource_name = "trueshot_charge"
+length = 0.9
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.9),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(3, 3), Vector2(3.25, 3.12)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_trueshot_fire"]
+resource_name = "trueshot_fire"
+length = 0.35
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.35),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(2.75, 3.3), Vector2(3, 3)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_spent"]
+resource_name = "spent"
+length = 0.6
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.3),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [Vector2(3.02, 2.97), Vector2(2.98, 3.02)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_recover"]
+resource_name = "recover"
+length = 0.36
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.18),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [Vector2(3.2, 2.7), Vector2(3.14, 2.76)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_yell_tell"]
+resource_name = "yell_tell"
+length = 0.4
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.4),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(3, 3), Vector2(2.85, 3.3)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_roar_inhale"]
+resource_name = "roar_inhale"
+length = 0.35
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.35),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(3, 3), Vector2(2.88, 3.24)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_roar"]
+resource_name = "roar"
+length = 0.12
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.06),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [Vector2(3.12, 3), Vector2(3, 3.12)]
+}
+
+[sub_resource type="Animation" id="Animation_matt_defeated"]
+resource_name = "defeated"
+length = 0.5
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [Vector2(3, 3)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Sprite2D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.5),
+"transitions": PackedFloat32Array(2, 1),
+"update": 0,
+"values": [0.0, -1.45]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_matt"]
+_data = {
+&"RESET": SubResource("Animation_matt_reset"),
+&"defeated": SubResource("Animation_matt_defeated"),
+&"idle": SubResource("Animation_matt_idle"),
+&"mystic_fire": SubResource("Animation_matt_mystic_fire"),
+&"mystic_windup": SubResource("Animation_matt_mystic_windup"),
+&"recover": SubResource("Animation_matt_recover"),
+&"roar": SubResource("Animation_matt_roar"),
+&"roar_inhale": SubResource("Animation_matt_roar_inhale"),
+&"spent": SubResource("Animation_matt_spent"),
+&"talk": SubResource("Animation_matt_talk"),
+&"teleport_in": SubResource("Animation_matt_teleport_in"),
+&"teleport_out": SubResource("Animation_matt_teleport_out"),
+&"trueshot_charge": SubResource("Animation_matt_trueshot_charge"),
+&"trueshot_fire": SubResource("Animation_matt_trueshot_fire"),
+&"walk": SubResource("Animation_matt_walk"),
+&"yell_tell": SubResource("Animation_matt_yell_tell")
+}
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_matt_hurtbox"]
+size = Vector2(120, 240)
+
+[node name="MattScene" type="Node2D"]
+y_sort_enabled = true
+
+[node name="FloorLayer" type="Node2D" parent="."]
+position = Vector2(0, 101)
+
+[node name="ProjectileLayer" type="Node2D" parent="."]
+z_index = 2
+
+[node name="MattCharacterBody" type="CharacterBody2D" parent="." node_paths=PackedStringArray("floor_layer", "projectile_layer")]
+position = Vector2(960, 620)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_body")
+floor_layer = NodePath("../FloorLayer")
+projectile_layer = NodePath("../ProjectileLayer")
+
+[node name="Sprite2D" type="Sprite2D" parent="MattCharacterBody"]
+scale = Vector2(3, 3)
+texture = ExtResource("2_matt")
+offset = Vector2(0, -48)
+hframes = 2
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="MattCharacterBody"]
+libraries/ = SubResource("AnimationLibrary_matt")
+
+[node name="Hurtbox" type="Area2D" parent="MattCharacterBody" groups=["enemy", "boss_target"]]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="MattCharacterBody/Hurtbox"]
+position = Vector2(0, -120)
+shape = SubResource("RectangleShape2D_matt_hurtbox")
+
+[node name="StateManager" type="Node" parent="MattCharacterBody" node_paths=PackedStringArray("initial_state", "MattCharacterBody", "post_dialogue_pre_fight_timer", "recover_timer", "finisher_stagger_timer", "beat_timer")]
+script = ExtResource("3_state_machine")
+initial_state = NodePath("Intro")
+MattCharacterBody = NodePath("..")
+post_dialogue_pre_fight_timer = NodePath("../PostDialoguePreFightTimer")
+recover_timer = NodePath("../RecoverTimer")
+finisher_stagger_timer = NodePath("../FinisherStaggerTimer")
+beat_timer = NodePath("../BeatTimer")
+
+[node name="Intro" type="Node" parent="MattCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("4_intro")
+body = NodePath("../..")
+
+[node name="Idle" type="Node" parent="MattCharacterBody/StateManager" node_paths=PackedStringArray("body", "beat_timer")]
+script = ExtResource("5_idle")
+body = NodePath("../..")
+beat_timer = NodePath("../../BeatTimer")
+
+[node name="MysticVolley" type="Node" parent="MattCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("6_mysticvolley")
+body = NodePath("../..")
+
+[node name="TrueshotBarrage" type="Node" parent="MattCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("7_trueshotbarrage")
+body = NodePath("../..")
+
+[node name="Spent" type="Node" parent="MattCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("8_spent")
+body = NodePath("../..")
+
+[node name="Recover" type="Node" parent="MattCharacterBody/StateManager" node_paths=PackedStringArray("body", "recover_timer")]
+script = ExtResource("9_recover")
+body = NodePath("../..")
+recover_timer = NodePath("../../RecoverTimer")
+
+[node name="Defeated" type="Node" parent="MattCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("10_defeated")
+body = NodePath("../..")
+
+[node name="Victory" type="Node" parent="MattCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("11_victory")
+body = NodePath("../..")
+
+[node name="GlassRow" type="Node" parent="MattCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("12_glassrow")
+body = NodePath("../..")
+
+[node name="PostDialoguePreFightTimer" type="Timer" parent="MattCharacterBody"]
+wait_time = 0.6
+one_shot = true
+
+[node name="RecoverTimer" type="Timer" parent="MattCharacterBody"]
+one_shot = true
+
+[node name="FinisherStaggerTimer" type="Timer" parent="MattCharacterBody"]
+one_shot = true
+
+[node name="BeatTimer" type="Timer" parent="MattCharacterBody"]
+one_shot = true
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="MattCharacterBody"]
+volume_db = -7.0
+
+[node name="HitSfxPlayer" type="AudioStreamPlayer" parent="MattCharacterBody"]
+
+[node name="VictorySfxPlayer" type="AudioStreamPlayer" parent="MattCharacterBody"]
+
+[connection signal="timeout" from="MattCharacterBody/PostDialoguePreFightTimer" to="MattCharacterBody/StateManager" method="_on_post_dialogue_pre_fight_timer_timeout"]
+[connection signal="timeout" from="MattCharacterBody/RecoverTimer" to="MattCharacterBody/StateManager/Recover" method="_on_recover_timer_timeout"]
+[connection signal="timeout" from="MattCharacterBody/FinisherStaggerTimer" to="MattCharacterBody/StateManager" method="_on_finisher_stagger_timer_timeout"]
+[connection signal="timeout" from="MattCharacterBody/BeatTimer" to="MattCharacterBody/StateManager/Idle" method="_on_beat_timer_timeout"]

@@ -1,8 +1,8 @@
 extends Node
 
 # Carter's fight, boss 5. Intro once, then attack -> Recover -> Idle -> attack for as long as he is
-# standing. He has two attacks and they strictly alternate (next_attack): the Raging Demon barrage,
-# then the Beam Rush, then the barrage again.
+# standing. He has three attacks and they come round in a fixed rotation (next_attack): the Raging
+# Demon barrage, the Beam Rush, the Messatsu, then the barrage again.
 #
 # THE BARRAGE'S DIFFICULTY AXIS IS THE NUMBER OF YELLOWS, AND NOTHING ELSE. Fifteen clones,
 # identical rhythm, every round forever - that is what makes the fight learnable. To make it harder,
@@ -38,6 +38,7 @@ extends Node
 @export var beat_timer: Timer
 
 const VsCard := preload("res://Scripts/VsCard.gd")
+const CarterJuggled := preload("res://Scripts/States/CarterAkuma/CarterJuggled.gd")
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/CarterPreFight.dialogue"
 const HAZARD_GROUP := "carter_hazard"
 
@@ -45,6 +46,10 @@ const HAZARD_GROUP := "carter_hazard"
 # player to. Nothing else may hardcode either.
 const ROPES := Rect2(113, 114, 1692, 853)
 const ARENA_CENTRE := Vector2(959, 540)
+# How far inside the ropes a Break keeps his feet - where its window drops him, and where the juggle's
+# last uppercut shoves him - and the gap in x that drop leaves between him and the player.
+const BREAK_ROPE_MARGIN := 90.0
+const BREAK_PLAYER_GAP := 250.0
 
 #TUNING (seconds and px)
 # Beat 0: the eyes go. The lock lands on frame 1 of this, not at the end of it - a player mid-dash
@@ -100,29 +105,35 @@ const ARENA_CENTRE := Vector2(959, 540)
 @export var feint_stamina := 40.0
 
 #BEAM RUSH (CarterBeamRush, seconds and px)
-# Four clones hold a curtain of light each across the ring, and he teleports in beside the player and
-# strikes until a parry has filled his Break gauge. The player is NOT locked here, unlike the
-# barrage: free movement is what makes the curtains exist at all, and it is what gives the strike a
-# second answer - 0.36 s of tell against 600 px/s of walking is 216 px against a strike_reach of 120,
-# so committing early sidesteps it entirely. Sidestepping does NOT fill the gauge, though, so the
-# player who never parries eats all twelve strikes and earns the short window instead of the long one.
+# Four clones at the top of the ring charge beams, lock them onto the player and fire them, volley after
+# volley, and once in the attack he teleports in beside the player and strikes. The player is NOT locked
+# here, unlike the barrage: walking or dashing out of the locked lines is the only answer to the beams,
+# which can't be blocked or parried, and his strike is the one parry in the attack.
 #
-# THE ATTACK ENDS ON A STRIKE COUNT, NOT A CLOCK, AND NOT ON A TIMEOUT. A parry costs
-# PlayerDefense.parry_hit_stop plus parry_slow_time at parry_slow_scale - about 0.73 s of wall clock
-# each - so seven parries is five seconds of real time the player spent SUCCEEDING. A wall-clock cap
-# would cut the attack short for the player reading it and run long for the one doing nothing.
-# strike_cap is the sequence's own loop variable: frame-rate-, freeze- and hit-stop-independent by
-# construction. A player who never parries does not escape it; they die to it.
+# THE ESCAPE IS beam_escape + messatsu_travel: 0.90 s from the lines locking to the heads landing. From
+# where the four cross, the player's hurtbox has to be 180 px plus its own reach across a beam off every
+# one of them. A dash and a step after it does that from anywhere in the ring in 0.63 s at worst - up
+# between the middle two clones, where the lines fan out all round the player - which leaves 0.27 s to
+# react in; walking alone does it in time from about 80% of the ring. The defence suite's beam_rush mode
+# walks that model over the whole ring, so re-run it before shortening beam_escape.
 #
-# STRIKE_SHOW IS AT THE SAME FLOOR AS CLONE_SHOW AND MUST NOT GO BELOW IT: 0.36 s is the last value
-# at which the read is a read.
-# strike_period() is show + dash + gap = 0.50 s, which sits EXACTLY ON
-# PlayerDefense.parry_mash_lockout (0.5 s). The rearm_parry() this attack makes as each strike
-# appears is therefore load-bearing and not a safety net, exactly as it is at the barrage's 0.62 s:
-# without it, whiffing a press on strike N leaves strike N+1 mathematically unparryable. Do not
-# shorten strike_gap without re-reading that.
+# THE ATTACK ENDS ON A VOLLEY COUNT OR A BREAK, NEVER ON A CLOCK. A parry costs about 0.73 s of wall
+# clock (PlayerDefense's hit-stop and slow), and a count is the one bound that is frame-rate-, freeze-
+# and hit-stop-independent. A player who never moves doesn't escape it; they die to it.
+#
+# STRIKE_SHOW IS AT THE SAME FLOOR AS CLONE_SHOW AND MUST NOT GO BELOW IT: 0.36 s is the last value at
+# which the read is a read. The strike comes at a random moment in one charge, from strike_from into it
+# to strike_latest(), so its blow lands at least strike_clear before the lines lock: never while a beam
+# is out, and with the whole escape still ahead of a player who stood rooted to parry it.
 @export var beam_summon := 0.70
-@export var beam_charge := 0.45
+# Each volley's charge, as long as his own Messatsu's.
+@export var beam_charge := 1.20
+# From the lines locking to the four firing. Its last messatsu_tell is the tell, as the Messatsu's is.
+@export var beam_escape := 0.80
+# How long each volley's beams hurt, from the heads landing to their fade. Against the player's 1 s of
+# i-frames, a player who stays in them takes two hits a volley.
+@export var beam_live := 1.20
+@export var beam_volleys := 3
 @export var strike_show := 0.36
 @export var strike_dash := 0.08
 @export var strike_gap := 0.06
@@ -131,23 +142,72 @@ const ARENA_CENTRE := Vector2(959, 540)
 @export var strike_y_jitter := 40.0
 # Half-width of the box around the latched point the player has to still be in for it to connect.
 @export var strike_reach := 120.0
-@export var strike_cap := 12
+@export var strike_from := 0.15
+@export var strike_clear := 0.30
 @export var beam_end := 0.40
-# The punish window: five seconds for a Break, and a second and a half for a rush simply sat through.
-# His Break IS his punish window, which is why the gauge unlocks 0.5 s after it rather than Eric's 3.
-@export var recover_break := 5.0
+# The punish window: at least his body's BREAK.broken_time for a Break - that number and no other -
+# and a second and a half for a rush simply sat through. His Break IS his punish window, which is why
+# the gauge unlocks 0.5 s after it rather than Eric's 3.
+var recover_break: float:
+	get:
+		return CarterAkumaCharacterBody.BREAK.broken_time
 @export var recover_spent := 1.5
+
+#THE MESSATSU (CarterMessatsu, seconds and px)
+# The lights go out, he reappears across the ring and charges a beam locked onto the player, and the
+# lights come back on with the badge already over his head. The beam comes out messatsu_tell later and
+# its head lands messatsu_travel after that: 0.40 s from the lights to the first hit, which is the
+# read, at or over the 0.36 s floor the other two attacks keep. Then one hit per surge, messatsu_tick
+# apart, messatsu_hits in all. The player is never locked here.
+# MESSATSU_TRAVEL IS THE DODGE DIAL, NOT THE WIDTH. 0.10 s is six frames, and only a dash whose three
+# frames all fall inside them clears the beam: about four frames of dodge, timed before it is seen.
+# THE TICK SITS EXACTLY ON PlayerDefense.parry_mash_lockout (0.5 s), SO THE REARM IS LOAD-BEARING.
+# The fight re-arms the parry as the lights come on and messatsu_rearm_delay after every hit, and
+# nowhere else. Between two hits that gives three zones: a press up to 0.08 s late for the last hit is
+# wiped by the rearm and costs nothing; a press from 0.08 to 0.26 s after it whiffs and costs the next
+# hit only; and the last 0.24 s before a hit is its parry window. Do not widen this into a per-press
+# rearm or the string becomes a mash-fest.
+# The rest must hold: messatsu_pulse_travel over parry_window plus a frame, so pressing as a surge
+# leaves his palms is too early; tick - rearm - window at least 0.15 s of early zone; and the rearm
+# before the next surge leaves (rearm < tick - pulse_travel). The defence suite's messatsu mode checks
+# all of it.
+@export var messatsu_charge := 1.20
+@export var messatsu_tell := 0.30
+@export var messatsu_travel := 0.10
+@export var messatsu_tick := 0.50
+@export var messatsu_hits := 6
+@export var messatsu_rearm_delay := 0.08
+@export var messatsu_pulse_travel := 0.30
+@export var messatsu_end_hold := 0.20
+@export var messatsu_fade := 0.30
+# How far from the player he may reappear, so the charge is a thing across the ring and never one on
+# top of them.
+@export var messatsu_min_range := 520.0
 
 var player_defeated := false
 var cycles_started := 0
 # Locked once, at the top of each cycle, so a hit landing mid-sequence can't change what the rest of
 # it does.
 var cycle_yellows := 0
+# The pre-fight lines' balloon, which a held skip takes down, and whether those lines have handed
+# over to the VS card yet.
+var pre_fight_balloon: Node
+var pre_fight_over := false
+# His gauge broke in the middle of an attack that plays on to its end (the Demon, the Messatsu): the
+# Break is banked, and the attack's hand-over cashes it as a Break window (take_break_owed).
+var break_owed := false
 
 var warned := {}
 
 
 func _ready() -> void:
+	# Built here rather than in his scene, which nothing in this fight edits.
+	var juggled := CarterJuggled.new()
+	juggled.name = "Juggled"
+	juggled.body = CarterAkumaCharacterBody
+	juggled.hurtbox = CarterAkumaCharacterBody.get_node("Hurtbox")
+	juggled.state_machine = self
+	add_child(juggled)
 	for child in get_children():
 		if child is State:
 			states[child.name] = child
@@ -193,10 +253,24 @@ func on_child_transition(state, new_state_name):
 func show_pre_fight_dialogue() -> void:
 	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
 	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
-	DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start")
+	pre_fight_balloon = DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start")
+
+
+# A held skip's way past the lines (BossEntrance), whether they were ever put up or not: the hand-over
+# their own end makes, made from here instead. pre_fight_over keeps it to once.
+func end_pre_fight_dialogue() -> void:
+	if pre_fight_over:
+		return
+	if DialogueManager.dialogue_ended.is_connected(_on_dialogue_ended):
+		DialogueManager.dialogue_ended.disconnect(_on_dialogue_ended)
+	_on_dialogue_ended(null)
 
 
 func _on_dialogue_ended(_dialogue: Object) -> void:
+	pre_fight_over = true
+	var intro = states.get("Intro")
+	if intro:
+		intro.lines_over()
 	VsCard.play_intro(self, "carter", post_dialogue_pre_fight_timer.start)
 
 
@@ -211,12 +285,15 @@ func start_cycle() -> void:
 	on_child_transition(current_state, next_attack())
 
 
-# Strict alternation, never a random pick. Cycle 1 is always the barrage: it is the teaching round,
-# and the Beam Rush assumes the player already knows what a red badge on Carter means. After that the
-# two take turns. A fight is about three attacks long, and a random picker serves the same one three
-# times often enough to matter.
+# A strict rotation, never a random pick, and never gated on his health. Cycle 1 is always the
+# barrage: it is the teaching round, and the Beam Rush and the Messatsu both assume the player already
+# knows what a red badge on Carter means. A fight is about three attacks long, so the rotation shows
+# each of them once, where a random picker serves the same one three times often enough to matter.
+const ATTACK_ROTATION := ["RagingDemon", "BeamRush", "Messatsu"]
+
+
 func next_attack() -> String:
-	return "RagingDemon" if cycles_started % 2 == 1 else "BeamRush"
+	return ATTACK_ROTATION[maxi(cycles_started - 1, 0) % ATTACK_ROTATION.size()]
 
 
 # The one difficulty dial. Cycle 1 is all red - it teaches the rhythm - and after that it is his
@@ -241,10 +318,15 @@ func clone_interval() -> float:
 	return clone_show + clone_dash + clone_gap
 
 
-# Strike to strike. At 0.50 s this lands exactly ON parry_mash_lockout, so the rearm_parry() the Beam
-# Rush makes as each strike appears is what keeps consecutive strikes answerable - see the block above.
-func strike_period() -> float:
-	return strike_show + strike_dash + strike_gap
+# The latest the Beam Rush's strike may appear in its charge: its blow lands strike_clear before the lock.
+func strike_latest() -> float:
+	return maxf(beam_charge - strike_show - strike_dash - strike_clear, strike_from)
+
+
+# When the Messatsu's hit `k` lands, counted from the frame it fires: k 0 is the head arriving, 1 to 5
+# the surges after it.
+func messatsu_hit_time(k: int) -> float:
+	return messatsu_travel + k * messatsu_tick
 
 
 # The punish window the round earned. Later rounds have fewer reds to parry, so the longest possible
@@ -264,12 +346,29 @@ func flinch() -> void:
 		current_state.flinch()
 
 
-# His Break gauge filled, which is the only thing that ends the Beam Rush. Called deferred from
-# CarterAkumaScript._on_break: the gauge fills inside a physics flush, where states can't switch.
-func break_beam_rush() -> void:
+# His Break gauge filled. Called deferred from CarterAkumaScript._on_break: the gauge fills inside a
+# physics flush, where states can't switch. The Beam Rush ends on the spot, as it always has. Anything
+# else plays on to its end and its hand-over cashes the Break then: the Demon's string runs on in the
+# dark with the player locked, so nothing may resolve in the middle of it - the same rule its banked
+# parries keep. The sting and the gauge's own BREAK! go off now either way.
+func on_break() -> void:
+	CarterAkumaCharacterBody.play_break_sting()
 	var rush: State = states.get("BeamRush")
 	if rush and current_state == rush:
 		rush.on_broke()
+		return
+	break_owed = true
+
+
+func break_beam_rush() -> void:
+	on_break()
+
+
+# A Break owed, handed to the window that cashes it, and cleared.
+func take_break_owed() -> bool:
+	var owed := break_owed
+	break_owed = false
+	return owed
 
 
 # The finisher ended his recovery early: he stays down, staggered, then starts the next cycle.
@@ -285,6 +384,33 @@ func stagger_then_start_cycle(stagger_time: float) -> void:
 
 func _on_finisher_stagger_timer_timeout() -> void:
 	start_cycle()
+
+
+# The tiered finisher's first uppercut (CarterAkumaScript.begin_juggle), out of a Break window.
+func enter_juggled() -> void:
+	var juggled: State = states["Juggled"]
+	if CarterAkumaCharacterBody.defeated or current_state == juggled:
+		return
+	for timer in [recover_timer, finisher_stagger_timer, beat_timer]:
+		timer.stop()
+	on_child_transition(current_state, "Juggled")
+
+
+# Down after a juggle, he picks himself up where he crashed - staggered, as after any finisher - and
+# his next attack comes `delay` after this. A Timer can't start at 0.
+func after_juggle(delay: float) -> void:
+	stagger_then_start_cycle(maxf(delay, 0.01))
+
+
+# The one switch past the fight being decided: juggled and killed in the air, he lands into his
+# defeat rather than snapping to its pose mid-flight.
+func land_juggled(final_state_name: String) -> void:
+	var final_state: State = states.get(final_state_name)
+	if final_state == states.get("Defeated"):
+		final_state.lying = true
+	current_state.Exit()
+	final_state.Enter()
+	current_state = final_state
 
 
 func get_player() -> Node2D:
@@ -441,9 +567,19 @@ func _end_fight(final_state_name: String, keep_dark := false) -> void:
 	var beam_rush: State = states.get("BeamRush")
 	if beam_rush:
 		beam_rush.release()
+	# And the Messatsu, with the Demon's stay-dark rule for his win: it never leaves a player to die in
+	# the dark, but if one ever did, the dark goes on into his victory pose rather than lifting.
+	var messatsu: State = states.get("Messatsu")
+	if messatsu:
+		messatsu.release(keep_dark)
 	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
 		hazard.queue_free()
-	on_child_transition(current_state, final_state_name)
+	# In the air, he finishes his fall and his crash first, and lands into it (land_juggled).
+	var juggled: State = states.get("Juggled")
+	if juggled and current_state == juggled:
+		juggled.final_state = final_state_name
+	else:
+		on_child_transition(current_state, final_state_name)
 	# After the transition, not before: entering Idle starts the beat timer, which must not survive
 	# the end of the fight.
 	for timer in [post_dialogue_pre_fight_timer, recover_timer, finisher_stagger_timer, beat_timer]:

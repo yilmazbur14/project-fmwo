@@ -30,7 +30,10 @@ extends Node
 #     take_juggle_hit(amount: int, pitch: float) -> int
 #                                        take_finisher, with his hit sound at `pitch`
 #     get_juggle_point() -> Vector2      his middle in the air, which the camera follows
-# and his end_recovery() then comes as he crashes rather than at contact.
+# and his end_recovery() then comes as he crashes rather than at contact. Optionally:
+#     juggle_knock_back(push: Vector2, time: float)
+#                                        the last uppercut's shove, where his knock_back() isn't
+#                                        the one for a juggle. With neither he isn't shoved.
 
 signal prompt_shown
 signal meter_changed(meter: float, next_action: StringName)
@@ -45,6 +48,7 @@ const HitStop := preload("res://Scripts/HitStop.gd")
 const FinisherArtLayout := preload("res://Scripts/FinisherArtLayout.gd")
 const FinisherTierMeter := preload("res://Scripts/FinisherTierMeter.gd")
 const MashInput := preload("res://Scripts/MashInput.gd")
+const MashCurve := preload("res://Scripts/MashCurve.gd")
 
 # JUGGLE_FALL: the juggle's last uppercut has landed and the boss is still falling. CHARGE: a mash a
 # fight runs on its own account (begin_scripted_charge), with no boss and no uppercut behind it.
@@ -56,10 +60,12 @@ enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE, JUGGLE_FALL, CHARGE
 # From the freeze until the prompt shows and presses count.
 @export var prompt_delay := 0.1
 @export var charge_time_limit := 3.0
-# At r alternating presses a second the meter fills in about 1 / (r * gain - drain) seconds: 2 s at 7
-# presses a second, 2.95 s at 5.5, never below 2.3. Mashing one key only counts its first press.
+# Both bent by MashCurve on how full the meter is. From the first press it fills in 2.2 s at 7
+# alternating presses a second and 1.8 s at 8, and needs about 5.7 to fill inside charge_time_limit: a
+# steady 5 a second stalls just short of the top, as it always has. Mashing one key only counts its first
+# press.
 @export var meter_gain_per_press := 0.107
-@export var meter_drain_per_second := 0.25
+@export var meter_drain_per_second := 0.14
 # Real seconds: Q and W pressed together arrive in the same input flush however long the frame took,
 # and count once.
 @export var min_press_interval := 0.03
@@ -112,14 +118,16 @@ enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE, JUGGLE_FALL, CHARGE
 # the key the player was last hammering doesn't walk them off or raise their guard.
 @export var mash_release_latch := 1.0
 
-# The tiered mash (FinisherTierMeter). At about 7.0, 9.4 and 10.9 alternating presses a second each bar
-# fills inside its window: presses every 8, 6 and 5 frames reach tiers 1, 2 and 3, and every 9, 7 and 6
-# don't, each at least 1.3 press intervals clear of its window either way (mash_tiers). Windows 2 and 3
-# are under the plan's 1.2 and 1.05 s because the drain can't take the meter back under a bar that has
-# just banked, so the next bar fills a press sooner than the plan's maths had it.
+# The tiered mash (FinisherTierMeter). At about 7.0, 9.4 and 11.0 alternating presses a second each bar
+# fills inside its window: presses every 8, 6 and 5 frames reach tiers 1, 2 and 3, at least 1.8 press
+# intervals inside their windows, and every 9, 7 and 6 don't, stalling short of the bar's top or banking
+# 2.8 intervals late (mash_tiers). The drains and windows are fitted together: MashCurve makes each bar's
+# top a grind, so a window has to leave room for it. Window 3 is still the shortest because the drain
+# can't take the meter back under a bar that has just banked, so each bar after the first fills a press
+# sooner than its own numbers suggest.
 @export var tier_gain := 0.20
-@export var tier_drains: Array[float] = [0.75, 1.0, 1.2]
-@export var tier_windows: Array[float] = [1.30, 1.06, 0.92]
+@export var tier_drains: Array[float] = [0.42, 0.58, 0.59]
+@export var tier_windows: Array[float] = [1.30, 1.18, 0.82]
 @export var tier_start_grace := 1.0
 @export var tier_idle_stop := 0.5
 # The charge builds with m_s: the banked bars, or the meter smoothed over meter_smoothing if higher.
@@ -210,6 +218,9 @@ var auto_hold := 0.0
 # Decided when the daze starts: nothing can hit the player during the finisher, so the hype it needs
 # can't drain in between. PlayerFinishing reads it for the recoloured sheet.
 var supercharged := false
+# A fight's own player sheet for this finisher (begin()): FinisherArtLayout.FINAL_PLAYER's keys plus an
+# optional "super_texture". Empty, which is every fight but Greyson's brawl, it is FinisherArtLayout's.
+var sheet_override := {}
 # Whether this finisher asked for a mash: only then is a key held at its end left over from mashing.
 var mashed := false
 var latch_left := 0.0
@@ -371,6 +382,22 @@ func begin_auto(target: Node, hold := 0.35) -> bool:
 	return true
 
 
+# The hand-driven finisher with no charged punch to start it: a fight that dazed the boss itself hands
+# him over, drawn off `sheet` (sheet_override) if it isn't empty. The daze starts at once: there is no
+# swing to settle, and the settle's beat would show the player's standing sprite. Returns whether it
+# started.
+func begin(target: Node, sheet := {}) -> bool:
+	if phase != Phase.OFF:
+		return false
+	sheet_override = sheet
+	_try_begin(target)
+	if phase == Phase.OFF:
+		sheet_override = {}
+		return false
+	_begin_daze()
+	return phase != Phase.OFF
+
+
 # A fight runs the mash on its own account: the same keys, the same prompt, the same camera, and
 # NOTHING else. No boss, no daze, no FightFreeze, no player pose, no uppercut, no damage, no hype.
 # The caller owns all of that. Returns false if a finisher is already running.
@@ -378,7 +405,8 @@ func begin_auto(target: Node, hold := 0.35) -> bool:
 # SCRIPTED_FULL_HOLD later is the prompt's FULL! flash having played out, the mash keys stopping being
 # swallowed and the player being theirs again. A caller who hands them back does it on `finished`.
 #   config, all optional:
-#     "press_gain"  meter per alternating press             default 0.12
+#     "press_gain"  meter per alternating press, which      default 0.12
+#                   MashCurve bends as the meter fills
 #     "floor_time"  seconds to fill with no presses at all  default 6.0
 #     "zoom"        the view's zoom                         default charge_zoom
 #     "focus"       a Vector2 the view centres on, or Vector2.INF for the player
@@ -483,7 +511,7 @@ func _process(delta: float) -> void:
 				_start_uppercut()
 			else:
 				daze_time += delta
-				meter = maxf(meter - meter_drain_per_second * delta, 0.0)
+				meter = maxf(meter - MashCurve.drain(meter_drain_per_second, meter) * delta, 0.0)
 				_animate_charge(delta)
 				if daze_time >= prompt_delay + charge_time_limit:
 					_start_fizzle()
@@ -563,14 +591,14 @@ func _press(action: StringName) -> void:
 	last_action = action
 	last_press_usec = now
 	if phase == Phase.CHARGE:
-		meter = minf(meter + scripted_gain, 1.0)
+		meter = minf(meter + MashCurve.gain(scripted_gain, meter), 1.0)
 	elif tiered:
 		var banked: int = tier_meter.press()
 		meter = tier_meter.meter
 		if banked > 0:
 			_on_bar_banked(banked)
 	else:
-		meter = minf(meter + meter_gain_per_press, 1.0)
+		meter = minf(meter + MashCurve.gain(meter_gain_per_press, meter), 1.0)
 	var pair := mash_actions()
 	meter_changed.emit(meter, pair[1] if action == pair[0] else pair[0])
 	get_tree().call_group("arena_crowd", "cheer", 0.4)
@@ -673,7 +701,7 @@ func _start_uppercut() -> void:
 
 func _advance_uppercut() -> void:
 	var steps: Array = _sheet().uppercut
-	var starts := FinisherArtLayout.uppercut_step_starts()
+	var starts := FinisherArtLayout.uppercut_step_starts(_sheet())
 	while uppercut_step + 1 < steps.size() and phase_time + STEP_TOLERANCE >= starts[uppercut_step + 1]:
 		if special and FinisherArtLayout.KNIGHT_BREAKER_GHOST.steps.has(uppercut_step + 1):
 			_drop_ghost()
@@ -763,7 +791,7 @@ func _juggle_contact() -> void:
 			return
 		boss.exit_daze(true)
 		boss.begin_juggle()
-		lift_scale = clampf(boss.juggle_headroom() / _planned_apex(), 0.0, 1.0)
+		lift_scale = clampf(boss.juggle_headroom() / planned_apex(juggle_tiers), 0.0, 1.0)
 		juggling = true
 		camera_time = 0.0
 		camera_zoom_from = ScreenView.zoom
@@ -811,14 +839,15 @@ func _juggle_contact() -> void:
 	juggle_hit.emit(juggle_index, last)
 
 
-# The highest the juggle ahead would throw him, each uppercut catching him where the one before left him.
-func _planned_apex() -> float:
-	var starts := FinisherArtLayout.uppercut_step_starts()
+# The highest a juggle of `tiers` uppercuts would throw him, each catching him where the one before left
+# him. Public for the juggle floor a Break slides a boss down to (BossJuggled.floor_y).
+func planned_apex(tiers: int) -> float:
+	var starts := FinisherArtLayout.uppercut_step_starts(_sheet())
 	var between: float = starts[_sheet().uppercut.size() - 1] + relaunch_delay
 	var apex := 0.0
 	var from := 0.0
-	for i in juggle_tiers:
-		var speed: float = juggle_last_launches[i] if i == juggle_tiers - 1 else juggle_launches[i]
+	for i in tiers:
+		var speed: float = juggle_last_launches[i] if i == tiers - 1 else juggle_launches[i]
 		apex = maxf(apex, from + speed * speed / (2.0 * juggle_gravity))
 		from += speed * between - 0.5 * juggle_gravity * between * between
 	return apex
@@ -900,13 +929,19 @@ func _drop_ghost() -> void:
 # The shove away from the player. A boss who can take it moves for real, clamped to his own ground;
 # the rest rock back on their sprite and settle through the stagger, so nothing anchored to their
 # position moves with them. Returns true when the sprite is what moved. A `level` shove keeps his
-# ground line: a juggle's, whose heights are fitted to where he stands.
+# ground line: a juggle's, whose heights are fitted to where he stands. It is never the rock, because
+# during a juggle sprite.offset is his lift.
 func _knock_back(distance: float, settle_time: float, level := false) -> bool:
 	if distance <= 0.0 or not _boss_valid():
 		return false
 	var push := (_hurtbox_rect().get_center() - player.global_position).normalized()
 	if level:
 		push = Vector2(-1.0 if flipped else 1.0, 0.0)
+		if boss.has_method("juggle_knock_back"):
+			boss.juggle_knock_back(push * distance, uppercut_knockback_time)
+			return false
+		if not boss.has_method("knock_back"):
+			return false
 	if push == Vector2.ZERO:
 		push = Vector2.UP
 	if boss.has_method("knock_back"):
@@ -1074,6 +1109,7 @@ func _finish() -> void:
 	auto = false
 	dazed = false
 	supercharged = false
+	sheet_override = {}
 	prompt_visible = false
 	zoomed = false
 	tiered = false
@@ -1094,7 +1130,22 @@ func _boss_valid() -> bool:
 
 
 func _sheet() -> Dictionary:
-	return FinisherArtLayout.player_sheet()
+	return sheet()
+
+
+# The player's finisher sheet: this finisher's sheet_override, or FinisherArtLayout's own.
+func sheet() -> Dictionary:
+	return FinisherArtLayout.player_sheet() if sheet_override.is_empty() else sheet_override
+
+
+# What PlayerFinishing puts on the sprite: the override's own texture, its "super_texture" for a
+# supercharged uppercut when it has one, or FinisherArtLayout's.
+func texture_path() -> String:
+	if sheet_override.is_empty():
+		return FinisherArtLayout.player_texture(supercharged)
+	if supercharged and sheet_override.has("super_texture"):
+		return sheet_override.super_texture
+	return sheet_override.texture
 
 
 func _show_pose(pose: Array) -> void:

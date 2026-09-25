@@ -5,11 +5,12 @@ extends CharacterBody2D
 # in a separate coordinator when Greyson fought alongside him. Carter's fight is built the same way
 # and is the shape this follows.
 #
-# Greyson is not in the arena at all. He is a dialogue-only character now: he speaks in the pre-fight
-# and outro lines, and nothing in this scene draws, places or moves him.
+# Greyson is not in this scene: he speaks in the pre-fight lines, and once Computah is beaten he storms the
+# ring in a scene of his own (greyson_follows, _hand_to_greyson) and the fight is his from there.
 #
-# HE MUST STAY IN FightOutro.BOSS_GROUP. PlayerHype.is_inert() scans that group for a node with
-# can_be_dazed() and, finding none, silently makes hype inert and hides the meter with no error at all.
+# HE MUST STAY IN FightOutro.BOSS_GROUP until that hand-off, when Greyson takes his place in it.
+# PlayerHype.is_inert() scans that group for a node with can_be_dazed() and, finding none, silently makes
+# hype inert and hides the meter with no error at all.
 #
 # THE CHARGE STATE IS A FRAME OFFSET, NOT A TINT. computah_idle and computah_run each hold the same
 # four-frame cycle three times over, so `frame = charge_state * 4 + cycle_frame` changes how many
@@ -31,16 +32,53 @@ const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
 const OUTRO_DIALOGUE := "res://Dialogue/ComputahOutro.dialogue"
 # This fight's place in the order; GameProgress decides what follows it.
 const FIGHT_SCENE := "res://Scenes/Bosses/ComputahBossFightScene.tscn"
+# The fight's second half: beaten, he hands the ring to Greyson, who tears off his cannon arm and fights on as
+# the real boss of FIGHT 03 (GreysonTakeover). With greyson_follows off, his fight ends where it always has.
+const GREYSON_SCENE := "res://Scenes/Bosses/GreysonScene.tscn"
+@export var greyson_follows := true
+var greyson_scene: PackedScene
+# Greyson has torn his cannon arm off.
+var armless := false
 
-# SIZED FOR THE WHOLE FIGHT, not for one attack. Four attacks are coming - the beam, the mine field
-# and its chase, an overload damage check and a phase-two beam shower - plus a kill sequence, and the
-# overload is what fixes this number rather than pacing: it is a DPS check whose threshold has to sit
-# at or under 15% of his health, and at the old 12 the check was half his bar, which made it a second
-# health bar instead. 48 puts it at 12.5%, just under Carter's 50 and Eric's 56.
-@export var max_health := 48
+# TWO CLEAN BEAM OPENINGS (the user, 2026-09-24): FIGHT 03's first half is meant to be easy, the beam alone
+# (ComputahStateMachine.live_attacks), so that Greyson's half lands as the surprise.
+@export var max_health := 8
+# What the whole rotation was sized for, which comes back with the mine field and the overload: the overload is a
+# DPS check whose threshold has to sit at or under 15% of his health.
+const FULL_ROTATION_HEALTH := 48
 var boss_health := max_health
 const MAX_HITS_PER_WINDOW := 3
+# Each opening takes the damage of a clean chain of MAX_HITS_PER_WINDOW punches (PunchAllowance).
+const PunchAllowance := preload("res://Scripts/PunchAllowance.gd")
 const PHANTOM_HIT_WINDOW := 0.5
+
+#BREAK GAUGE (BossBreakGauge)
+# His own numbers, not on the "N reads from empty" rule the later fights share. The parry, dodge, guard
+# break and unlock numbers are BossBreakGauge's defaults, which he was tuned on.
+# grab_parry_gain: the pounce is the one parry worth it, the only thing in the fight a parry both stops
+#   and staggers. Nothing of his takes the plain parry_gain.
+# hit_loss: HEAVIER THAN ERIC'S 20, and deliberately applying to the beam and the failed uppercut too:
+#   this fight's signature mistake is being caught, and a catch already costs damage and 30 stamina. The
+#   gauge is the third of those three, and it is one number in one place - the drain is
+#   BossBreakGauge's own, off PlayerDefense.hit_taken, so no attack calls it by hand.
+# punch gains: HALF ERIC'S, because this fight is twice as long as the gauge was tuned against. What
+#   fills it here is READING him - dodging the beam, parrying the pounce - and punches in a window are
+#   the reward that read already earned, not a second one. At Eric's 8/14 a competent player banks
+#   about 92 of 100 per beam-and-mine-field pair, of which 60 is punching, and a 48-health fight is
+#   about six of those pairs: five Breaks. At 4/7 a pair banks about 62, which is the two or three a
+#   fight should hand out. Carter's gauge makes the same cut harder, to zero.
+# broken_time: the Break window he was tuned on, battery_window plus parry_stagger_bonus, 3.2 + 0.8 s.
+const BREAK := {
+	"parry_gain": 15.0,
+	"grab_parry_gain": 20.0,
+	"perfect_dodge_gain": 12.0,
+	"punch_gain": 4.0,
+	"charged_punch_gain": 7.0,
+	"hit_loss": 30.0,
+	"guard_break_loss": 35.0,
+	"unlock_delay": 3.0,
+	"broken_time": 4.0,
+}
 
 # His own theme. Same level as Eric's, so walking from one fight to the next does not jump. The file
 # is still named for the pair it was written for; renaming it would mean re-cutting it through the
@@ -77,7 +115,8 @@ var music_duck: Tween
 
 var defeated := false
 var hits_this_window := 0
-# How many punches this window takes.
+var punches := PunchAllowance.new()
+# How many punches this window takes: the damage of a clean chain that long (PunchAllowance).
 var window_cap := MAX_HITS_PER_WINDOW
 # HALF-HEARTS PUT INTO HIM SINCE THE WINDOW OPENED, which is what the overload's DPS check is
 # measured in. Written here and read a physics step later by whoever opened the window; deliberately
@@ -135,6 +174,8 @@ func _ready() -> void:
 		_add_break_gauge(player)
 	_build_hud()
 	play_anim(&"idle")
+	if greyson_follows:
+		greyson_scene = load(GREYSON_SCENE)
 
 	# "Two Bars", written for this fight - see art_source/music/greyson_theme.rb. One 16-bar cycle
 	# cut to the beat, so LOOP_FORWARD runs it end to end with no seam.
@@ -169,25 +210,19 @@ func _add_break_gauge(player: Node) -> void:
 	break_gauge.name = "BreakGauge"
 	break_gauge.boss = self
 	break_gauge.player = player
-	# Every computah_ attack is his; his ids are regular, so a prefix is the whole test.
+	# Every computah_ attack is his; his ids are regular, so a prefix is the whole test. It is what fills
+	# the gauge as well as what drains it, so earns_from stays unset.
 	break_gauge.owns_attack = func(id: StringName) -> bool: return str(id).begins_with("computah_")
-	# The pounce is the one parry worth grab_parry_gain: it is the only thing in the fight a parry
-	# both stops and staggers.
 	var strong: Array[StringName] = [&"computah_chase"]
 	break_gauge.strong_parry_ids = strong
-	# HEAVIER THAN ERIC'S 20, and deliberately applying to the beam and the failed uppercut too: this
-	# fight's signature mistake is being caught, and a catch already costs damage and 30 stamina. The
-	# gauge is the third of those three, and it is one number in one place - the drain is
-	# BossBreakGauge's own, off PlayerDefense.hit_taken, so no attack calls it by hand.
-	break_gauge.hit_loss = 30.0
-	# HALF ERIC'S PUNCH GAINS, because this fight is twice as long as the gauge was tuned against.
-	# What fills it here is READING him - dodging the beam, parrying the pounce - and punches in a
-	# window are the reward that read already earned, not a second one. At Eric's 8/14 a competent
-	# player banks about 92 of 100 per beam-and-mine-field pair, of which 60 is punching, and a
-	# 48-health fight is about six of those pairs: five Breaks. At 4/7 a pair banks about 62, which
-	# is the two or three a fight should hand out. Carter's gauge makes the same cut harder, to zero.
-	break_gauge.punch_gain = 4.0
-	break_gauge.charged_punch_gain = 7.0
+	break_gauge.parry_gain = BREAK.parry_gain
+	break_gauge.grab_parry_gain = BREAK.grab_parry_gain
+	break_gauge.perfect_dodge_gain = BREAK.perfect_dodge_gain
+	break_gauge.punch_gain = BREAK.punch_gain
+	break_gauge.charged_punch_gain = BREAK.charged_punch_gain
+	break_gauge.hit_loss = BREAK.hit_loss
+	break_gauge.guard_break_loss = BREAK.guard_break_loss
+	break_gauge.unlock_delay = BREAK.unlock_delay
 	add_child(break_gauge)
 	break_gauge.broke.connect(_on_break)
 
@@ -210,11 +245,20 @@ func break_now() -> bool:
 	return break_gauge.add(break_gauge.max_value)
 
 
-# BossBreakGauge._physics_process asks this every step, unconditionally. Down, for him, is any open
-# punish window: that is what a Break buys, and the wait before the gauge takes anything again starts
-# when it closes.
+# BossBreakGauge._physics_process asks this every step, unconditionally, and its wait before it takes
+# anything again starts once this goes false. Down is the Break and the juggle it pays out, not every
+# open window: counting his vents would hold the gauge shut through the next one that opens, which on
+# the beam is 2.6 s after he gets up.
 func is_down() -> bool:
-	return state_machine != null and state_machine.is_open()
+	return is_broken() or is_juggled()
+
+
+func is_broken() -> bool:
+	return state_machine != null and state_machine.current_state == state_machine.states.get("Broken")
+
+
+func is_juggled() -> bool:
+	return state_machine != null and state_machine.current_state == state_machine.states.get("Juggled")
 
 
 func start_music() -> void:
@@ -520,7 +564,11 @@ func show_aura(on: bool) -> void:
 
 #WHERE THINGS STAND ON HIM
 
+# Broken, over his head on the mat, where Broken's own stars already circle; otherwise over whichever
+# pose the window caught him in.
 func get_daze_anchor() -> Vector2:
+	if is_broken():
+		return state_machine.current_state.head_point()
 	return global_position + Layout.C_DAZE_ANCHOR
 
 
@@ -592,11 +640,15 @@ func begin_window(cap := MAX_HITS_PER_WINDOW) -> void:
 
 
 func take_punch(amount: int) -> int:
-	if hits_this_window >= window_cap or not is_open():
+	if not is_open():
 		return 0
-	var dealt := _apply_damage(amount)
+	var allowed := punches.allow(amount, hits_this_window, window_cap)
+	if allowed <= 0:
+		return 0
+	var dealt := _apply_damage(allowed)
 	if dealt > 0:
 		hits_this_window += 1
+		punches.spend(dealt)
 	return dealt
 
 
@@ -607,8 +659,65 @@ func take_finisher(amount: int) -> int:
 	return _apply_damage(amount)
 
 
+#THE JUGGLE (PlayerFinisher's tiered finisher, after a Break)
+# The Break window alone pays out the three-bar mash and the juggle; every other window pays the
+# single-bar finisher. The juggle's shares are fractions of max health, so on every window it would end
+# the fight in a handful of them.
+func can_be_juggled() -> bool:
+	return not defeated and boss_health > 0 and is_broken()
+
+
+func begin_juggle() -> void:
+	state_machine.enter_juggled()
+
+
+func juggle_lift(px: float) -> void:
+	if is_juggled():
+		state_machine.current_state.lift(px)
+
+
+func juggle_pose(pose: StringName, crater := false) -> void:
+	if is_juggled():
+		state_machine.current_state.pose(pose, crater)
+
+
+func juggle_headroom() -> float:
+	return state_machine.states["Juggled"].headroom()
+
+
+# Past the hit cap, as take_finisher, but with no open window behind it: Broken's window closes as the
+# first uppercut hands him to Juggled.
+func take_juggle_hit(amount: int, pitch: float) -> int:
+	return _apply_damage(amount, pitch)
+
+
+func get_juggle_point() -> Vector2:
+	return state_machine.states["Juggled"].air_point()
+
+
+# A juggle that kills him ends with him still in the air, and the outro's first line would otherwise open
+# over him mid-fall.
+func outro_line_delay(_player_won: bool) -> float:
+	if is_juggled():
+		return Layout.juggle().outro_delay
+	return 0.0
+
+
+# The last uppercut's shove (PlayerFinisher._knock_back, level). He moves for real, because what a
+# juggle lifts is sprite.offset, the same offset the classic finisher's rock would tween. There is no
+# knock_back(), so his single-bar finisher keeps that rock.
+func juggle_knock_back(push: Vector2, time: float) -> void:
+	var bounds: Rect2 = state_machine.runner_bounds()
+	var target := (global_position + push).clamp(bounds.position, bounds.end)
+	var player: Node2D = state_machine.get_player()
+	# The ropes must never shove him back onto the player.
+	if player and target.distance_to(player.global_position) < global_position.distance_to(player.global_position):
+		return
+	create_tween().tween_property(self, "global_position", target, time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
 # No floor: he is one body with no transformation, so nothing may hold his health up.
-func _apply_damage(amount: int) -> int:
+func _apply_damage(amount: int, pitch := 1.0) -> int:
 	var dealt := mini(amount, boss_health)
 	if dealt <= 0:
 		return 0
@@ -617,6 +726,7 @@ func _apply_damage(amount: int) -> int:
 	damage_this_window += dealt
 	_refresh_health_bar()
 	_hit_feedback()
+	hit_sfx_player.pitch_scale = pitch
 	hit_sfx_player.play()
 
 	if boss_health > 0:
@@ -640,16 +750,27 @@ func can_be_dazed() -> bool:
 		and state_machine.allows_daze())
 
 
+# The finisher draws its own daze stars over Broken's.
 func enter_daze() -> void:
 	daze_used = true
+	if is_broken():
+		state_machine.current_state.show_stars(false)
 
 
-func exit_daze(_finisher_landed: bool) -> void:
-	pass
+func exit_daze(finisher_landed: bool) -> void:
+	if is_broken() and not finisher_landed:
+		state_machine.current_state.show_stars(true)
 
 
 func end_recovery(stagger_time: float) -> bool:
-	if defeated or boss_health <= 0 or not is_open():
+	if defeated or boss_health <= 0:
+		return false
+	# Crashed from a juggle, he lies a beat before he gets up. Juggled isn't an open window, so it goes
+	# first.
+	if is_juggled():
+		state_machine.current_state.recover(stagger_time)
+		return true
+	if not is_open():
 		return false
 	return state_machine.end_window(stagger_time)
 
@@ -677,7 +798,10 @@ func _on_defeated() -> void:
 	show_battery(false)
 	show_overload(false)
 	state_machine.enter_defeated()
-	_win()
+	if greyson_follows and greyson_scene != null:
+		_hand_to_greyson()
+	else:
+		_win()
 
 
 func _win() -> void:
@@ -687,6 +811,110 @@ func _win() -> void:
 	get_tree().call_group("arena_crowd", "cheer", 2.0)
 	GameProgress.next_boss_scene = _next_fight()
 	FightOutro.finish_fight(get_tree(), true)
+
+
+#GREYSON'S TAKEOVER
+
+# Beaten, but the fight isn't over: Greyson storms in and takes the cannon, and the fight's end is his from here.
+# So Computah leaves the boss group - FightOutro would otherwise play his lines and tell him the player lost - and
+# the target group, so the player's punches and facing stop looking for him.
+func _hand_to_greyson() -> void:
+	if music_player.playing:
+		music_player.stop()
+	get_tree().call_group("arena_crowd", "cheer", 2.0)
+	remove_from_group(FightOutro.BOSS_GROUP)
+	set_target_active(false)
+	var scene := greyson_scene.instantiate()
+	scene.get_node("GreysonCharacterBody").computah = self
+	get_parent().add_sibling(scene)
+
+
+# FIGHT 03's second half on its own, with no fight of his first: already down where his entrance would have stood
+# him, on his defeat's last frame, his bar empty, and Greyson's takeover from its first line. The main menu's
+# GREYSON row starts here, in place of his entrance (ComputahStateMachine._ready); only with greyson_follows on.
+func start_at_greyson() -> void:
+	if defeated or greyson_scene == null:
+		return
+	global_position = state_machine.COMPUTAH_HOME
+	set_facing(false)
+	defeated = true
+	boss_health = 0
+	# Down before the first frame is drawn: an empty bar, not a hit draining it.
+	if health_bar:
+		health_bar.set_value(0, 0, BossHealthBarUI.HIT_SILENT)
+	_refresh_health_bar()
+	set_hurtbox_active(false)
+	show_battery(false)
+	show_overload(false)
+	state_machine.enter_defeated()
+	_hold_last_frame(&"defeat")
+	_hand_to_greyson()
+
+
+# Where the takeover wants him before Greyson touches him: on his own defeat's last frame, off the juggle's KO loop
+# if a juggle killed him, since the arm he loses is drawn on his own sheets. A defeat still playing finishes first.
+func rest_on_defeat() -> void:
+	if armless:
+		return
+	if _off_the_juggle() or current_anim != &"defeat":
+		_hold_last_frame(&"defeat")
+
+
+# Greyson hauling on the arm, before it tears.
+func haul_arm() -> void:
+	if armless:
+		return
+	_off_the_juggle()
+	play_anim(&"wrench_haul")
+
+
+# The arm torn off on the frame it tears, then armless on the mat with the stump sparking. `instant` lands straight
+# on the armless loop, for a skipped takeover.
+func lose_arm(instant := false) -> void:
+	if armless:
+		if instant and current_anim != &"armless":
+			play_anim(&"armless")
+		return
+	armless = true
+	_off_the_juggle()
+	if instant:
+		play_anim(&"armless")
+		return
+	play_anim(&"wrench_tear", &"armless")
+	shake_sprite(6.0, 6, 0.03)
+
+
+# His bar and gauge gone over `time` as Greyson's come up; 0 is at once.
+func retire_hud(time: float) -> void:
+	if hud_layer == null or not hud_layer.visible:
+		return
+	var parts: Array[CanvasItem] = []
+	for child in hud_layer.get_children():
+		if child is CanvasItem:
+			parts.append(child)
+	if time <= 0.0 or parts.is_empty():
+		hud_layer.hide()
+		return
+	var fade := hud_layer.create_tween().set_parallel()
+	for part in parts:
+		fade.tween_property(part, "modulate:a", 0.0, time)
+	fade.chain().tween_callback(hud_layer.hide)
+
+
+# Off the juggle's KO loop onto his own sheet. Whether he was on it.
+func _off_the_juggle() -> bool:
+	var juggled = state_machine.states.get("Juggled")
+	if juggled == null or not juggled.lingering:
+		return false
+	juggled.stop_lingering()
+	return true
+
+
+func _hold_last_frame(anim_name: StringName) -> void:
+	play_anim(anim_name)
+	anim_step = anim.frames.size() - 1
+	anim_done = true
+	_show_anim_frame()
 
 
 # The boss ladder owns the order and skips fights whose scene isn't built yet; "" sends the Victory

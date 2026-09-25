@@ -17,7 +17,7 @@ sys.path.insert(0, HERE)
 from pngio import read_png, write_png, upscale     # noqa: E402
 from rig import to_pix                              # noqa: E402
 import danny_small as SM                            # noqa: E402
-import danny_honda as SU                             # noqa: E402
+import evolved as EV   # the evolved form, redesigned 2026-09-23 (was danny_honda)  # noqa: E402
 import transform as T                               # noqa: E402
 
 # --- where the sprites stand in the 1920x1080 arena --------------------------
@@ -49,12 +49,12 @@ def contact_sheet(path, scale=6):
     evolved registers beneath, then the two flash silhouettes at the shared
     anchor."""
     small = [(k, to_pix(SM.build(k))) for k in SM.KEYS]
-    big = [(p, to_pix(SU.build(p))) for p in ('idle', 'awake', 'land')]
+    big = [(p, EV.pix(p)) for p in ('idle', 'awake', 'land')]
     sil = [('sil_small', T.silhouette(T.small_in_big('flex_in'))),
            ('sil_big', T.silhouette(T.sumo_in_big('awake')))]
 
     sc = 64 * scale
-    bc, br = SU.W * scale, SU.H * scale
+    bc, br = EV.W * scale, EV.H * scale
     cols_s, cols_b = 5, 3
     rows_s = (len(small) + cols_s - 1) // cols_s
     Wp = max(cols_s * sc, cols_b * bc)
@@ -125,8 +125,8 @@ def mockup(path, plate_path, which):
     blit(px, pl, PLAYER_POS[0] - 16 * PLAYER_SCALE,
          PLAYER_POS[1] - 16 * PLAYER_SCALE, PLAYER_SCALE)
     if which == 'sumo':
-        sp = to_pix(SU.build('idle'))
-        fw, fh = SU.W, SU.H
+        sp = EV.pix('idle')
+        fw, fh = EV.W, EV.H
     else:
         sp = T.small_in_big('arrive')
         fw, fh = T.BW, T.BH

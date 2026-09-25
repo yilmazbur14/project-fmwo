@@ -385,6 +385,9 @@ _data = {
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_mason_hurtbox"]
 size = Vector2(130, 170)
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_mason_contact"]
+size = Vector2(130, 170)
+
 [node name="MasonScene" type="Node2D"]
 y_sort_enabled = true
 
@@ -412,6 +415,13 @@ monitorable = false
 [node name="CollisionShape2D" type="CollisionShape2D" parent="MasonCharacterBody/Hurtbox"]
 position = Vector2(0, 10)
 shape = SubResource("RectangleShape2D_mason_hurtbox")
+
+[node name="ContactHitbox" type="Area2D" parent="MasonCharacterBody"]
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="MasonCharacterBody/ContactHitbox"]
+position = Vector2(0, 10)
+shape = SubResource("RectangleShape2D_mason_contact")
 
 [node name="StateManager" type="Node" parent="MasonCharacterBody" node_paths=PackedStringArray("initial_state", "MasonCharacterBody", "post_dialogue_pre_fight_timer", "squat_timer", "release_timer", "phone_timer", "eat_timer")]
 script = ExtResource("3_state_machine")

@@ -107,16 +107,19 @@ func _animate(popup: Dictionary) -> void:
 		popup.node.add_theme_color_override("font_color", spec.colors[look])
 
 
-# Bottom-centre over the head, or top-centre under the feet near the top of the screen.
+# Bottom-centre over the head, or top-centre under the feet near the top of the screen. Over the combo
+# counter, when it is up there too (ComboCounterUI).
 func _place(popup: Dictionary) -> void:
 	var tree := get_tree()
 	var size: Vector2 = popup.size
+	var counter := get_parent().get_node_or_null("ComboCounter")
+	var room: float = counter.overhead_room() if counter != null and counter.has_method("overhead_room") else 0.0
 	var head := ScreenView.world_to_screen(tree, player.global_position + FinisherArtLayout.PLAYER_HEAD)
-	var bottom: float = head.y - DefenseHypeArtLayout.POPUP_GAP - popup.stack
+	var bottom: float = head.y - DefenseHypeArtLayout.POPUP_GAP - popup.stack - room
 	var top: float = bottom - size.y - popup.lift
 	if bottom - size.y - DefenseHypeArtLayout.POPUP_RISE < DefenseHypeArtLayout.POPUP_TOP_LIMIT:
 		var feet := ScreenView.world_to_screen(tree, player.global_position + FinisherArtLayout.PLAYER_FEET)
-		top = feet.y + DefenseHypeArtLayout.POPUP_GAP + popup.stack + popup.lift
+		top = feet.y + DefenseHypeArtLayout.POPUP_GAP + popup.stack + popup.lift + room
 	var margin := Vector2.ONE * DefenseHypeArtLayout.POPUP_SCREEN_MARGIN
 	var corner := Vector2(head.x - size.x / 2.0, top)
 	popup.node.position = corner.clamp(margin, get_viewport_rect().size - size - margin).round()

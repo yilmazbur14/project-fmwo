@@ -34,6 +34,18 @@ GOLDEN = {
 }
 
 
+# The armless set, approved 2026-09-24 and pinned by the first `armless_build.py
+# --ship` (the loose arm as re-matched to Greyson's shipped greyson_fight_approval).
+# These are strips, so they compare as whole images.
+import armless as A                                               # noqa: E402
+
+SHEET_GOLDEN = {
+    "armless.png": lambda: A.render("computah_armless"),
+    "wrench.png": lambda: A.render("computah_wrench"),
+    "arm_prop.png": lambda: A.render("computah_arm_prop"),
+}
+
+
 def main():
     M._set_frame(96)
     bad = 0
@@ -41,6 +53,15 @@ def main():
         want = Image.open(os.path.join(HERE, "golden", name))
         d = pixel_diff(want, fn().to_image())
         print("%-24s %s" % (name, d or "matches the approved frame"))
+        bad += d is not None
+    for name, fn in sorted(SHEET_GOLDEN.items()):
+        path = os.path.join(HERE, "golden", name)
+        if not os.path.exists(path):
+            print("%-24s NO GOLDEN - run armless_build.py --ship to pin it" % name)
+            bad += 1
+            continue
+        d = pixel_diff(Image.open(path), fn())
+        print("%-24s %s" % (name, d or "matches the approved sheet"))
         bad += d is not None
     return 1 if bad else 0
 

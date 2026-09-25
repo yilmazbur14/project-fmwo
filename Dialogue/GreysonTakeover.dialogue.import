@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://cq647okcpgwm6"
+path="res://.godot/imported/GreysonTakeover.dialogue-3078f2da92e0c8504b45dcecb4276f8f.tres"
+
+[deps]
+
+source_file="res://Dialogue/GreysonTakeover.dialogue"
+dest_files=["res://.godot/imported/GreysonTakeover.dialogue-3078f2da92e0c8504b45dcecb4276f8f.tres"]
+
+[params]
+
+defaults=true

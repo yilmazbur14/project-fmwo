@@ -9,8 +9,13 @@ var distance := 0.0
 
 
 func Enter() -> void:
+	body.set_contact_live(true)
 	animation_player.play("waddle")
 	distance = 0.0
+
+
+func Exit() -> void:
+	body.set_contact_live(false)
 
 
 func Physics_Update(delta: float) -> void:

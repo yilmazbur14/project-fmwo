@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://yl72vytjs16"
+path="res://.godot/imported/MattOutro.dialogue-545fd501085f7d5eecaebc2b1869c282.tres"
+
+[deps]
+
+source_file="res://Dialogue/MattOutro.dialogue"
+dest_files=["res://.godot/imported/MattOutro.dialogue-545fd501085f7d5eecaebc2b1869c282.tres"]
+
+[params]
+
+defaults=true

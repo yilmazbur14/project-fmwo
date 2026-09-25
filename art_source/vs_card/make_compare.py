@@ -30,7 +30,7 @@ SHIPPED = {
     "carter":  [("Carter/carter_akuma.png", (0, 0, 96, 96))],
     "liam":    [("Bixby/bixby_beast.png", (0, 0, 192, 160)),
                 ("Liam/liam.png", None)],
-    "jordan":  [("Jordan/jordan.png", None)],
+    "jordan":  [("Jordan/jordan_redesign_v2.png", (0, 0, 96, 96))],     # v2 idle, the bust's source
 }
 
 

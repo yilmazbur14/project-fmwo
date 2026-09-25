@@ -44,6 +44,20 @@ const C_DOWN_BODY_BOX := Rect2(2, 53, 87, 43)
 # Over whichever pose the punish window caught him in, and high enough to clear his tallest: the
 # antenna on beam_ready reaches 285 px above his feet.
 const C_DAZE_ANCHOR := Vector2(0, -300)
+# HIS CROWN ON THE FLOOR LOOP, computah_drop 3-4 (`down`), where a Break leaves him: the stars circle
+# DAZE_GAP over it. Measured the way that 285 px was: the topmost row holding a drawn texel (alpha over
+# 128, checks.py's threshold, keyline included). On these frames that is the dome of his helmet, not
+# the antenna, which lies out to the left with its ball no higher than row 54. The dome tops out on row
+# 50 on frame 3 and row 51 on frame 4, where the twitch drops him a row; the higher is taken so the
+# stars clear both. x is the middle of that row's run, columns 24 to 31. 138 px over his floor point.
+const C_DOWN_HEAD := Vector2(28, 50)
+# The collapse's frames before he is flat, measured the same way, so the stars ride his head down from
+# the Break rather than hanging over his chest on the standing falter it opens on: frame 0 is that
+# falter (the dome on row 19, columns 50 to 55), 1 the knees going (row 41, columns 24 to 31). Frame 2
+# tops out a row under C_DOWN_HEAD, which serves it.
+const C_COLLAPSE_HEADS := {0: Vector2(53, 19), 1: Vector2(28, 41)}
+# PlayerFinisher's "about 34 px above the head", as Jordan's and Matt's.
+const DAZE_GAP := 34.0
 # WHERE THE YELLOW LOCK RING STANDS, AND IT IS THE WHOLE READ OF HIS BEAM, so it may not be behind
 # anything. The ring hangs UP from this anchor and reaches 69 px above it, and the block's crest
 # above him reaches down to y=174. THIS AND COMPUTAH_HOME ARE ONE NUMBER IN TWO PLACES: he fights on
@@ -217,6 +231,80 @@ const COMPUTAH_ANIMS := {
 		frames = [0, 1, 2], times = [0.07], loop = false, flips = true},
 	&"defeat": {sheet = C_DIR + "computah_defeat.png",
 		frames = [0, 1, 2, 3, 4], times = [0.14, 0.12, 0.12, 0.30, 1.0], loop = false, flips = true},
+	# Greyson's takeover (GreysonTakeover), the approved armless set (2026-09-24): his arm hauled on (wrench f0) and
+	# torn off (f1), then armless on the mat, the stump sparking (armless f0 the pose, 1-2 the sparks, looping).
+	&"wrench_haul": {sheet = C_DIR + "computah_wrench.png",
+		frames = [0], times = [1.0], loop = true, flips = true},
+	&"wrench_tear": {sheet = C_DIR + "computah_wrench.png",
+		frames = [1], times = [0.12], loop = false, flips = true},
+	&"armless": {sheet = C_DIR + "computah_armless.png",
+		frames = [0, 1, 2], times = [0.30, 0.10, 0.10], loop = true, flips = true},
+}
+
+#GREYSON'S TAKEOVER (the approved armless set, 2026-09-24)
+# The wound on the armless frames, where the stump sparks, and the wrench's socket, where Greyson's grip hauls on the
+# arm (f0 haul, f1 tear), both in texels on his 96x96 frame. The torn arm is a prop of its own that Greyson carries
+# to his own arm: 56x56 frames (torn, carry, lift, fit, hang), its grip on every frame at `grip`, and a socket and a
+# muzzle a frame. On the tear its "torn" frame is drawn centred `handoff` px from his floor point, x mirrored when
+# both sprites face left, which lands its socket and muzzle exactly on the hauled arm's.
+const C_WOUND := Vector2(50.6, 84.9)
+const C_WRENCH_SOCKETS := [Vector2(51, 75), Vector2(49, 80)]
+const ARM_PROP := {
+	"texture": C_DIR + "computah_arm_prop.png",
+	"hframes": 5,
+	"frame_size": Vector2(56, 56),
+	"frames": {&"torn": 0, &"carry": 1, &"lift": 2, &"fit": 3, &"hang": 4},
+	"grip": Vector2(28, 25),
+	"sockets": [Vector2(13.8, 31.7), Vector2(12.3, 25), Vector2(19, 37.9), Vector2(28, 40.7), Vector2(28, 9.3)],
+	"muzzles": [Vector2(42.1, 18.4), Vector2(43.6, 25), Vector2(36.9, 12.2), Vector2(28, 9.4), Vector2(28, 40.6)],
+	"handoff": Vector2(43.8, -73.2),
+}
+# Greyson's hurl: his collar on the armless frames, which Greyson's fist closes on for the grab, and the tumble he is
+# thrown in, computah_armless_tumble, 96x96 cells drawn thrown to the right. `held` is the cell he hangs from
+# Greyson's fist in, its `grip` on the fist; `spin` the cells the flight turns through, `spin_time` each. The body's
+# middle drifts from cell to cell (`middles`), so the flight puts each cell's middle on its arc.
+const C_ARMLESS_COLLAR := Vector2(40, 80)
+const ARMLESS_TUMBLE := {
+	"texture": C_DIR + "computah_armless_tumble.png",
+	"hframes": 5,
+	"frame_size": Vector2(96, 96),
+	"held": 0,
+	"grip": Vector2(58, 60),
+	"spin": [1, 2, 3, 4],
+	"spin_time": 0.07,
+	"middles": [Vector2(54, 42), Vector2(49, 47), Vector2(48, 49), Vector2(47, 49), Vector2(47, 47)],
+}
+
+#JUGGLED (the tiered finisher's uppercuts, after a Break)
+# computah_juggle.png: 12 frames of 192x144, feet on (96, 143). The hit 0-1; the tumble 2-6, looping
+# from a hang at the apex; the crash 7-9; and him lying KO'd 10-11. ITS FRAME IS NOT HIS MAIN SHEET'S:
+# 192x144 against 96x96, so it hangs at (0, -72) against computah_offset()'s (0, -48) to keep his feet
+# on the same floor line. The anchors and timings are the artist's (art_source/computah_juggle, build.py
+# measure() and poses.py FRAMES), re-measured off the shipped sheet.
+# Paths rather than textures: they load at runtime, so this parses whether or not the sheets are
+# imported yet.
+const USE_FINAL_JUGGLE := true
+const FINAL_JUGGLE := {
+	"texture": "res://Assets/Characters/Computah/computah_juggle.png",
+	"hframes": 12,
+	"frame_size": Vector2(192, 144),
+	"offset": Vector2(0, -72),
+	"feet": Vector2(96, 143),
+	"tumble_centre": Vector2(94, 79),
+	"top_row": 24,
+	"clips": {
+		&"launch": {"frames": [0, 1], "times": [0.06, 0.08], "loop": false},
+		&"tumble": {"frames": [2, 3, 4, 5, 6], "times": [0.16, 0.07, 0.07, 0.07, 0.07], "loop": true},
+		&"crash": {"frames": [7, 8, 9], "times": [0.06, 0.08, 0.12], "loop": false},
+		&"down": {"frames": [10, 11], "times": [0.4, 0.4], "loop": true},
+	},
+	"shadow": {
+		"texture": "res://Assets/Characters/Computah/computah_leap_shadow.png",
+		"hframes": 3, "scale": 3.0, "alpha": 0.35, "step": 100.0, "offset": Vector2.ZERO,
+	},
+	"lying_time": 0.3,
+	"outro_delay": 1.8,
+	"crash_sfx": {"stream": "res://Assets/Audio/SFX/hit_impact.ogg", "pitch": 0.7, "volume_db": 0.0},
 }
 
 #THE WORD POPUPS
@@ -393,6 +481,10 @@ const PLACEHOLDER_COMBO_IMPACT := {
 
 static func computah_anim(anim_name: StringName) -> Dictionary:
 	return COMPUTAH_ANIMS[anim_name]
+
+
+static func juggle() -> Dictionary:
+	return FINAL_JUGGLE
 
 
 # Sprite offset, in texels, that puts an anchor on the sprite's origin.

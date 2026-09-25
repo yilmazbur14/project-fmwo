@@ -1,6 +1,5 @@
 extends State
 
-@export var animation_player : AnimationPlayer
 @export var hurtbox : Area2D
 @export var taunt_sfx_player : AudioStreamPlayer
 @export var body : CharacterBody2D
@@ -14,7 +13,7 @@ var elapsed := 0.0
 func Enter() -> void:
 	body.hits_this_window = 0
 	body.daze_used = false
-	animation_player.play("taunt")
+	body.play_state_anim(&"taunt")
 	taunt_sfx_player.play()
 	hurtbox.set_deferred("monitoring", true)
 	hurtbox.set_deferred("monitorable", true)

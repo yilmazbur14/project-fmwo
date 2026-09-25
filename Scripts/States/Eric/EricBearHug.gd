@@ -6,6 +6,10 @@ extends State
 # In the reworked fight (EricPacing V2) the charge is red or yellow, on the same art and timing: red is
 # the grab, which only a parry answers, and yellow a shoulder charge, which only a dash answers and
 # which ends in the stumble whether it hit or not.
+# V2's lunge is a rush that homes on the player and reaches them after exactly hug_rush_time from
+# anywhere in the ring. It is harmless on the way, then his arms are live for hug_rush_hot where it
+# arrives, so the moment of contact is the same at any range and only the colour says which answer
+# it wants.
 
 const HitInfo := preload("res://Scripts/HitInfo.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
@@ -27,8 +31,12 @@ const PLANTED_SWORD_TEXTURE := preload("res://Assets/Characters/Eric/eric_bearhu
 const EricPacing := preload("res://Scripts/EricPacing.gd")
 const EricColourRule := preload("res://Scripts/EricColourRule.gd")
 const TOSS_DIRECTION := Vector2(0.7071, -0.7071)
+# Where V2's rush may take his origin. Wider than the whirlwind's lunge area (240 to 1680 across), which
+# stops his grab box short of a player flush against a side rope: from 200 to 1702 it closes 19 px over
+# them on both sides, and his body still stays on the floor the player can stand on.
+const RUSH_AREA := Rect2(200, 180, 1502, 590)
 
-enum Phase { PLANT, CHARGE, LUNGE, WHIFF, STUMBLE, HOLD, RETURN, RETRIEVE }
+enum Phase { PLANT, CHARGE, LUNGE, CONTACT, WHIFF, STUMBLE, HOLD, RETURN, RETRIEVE }
 
 @onready var player = get_tree().current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
 
@@ -36,6 +44,9 @@ var phase := Phase.PLANT
 var plant_spot: Vector2
 var lunge_target: Vector2
 var lunge_speed_now := 0.0
+# V2: the rush's time left, then how long his arms stay live once he has arrived.
+var lunge_left := 0.0
+var hot_left := 0.0
 var charge_left := 0.0
 var squeezes_left := 0
 var holding := false
@@ -55,7 +66,6 @@ func Enter() -> void:
 	sprite.texture = HUG_TEXTURE
 	sprite.hframes = EricArtLayout.HUG_FRAMES
 	plant_spot = character_body.global_position
-	lunge_speed_now = EricPacing.raged("hug_lunge_speed", eric_state_machine.rage)
 	yellow = EricPacing.is_v2() and _next_is_yellow()
 	hugs_started += 1
 	phase = Phase.PLANT
@@ -89,16 +99,22 @@ func Physics_Update(delta: float) -> void:
 			if charge_left <= 0.0:
 				_start_lunge()
 		Phase.LUNGE:
+			if EricPacing.is_v2():
+				_rush(delta)
 			# Overlaps are from the last physics step, so the lunge's final position still gets
 			# checked on the frame after it arrives.
-			if _catches_player():
+			elif _catches_player():
 				_grab()
 			elif character_body.global_position == lunge_target:
-				grab_area.monitoring = false
-				phase = Phase.WHIFF
-				animation_player.play("hug_whiff")
+				_whiff()
 			else:
 				character_body.global_position = character_body.global_position.move_toward(lunge_target, lunge_speed_now * delta)
+		Phase.CONTACT:
+			hot_left -= delta
+			if _catches_player():
+				_grab()
+			elif hot_left <= 0.0:
+				_whiff()
 		Phase.RETURN:
 			character_body.global_position = character_body.global_position.move_toward(plant_spot, EricPacing.value("hug_return_speed") * delta)
 			if character_body.global_position == plant_spot and not animation_player.is_playing():
@@ -111,18 +127,47 @@ func Physics_Update(delta: float) -> void:
 		player.velocity = Vector2.ZERO
 
 
-# The lunge is the hitbox: the warning has done its job by now.
+# The lunge is the hitbox: the warning has done its job by now. V2's rush only becomes one once it
+# arrives (_rush).
 func _start_lunge() -> void:
 	ParryTell.clear(character_body)
-	var grab_offset: Vector2 = grab_area.get_node("CollisionShape2D").global_position - character_body.global_position
-	var to_player: Vector2 = player.global_position - grab_offset - character_body.global_position
-	lunge_target = character_body.global_position + to_player.limit_length(EricPacing.value("hug_lunge_max_distance"))
 	# Like the whirlwind, he passes through the player instead of being blocked by them.
 	boss_collision_shape.disabled = true
-	grab_area.monitoring = true
 	_add_planted_sword()
 	phase = Phase.LUNGE
 	animation_player.play("hug_lunge")
+	if EricPacing.is_v2():
+		lunge_left = EricPacing.value("hug_rush_time")
+		return
+	var to_player: Vector2 = player.global_position - _grab_offset() - character_body.global_position
+	lunge_target = character_body.global_position + to_player.limit_length(EricPacing.value("hug_lunge_max_distance"))
+	lunge_speed_now = EricPacing.raged("hug_lunge_speed", eric_state_machine.rage)
+	grab_area.monitoring = true
+
+
+# The homing step: whatever time is left has to cover whatever ground is left, so he arrives on
+# hug_rush_time however far away they were and however they ran. He never turns round on the way: the
+# hold's player centres, the toss and the planted sword are all placed for his frames as drawn.
+func _rush(delta: float) -> void:
+	lunge_left -= delta
+	var target: Vector2 = player.global_position - _grab_offset()
+	var step: float = character_body.global_position.distance_to(target) / maxf(lunge_left, delta)
+	character_body.global_position = character_body.global_position.move_toward(target, step * delta).clamp(RUSH_AREA.position, RUSH_AREA.end)
+	if lunge_left <= 0.0:
+		phase = Phase.CONTACT
+		hot_left = EricPacing.value("hug_rush_hot")
+		grab_area.monitoring = true
+
+
+# Where his grab box sits from his origin: a lunge aims that at the player.
+func _grab_offset() -> Vector2:
+	return grab_area.get_node("CollisionShape2D").global_position - character_body.global_position
+
+
+func _whiff() -> void:
+	grab_area.monitoring = false
+	phase = Phase.WHIFF
+	animation_player.play("hug_whiff")
 
 
 func _catches_player() -> bool:

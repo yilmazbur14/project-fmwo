@@ -2,12 +2,11 @@ extends Node
 
 # Computah's machine. ONE body, ONE cycle: an attack, then the window it leaves open, then a beat.
 #
-# TODAY THE CYCLE HAS ONE ATTACK IN IT - the cannon beam. start_cycle() below is the seam his second
-# attack slots into: it is already an attack picker with a single entry, and adding a move means
-# adding a row there and a state to the scene, not restructuring anything.
-#
-# The chase and the catch are still here, wired and working, but NOT in the rotation: they are the
-# ground the second attack is being built on, and deleting them would mean writing them again.
+# TODAY THE CYCLE HAS ONE ATTACK IN IT - the cannon beam (live_attacks). The user took the mine field and
+# the overload out of the rotation (2026-09-24): FIGHT 03's first half is meant to be easy, so that Greyson's
+# half lands as the surprise. Both are still here, wired and working - the mine field, its chase, the trap and
+# the catch, and the overload - and come back by name in live_attacks, with his health back up with them
+# (ComputahScript.FULL_ROTATION_HEALTH). start_cycle() is the picker, and nothing else starts any of them.
 #
 # TELEGRAPHS NEVER SCALE. BEAM_LOCK_FLOOR is the floor the beam's read may never go under, because
 # below about 0.35 s a read stops being a read and becomes a coin flip.
@@ -34,6 +33,8 @@ extends Node
 
 const VsCard := preload("res://Scripts/VsCard.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
+const ComputahBroken := preload("res://Scripts/States/Computah/ComputahBroken.gd")
+const ComputahJuggled := preload("res://Scripts/States/Computah/ComputahJuggled.gd")
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/ComputahPreFight.dialogue"
 const HAZARD_GROUP := "computah_hazard"
 
@@ -112,11 +113,13 @@ const COMPUTAH_HOME := Vector2(960, 560)
 @export var mine_chase_time := 6.0
 @export var mine_walk_speed := 900.0
 @export var mine_charge := 1.50
-# The escape mash. Deliberately NOT the finisher's 0.107/0.25, which would take longer to fill than
+# The escape mash. Deliberately NOT the finisher's 0.107/0.14, which would take longer to fill than
 # the whole trap lasts: these two are PlayerGrabEscape's shape, with a heavier drain, because this
-# hold is shorter than a bear hug and standing still in it has to cost.
+# hold is shorter than a bear hug and standing still in it has to cost. Both are bent by MashCurve, and
+# the drain is fitted so getting out takes about 5.5 a second with him beside the pod and 4.6 with the
+# ring to cross.
 @export var escape_gain := 0.16
-@export var escape_drain := 0.40
+@export var escape_drain := 0.21
 # The window a whiffed uppercut opens, and what a catch costs on top of the damage.
 @export var mine_fall_window := 3.6
 @export var mine_fall_cap := 4
@@ -177,23 +180,51 @@ var last_attack := "LayMines"
 var caught_since_cycle := false
 # On his own fight clock (game seconds), so a hit-stop holds the grace with everything else.
 var last_release_time := -INF
+# The pre-fight lines' balloon, which a held skip takes down, and whether those lines have handed
+# over to the VS card yet.
+var pre_fight_balloon: Node
+var pre_fight_over := false
 
 var warned := {}
 
 
 func _ready() -> void:
+	# His Break and his juggle are built here rather than in his scene, as Jordan's intro is, so nothing
+	# an open editor saves can write over them. Before the loop registers them, and before any Break:
+	# Broken's slide reads Juggled's floor.
+	_add_state(ComputahBroken.new(), "Broken")
+	_add_state(ComputahJuggled.new(), "Juggled")
 	for child in get_children():
 		if child is State:
 			states[child.name] = child
 
 	if initial_state:
 		current_state = initial_state
+	# The main menu's GREYSON row (GameProgress.start_at_greyson), taken whether or not Greyson follows him, so it
+	# can never carry over into a later load: the fight opens on Greyson's takeover, with no entrance, lines or
+	# card of Computah's. Deferred until the body is ready, which loads Greyson's scene.
+	var at_greyson: bool = GameProgress.start_at_greyson
+	GameProgress.start_at_greyson = false
+	if at_greyson and boss.greyson_follows:
+		boss.start_at_greyson.call_deferred()
+		return
+	if initial_state:
 		# Deferred until the body is ready, since the intro places and draws him.
 		current_state.Enter.call_deferred()
 	# On the first frame, the way the fight has always done it, rather than at the end of the intro
 	# pose: anything driving the fight from outside (the defence suite) ends the dialogue as soon as
 	# the scene loads, and a handler connected a second later would never hear it.
 	show_pre_fight_dialogue.call_deferred(initial_state)
+
+
+# The hurtbox comes off the tree, not off the body's onready var: the body is this node's parent, and a
+# parent is ready after its children, so that var isn't set yet.
+func _add_state(state, state_name: String) -> void:
+	state.name = state_name
+	state.body = boss
+	state.hurtbox = boss.get_node("Hurtbox")
+	state.state_machine = self
+	add_child(state)
 
 
 func _process(delta: float) -> void:
@@ -232,10 +263,25 @@ func on_child_transition(state, new_state_name):
 func show_pre_fight_dialogue(intro: State) -> void:
 	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
 	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
-	DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start", [intro])
+	pre_fight_balloon = DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start", [intro])
+
+
+# A held skip's way past the lines (BossEntrance): the hand-over their own end makes, made from here
+# instead. pre_fight_over keeps it to once - the lines can end on their own inside the skip, on the
+# charge-up it ran out.
+func end_pre_fight_dialogue() -> void:
+	if pre_fight_over:
+		return
+	if DialogueManager.dialogue_ended.is_connected(_on_dialogue_ended):
+		DialogueManager.dialogue_ended.disconnect(_on_dialogue_ended)
+	_on_dialogue_ended(null)
 
 
 func _on_dialogue_ended(_dialogue: Object) -> void:
+	pre_fight_over = true
+	var intro = states.get("Intro")
+	if intro:
+		intro.lines_over()
 	VsCard.play_intro(self, "computah", post_dialogue_pre_fight_timer.start.bind(intro_beat))
 
 
@@ -246,6 +292,9 @@ func _on_post_dialogue_pre_fight_timer_timeout() -> void:
 
 # THE ATTACK PICKER. Three moves, and what decides between them is chosen here and nowhere else.
 const ATTACKS := ["Beam", "LayMines", "Overload"]
+# The ones the picker may choose: the beam alone (see the header). A var, so a test of the dormant two can put
+# them back for itself.
+var live_attacks: Array[String] = ["Beam"]
 
 
 # THE OVERLOAD TAKES A TURN WITHOUT SPENDING ONE. It does not write `last_attack`, so the beam and the
@@ -254,7 +303,7 @@ const ATTACKS := ["Beam", "LayMines", "Overload"]
 func start_cycle() -> void:
 	cycles_started += 1
 	caught_since_cycle = false
-	if cycles_started % overload_every_cycles == 0 and can_start_overload():
+	if live_attacks.has("Overload") and cycles_started % overload_every_cycles == 0 and can_start_overload():
 		on_child_transition(current_state, "Overload")
 		return
 	last_attack = _next_attack()
@@ -337,7 +386,7 @@ func allows_daze() -> bool:
 # `last_attack` starts on the mine field so the fight OPENS on the beam - the mine field is answered
 # by moving, and the player needs one cycle of him standing still to read him first.
 func _next_attack() -> String:
-	if last_attack == "LayMines" or caught_since_cycle:
+	if not live_attacks.has("LayMines") or last_attack == "LayMines" or caught_since_cycle:
 		return "Beam"
 	return "LayMines"
 
@@ -414,8 +463,10 @@ func _end_punish_window(stagger_time: float) -> bool:
 	on_child_transition(current_state, "Idle")
 	# Idle starts the beat before the next attack; the stagger replaces it.
 	beat_timer.stop()
-	# Held on the recoil frame through the stagger instead of the idle loop Idle started.
-	boss.play_anim(&"hit", &"down")
+	# Held on the recoil frame through the stagger instead of the idle loop Idle started, and on it to the end: the
+	# finisher rocks his sprite back and settles it over the whole stagger, so a floor pose in it floats, and the next
+	# beam's brace stands up out of it rather than off the mat.
+	boss.play_anim(&"hit")
 	finisher_stagger_timer.start(stagger_time)
 	return true
 
@@ -437,8 +488,9 @@ func trap_allowed() -> bool:
 	if player_defeated or not is_instance_valid(boss) or boss.defeated or boss.boss_health <= 0:
 		return false
 	# The intro places him and the defeat is terminal; a trap in either is a hold with no fight
-	# around it. A trap already open is the whole of the second rule.
-	for state_name in ["Intro", "Defeated", "Trapped"]:
+	# around it. A trap already open is the whole of the second rule. Broken and juggled, the player has
+	# just been driven in to punish him, and a pod closing on them would take that away.
+	for state_name in ["Intro", "Defeated", "Trapped", "Broken", "Juggled"]:
 		if current_state == states.get(state_name):
 			return false
 	if boss.fight_clock - last_release_time < trap_grace:
@@ -492,14 +544,16 @@ func in_catch_grace() -> bool:
 
 
 #THE BREAK
-# His daze meter filling (BossBreakGauge) drops him where he stands, which is the punish window the
-# player's finisher needs. Fed by reading his fight and drained by being caught by it.
+# His daze meter filling (BossBreakGauge) drops him where he stands (ComputahBroken): the one window
+# that pays out the three-bar finisher and the juggle. Fed by reading his fight and drained by being
+# caught by it.
 
 func enter_broken() -> void:
 	if player_defeated or boss.defeated or boss.boss_health <= 0:
 		return
-	if current_state == states.get("Defeated") or current_state == states.get("Intro"):
-		return
+	for state_name in ["Defeated", "Intro", "Broken", "Juggled"]:
+		if current_state == states.get(state_name):
+			return
 	# Nothing may be left holding the player while he falls over.
 	var trapped: State = states.get("Trapped")
 	if trapped:
@@ -509,9 +563,53 @@ func enter_broken() -> void:
 		caught.release()
 	ParryTell.clear(boss)
 	beat_timer.stop()
+	window_timer.stop()
 	finisher_stagger_timer.stop()
-	open_window(battery_window + parry_stagger_bonus, boss.MAX_HITS_PER_WINDOW,
-		&"collapse", &"down", &"reboot")
+	# The mat goes with him: the player is about to be driven in beside him, and a pod left armed there
+	# is a trap they are walked into blind. Expired, as the overload's sweep is, so it reads as him
+	# losing the charge in them.
+	sweep_field()
+	on_child_transition(current_state, "Broken")
+
+
+# The single-bar finisher ended his Break window instead of its own clock (ComputahBroken.end_window):
+# the same stagger any other window's finisher leaves.
+func end_break(stagger_time: float) -> void:
+	_end_punish_window(stagger_time)
+
+
+# The tiered finisher's first uppercut (ComputahScript.begin_juggle).
+func enter_juggled() -> void:
+	if boss.defeated or current_state == states["Juggled"]:
+		return
+	on_child_transition(current_state, "Juggled")
+
+
+# Down after a juggle, he gets up where he crashed, and his next attack comes `delay` after this.
+func after_juggle(delay: float) -> void:
+	on_child_transition(current_state, "Idle")
+	beat_timer.stop()
+	# The juggle left his own animation halted. This is him getting up, and Idle lets it play out.
+	boss.play_anim(&"reboot", &"idle")
+	finisher_stagger_timer.start(maxf(delay, 0.01))
+
+
+# The one switch past the fight being decided that on_child_transition refuses: killed in the air, he
+# lands into his end rather than snapping to it mid-flight, and goes straight into it.
+func land_juggled(final_state_name: String) -> void:
+	var juggled = current_state
+	var final_state = states.get(final_state_name)
+	var beaten: bool = final_state == states.get("Defeated")
+	if beaten:
+		final_state.lying = true
+	juggled.Exit()
+	# Only beaten does he stay down on the juggle's KO loop. The player losing leaves him standing.
+	if not beaten:
+		juggled.stop_lingering()
+	final_state.Enter()
+	current_state = final_state
+	# The player losing ends the fight in Idle, whose Enter starts the beat into his next attack.
+	beat_timer.stop()
 
 
 #THE PARRY STAGGER
@@ -555,9 +653,19 @@ func _end_fight(final_state_name: String) -> void:
 		ParryTell.clear(boss)
 	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
 		hazard.queue_free()
+	var juggled = states.get("Juggled")
+	if current_state == juggled:
+		# In the air, he finishes his fall and his crash first (land_juggled). His clocks stop now.
+		juggled.final_state = final_state_name
+		_stop_timers()
+		return
 	on_child_transition(current_state, final_state_name)
 	# After the transition, not before: entering Idle starts the beat timer, which must not survive
 	# the end of the fight.
+	_stop_timers()
+
+
+func _stop_timers() -> void:
 	for timer in [post_dialogue_pre_fight_timer, window_timer, finisher_stagger_timer, beat_timer]:
 		timer.stop()
 
@@ -581,6 +689,13 @@ const RUNNER_MARGIN := Vector2(80, 170)
 
 func runner_bounds() -> Rect2:
 	return Rect2(ROPES.position + RUNNER_MARGIN, ROPES.size - RUNNER_MARGIN * 2.0)
+
+
+# Where the juggle's leap shadow lies: the floor his pods lie on. His fight has no Arena/GroundFx, and
+# this layer is y-sorted and ahead of his body in the tree, so a shadow on his ground line draws under
+# him.
+func ground_layer() -> Node2D:
+	return boss.get_parent().get_node("HazardLayer")
 
 
 # Everything he sends out lives under the fight scene, so a finisher's freeze holds it and the end

@@ -282,6 +282,8 @@ const PROMPT_WORDS := {
 	&"mash": {"text": "MASH!", "colors": [Color(1.0, 0.72, 0.1), Color(1.0, 0.95, 0.6)]},
 	&"charge": {"text": "CHARGE!", "colors": [Color(1.0, 0.72, 0.1), Color(1.0, 0.95, 0.6)]},
 	&"escape": {"text": "ESCAPE!", "colors": [Color(1.0, 0.25, 0.2), Color(1.0, 0.92, 0.88)]},
+	# Matt's Deafening Yell: mash through it, in his lavender.
+	&"resist": {"text": "RESIST!", "colors": [Color("#B3B6F2"), Color("#F2F3FF")]},
 }
 
 const USE_FINAL_METER := true
@@ -474,10 +476,11 @@ static func meter() -> Dictionary:
 	return FINAL_METER if USE_FINAL_METER else PLACEHOLDER_METER
 
 
-# Seconds from the uppercut's start to each step's start, with the landing as the last entry.
-static func uppercut_step_starts() -> Array:
+# Seconds from the uppercut's start to each step's start, with the landing as the last entry: `sheet`'s,
+# a fight's own (PlayerFinisher.sheet_override), or player_sheet()'s when it is empty.
+static func uppercut_step_starts(sheet := {}) -> Array:
 	var starts := [0.0]
-	for step in player_sheet().uppercut:
+	for step in (player_sheet() if sheet.is_empty() else sheet).uppercut:
 		starts.append(starts[-1] + step[2])
 	return starts
 

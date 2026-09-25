@@ -8,6 +8,8 @@ const FightOutro := preload("res://Scripts/FightOutro.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
 const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
 const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
+const BossBreakGauge := preload("res://Scripts/BossBreakGauge.gd")
+const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
 # What Liam says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/LiamOutro.dialogue"
 const NEXT_FIGHT_SCENE := "res://Scenes/Bosses/JordanBossFightScene.tscn"
@@ -16,6 +18,8 @@ const NEXT_FIGHT_SCENE := "res://Scenes/Bosses/JordanBossFightScene.tscn"
 @export var max_health := 16
 var boss_health := max_health
 const MAX_HITS_PER_WINDOW := 3
+# Each opening takes the damage of a clean chain of MAX_HITS_PER_WINDOW punches (PunchAllowance).
+const PunchAllowance := preload("res://Scripts/PunchAllowance.gd")
 const PHANTOM_HIT_WINDOW := 0.5
 const VIEW_SIZE := Vector2(1920, 1080)
 const HOVER_HEIGHT_PX := BixbyBeastArtLayout.HOVER_HEIGHT * BixbyBeastArtLayout.SCALE
@@ -26,8 +30,41 @@ const FLY_ACCELERATION := 2600.0
 # Flying sideways faster than this turns the fly frames to face the way he's going.
 const FLY_TURN_SPEED := 60.0
 
+#BREAK GAUGE (BossBreakGauge, and BossBroken's window)
+# The rule every fight after Mason's is on: 8 clean reads from empty are a guaranteed Break. A parry or a
+# perfect dodge is one read, a hit taken costs one and a guard break two, and a landed punch is a quarter of
+# one, a charged one half, so a 3-punch combo is one read. Nothing of his is a grab or comes back at him, so
+# the grab and reflect gains are the plain read and never paid. BREAK_READ is BossBreakGauge's max_value of
+# 100 over N, given as it is (BREAK_EPSILON).
+const BREAK_READS := 8
+const BREAK_READ := 100.0 / BREAK_READS
+const BREAK := {
+	"parry_gain": BREAK_READ,
+	"grab_parry_gain": BREAK_READ,
+	"reflect_gain": BREAK_READ,
+	"perfect_dodge_gain": BREAK_READ,
+	"punch_gain": BREAK_READ / 4.0,
+	"charged_punch_gain": BREAK_READ / 2.0,
+	"hit_loss": BREAK_READ,
+	"guard_break_loss": 2.0 * BREAK_READ,
+	"unlock_delay": 3.0,
+	"broken_time": 3.0,
+}
+# What fills it: not the Inferno's fireballs, too many to a shower for each to be a read, nor its embers,
+# which lie still on the floor. Anything of his that lands drains it.
+const BREAK_EARNING_IDS: Array[StringName] = [&"bixby_fire_breath", &"bixby_sonic_beam", &"bixby_quake_ring", &"bixby_inferno"]
+
 #UI (BossHealthBarUI builds it at runtime)
 var health_bar: Control
+var hud_layer: CanvasLayer
+var break_gauge: Node
+var gauge_bar: Control
+# Whether the fire breath going now has filled the gauge yet: a breath is one read however often its stream
+# is parried. Each breath starts it over (BixbyBeastFireBreath).
+var breath_read := false
+# How long the bar takes to fade as he takes the rope, and to come back as he leaves it.
+const HUD_FADE_TIME := 0.25
+var hud_fade: Tween
 
 # Kept under a node that y-sorts at the top edge of the arena floor, so it's drawn under every
 # character wherever it goes, rather than over the feet of a player standing just behind him.
@@ -59,9 +96,13 @@ const THEME_DB := -7.0
 @onready var blast_sfx_player: AudioStreamPlayer = $BlastSfxPlayer
 @onready var pound_sfx_player: AudioStreamPlayer = $PoundSfxPlayer
 @onready var scream_sfx_player: AudioStreamPlayer = $ScreamSfxPlayer
+@onready var inhale_sfx_player: AudioStreamPlayer = $InhaleSfxPlayer
+@onready var spit_sfx_player: AudioStreamPlayer = $SpitSfxPlayer
+@onready var rope_sfx_player: AudioStreamPlayer = $RopeSfxPlayer
 
 var defeated := false
 var hits_this_window := 0
+var punches := PunchAllowance.new()
 # One finisher daze per recovery; Recover clears it.
 var daze_used := false
 
@@ -69,6 +110,8 @@ var fight_clock := 0.0
 var last_contact_hit_time := -INF
 
 var sprite_base_position: Vector2
+# The last shudder started (shake_sprite).
+var sprite_shake: Tween
 
 # The floor point under him, where his shadow is, and how many px above it his feet are. His node sits
 # on the floor point, and everything drawn is snapped to whole pixels.
@@ -97,6 +140,9 @@ func _ready() -> void:
 	sprite_base_position = sprite.position
 	ground_position = global_position
 	_apply_art_layout()
+	var player := get_tree().current_scene.get_node_or_null(FightOutro.PLAYER_PATH)
+	if player:
+		_add_break_gauge(player)
 	_build_hud()
 
 	# "Carried In, Swallowed Whole", written for this fight - see art_source/music/liam_theme.rb.
@@ -125,6 +171,49 @@ func _ready() -> void:
 	roar_sfx_player.stream = load("res://Assets/Audio/SFX/bixby_roar.wav")
 	scream_sfx_player.stream = load("res://Assets/Audio/SFX/bixby_roar_short.wav")
 	pound_sfx_player.stream = load("res://Assets/Audio/SFX/earthquake_slam.ogg")
+	# The Inferno's placeholders. The inhale loops, and load() hands back the one whoosh the breath and the
+	# wings play as well, so it loops on a copy of its own.
+	var inhale: AudioStreamOggVorbis = load("res://Assets/Audio/SFX/whirlwind_whoosh.ogg").duplicate()
+	inhale.loop = true
+	inhale_sfx_player.stream = inhale
+	spit_sfx_player.stream = load("res://Assets/Audio/SFX/rocket_launch.ogg")
+	rope_sfx_player.stream = load("res://Assets/Audio/SFX/wrestler_collision.ogg")
+
+
+func _add_break_gauge(player: Node) -> void:
+	break_gauge = BossBreakGauge.new()
+	break_gauge.name = "BreakGauge"
+	break_gauge.boss = self
+	break_gauge.player = player
+	break_gauge.owns_attack = func(id: StringName) -> bool: return String(id).begins_with("bixby_")
+	break_gauge.earns_from = _earns_break
+	break_gauge.parry_gain = BREAK.parry_gain
+	break_gauge.grab_parry_gain = BREAK.grab_parry_gain
+	break_gauge.reflect_gain = BREAK.reflect_gain
+	break_gauge.perfect_dodge_gain = BREAK.perfect_dodge_gain
+	break_gauge.punch_gain = BREAK.punch_gain
+	break_gauge.charged_punch_gain = BREAK.charged_punch_gain
+	break_gauge.hit_loss = BREAK.hit_loss
+	break_gauge.guard_break_loss = BREAK.guard_break_loss
+	break_gauge.unlock_delay = BREAK.unlock_delay
+	add_child(break_gauge)
+	break_gauge.broke.connect(_on_break)
+
+
+# Every breath shares the one fire hitbox, so its one read is counted here rather than by source.
+func _earns_break(hit: RefCounted) -> bool:
+	if not BREAK_EARNING_IDS.has(hit.attack_id):
+		return false
+	if hit.attack_id == &"bixby_fire_breath":
+		if breath_read:
+			return false
+		breath_read = true
+	return true
+
+
+# The gauge fills inside physics flushes and his own physics steps, where his states can't switch.
+func _on_break() -> void:
+	state_machine.enter_broken.call_deferred()
 
 
 func start_music() -> void:
@@ -155,7 +244,13 @@ func _apply_art_layout() -> void:
 		fire_hitbox.add_child(shape)
 		fire_shapes[frame] = shape
 
-	var box := BixbyBeastArtLayout.local_rect(BixbyBeastArtLayout.RECOVER_BODY_BOX)
+	_fit_hurtbox(BixbyBeastArtLayout.RECOVER_BODY_BOX)
+
+
+# The hurtbox on `texel_box` of his frames: the one the player punches in his windows, and faces the rest
+# of the time.
+func _fit_hurtbox(texel_box: Rect2) -> void:
+	var box := BixbyBeastArtLayout.local_rect(texel_box)
 	var hurtbox_shape: CollisionShape2D = hurtbox.get_node("CollisionShape2D")
 	hurtbox_shape.position = box.get_center()
 	(hurtbox_shape.shape as RectangleShape2D).size = box.size
@@ -279,6 +374,46 @@ func place() -> void:
 	shadow.global_position = global_position
 
 
+# The Inferno: on the middle of the top rope with his feet at `feet`, facing down over the ring. His floor
+# point goes up to the rope line, so he sorts behind everyone on the mat, which puts his feet below it: his
+# height is negative, and there is no floor under him to cast a shadow on. The boss bar, its plate and its
+# Break gauge sit over the middle of the rope, so they fade while he is there.
+func perch_on_rope(feet: Vector2) -> void:
+	var rope_y: float = state_machine.ROPES.position.y
+	ground_position = Vector2(feet.x, rope_y)
+	height = rope_y - feet.y
+	fly_velocity = Vector2.ZERO
+	shadow.hide()
+	place()
+	_fit_hurtbox(BixbyBeastArtLayout.PERCH_BODY_BOX)
+	_fade_hud(state_machine.inferno_hud_fade_alpha)
+
+
+# He lets go of the rope, dropping `drop` px: hovering at his usual height over the floor under his feet,
+# the HUD and his grounded hurtbox back. Every way out of the Inferno comes through here (its Exit()), so
+# nothing leaves the HUD faded.
+func leave_rope(drop := 0.0) -> void:
+	var feet := feet_position() + Vector2(0, drop)
+	height = HOVER_HEIGHT_PX
+	ground_position = feet + Vector2(0, height)
+	shadow.show()
+	place()
+	_fit_hurtbox(BixbyBeastArtLayout.RECOVER_BODY_BOX)
+	_fade_hud(1.0)
+
+
+# Bound to the bar itself, so a pause or a finisher's freeze holds it with the fight.
+func _fade_hud(alpha: float) -> void:
+	if not health_bar:
+		return
+	if hud_fade:
+		hud_fade.kill()
+	hud_fade = health_bar.create_tween().set_parallel()
+	hud_fade.tween_property(health_bar, "modulate:a", alpha, HUD_FADE_TIME)
+	if gauge_bar:
+		hud_fade.tween_property(gauge_bar, "modulate:a", alpha, HUD_FADE_TIME)
+
+
 # Moves his floor point toward `target` and returns how far off it still is.
 func fly_toward(target: Vector2, max_speed: float, delta: float) -> float:
 	var to_target := target - ground_position
@@ -338,11 +473,19 @@ func shake_screen(strength: float, steps: int, step_time: float) -> void:
 # Shudders the drawn body in whole pixels; his hitboxes and shadow stay put.
 func shake_sprite(strength: float, steps: int, step_time: float) -> void:
 	var tween := sprite.create_tween()
+	sprite_shake = tween
 	for i in steps:
 		var offset := Vector2(randf_range(-strength, strength), randf_range(-strength, strength)).round()
 		tween.tween_callback(func() -> void: sprite.position = sprite_base_position + offset)
 		tween.tween_interval(step_time)
 	tween.tween_callback(func() -> void: sprite.position = sprite_base_position)
+
+
+# A Break cuts a shudder short, so nothing jitters the pose it cuts to.
+func stop_sprite_shake() -> void:
+	if sprite_shake:
+		sprite_shake.kill()
+	sprite.position = sprite_base_position
 
 
 #COMBAT
@@ -367,23 +510,28 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 		last_contact_hit_time = fight_clock
 
 
-# Punches only land while he recovers on the ground.
+# Punches only land in his punish windows (BixbyBeastStateMachine.is_recovering), all of them on the ground.
 func take_punch(amount: int) -> int:
-	if hits_this_window >= MAX_HITS_PER_WINDOW or not state_machine.is_recovering():
+	if not state_machine.is_recovering():
 		return 0
-	var dealt := _apply_damage(amount)
+	var allowed := punches.allow(amount, hits_this_window, MAX_HITS_PER_WINDOW)
+	if allowed <= 0:
+		return 0
+	var dealt := _apply_damage(allowed)
 	if dealt > 0:
 		hits_this_window += 1
+		punches.spend(dealt)
 	return dealt
 
 
-func _apply_damage(amount: int) -> int:
+func _apply_damage(amount: int, pitch := 1.0) -> int:
 	var dealt := mini(amount, boss_health)
 	if dealt <= 0:
 		return 0
 	boss_health -= dealt
 	_refresh_health_bar()
 	_hit_feedback()
+	hit_sfx_player.pitch_scale = pitch
 	hit_sfx_player.play()
 
 	if boss_health > 0:
@@ -395,21 +543,32 @@ func _apply_damage(amount: int) -> int:
 	return dealt
 
 
-# The player's finisher (PlayerFinisher). Only his grounded recovery can be dazed, once per landing.
+# The player's finisher (PlayerFinisher). Only a punish window can be dazed, once per window.
 func can_be_dazed() -> bool:
 	return not defeated and boss_health > 0 and not daze_used and state_machine.is_recovering()
 
 
+# The finisher draws its own daze stars over Broken's.
 func enter_daze() -> void:
 	daze_used = true
+	if is_broken():
+		state_machine.current_state.show_stars(false)
 
 
-func exit_daze(_finisher_landed: bool) -> void:
-	pass
+func exit_daze(finisher_landed: bool) -> void:
+	if is_broken() and not finisher_landed:
+		state_machine.current_state.show_stars(true)
 
 
+# Ended by the finisher. Crashed from a juggle, he lies a beat before he gets up; out of any other window
+# he stays down, staggered, and takes off after it.
 func end_recovery(stagger_time: float) -> bool:
-	if defeated or boss_health <= 0 or not state_machine.is_recovering():
+	if defeated or boss_health <= 0:
+		return false
+	if is_juggled():
+		state_machine.current_state.recover(stagger_time)
+		return true
+	if not state_machine.is_recovering():
 		return false
 	state_machine.stagger_then_take_off(stagger_time)
 	return true
@@ -434,11 +593,66 @@ func get_finisher_hurtbox() -> Area2D:
 	return hurtbox
 
 
+func is_broken() -> bool:
+	return state_machine.current_state == state_machine.states.get("Broken")
+
+
+func is_juggled() -> bool:
+	return state_machine.current_state == state_machine.states.get("Juggled")
+
+
+# Down from a Break or a juggle, until he is back up: the gauge waits for this.
+func is_down() -> bool:
+	return is_broken() or is_juggled()
+
+
+# The three-bar mash and the juggle are the Break's payout alone: the juggle's shares of his 16 health
+# would end the fight inside two ordinary windows.
+func can_be_juggled() -> bool:
+	return not defeated and boss_health > 0 and is_broken()
+
+
+# The tiered finisher's juggle (PlayerFinisher).
+func begin_juggle() -> void:
+	state_machine.enter_juggled()
+
+
+func juggle_lift(px: float) -> void:
+	if is_juggled():
+		state_machine.current_state.lift(px)
+
+
+func juggle_pose(pose: StringName, crater := false) -> void:
+	if is_juggled():
+		state_machine.current_state.pose(pose, crater)
+
+
+func juggle_headroom() -> float:
+	return state_machine.states["Juggled"].headroom()
+
+
+# Past the hit cap, as take_finisher, with his hit sound pitched up a step each uppercut.
+func take_juggle_hit(amount: int, pitch: float) -> int:
+	return _apply_damage(amount, pitch)
+
+
+func get_juggle_point() -> Vector2:
+	return state_machine.states["Juggled"].air_point()
+
+
+# A juggle that kills him ends with him still in the air. His own outro waits for Liam to be coughed up
+# anyway (Defeated), long after he has landed, so this only matters if that ever changes.
+func outro_line_delay(_player_won: bool) -> float:
+	if is_juggled():
+		return BixbyBeastArtLayout.juggle().outro_delay
+	return 0.0
+
+
 func _on_defeated() -> void:
 	defeated = true
 	set_hurtbox_active(false)
 	state_machine.enter_defeated()
-	_clear_hazards()
+	clear_hazards()
 
 	if music_player.playing:
 		music_player.stop()
@@ -455,11 +669,11 @@ func finish_victory() -> void:
 # Called by FightOutro when the player loses.
 func on_player_defeated() -> void:
 	state_machine.enter_player_defeated()
-	_clear_hazards()
+	clear_hazards()
 
 
-# Whoever won, no fire and nothing he's sent out may stay live.
-func _clear_hazards() -> void:
+# Whoever won, or once he's Broken, no fire and nothing he's sent out may stay live.
+func clear_hazards() -> void:
 	_set_fire_shape(-1)
 	for hazard in get_tree().get_nodes_in_group(state_machine.HAZARD_GROUP):
 		hazard.queue_free()
@@ -487,15 +701,21 @@ func swallow_liam() -> void:
 
 
 func _build_hud() -> void:
-	var layer := CanvasLayer.new()
-	add_child(layer)
+	hud_layer = CanvasLayer.new()
+	add_child(hud_layer)
 
 	health_bar = BossHealthBarUI.create({
 		"rows": [{"key": &"liam", "max": max_health, "value": boss_health}],
 		"plate": &"liam_pair",
 		"text": "LIAM & BIXBY",
 	})
-	layer.add_child(health_bar)
+	hud_layer.add_child(health_bar)
+
+	if break_gauge:
+		gauge_bar = BreakGaugeUI.new()
+		gauge_bar.gauge = break_gauge
+		hud_layer.add_child(gauge_bar)
+		gauge_bar.position = health_bar.break_gauge_anchor()
 
 
 func _hit_feedback() -> void:

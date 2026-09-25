@@ -47,7 +47,7 @@ func _process(delta: float) -> void:
 	pass
 
 func _on_ready_button_pressed() -> void:
-	get_tree().change_scene_to_file("res://Scenes/Bosses/EricBossFightScene.tscn")
+	get_tree().change_scene_to_file(GameProgress.first_fight())
 
 func _on_dialogue_ended(dialogue: Object) -> void:
 	# get_tree().change_scene_to_file("res://Scenes/ArenaScene.tscn")

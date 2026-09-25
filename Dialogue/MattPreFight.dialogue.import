@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://cbqjsci6luahe"
+path="res://.godot/imported/MattPreFight.dialogue-911188482ecc1e7f417539bb4759e996.tres"
+
+[deps]
+
+source_file="res://Dialogue/MattPreFight.dialogue"
+dest_files=["res://.godot/imported/MattPreFight.dialogue-911188482ecc1e7f417539bb4759e996.tres"]
+
+[params]
+
+defaults=true

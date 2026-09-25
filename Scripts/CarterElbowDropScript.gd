@@ -57,6 +57,11 @@ var dive_time: float
 var sit_up_time: float
 var leap_out_time: float
 var gap_between_drops: float
+# Set by Mason before begin() when his nugget shower rains on the same mat (MasonNuggetShower). Both
+# markers are floor art sorted at their own top edge, so a nugget marker lying across the top of this
+# much bigger one would draw mostly under it. Sorted up at this height instead, his marker draws under
+# every nugget marker, and still under anyone standing on it. INF leaves it at its top edge.
+var marker_sort_y := INF
 
 var target_player: Node2D
 var arena_bounds: Rect2
@@ -67,6 +72,7 @@ var over_mason := false
 # oval they draw centred on the landing spot.
 var art_scale := Vector2.ONE
 var target_art_position := Vector2.ZERO
+var target_art_offset := Vector2.ZERO
 var impact_art_position := Vector2.ZERO
 
 
@@ -79,6 +85,7 @@ func _ready() -> void:
 	impact_sprite.hframes = IMPACT_FRAMES
 	art_scale = target_sprite.scale
 	target_art_position = target_sprite.position
+	target_art_offset = target_sprite.offset
 	impact_art_position = impact_sprite.position
 	# The shape resource is shared by every drop that comes out of this scene, so each one sizes its
 	# own copy.
@@ -152,6 +159,21 @@ func begin(drop_count: int, player: Node2D, bounds: Rect2, avoid: Rect2) -> void
 	sequence.tween_callback(_finish)
 
 
+# When each of begin()'s slams switches its hitbox on, in seconds after begin(). It walks the same
+# steps as that tween and must change with it: the shower Mason calls him into times its landings
+# around these before he has picked a single spot.
+func slam_times(drop_count: int) -> Array[float]:
+	var times: Array[float] = []
+	var at := 0.0
+	for i in drop_count:
+		if i > 0:
+			at += gap_between_drops
+		at += telegraph_time + dive_time
+		times.append(at)
+		at += hitbox_active_time + maxf(landed_time - hitbox_active_time, 0.0) + sit_up_time + leap_out_time
+	return times
+
+
 func _mark_target() -> void:
 	if is_instance_valid(target_player):
 		var hurtbox_shape: CollisionShape2D = target_player.hurtBox.get_node("CollisionShape2D")
@@ -159,8 +181,17 @@ func _mark_target() -> void:
 		global_position = _landing_spot(target_player.global_position, hurtbox)
 	over_mason = keep_out.has_point(global_position)
 	target_sprite.z_index = RAISED_MARKER_LAYER if over_mason else 0
+	if marker_sort_y != INF:
+		_sort_marker_at(marker_sort_y)
 	target_sprite.show()
 	animation_player.play("pulse")
+
+
+# The marker's sort point moved to `y` with nothing it draws moving: the offset takes up the difference.
+func _sort_marker_at(y: float) -> void:
+	var drawn_centre := (target_art_position + target_art_offset * art_scale) * hit_scale
+	target_sprite.position.y = y - global_position.y
+	target_sprite.offset.y = (drawn_centre.y - target_sprite.position.y) / target_sprite.scale.y
 
 
 # The spot nearest the target that's inside the bounds and outside keep_out, pushed straight out through

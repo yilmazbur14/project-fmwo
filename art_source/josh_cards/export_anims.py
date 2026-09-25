@@ -44,6 +44,14 @@ def base_sheet():
 
 
 if __name__ == '__main__':
+    # SUPERSEDED 2026-09-23: Josh was redesigned, and every sheet in Assets/Characters/Josh is now
+    # built by art_source/josh_redesign. Run bare, this script used to write the OLD design over the
+    # shipped art (it did once, by accident), so it now needs an explicit output folder and refuses
+    # the shipped one.
+    if len(sys.argv) < 2 or os.path.normcase(os.path.abspath(sys.argv[1])).rstrip('\\/') \
+            == os.path.normcase(os.path.abspath(ASSET)).rstrip('\\/'):
+        sys.exit('superseded rig: pass an output folder other than Assets/Characters/Josh '
+                 '(the shipped sheets come from art_source/josh_redesign)')
     out = (sys.argv[1] if len(sys.argv) > 1 else ASSET).rstrip('/\\') + '/'
     for name in anims.ANIMS:
         sheet, w, h = strip(anims.sheet(name))

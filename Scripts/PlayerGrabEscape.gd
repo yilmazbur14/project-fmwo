@@ -26,14 +26,16 @@ signal tier_banked(tier: int)
 signal juggle_hit(index: int, last: bool)
 
 const MashInput := preload("res://Scripts/MashInput.gd")
+const MashCurve := preload("res://Scripts/MashCurve.gd")
 
 @onready var player: CharacterBody2D = get_parent()
 
-# Deliberately NOT the finisher's 0.107/0.25. Those fill in about 2.0 s at seven alternating presses
-# a second, which is longer than the whole hold: nobody would ever get out. These fill in about 1.2 s
-# at seven and 0.8 s at ten, which is what EricPacing's p2_crush_interval is set against.
+# Deliberately NOT the finisher's 0.107/0.14. Those fill in about 2.2 s at seven alternating presses a
+# second, too slow for a hold that crushes every 0.8 s. These, bent by MashCurve, fill in about 1.2 s at
+# seven and 0.7 s at ten, and the drain is fitted so getting out of such a hold before its third crush
+# takes about 5.8 a second, and before its second about 9.5.
 @export var gain_per_press := 0.16
-@export var drain_per_second := 0.30
+@export var drain_per_second := 0.18
 # Real seconds, as the finisher's: both keys pressed together arrive in one input flush however long
 # the frame took, and count once.
 @export var min_press_interval := 0.03
@@ -98,7 +100,7 @@ func _process(delta: float) -> void:
 	if player.fight_over or not player.is_grabbed:
 		cancel()
 		return
-	meter = maxf(meter - drain_per_second * delta, 0.0)
+	meter = maxf(meter - MashCurve.drain(drain_per_second, meter) * delta, 0.0)
 
 
 func _input(event: InputEvent) -> void:
@@ -121,7 +123,7 @@ func _press(action: StringName) -> void:
 		return
 	last_action = action
 	last_press_usec = now
-	meter = minf(meter + gain_per_press, 1.0)
+	meter = minf(meter + MashCurve.gain(gain_per_press, meter), 1.0)
 	var pair := mash_actions()
 	meter_changed.emit(meter, pair[1] if action == pair[0] else pair[0])
 	get_tree().call_group("arena_crowd", "cheer", 0.4)

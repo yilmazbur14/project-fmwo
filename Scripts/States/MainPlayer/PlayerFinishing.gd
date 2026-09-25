@@ -27,8 +27,9 @@ func Enter() -> void:
 	saved_offset = sprite.offset
 	saved_flip_h = sprite.flip_h
 	saved_z_index = sprite.z_index
-	var sheet := FinisherArtLayout.player_sheet()
-	sprite.texture = load(FinisherArtLayout.player_texture(player.finisher.supercharged))
+	# PlayerFinisher's sheet: FinisherArtLayout's, or the one a fight handed it (PlayerFinisher.begin).
+	var sheet: Dictionary = player.finisher.sheet()
+	sprite.texture = load(player.finisher.texture_path())
 	sprite.hframes = sheet.hframes
 	sprite.vframes = sheet.vframes
 	sprite.z_index = FinisherArtLayout.FINISHING_Z_INDEX
@@ -53,5 +54,5 @@ func Physics_Update(_delta: float) -> void:
 func show_frame(frame: int, texel_offset: Vector2, flipped: bool) -> void:
 	var sprite: Sprite2D = player.sprite
 	sprite.frame = frame
-	sprite.offset = saved_offset + FinisherArtLayout.player_sheet().offset + texel_offset
+	sprite.offset = saved_offset + player.finisher.sheet().offset + texel_offset
 	sprite.flip_h = flipped

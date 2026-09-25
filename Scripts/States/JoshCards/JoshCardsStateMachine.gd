@@ -15,6 +15,8 @@ const VsCard := preload("res://Scripts/VsCard.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
 const CARD_BOMB_SCENE := preload("res://Scenes/Bosses/JoshCardBombScene.tscn")
 const JoshArtLayout := preload("res://Scripts/JoshArtLayout.gd")
+const JoshCardsBroken := preload("res://Scripts/States/JoshCards/JoshCardsBroken.gd")
+const JoshCardsJuggled := preload("res://Scripts/States/JoshCards/JoshCardsJuggled.gd")
 
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/JoshPreFight.dialogue"
 const HAZARD_GROUP := "josh_cards_hazard"
@@ -122,6 +124,10 @@ var cycles_started := 0
 var cycle_phase := 0
 var phase_two_cycles := 0
 var warned_no_status := false
+# The pre-fight lines' balloon, which a held skip takes down, and whether those lines have handed
+# over to the VS card yet.
+var pre_fight_balloon: Node
+var pre_fight_over := false
 
 # The three giant cards this cycle laid, and what is under each one. Both are indexed by third, so a
 # monte swap swaps them together and the reveal can just look up where the player is standing.
@@ -132,9 +138,15 @@ var cards: Array = [null, null, null]
 var pass_row := 0
 var pass_edge := 0.0
 var pass_travel := 0.0
+# Bombs he has wound up to drop, oldest first: where each will land and how long he has held it.
+var bombs_in_hand: Array[Dictionary] = []
 
 
 func _ready() -> void:
+	# The Break window and the juggle it pays out are built here rather than in his scene.
+	_add_down_state(JoshCardsBroken.new(), "Broken")
+	_add_down_state(JoshCardsJuggled.new(), "Juggled")
+
 	for child in get_children():
 		if child is State:
 			states[child.name] = child
@@ -143,6 +155,15 @@ func _ready() -> void:
 		current_state = initial_state
 		# Deferred until the body is ready, since the intro moves and draws him.
 		current_state.Enter.call_deferred()
+
+
+# His body's own ready comes after this node's, so its hurtbox is looked up rather than read off it.
+func _add_down_state(state: Node, state_name: String) -> void:
+	state.name = state_name
+	state.body = JoshCardsCharacterBody
+	state.hurtbox = JoshCardsCharacterBody.get_node("Air/Hurtbox")
+	state.state_machine = self
+	add_child(state)
 
 
 func _process(delta: float) -> void:
@@ -194,10 +215,24 @@ static func third_at(x: float) -> int:
 func show_pre_fight_dialogue() -> void:
 	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
 	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
-	DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start")
+	pre_fight_balloon = DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start")
+
+
+# A held skip's way past the lines (BossEntrance), whether they were ever put up or not: the hand-over
+# their own end makes, made from here instead. pre_fight_over keeps it to once.
+func end_pre_fight_dialogue() -> void:
+	if pre_fight_over:
+		return
+	if DialogueManager.dialogue_ended.is_connected(_on_dialogue_ended):
+		DialogueManager.dialogue_ended.disconnect(_on_dialogue_ended)
+	_on_dialogue_ended(null)
 
 
 func _on_dialogue_ended(_dialogue: Object) -> void:
+	pre_fight_over = true
+	var intro = states.get("Intro")
+	if intro:
+		intro.lines_over()
 	VsCard.play_intro(self, "josh", post_dialogue_pre_fight_timer.start)
 
 
@@ -225,8 +260,9 @@ func is_recovering() -> bool:
 	return current_state == states.get("Recover")
 
 
+# A punch landing in either of his windows; not in the juggle, which is drawn off its own sheet.
 func flinch() -> void:
-	if is_recovering():
+	if is_recovering() or current_state == states.get("Broken"):
 		current_state.flinch()
 
 
@@ -261,6 +297,7 @@ func begin_passes() -> void:
 	pass_row = 0
 	pass_travel = 0.0
 	pass_edge = pass_right_edge if JoshCardsCharacterBody.fly_velocity.x >= 0.0 else pass_left_edge
+	bombs_in_hand.clear()
 
 
 # He keeps crossing the arena, turning around well off-screen and dropping a row each pass, and leaves
@@ -278,8 +315,11 @@ func advance_pass(delta: float, spacing: float, keep_out_third: int) -> void:
 	while pass_travel >= spacing:
 		pass_travel -= spacing
 		drop_bomb(keep_out_third)
+	_release_bombs(delta, keep_out_third)
 
 
+# He winds up a bomb. It only leaves his hand on the release frame of his drop, so the card he is
+# still holding up is never drawn twice.
 func drop_bomb(keep_out_third: int) -> void:
 	var body := JoshCardsCharacterBody
 	# Only while he is over the arena himself: nothing appears out of an off-screen turn.
@@ -289,14 +329,32 @@ func drop_bomb(keep_out_third: int) -> void:
 	# The keep-out rule is judged on where it lands, not on where he was standing.
 	if third_at(point.x) == keep_out_third:
 		return
+	bombs_in_hand.append({point = point, held = 0.0})
+	body.play_anim(&"bomb", &"glide")
+
+
+# Held time counts the frame the wind-up started on, as his animation's clock does, so a bomb leaves
+# his hand on the very frame that draws it leaving.
+func _release_bombs(delta: float, keep_out_third: int) -> void:
+	var release_at := JoshArtLayout.time_to_step(&"bomb", JoshArtLayout.BOMB_RELEASE_STEP)
+	for bomb in bombs_in_hand:
+		bomb.held += delta
+	while not bombs_in_hand.is_empty() and bombs_in_hand[0].held >= release_at:
+		var point: Vector2 = bombs_in_hand.pop_front().point
+		# A third that started warning during the wind-up is kept clear all the same.
+		if third_at(point.x) != keep_out_third:
+			_spawn_bomb(point)
+
+
+func _spawn_bomb(point: Vector2) -> void:
+	var body := JoshCardsCharacterBody
 	var bomb := CARD_BOMB_SCENE.instantiate()
 	bomb.fuse = bomb_fuse
 	bomb.blast_radius = bomb_blast_radius
-	# It still leaves his hand on the drop frame, wherever it is aimed.
+	# It leaves his hand where the release frame draws it, wherever it is aimed.
 	var hand: Vector2 = body.air.global_position + JoshArtLayout.local(JoshArtLayout.HAND_BOMB, body.sprite.flip_h)
 	bomb.fall_offset = hand - point
 	add_hazard(bomb, point, body.floor_layer)
-	body.play_anim(&"bomb", &"glide")
 
 
 # Where a bomb goes: leaned from him toward the player and then scattered, so the floor he is working
@@ -321,6 +379,55 @@ func apply_status(kind: StringName, seconds: float) -> void:
 		push_warning("JoshCards: player has no apply_status(); '%s' had no effect" % kind)
 
 
+#HIS BREAK AND THE JUGGLE
+
+# A full Break gauge (BossBreakGauge): whatever he was doing stops, everything he sent out goes, and he
+# is Broken until his time is up or the finisher's uppercut ends it.
+func enter_broken() -> void:
+	var body := JoshCardsCharacterBody
+	if body.defeated or body.boss_health <= 0 or player_defeated:
+		return
+	if current_state in [states.get("Intro"), states.get("Defeated"), states.get("Broken"), states.get("Juggled")]:
+		return
+	_stop_everything()
+	on_child_transition(current_state, "Broken")
+
+
+# The finisher's uppercut ends the Break window instead of its own clock, as it ends his recovery.
+func end_break(delay: float) -> void:
+	stagger_then_start_cycle(maxf(delay, 0.01))
+
+
+# The tiered finisher's first uppercut (JoshCardsScript.begin_juggle).
+func enter_juggled() -> void:
+	var juggled = states["Juggled"]
+	if JoshCardsCharacterBody.defeated or current_state == juggled:
+		return
+	on_child_transition(current_state, "Juggled")
+
+
+# Down after a juggle, he picks himself up where he crashed, on the recoil frame a finisher leaves him
+# on, and his next cycle starts `delay` after this.
+func after_juggle(delay: float) -> void:
+	stagger_then_start_cycle(maxf(delay, 0.01))
+
+
+# The one switch past the fight being decided: a juggled Josh, killed in the air, lands into his defeat
+# rather than snapping to its pose mid-flight.
+func land_juggled(final_state_name: String) -> void:
+	var final_state = states.get(final_state_name)
+	if final_state == states.get("Defeated"):
+		final_state.lying = true
+	current_state.Exit()
+	final_state.Enter()
+	current_state = final_state
+
+
+# Where his juggle's shadow lies: on his floor layer, with his bombs and his cards.
+func ground_layer() -> Node2D:
+	return JoshCardsCharacterBody.floor_layer
+
+
 func enter_defeated() -> void:
 	_end_fight("Defeated")
 
@@ -332,9 +439,22 @@ func enter_player_defeated() -> void:
 
 
 func _end_fight(final_state_name: String) -> void:
+	_stop_everything()
+	var juggled = states.get("Juggled")
+	# In the air, he finishes his fall and his crash first (land_juggled). The juggle draws itself on its
+	# own clock, so it plays out whatever state the fight is in.
+	if current_state == juggled:
+		juggled.final_state = final_state_name
+		return
+	on_child_transition(current_state, final_state_name)
+
+
+# Everything of his still running: his clocks, a tell over his head, everything he has sent out (the
+# monte's cards on the floor with the rest), and any bomb he has wound up but not yet let go of.
+func _stop_everything() -> void:
 	for timer in [post_dialogue_pre_fight_timer, recover_timer, finisher_stagger_timer]:
 		timer.stop()
 	ParryTell.clear(JoshCardsCharacterBody)
 	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
 		hazard.queue_free()
-	on_child_transition(current_state, final_state_name)
+	bombs_in_hand.clear()

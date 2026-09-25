@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/BixbySuctionScript.gd" id="1_suction"]
+
+[node name="BixbySuction" type="Node2D" groups=["bixby_beast_hazard"]]
+z_index = 1
+script = ExtResource("1_suction")

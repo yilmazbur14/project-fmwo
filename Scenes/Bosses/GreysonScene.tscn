@@ -1,0 +1,179 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/GreysonScript.gd" id="1_body"]
+[ext_resource type="Texture2D" uid="uid://em6p0ysfm1pm" path="res://Assets/Characters/Greyson/greyson_redesign.png" id="2_design"]
+[ext_resource type="Script" path="res://Scripts/States/Greyson/GreysonStateMachine.gd" id="3_state_machine"]
+[ext_resource type="Script" path="res://Scripts/States/Greyson/GreysonTakeover.gd" id="4_takeover"]
+[ext_resource type="Script" path="res://Scripts/States/Greyson/GreysonIdle.gd" id="5_idle"]
+[ext_resource type="Script" path="res://Scripts/States/Greyson/GreysonThrow.gd" id="6_throw"]
+[ext_resource type="Script" path="res://Scripts/States/Greyson/GreysonSlams.gd" id="7_slams"]
+[ext_resource type="Script" path="res://Scripts/States/Greyson/GreysonPose.gd" id="8_pose"]
+[ext_resource type="Script" path="res://Scripts/States/Greyson/GreysonSpiritBomb.gd" id="9_spirit_bomb"]
+[ext_resource type="Script" path="res://Scripts/States/Greyson/GreysonBroken.gd" id="10_broken"]
+[ext_resource type="Script" path="res://Scripts/States/Greyson/GreysonJuggled.gd" id="11_juggled"]
+[ext_resource type="Script" path="res://Scripts/States/Greyson/GreysonFinalBrawl.gd" id="12_final_brawl"]
+[ext_resource type="Script" path="res://Scripts/States/Greyson/GreysonDefeated.gd" id="13_defeated"]
+[ext_resource type="Script" path="res://Scripts/States/Greyson/GreysonVictory.gd" id="14_victory"]
+
+[sub_resource type="Animation" id="Animation_greyson_reset"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(3, 3)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Sprite2D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+
+[sub_resource type="Animation" id="Animation_greyson_talk"]
+resource_name = "talk"
+length = 0.24
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.12),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [Vector2(3, 3), Vector2(3.04, 2.96)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_greyson"]
+_data = {
+&"RESET": SubResource("Animation_greyson_reset"),
+&"talk": SubResource("Animation_greyson_talk")
+}
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_greyson_hurtbox"]
+size = Vector2(132, 258)
+
+[node name="GreysonScene" type="Node2D"]
+y_sort_enabled = true
+
+[node name="FloorLayer" type="Node2D" parent="."]
+position = Vector2(0, 101)
+
+[node name="HazardLayer" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="FxLayer" type="Node2D" parent="."]
+z_index = 3
+
+[node name="GreysonCharacterBody" type="CharacterBody2D" parent="." node_paths=PackedStringArray("floor_layer", "hazard_layer", "fx_layer")]
+position = Vector2(960, 560)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_body")
+floor_layer = NodePath("../FloorLayer")
+hazard_layer = NodePath("../HazardLayer")
+fx_layer = NodePath("../FxLayer")
+
+[node name="Sprite2D" type="Sprite2D" parent="GreysonCharacterBody"]
+scale = Vector2(3, 3)
+texture = ExtResource("2_design")
+offset = Vector2(0, -56)
+hframes = 2
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="GreysonCharacterBody"]
+libraries/ = SubResource("AnimationLibrary_greyson")
+
+[node name="Hurtbox" type="Area2D" parent="GreysonCharacterBody" groups=["enemy", "boss_target"]]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="GreysonCharacterBody/Hurtbox"]
+position = Vector2(0, -129)
+shape = SubResource("RectangleShape2D_greyson_hurtbox")
+
+[node name="StateManager" type="Node" parent="GreysonCharacterBody" node_paths=PackedStringArray("initial_state", "body", "finisher_stagger_timer", "beat_timer")]
+script = ExtResource("3_state_machine")
+initial_state = NodePath("Takeover")
+body = NodePath("..")
+finisher_stagger_timer = NodePath("../FinisherStaggerTimer")
+beat_timer = NodePath("../BeatTimer")
+
+[node name="Takeover" type="Node" parent="GreysonCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("4_takeover")
+body = NodePath("../..")
+
+[node name="Idle" type="Node" parent="GreysonCharacterBody/StateManager" node_paths=PackedStringArray("body", "beat_timer")]
+script = ExtResource("5_idle")
+body = NodePath("../..")
+beat_timer = NodePath("../../BeatTimer")
+
+[node name="Throw" type="Node" parent="GreysonCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("6_throw")
+body = NodePath("../..")
+
+[node name="Slams" type="Node" parent="GreysonCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("7_slams")
+body = NodePath("../..")
+
+[node name="Pose" type="Node" parent="GreysonCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("8_pose")
+body = NodePath("../..")
+
+[node name="SpiritBomb" type="Node" parent="GreysonCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("9_spirit_bomb")
+body = NodePath("../..")
+
+[node name="Broken" type="Node" parent="GreysonCharacterBody/StateManager" node_paths=PackedStringArray("body", "hurtbox", "state_machine")]
+script = ExtResource("10_broken")
+body = NodePath("../..")
+hurtbox = NodePath("../../Hurtbox")
+state_machine = NodePath("..")
+
+[node name="Juggled" type="Node" parent="GreysonCharacterBody/StateManager" node_paths=PackedStringArray("body", "hurtbox", "state_machine")]
+script = ExtResource("11_juggled")
+body = NodePath("../..")
+hurtbox = NodePath("../../Hurtbox")
+state_machine = NodePath("..")
+
+[node name="FinalBrawl" type="Node" parent="GreysonCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("12_final_brawl")
+body = NodePath("../..")
+
+[node name="Defeated" type="Node" parent="GreysonCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("13_defeated")
+body = NodePath("../..")
+
+[node name="Victory" type="Node" parent="GreysonCharacterBody/StateManager" node_paths=PackedStringArray("body")]
+script = ExtResource("14_victory")
+body = NodePath("../..")
+
+[node name="FinisherStaggerTimer" type="Timer" parent="GreysonCharacterBody"]
+one_shot = true
+
+[node name="BeatTimer" type="Timer" parent="GreysonCharacterBody"]
+one_shot = true
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="GreysonCharacterBody"]
+volume_db = -7.0
+
+[node name="HitSfxPlayer" type="AudioStreamPlayer" parent="GreysonCharacterBody"]
+
+[node name="VictorySfxPlayer" type="AudioStreamPlayer" parent="GreysonCharacterBody"]
+
+[connection signal="timeout" from="GreysonCharacterBody/FinisherStaggerTimer" to="GreysonCharacterBody/StateManager" method="_on_finisher_stagger_timer_timeout"]
+[connection signal="timeout" from="GreysonCharacterBody/BeatTimer" to="GreysonCharacterBody/StateManager/Idle" method="_on_beat_timer_timeout"]

@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/BurakBossBarrelScript.gd" id="1_keg"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_keg_hurtbox"]
+
+[node name="BurakBossBarrel" type="Node2D" node_paths=PackedStringArray("visual", "body_sprite", "fuse_sprite", "burst_sprite", "hurtbox")]
+editor_description = "Origin on the keg's floor point. The sprites and the hurtbox are set up at runtime from the KEG block in BurakBossBarrelScript.gd, so nothing here needs changing when the keg is redrawn."
+script = ExtResource("1_keg")
+visual = NodePath("Visual")
+body_sprite = NodePath("Visual/BodySprite")
+fuse_sprite = NodePath("Visual/FuseSprite")
+burst_sprite = NodePath("BurstSprite")
+hurtbox = NodePath("Hurtbox")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="BodySprite" type="Sprite2D" parent="Visual"]
+
+[node name="FuseSprite" type="Sprite2D" parent="Visual"]
+visible = false
+
+[node name="BurstSprite" type="Sprite2D" parent="."]
+visible = false
+
+[node name="Hurtbox" type="Area2D" parent="."]
+collision_layer = 0
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("RectangleShape2D_keg_hurtbox")

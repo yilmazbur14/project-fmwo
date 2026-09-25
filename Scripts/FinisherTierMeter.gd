@@ -3,13 +3,16 @@ extends RefCounted
 # The tiered finisher's meter (PlayerFinisher, against a boss that can be juggled): three bars, filled
 # by alternating presses against a drain, each bar with its own window. The finisher and the mash_tiers
 # test both drive this, press by press and step by step.
-# The meter runs from 0 to 3, and bar k covers k-1 to k. A press adds `gain`. The meter drains at the
-# current bar's rate, never below the bars already banked. Reaching k banks bar k and snaps the meter to
+# The meter runs from 0 to 3, and bar k covers k-1 to k. A press adds `gain` and the meter drains at the
+# current bar's rate, both bent by MashCurve on how full the current bar is, so every bar starts easy and
+# ends hard; it never drains below the bars already banked. Reaching k banks bar k and snaps the meter to
 # exactly k, throwing any overshoot away. Bar 1 has to fill within its window of the first press, or of
 # `start_grace` after the prompt if nothing was pressed by then; each later bar within its own window of
 # the one before it banking. The mash resolves as bar 3 banks, when the current bar's window runs out,
 # or once presses have stopped for `idle_stop` with a bar banked. The player gets what they banked.
 # Times are the finisher's own seconds from the prompt.
+
+const MashCurve := preload("res://Scripts/MashCurve.gd")
 
 # A press that lands a hair short of a bar's top still banks it.
 const BANK_EPSILON := 1e-6
@@ -48,7 +51,7 @@ func press() -> int:
 	if window_from < 0.0:
 		window_from = clock
 	last_press = clock
-	meter += gain
+	meter += MashCurve.gain(gain, meter - banked)
 	if meter < banked + 1 - BANK_EPSILON:
 		return 0
 	banked += 1
@@ -62,7 +65,7 @@ func advance(delta: float) -> void:
 	if resolved:
 		return
 	clock += delta
-	meter = maxf(meter - drains[banked] * delta, float(banked))
+	meter = maxf(meter - MashCurve.drain(drains[banked], meter - banked) * delta, float(banked))
 	if window_from < 0.0 and clock >= start_grace - STEP_TOLERANCE:
 		window_from = start_grace
 	if window_from >= 0.0 and clock - window_from >= windows[banked] - STEP_TOLERANCE:

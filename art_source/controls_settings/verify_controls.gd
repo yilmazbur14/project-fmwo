@@ -23,6 +23,8 @@ const INTRO_SCENE := "res://Scenes/Core/IntroCutsceneScene.tscn"
 const VICTORY_SCENE := "res://Scenes/Core/VictoryScene.tscn"
 const DEFEAT_SCENE := "res://Scenes/Core/DefeatScene.tscn"
 const DANNY_DIALOGUE := "res://Dialogue/ControlsSceneDialogue.dialogue"
+# The modes about Eric's own fight: his mash, his outro and the quiet fight the pause modes use. The rooms
+# lead to GameProgress.first_fight(), which is Captain Burak's.
 const ERIC_FIGHT := "res://Scenes/Bosses/EricBossFightScene.tscn"
 # Each mash action's pad button, whichever pair the finisher is on.
 const PAD_MASH := {&"punch": JOY_BUTTON_A, &"dodge": JOY_BUTTON_B, &"mash_left": JOY_BUTTON_LEFT_SHOULDER, &"mash_right": JOY_BUTTON_RIGHT_SHOULDER}
@@ -798,9 +800,11 @@ func test_screens() -> void:
 	log_p("keyboard: %s" % [lines])
 	var text := " ".join(lines)
 	check(lines.size() == 6 and not text.contains("{{"), "six lines, every token resolved")
-	check(text.contains("ARROWS to move, Q punches, W dashes") and text.contains("HOLD SHIFT") and text.contains("TAP SHIFT"), "on the keyboard: arrows, Q, W and Shift")
-	# The line leads straight into Eric, so it names his mash keys, not attack and dash.
-	check(text.contains("Boss goes all dizzy? Follow the prompt to finish him: mash LEFT and RIGHT."), "and Eric's mash on the arrows, behind the prompt")
+	# Blocking is out of the game (PlayerDefense.BLOCKING_ENABLED), so nothing tells the player to hold the key.
+	check(text.contains("ARROWS to move, Q punches, W dashes") and text.contains("TAP SHIFT") and not text.contains("HOLD SHIFT"), "on the keyboard: arrows, Q, W and Shift, tapped to parry and never held to block")
+	check(text.contains("There's no blocking on this server"), "and it says outright that there is no blocking")
+	# The finisher is mashed on its own keys in every fight, not attack and dash, so those are the ones it names.
+	check(text.contains("Boss goes all dizzy? Follow the prompt to finish him: mash LEFT and RIGHT."), "and the finisher's mash on the arrows, behind the prompt")
 	check(text.contains("Need out mid-fight? ESC pauses it"), "and the pause key")
 	# The last line hands the room over rather than ending the screen: the dummy, the post that makes
 	# it hit back, that nothing in here can kill you, and BOTH ways out, since on a pad the Ready
@@ -819,13 +823,13 @@ func test_screens() -> void:
 	var a: String = layout.inline_glyph(0)
 	var b: String = layout.inline_glyph(1)
 	var lb: String = layout.inline_glyph(4)
-	check(text.contains("LEFT STICK to move, %s punches, %s dashes" % [a, b]) and text.contains("HOLD %s" % lb) and text.contains("TAP %s" % lb), "on a pad: the stick named, A, B and LB drawn inline")
-	check(text.contains("Follow the prompt to finish him: mash %s and %s." % [lb, layout.inline_glyph(5)]), "and Eric's mash on LB and RB")
+	check(text.contains("LEFT STICK to move, %s punches, %s dashes" % [a, b]) and text.contains("TAP %s" % lb) and not text.contains("HOLD %s" % lb), "on a pad: the stick named, A, B and LB drawn inline")
+	check(text.contains("Follow the prompt to finish him: mash %s and %s." % [lb, layout.inline_glyph(5)]), "and the finisher's mash on LB and RB")
 	check(a.contains("pad_buttons_inline_3x.png") and b.contains("pad_buttons_inline_3x.png") and lb.contains("pad_buttons.png"), "the face buttons from the 11 px set, the bumper from the 32 px sheet")
 	Input.joy_connection_changed.emit(0, false)
 	settings.rebind(&"block", key_event(KEY_C, true))
 	text = " ".join(await danny_lines())
-	check(text.contains("HOLD C") and text.contains("TAP C"), "and a rebind")
+	check(text.contains("TAP C") and not text.contains("HOLD C"), "and a rebind")
 	settings.reset_to_defaults()
 
 	log_p("-- a line with glyphs in it types out whole, in the real balloon")
@@ -889,10 +893,18 @@ func test_screens() -> void:
 	check(start.get_theme_stylebox("focus") is StyleBoxFlat and slider.get_theme_stylebox("grabber_area_highlight").modulate_color != Color.WHITE, "on a pad the focus shows: a ring on the buttons, a tint on the slider")
 	tap_button(JOY_BUTTON_DPAD_DOWN)
 	await wait(1)
+	# The INVINCIBLE toggle heads the boss select, and the fights come under it.
+	check(focus_owner() is CheckBox, "and on down into the boss select, onto its INVINCIBLE toggle (%s)" % focus_name())
+	tap_button(JOY_BUTTON_DPAD_DOWN)
+	await wait(1)
 	# Button -> its column -> the columns -> the rows -> the panel.
 	var first_boss := focus_owner()
-	var panel: Node = first_boss.get_parent().get_parent().get_parent().get_parent() if first_boss is Button and first_boss != start else null
-	check(panel is PanelContainer, "and on down into the boss select (%s)" % focus_name())
+	var panel: Node = null
+	if first_boss is Button and not (first_boss is CheckBox) and first_boss != start:
+		panel = first_boss.get_parent().get_parent().get_parent().get_parent()
+	check(panel is PanelContainer, "then onto the first fight (%s: %s)" % [focus_name(), first_boss.text if first_boss is Button else ""])
+	tap_button(JOY_BUTTON_DPAD_UP)
+	await wait(1)
 	tap_button(JOY_BUTTON_DPAD_UP)
 	await wait(1)
 	check(focus_owner() == slider, "back up to VOLUME")
@@ -1044,7 +1056,8 @@ func test_training() -> void:
 	Input.joy_connection_changed.emit(0, true)
 	await wait(2)
 	tap_button(JOY_BUTTON_Y)
-	check(await wait_for_scene(ERIC_FIGHT, 120), "Y confirms, straight into Eric's fight")
+	var first_fight: String = root.get_node("GameProgress").first_fight()
+	check(await wait_for_scene(first_fight, 120), "Y confirms, straight into the first fight (%s)" % first_fight.get_file())
 
 	log_p("-- and the door is still a way out as well")
 	# The pad stays plugged in for the rest of the mode. Unplugging the last one INSIDE a fight opens
@@ -1059,7 +1072,7 @@ func test_training() -> void:
 		balloon.free()
 	await wait(3)
 	player.global_position = Vector2(1797, 752)
-	check(await wait_for_scene(ERIC_FIGHT, 180), "standing in the Arena #1 doorway for the dwell goes through to Eric's fight too")
+	check(await wait_for_scene(first_fight, 180), "standing in the Arena #1 doorway for the dwell goes through to the first fight too")
 
 
 # ------------------------------------------------------------------ rebind_screen

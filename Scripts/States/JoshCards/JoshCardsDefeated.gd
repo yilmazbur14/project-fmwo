@@ -11,6 +11,10 @@ const SCATTER_REACH := Vector2(420, 150)
 const SCATTER_TIME := 0.55
 const SCATTER_HOP := 90.0
 
+# Set by the state machine when a juggle killed him (JoshCardsStateMachine.land_juggled): he stays lying
+# where he crashed, on the juggle sheet, rather than dropping into his own defeat. The deck still rains.
+var lying := false
+
 
 func Enter() -> void:
 	body.fly_velocity = Vector2.ZERO
@@ -18,7 +22,8 @@ func Enter() -> void:
 	body.place()
 	body.hide_glider()
 	body.set_air_draw(false)
-	body.play_anim(&"defeat")
+	if not lying:
+		body.play_anim(&"defeat")
 	_scatter()
 
 

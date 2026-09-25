@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://ck0yj78k7iyn1"
+path="res://.godot/imported/DannyBossSumo.dialogue-3e2c26d6fc849187f9abbe79726f3d72.tres"
+
+[deps]
+
+source_file="res://Dialogue/DannyBossSumo.dialogue"
+dest_files=["res://.godot/imported/DannyBossSumo.dialogue-3e2c26d6fc849187f9abbe79726f3d72.tres"]
+
+[params]
+
+defaults=true

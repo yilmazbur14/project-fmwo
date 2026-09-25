@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/BixbyFireballScript.gd" id="1_fireball"]
+[ext_resource type="Texture2D" uid="uid://c47ohkyirkt01" path="res://Assets/Characters/Bixby/bixby_fire_scorch.png" id="2_scorch"]
+[ext_resource type="AudioStream" uid="uid://b0tkyutiwfk03" path="res://Assets/Audio/SFX/hit_impact.ogg" id="3_hit_impact"]
+
+[sub_resource type="ConvexPolygonShape2D" id="ConvexPolygonShape2D_fireball_hit"]
+points = PackedVector2Array(66, 0, 64.73, 6.44, 60.98, 12.63, 54.88, 18.33, 46.67, 23.33, 36.67, 27.44, 25.26, 30.49, 12.88, 32.37, 0, 33, -12.88, 32.37, -25.26, 30.49, -36.67, 27.44, -46.67, 23.33, -54.88, 18.33, -60.98, 12.63, -64.73, 6.44, -66, 0, -64.73, -6.44, -60.98, -12.63, -54.88, -18.33, -46.67, -23.33, -36.67, -27.44, -25.26, -30.49, -12.88, -32.37, 0, -33, 12.88, -32.37, 25.26, -30.49, 36.67, -27.44, 46.67, -23.33, 54.88, -18.33, 60.98, -12.63, 64.73, -6.44)
+
+[node name="BixbyFireball" type="Node2D" groups=["bixby_beast_hazard"]]
+y_sort_enabled = true
+script = ExtResource("1_fireball")
+
+[node name="Marker" type="Node2D" parent="."]
+visible = false
+position = Vector2(0, -33)
+
+[node name="Ring" type="Line2D" parent="Marker"]
+closed = true
+width = 3.0
+default_color = Color(1, 0.86, 0.25, 0.35)
+
+[node name="Sprite" type="Sprite2D" parent="Marker"]
+scale = Vector2(3, 3)
+offset = Vector2(0, 11)
+
+[node name="Ball" type="Node2D" parent="."]
+visible = false
+z_index = 2
+
+[node name="Sprite" type="Sprite2D" parent="Ball"]
+scale = Vector2(3, 3)
+
+[node name="Impact" type="Sprite2D" parent="."]
+visible = false
+z_index = 2
+scale = Vector2(3, 3)
+
+[node name="Floor" type="Node2D" parent="."]
+
+[node name="Scorch" type="Sprite2D" parent="Floor"]
+visible = false
+scale = Vector2(3, 3)
+texture = ExtResource("2_scorch")
+offset = Vector2(0, -11)
+hframes = 2
+
+[node name="Hitbox" type="Area2D" parent="." groups=["enemy projectile"]]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("ConvexPolygonShape2D_fireball_hit")
+disabled = true
+
+[node name="ImpactSfx" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_hit_impact")
+volume_db = -10.0

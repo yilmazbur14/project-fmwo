@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/BixbyFireballRiseScript.gd" id="1_rise"]
+
+[node name="BixbyFireballRise" type="Node2D" groups=["bixby_beast_hazard"]]
+z_index = 2
+script = ExtResource("1_rise")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+scale = Vector2(3, 3)

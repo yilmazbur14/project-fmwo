@@ -33,6 +33,8 @@ var dash_through := false
 var grab := false
 var bypass_invincibility := false
 var hype_loss := true
+var no_perfect_dodge := false
+var parry_pass_through := false
 
 static var warned_areas := {}
 

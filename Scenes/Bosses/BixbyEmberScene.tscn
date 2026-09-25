@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/BixbyEmberScript.gd" id="1_ember"]
+[ext_resource type="Texture2D" uid="uid://dvo3k0r3nx3ek" path="res://Assets/Characters/Bixby/bixby_fire_trail.png" id="2_trail"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ember"]
+size = Vector2(96, 30)
+
+[node name="BixbyEmber" type="Node2D" groups=["bixby_beast_hazard"]]
+script = ExtResource("1_ember")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(3, 3)
+texture = ExtResource("2_trail")
+offset = Vector2(0, -11)
+hframes = 10
+
+[node name="Hitbox" type="Area2D" parent="."]
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("RectangleShape2D_ember")

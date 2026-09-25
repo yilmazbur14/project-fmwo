@@ -14,7 +14,7 @@ func Enter() -> void:
 	body.play_anim(&"recover")
 	body.set_hurtbox_active(true)
 	recover_sfx_player.play()
-	recover_timer.start(state_machine.recover_time)
+	recover_timer.start(state_machine.take_recover_time())
 
 
 func Exit() -> void:

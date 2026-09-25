@@ -1,0 +1,15 @@
+# Captain Burak's pre-fight lines, approved by the user. The "do" line plays his warning shot (in
+# BurakBossIntro.gd), and the dialogue waits for it to finish before the next line.
+# The tags drive him: `captain` sets his talk pose on any speaker's line, and `glance` turns him toward
+# ringside until the next `captain`. Never [wait=N] or "do wait(N)" in here: both run on a SceneTree timer,
+# which ticks through the pause screen and which the hold-to-skip can't run out. A pause is a beat.
+
+~ start
+Captain Burak: Ahoy, newcomer! Welcome aboard the server. [#captain=smug]
+Burak: ...who are you supposed to be?
+Captain Burak: Captain Burak. Best-dressed member this server's ever seen. [#captain=point]
+Burak: Captain? It's a Discord server.
+Captain Burak: And every server needs a captain. Want your @member rank? Get past me first. [#captain=shrug]
+do warning_shot()
+Captain Burak: Hah! Relax, kiddo. I'll go easy on ya. [#captain=laugh]
+=> END

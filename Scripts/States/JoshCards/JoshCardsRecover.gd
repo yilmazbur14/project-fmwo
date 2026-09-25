@@ -16,6 +16,7 @@ func Enter() -> void:
 	body.place()
 	body.hide_glider()
 	body.set_air_draw(false)
+	body.face_player()
 	body.play_anim(&"recover")
 	body.set_hurtbox_active(true)
 	recover_sfx_player.play()

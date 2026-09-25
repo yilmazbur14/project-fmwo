@@ -26,9 +26,6 @@ const HURT_AREA := Rect2(105, 105, 1710, 870)
 # Radius growth in px/s and the player to hurt, set by the throw before the ring is added.
 var speed := 950.0
 var player: CharacterBody2D
-# Which attack this ring is: the planted sword's by default, the phase-two leap's tremor when the
-# leap sets it (EricBarbaricLeap). Same one-line generalisation EarthquakeProjectilesScript has.
-var attack_id := &"eric_quake_ring"
 
 var radius := START_RADIUS
 var elapsed := 0.0
@@ -81,7 +78,7 @@ func _damage_player() -> void:
 	var inner := 0.0 if elapsed < LANDING_HIT_TIME else radius - HURT_HALF_WIDTH
 	if nearest > radius + HURT_HALF_WIDTH or farthest < inner:
 		return
-	player.receive_hit(HitInfo.make(attack_id, self, centre))
+	player.receive_hit(HitInfo.make(&"eric_quake_ring", self, centre))
 
 
 func _has_passed_hurt_area() -> bool:

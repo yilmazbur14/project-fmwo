@@ -10,7 +10,9 @@ extends State
 # it with the fight. Nothing here uses get_tree().create_timer() or a tree-level tween.
 #
 # A cut-short entrance never kills a tween something is waiting on: `finished` makes every beat bail
-# and every stepping callback a no-op instead, so nothing is left half-drawn and nothing hangs.
+# and every stepping callback a no-op instead, so nothing is left half-drawn and nothing hangs. A
+# held skip runs those waits out on the spot rather than letting them run their time
+# (BossEntrance.run_out), so nothing of it surfaces again once the fight is on.
 
 const BossEntrance := preload("res://Scripts/BossEntrance.gd")
 const EricEntranceLayout := preload("res://Scripts/EricEntranceLayout.gd")
@@ -29,7 +31,7 @@ const GATES_PATH := "Arena/Gates"
 
 @onready var state_machine = get_parent()
 
-# The entrance layer: the hold on the player, their walk and the skip hint.
+# The entrance layer: the hold on the player, their walk, and the skip and its hint through the lines.
 var entrance: CanvasLayer
 # His sword standing in the mat, until his own drawn one takes over on the grip frame.
 var planted: Sprite2D
@@ -43,6 +45,11 @@ var dialogue_started := false
 # Enter() is deferred, so anything that can reach in from outside checks this first: there is no
 # ring to set before it has run.
 var entered := false
+# A held skip took everything up to the VS card: the lines are gone, and a beat they would still
+# have called does nothing.
+var cut := false
+# The tweens a beat is waiting on, for the skip to run out.
+var waits: Array[Tween] = []
 var point_loop: Tween
 var sfx_players := {}
 # What his body is drawn from in the fight, put back when the fight starts (Exit).
@@ -64,6 +71,13 @@ func Enter() -> void:
 	# The entrance drives his frames itself; an animation still running would fight it for them.
 	animation_player.stop()
 	_build_sfx()
+	# On the retry path too: the walk-in is skipped there, but the lines still play and the hold
+	# still skips them.
+	entrance = BossEntrance.new()
+	entrance.name = "BossEntrance"
+	add_child(entrance)
+	entrance.skipped.connect(_on_skipped)
+	entrance.begin(player)
 	if BossEntrance.already_seen(FIGHT_SCENE):
 		_show_pose("arrive")
 		finish_entrance()
@@ -93,12 +107,6 @@ func Exit() -> void:
 #THE WALK-IN
 
 func _play() -> void:
-	entrance = BossEntrance.new()
-	entrance.name = "BossEntrance"
-	add_child(entrance)
-	entrance.skipped.connect(_on_skipped)
-	entrance.begin(_player())
-
 	var gates := _gates()
 	if gates != null:
 		gates.open()
@@ -145,7 +153,7 @@ func _walk_eric_in() -> void:
 		march.tween_method(_step_eric.bind(leg_from, leg_to, step), 0.0, 1.0, EricEntranceLayout.WALK_STEP_TIME)
 		march.tween_callback(_footfall.bind(step))
 		march.tween_interval(EricEntranceLayout.WALK_STEP_DWELL)
-	await march.finished
+	await _wait(march)
 	if finished:
 		return
 	character_body.global_position = home
@@ -198,7 +206,7 @@ func pull_sword() -> void:
 	for step in steps:
 		strain.tween_callback(_show_frame.bind(heave[step % heave.size()]))
 		strain.tween_interval(EricEntranceLayout.HEAVE_FRAME_TIME)
-	await strain.finished
+	await _wait(strain)
 	if finished:
 		return
 
@@ -223,8 +231,10 @@ func pull_sword() -> void:
 
 # He levels the blade at the player and the view leans in on him: the shot the entrance is for. It
 # runs even on the retry path - it is only a pose, a camera and the crowd, and the line under it
-# still needs its beat.
+# still needs its beat. Not after a skip, which has already left him pointing.
 func point_at_player() -> void:
+	if cut:
+		return
 	_show_pose("point")
 	_play_sfx("point")
 	get_tree().call_group("arena_crowd", "cheer", EricEntranceLayout.POINT_CHEER)
@@ -235,9 +245,12 @@ func point_at_player() -> void:
 	finish_entrance()
 
 
-# The lines are over: the view levels off before the VS card takes the screen.
-func release_camera() -> void:
+# The lines have handed over to the VS card: the view levels off before the card takes the screen,
+# and the skip goes with them.
+func lines_over() -> void:
 	ScreenView.zoom_to(get_tree(), 1.0, home, EricEntranceLayout.POINT_ZOOM_OUT_TIME)
+	if is_instance_valid(entrance):
+		entrance.end()
 
 
 #ENDING IT
@@ -259,25 +272,44 @@ func finish_entrance() -> void:
 	if player != null:
 		player.global_position = player_home
 	if is_instance_valid(entrance):
-		entrance.end()
+		entrance.release_player()
 	_start_music()
 	BossEntrance.mark_seen(FIGHT_SCENE)
 
 
-# What a held ui_cancel does: the ring set at once and the lines started. Public, so a test can cut
-# the entrance exactly the way a player cuts it.
+# The entrance cut on the spot and the lines started: where a second go at the fight starts on its
+# own. Public, so the defence suite can cut the entrance this way - its modes are about the fight,
+# and read the lines or throw them away themselves.
 func skip() -> void:
-	_on_skipped()
-
-
-func _on_skipped() -> void:
+	if cut:
+		return
 	ScreenView.reset(get_tree())
 	finish_entrance()
 	_start_dialogue()
 
 
+# What a held ui_cancel does: the entrance, whatever is left of the lines and the card's build-up,
+# all at once, landing on the card's flash. finish_entrance() is where the pull and the point leave
+# him - the sword out of the mat and levelled at the player, his theme playing - so the ring is the
+# one a watched entrance leaves.
+func skip_to_fight() -> void:
+	if not entered or cut:
+		return
+	cut = true
+	BossEntrance.close_balloon(state_machine.pre_fight_balloon)
+	finish_entrance()
+	BossEntrance.run_out(waits)
+	state_machine.end_pre_fight_dialogue()
+	BossEntrance.settle_arena(get_tree())
+	BossEntrance.card_to_flash(get_tree())
+
+
+func _on_skipped() -> void:
+	skip_to_fight()
+
+
 func _start_dialogue() -> void:
-	if dialogue_started:
+	if dialogue_started or cut:
 		return
 	dialogue_started = true
 	state_machine.show_pre_fight_dialogue(self)
@@ -378,7 +410,13 @@ func _play_sfx(key: String, volume_db := INF) -> void:
 func _beat(seconds: float) -> void:
 	var tween := create_tween()
 	tween.tween_interval(seconds)
+	await _wait(tween)
+
+
+func _wait(tween: Tween) -> void:
+	waits.append(tween)
 	await tween.finished
+	waits.erase(tween)
 
 
 func _player() -> Node:

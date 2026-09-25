@@ -37,7 +37,7 @@ func Enter() -> void:
 	resolved_at = -1.0
 	last_card = null
 	body.fly_velocity = Vector2.ZERO
-	_face_player()
+	body.face_player()
 	body.play_anim(&"idle")
 
 
@@ -69,7 +69,7 @@ func Physics_Update(delta: float) -> void:
 
 
 func _tell() -> void:
-	_face_player()
+	body.face_player()
 	body.play_anim(&"throw")
 	ParryTell.telegraph(body, &"josh_card_throw", state_machine.throw_tell, _tell_anchor)
 
@@ -101,11 +101,3 @@ func _aim_point(player: Node2D, fallback: Vector2) -> Vector2:
 # His daze anchor is tuned for his downed frames, too low for a standing wind-up.
 func _tell_anchor() -> Vector2:
 	return body.tell_anchor()
-
-
-# Set before the pose that uses it, so the throw is drawn toward the player.
-func _face_player() -> void:
-	var player: Node2D = state_machine.get_player()
-	if not is_instance_valid(player):
-		return
-	body.flying_left = player.global_position.x < body.global_position.x

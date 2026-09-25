@@ -51,6 +51,7 @@ func _land() -> void:
 	body.place()
 	body.shrink_glider(GLIDER_SHRINK)
 	body.set_air_draw(false)
+	body.face_player()
 	body.play_anim(&"dismount")
 	land_sfx_player.play()
 	body.shake_screen(LAND_SHAKE, LAND_SHAKE_STEPS, LAND_SHAKE_STEP_TIME)

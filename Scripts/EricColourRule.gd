@@ -1,8 +1,7 @@
 extends RefCounted
 
-# The rule that decides which colour a two-branch Eric attack comes out in: his phase-one bear hug
-# (EricBearHug, red grab or yellow shoulder charge) and his phase-two mixup (EricP2Mixup, red
-# haymaker or yellow grab) both draw from it, so the two read as one language rather than two.
+# The rule that decides which colour a two-branch Eric attack comes out in: his bear hug (EricBearHug,
+# red grab or yellow shoulder charge) draws from it.
 # The fight's first of a kind is always red, never three of one colour in a row, and otherwise a coin
 # toss at the attack's own chance.
 # The caller keeps the counter and the run of colours, so a test can set up a colour it wants by

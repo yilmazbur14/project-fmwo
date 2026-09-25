@@ -28,7 +28,7 @@ func Enter() -> void:
 	elapsed = 0.0
 	var bounds: Rect2 = body.ground_bounds(0.0)
 	landing_point = body.ground_position.clamp(bounds.position, bounds.end)
-	state_machine.clear_fire_for_landing(landing_point)
+	state_machine.clear_fire_for_landing(landing_point, state_machine.take_landing_clearance())
 	if body.ground_position.distance_to(landing_point) > LANDING_ALIGN_DISTANCE:
 		phase = Phase.GLIDE
 		body.play_anim(&"fly")

@@ -6,6 +6,7 @@ const HitStop := preload("res://Scripts/HitStop.gd")
 const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
 const EricPacing := preload("res://Scripts/EricPacing.gd")
 const BossBreakGauge := preload("res://Scripts/BossBreakGauge.gd")
+const PunchAllowance := preload("res://Scripts/PunchAllowance.gd")
 const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
 const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
@@ -45,14 +46,10 @@ var daze_used := false
 # Punches that can land while a parry has him staggered.
 const PARRY_STAGGER_HIT_CAP := 2
 var parry_stagger_hits := 0
+# The parry stagger takes the damage of a clean chain of PARRY_STAGGER_HIT_CAP punches (PunchAllowance).
+var punches := PunchAllowance.new()
 # The reworked fight's Break gauge (EricPacing V2); null in V1.
 var break_gauge: Node
-# Phase two: his sword is out of the ring and he fights with his fists (EricPhaseTwo). A ONE-WAY
-# LATCH set the first time a hit takes him across phase_two_health_ratio, not a reading of his health,
-# so a test that pokes boss_health can't flip him back and forth. `pending` is the cut still owed,
-# which his state machine plays at the start of the next chain.
-var phase_two := false
-var phase_two_pending := false
 var hud_layer: CanvasLayer
 var break_sting_players: Array[AudioStreamPlayer] = []
 
@@ -76,14 +73,6 @@ func _ready() -> void:
 	if player and EricPacing.is_v2():
 		_add_break_gauge(player)
 	_build_hud()
-	# The menu's playtest shortcut (MainMenuScript's boss select): open in phase two instead of
-	# fighting him down to half health for it. It takes the same entry point the crossing punch takes
-	# and leaves the transition cut owed, so what plays is exactly what a real fight plays - the sword
-	# thrown out of the ring, the lines, then phase two. His health is deliberately left alone.
-	if EricPacing.is_v2() and GameProgress.start_in_phase_two == FIGHT_SCENE:
-		GameProgress.start_in_phase_two = ""
-		enter_phase_two()
-		phase_two_pending = true
 
 	# Eric's own theme, "Ride for the King": written for this fight in Sonic Pi and recorded from
 	# it, so unlike the placeholder tracks it ships in the repo. One 16-bar cycle at 138 bpm cut on
@@ -215,9 +204,13 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 
 func take_punch(amount: int) -> int:
 	if state_machine.current_state == state_machine.states.get("ParryStaggered"):
-		if parry_stagger_hits >= PARRY_STAGGER_HIT_CAP:
+		var allowed := punches.allow(amount, parry_stagger_hits, PARRY_STAGGER_HIT_CAP)
+		if allowed <= 0:
 			return 0
 		parry_stagger_hits += 1
+		var dealt := _take_damage(allowed)
+		punches.spend(dealt)
+		return dealt
 	return _take_damage(amount)
 
 
@@ -225,9 +218,6 @@ func _take_damage(amount: int, pitch := 1.0) -> int:
 	var dealt := mini(amount, boss_health)
 	boss_health -= dealt
 	print("Boss health: ", boss_health)
-	if EricPacing.is_v2() and not phase_two and get_health_ratio() <= EricPacing.value("phase_two_health_ratio"):
-		enter_phase_two()
-		phase_two_pending = true
 	_refresh_health_bar()
 	_hit_feedback()
 	hit_sfx_player.pitch_scale = pitch
@@ -235,26 +225,11 @@ func _take_damage(amount: int, pitch := 1.0) -> int:
 	return dealt
 
 
-# Half his health gone: the sword goes and he fights on with his fists. Public, so a test and the
-# defence suite can put him in phase two without playing the cut. Idempotent, and everything about the
-# phase that isn't his attack list lives here.
-func enter_phase_two() -> void:
-	if phase_two:
-		return
-	phase_two = true
-	# The Break gauge's reflect_gain is dead from here - there is no sword to fling back - so the
-	# parry worth grab_parry_gain moves to the attack that is now the read: the red haymaker.
-	if break_gauge:
-		var strong: Array[StringName] = [&"eric_p2_haymaker"]
-		break_gauge.strong_parry_ids = strong
-
-
 # The attacks a parry (PlayerDefense) can stagger him out of, and the state each runs in.
 const PARRY_STAGGER_STATES := {
 	&"eric_thrown_sword": "SwordThrow",
 	&"eric_bear_hug_grab": "BearHug",
 	&"eric_bear_hug_grab_v2": "BearHug",
-	&"eric_p2_haymaker": "P2Mixup",
 }
 
 
@@ -276,8 +251,6 @@ func parry_stagger(duration: float) -> void:
 		state.reflect(duration)
 	elif state == state_machine.states.get("BearHug"):
 		state_machine.parry_stagger(duration, state.plant_spot)
-	elif state == state_machine.states.get("P2Mixup"):
-		state_machine.parry_stagger(duration, state.home)
 
 
 # The player's finisher (PlayerFinisher). The Downed window, a Break until he gets up, and the stagger

@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastHover.gd" id="9_hover"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastFireBreath.gd" id="10_fire_breath"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastCombined.gd" id="10b_combined"]
+[ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastInferno.gd" id="10c_inferno"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastLand.gd" id="11_land"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastRecover.gd" id="12_recover"]
 [ext_resource type="Script" path="res://Scripts/States/BixbyBeast/BixbyBeastTakeoff.gd" id="13_takeoff"]
@@ -233,6 +234,19 @@ pound_sfx_player = NodePath("../../PoundSfxPlayer")
 scream_sfx_player = NodePath("../../ScreamSfxPlayer")
 dizzy_sfx_player = NodePath("../../RecoverSfxPlayer")
 
+[node name="Inferno" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "inhale_sfx_player", "spit_sfx_player", "gulp_sfx_player", "windup_sfx_player", "roar_sfx_player", "breath_sfx_player", "rope_sfx_player", "wing_sfx_player", "flash")]
+script = ExtResource("10c_inferno")
+body = NodePath("../..")
+inhale_sfx_player = NodePath("../../InhaleSfxPlayer")
+spit_sfx_player = NodePath("../../SpitSfxPlayer")
+gulp_sfx_player = NodePath("../../GulpSfxPlayer")
+windup_sfx_player = NodePath("../../WindupSfxPlayer")
+roar_sfx_player = NodePath("../../RoarSfxPlayer")
+breath_sfx_player = NodePath("../../BreathSfxPlayer")
+rope_sfx_player = NodePath("../../RopeSfxPlayer")
+wing_sfx_player = NodePath("../../WingSfxPlayer")
+flash = NodePath("../../../FlashLayer/Flash")
+
 [node name="Land" type="Node" parent="BixbyBeastCharacterBody/StateManager" node_paths=PackedStringArray("body", "land_sfx_player")]
 script = ExtResource("11_land")
 body = NodePath("../..")
@@ -308,6 +322,16 @@ pitch_scale = 0.85
 
 [node name="ScreamSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
 pitch_scale = 1.25
+
+[node name="InhaleSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 0.45
+
+[node name="SpitSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+volume_db = -8.0
+pitch_scale = 1.5
+
+[node name="RopeSfxPlayer" type="AudioStreamPlayer" parent="BixbyBeastCharacterBody"]
+pitch_scale = 0.7
 
 [node name="DimLayer" type="CanvasLayer" parent="."]
 layer = 0

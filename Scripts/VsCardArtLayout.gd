@@ -90,9 +90,9 @@ const BADGE_AT := Vector2(1746, 888)
 # A new boss is a new entry here and the files its key names, and nothing else: play() takes the
 # key, and everything the card draws comes out of this table or out of Assets/UI/VsCard.
 #   fight      the fight scene the key belongs to, so a fight can look its own key up
-#   number     what the card counts this fight as, and which fight_NN plate it draws. The playable
-#              index - not an index into GameProgress.BOSSES, which still carries fights whose
-#              scenes aren't built.
+#   number     what the card counts this fight as, and which fight_NN plate it draws: its slot in
+#              GameProgress.BOSSES counted from 1, the number the boss select shows it under, so a
+#              fight still being built never moves the numbers of the ones after it.
 #   name       what the name plate says; the placeholder writes it while the plate is missing
 #   epithet    the line under the band. Optional: a card with none lays out without it, and the
 #              six that aren't Eric's are stand-ins until the user approves them.
@@ -106,9 +106,20 @@ const BADGE_AT := Vector2(1746, 888)
 #              it is drawn in code. The final halves carry their own ramp, baked in.
 #   portrait   PLACEHOLDER ONLY: the 64x64 dialogue portrait the stand-in half busts the boss with
 const CARDS := {
+	# Captain Burak, the tutorial. His badge is its own crop, so there is no portrait to bust.
+	"burak": {
+		"fight": "res://Scenes/Bosses/BurakBossFightScene.tscn",
+		"number": 1,
+		"name": "BURAK",
+		"epithet": "THE CAPTAIN",
+		"rank": "@member",
+		"rank_icon": 1,
+		"ramp": ["#06181A", "#0C3033", "#144C50", "#1E6A6E", "#2E8C8E"],
+		"portrait": "",
+	},
 	"eric": {
 		"fight": "res://Scenes/Bosses/EricBossFightScene.tscn",
-		"number": 1,
+		"number": 2,
 		"name": "ERIC",
 		"epithet": "THE WHITE KNIGHT",
 		"rank": "@regular",
@@ -118,19 +129,29 @@ const CARDS := {
 	},
 	"computah": {
 		"fight": "res://Scenes/Bosses/ComputahBossFightScene.tscn",
-		"number": 2,
+		"number": 3,
 		"name": "COMPUTAH",
-		"epithet": "",
+		"epithet": "THE MACHINE",
 		"rank": "@active",
 		"rank_icon": 3,
 		"ramp": ["#0B1620", "#12304A", "#1F5C8A", "#35A6D8", "#A9E4FF"],
 		"portrait": "res://Assets/Characters/Computah/portrait.png",
 	},
+	"matt": {
+		"fight": "res://Scenes/Bosses/MattBossFightScene.tscn",
+		"number": 4,
+		"name": "MATT",
+		"epithet": "THE WALL OF SOUND",
+		"rank": "@veteran",
+		"rank_icon": 4,
+		"ramp": ["#332F68", "#4F4D96", "#6D6FBC", "#8E91DA", "#B3B6F2"],
+		"portrait": "res://Assets/Characters/Matt/portrait.png",
+	},
 	"mason": {
 		"fight": "res://Scenes/Bosses/MasonBossFightScene.tscn",
-		"number": 3,
+		"number": 5,
 		"name": "MASON",
-		"epithet": "",
+		"epithet": "THE SHITPOSTER",
 		"rank": "@trusted",
 		"rank_icon": 5,
 		"ramp": ["#3A2418", "#74432A", "#B07A34", "#D9A066", "#F2C457"],
@@ -138,19 +159,30 @@ const CARDS := {
 	},
 	"josh": {
 		"fight": "res://Scenes/Bosses/JoshBossFightScene.tscn",
-		"number": 4,
+		"number": 6,
 		"name": "JOSH",
-		"epithet": "",
+		"epithet": "THE CARD SHARK",
 		"rank": "@vip",
 		"rank_icon": 6,
 		"ramp": ["#2B1B3A", "#45283C", "#6B3F7A", "#9C5FB5", "#D6A9E8"],
 		"portrait": "res://Assets/Characters/Josh/portrait.png",
 	},
+	# The night indigo his shipped band was drawn on (art_source/vs_card_v2/bands.py).
+	"danny": {
+		"fight": "res://Scenes/Bosses/DannyBossFightScene.tscn",
+		"number": 7,
+		"name": "DANNY",
+		"epithet": "THE SLEEPING GIANT",
+		"rank": "@helper",
+		"rank_icon": 7,
+		"ramp": ["#0A0C1E", "#141A3A", "#1F2A5C", "#2E3E82", "#4A5CA8"],
+		"portrait": "res://Assets/Characters/Danny/portrait.png",
+	},
 	"carter": {
 		"fight": "res://Scenes/Bosses/CarterBossFightScene.tscn",
-		"number": 5,
+		"number": 8,
 		"name": "CARTER",
-		"epithet": "",
+		"epithet": "THE DEMON",
 		"rank": "@moderator",
 		"rank_icon": 8,
 		"ramp": ["#140A0A", "#3C0C20", "#6E1F22", "#AC3232", "#D95763"],
@@ -158,9 +190,9 @@ const CARDS := {
 	},
 	"liam": {
 		"fight": "res://Scenes/Bosses/LiamBossFightScene.tscn",
-		"number": 6,
+		"number": 9,
 		"name": "LIAM & BIXBY",
-		"epithet": "",
+		"epithet": "THE THRONE AND THE BEAST",
 		"rank": "@admin",
 		"rank_icon": 9,
 		"ramp": ["#1A1016", "#4A1C08", "#7A3010", "#DF6C22", "#FFB45E"],
@@ -168,9 +200,9 @@ const CARDS := {
 	},
 	"jordan": {
 		"fight": "res://Scenes/Bosses/JordanBossFightScene.tscn",
-		"number": 7,
+		"number": 10,
 		"name": "JORDAN",
-		"epithet": "",
+		"epithet": "THE ADMIN",
 		"rank": "",
 		"rank_icon": 10,
 		"ramp": ["#0B0A12", "#222034", "#3F3F74", "#5B6EE1", "#CBDBFC"],
@@ -207,13 +239,16 @@ const FRAME_ART := {
 # their epithet, their badge, the fight_NN plate for their number and the win_<rank> plate for their
 # rank; nothing under FINAL_DIR is loaded for a fight whose flag is off.
 const USE_FINAL_CARDS := {
+	"burak": true,
 	"eric": true,
-	"computah": false,
-	"mason": false,
-	"josh": false,
-	"carter": false,
-	"liam": false,
-	"jordan": false,
+	"computah": true,
+	"matt": true,
+	"mason": true,
+	"josh": true,
+	"danny": true,
+	"carter": true,
+	"liam": true,
+	"jordan": true,
 }
 
 #PLACEHOLDER
@@ -395,8 +430,10 @@ static func burst_points() -> PackedVector2Array:
 	return points
 
 
+# Null for a piece whose file isn't there yet as well, so a set that lands in parts draws what it has and
+# writes the rest.
 static func _final(key: String, file: String) -> Texture2D:
-	if not uses_final_card(key):
+	if not uses_final_card(key) or not ResourceLoader.exists(FINAL_DIR + file):
 		return null
 	return load(FINAL_DIR + file)
 

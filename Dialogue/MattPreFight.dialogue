@@ -1,0 +1,31 @@
+# Matt's pre-fight lines, in the user's own wording. The "do" lines play his entrance's beats (in
+# MattIntro.gd) and the dialogue waits for each one to finish before the next line. Danny and Liam
+# heckle from ringside and have no node in the arena.
+# The tags drive him, and MattIntro reads them off the balloon: `matt` sets his talk pose on any
+# speaker's line, `glance` turns him toward a heckler until the next `matt`, and `shout` shakes the
+# ring as the line starts. Never [wait=N] or "do wait(N)" in here: both run on a SceneTree timer, which
+# ticks through the pause screen and which the hold-to-skip can't run out. A pause is a beat.
+
+~ start
+Matt: Are you enjoying your time so far? [#matt=friendly]
+Burak: No the challenge has been brutal and everyone's so weird
+Matt: Haha... you're right... but you'll get used to it! [#matt=laugh]
+Matt: Well anyways, I'm Matt, calm cool and collected, you ever play RuneScape? I love RuneScape! [#matt=proud]
+Burak: Once or twice, it was terrible, just some boomers rotting their brain
+Matt: Hehe.... ya... it's not for everyone.. but hey! At least we can all agree RuneScape's the top MMO of all time... right pal? [#matt=forced]
+Burak: Absolutely not. Hahaha what are you even talking about?
+Matt: You don't think it's in the top 5? [#matt=puzzled]
+Burak: That's not what you said, you said top 1...
+Matt: Buddy, I said top 5, you're starting to get me a little angry [#matt=irritated]
+Danny: Matt I think you said top 1... [#glance=left]
+Matt: NO I DID NOT. [#matt=snap, #shout]
+do composes_himself()
+Matt: Sorry about that haha, I don't think that's what I said friend ahaha.... [#matt=sheepish]
+Liam: Pfft Matt I have it on video you said top 1 ahahaha [#glance=right]
+Matt: ENOUGH. SICK OF YOU GUYS DISRESPECTING ME AH I NEED MY HONG STRESS TOY [#matt=furious, #shout]
+do pulls_out_hong()
+do screams_at_hong()
+do small_pause()
+Burak: Hehe hehe hehe.... top 1 by the way [#matt=forced]
+do roars()
+=> END

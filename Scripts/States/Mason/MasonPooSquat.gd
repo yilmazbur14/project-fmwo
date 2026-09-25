@@ -18,9 +18,14 @@ const POOP_ANIMATION_TIME := 0.75
 
 func Enter() -> void:
 	state_machine.begin_line()
+	state_machine.MasonCharacterBody.set_contact_live(true)
 	animation_player.play("poop", -1, POOP_ANIMATION_TIME / maxf(squat_hold + release_hold, 0.01))
 	squat_sfx_player.play()
 	squat_timer.start(squat_hold)
+
+
+func Exit() -> void:
+	state_machine.MasonCharacterBody.set_contact_live(false)
 
 
 func _on_squat_timer_timeout() -> void:

@@ -1,9 +1,9 @@
 extends Node2D
 
 # One of the fifteen shapes that rush the player during Carter's Raging Demon. It materialises out of
-# the dark at the edge of the spotlight with a light over its head - RED to parry, YELLOW a feint
-# that punishes a parry, or the hot white PUNISH that only ever follows a feint the player bit on and
-# that nothing answers - holds while the player reads it, then covers the gap and strikes.
+# the dark at the edge of the spotlight with a light over its head - RED to parry, the fake's pale X
+# for a feint that punishes a parry, or the hot white PUNISH that only ever follows a feint the player
+# bit on and that nothing answers - holds while the player reads it, then covers the gap and strikes.
 # It is much smaller than Carter, forms and dissolves rather than appearing and vanishing, and every
 # bit of that happens at the START of the read window: a clone still resolving when the player has to
 # decide would eat the reaction time the whole mechanic depends on.
@@ -43,6 +43,8 @@ var pass_clock := 0.0
 var pass_step := Vector2.ZERO
 var light_clock := 0.0
 var light_sprite: Sprite2D
+# Which of its sheet's frames the light ignites, peaks, holds and fades on.
+var light_steps := {}
 var shade: Polygon2D
 var ghost: Sprite2D
 var ghost_clock := 0.0
@@ -118,14 +120,13 @@ func _step_body() -> void:
 # past ever shows the fade.
 func _light_frame() -> int:
 	var spec := CarterArtLayout.FINAL_CLONE_LIGHT
-	var steps: Dictionary = spec.yellow if is_feint else spec.red
 	if passing:
-		return steps.fade
+		return light_steps.fade
 	if light_clock < spec.ignite_time:
-		return steps.ignite
+		return light_steps.ignite
 	if light_clock < spec.ignite_time + spec.peak_time:
-		return steps.peak
-	return steps.hold
+		return light_steps.peak
+	return light_steps.hold
 
 
 # The read. Called on the frame the clone appears, and it is the same frame the sequence re-arms the
@@ -287,7 +288,14 @@ func _build_light() -> void:
 	light.z_index = CarterArtLayout.CLONE_LIGHT_Z
 	if is_punish:
 		light.scale = Vector2.ONE * CarterArtLayout.PUNISH_CLONE.light_scale
-	var sheet := CarterArtLayout.clone_light()
+	# A fake wears its own mark, not the yellow ring the rest of the game dodges on, once it is imported.
+	var sheet := CarterArtLayout.feint_tell() if is_feint else {}
+	if not sheet.is_empty():
+		light_steps = sheet.steps
+	else:
+		sheet = CarterArtLayout.clone_light()
+		if sheet.has("texture"):
+			light_steps = sheet.yellow if is_feint else sheet.red
 	if sheet.has("texture"):
 		light_sprite = Sprite2D.new()
 		light_sprite.texture = load(sheet.texture)

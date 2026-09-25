@@ -1,0 +1,12 @@
+# The lines for the end of the Captain Burak fight, approved by the user, said before the fade to the Victory
+# or Defeat screen. player_won: the player beat him. player_lost: he beat the player.
+
+~ player_won
+Captain Burak: Ow! Okay, okay... you've earned your stripes, kiddo.
+Captain Burak: Welcome aboard, @member. Don't let it go to your head. That's my job.
+=> END
+
+~ player_lost
+Captain Burak: Hah! Down with the ship, eh?
+Captain Burak: The barrels were RIGHT THERE, kiddo. Think!
+=> END

@@ -125,18 +125,19 @@ const VOICES := {
 		"every": 3,
 		"volume_db": -2.0,
 	},
-	# The pilot and gamer: short and a little nasal.
+	# The gym bro, loud and hyped: a chesty bark into a "yeah", a "bro" or a "huh!". The widest pitch spread of
+	# anyone and a melody that keeps bumping up, because he is always hyping, and the loudest voice in the game.
 	"greyson": {
 		"streams": [
 			preload("res://Assets/Audio/SFX/Voices/voice_greyson_1.wav"),
 			preload("res://Assets/Audio/SFX/Voices/voice_greyson_2.wav"),
 			preload("res://Assets/Audio/SFX/Voices/voice_greyson_3.wav"),
 		],
-		"pitch_min": 0.95,
-		"pitch_max": 1.05,
-		"melody": [1.0],
+		"pitch_min": 0.96,
+		"pitch_max": 1.08,
+		"melody": [1.0, 1.08, 1.0, 1.15],
 		"every": 3,
-		"volume_db": -1.0,
+		"volume_db": 3.0,
 	},
 	# The intro guide: a warm, mid-range "bop".
 	"danny": {
@@ -163,6 +164,33 @@ const VOICES := {
 		"melody": [1.0],
 		"every": 4,
 		"volume_db": 0.0,
+	},
+	# The loud one: a brassy, friendly "bwah", quick and a notch louder than everybody else.
+	"matt": {
+		"streams": [
+			preload("res://Assets/Audio/SFX/Voices/voice_matt_1.wav"),
+			preload("res://Assets/Audio/SFX/Voices/voice_matt_2.wav"),
+			preload("res://Assets/Audio/SFX/Voices/voice_matt_3.wav"),
+		],
+		"pitch_min": 0.94,
+		"pitch_max": 1.06,
+		"melody": [1.0],
+		"every": 3,
+		"volume_db": 2.5,
+	},
+	# Captain Burak, the tutorial boss: a swaggering "hah", every other blip tipped up a step. Two words,
+	# because his lines go under "Captain Burak" and the player's own voice already has "burak".
+	"captain burak": {
+		"streams": [
+			preload("res://Assets/Audio/SFX/Voices/voice_captain_1.wav"),
+			preload("res://Assets/Audio/SFX/Voices/voice_captain_2.wav"),
+			preload("res://Assets/Audio/SFX/Voices/voice_captain_3.wav"),
+		],
+		"pitch_min": 0.95,
+		"pitch_max": 1.07,
+		"melody": [1.0, 1.06],
+		"every": 3,
+		"volume_db": 1.0,
 	},
 	# Nathan (Dialogue Manager's example speaker) and anyone else not listed above: plain and level.
 	"neutral": {

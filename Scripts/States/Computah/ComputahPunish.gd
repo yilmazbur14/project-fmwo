@@ -46,8 +46,11 @@ func Exit() -> void:
 	state_machine.set_open(false)
 
 
+# No pose change: every window's hold is on the mat (his knee in the vent, flat out after a collapse or a fall), and
+# his only hit sheet stands him up, so playing it popped him up off the mat and back on every punch. His damage's
+# white flash and shake are the flinch.
 func flinch() -> void:
-	body.play_anim(&"hit", hold_anim)
+	pass
 
 
 func _on_window_timer_timeout() -> void:

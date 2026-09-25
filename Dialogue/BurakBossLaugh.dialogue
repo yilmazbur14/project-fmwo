@@ -1,0 +1,11 @@
+# Captain Burak's laugh cut, in the user's own wording: it plays once, after the fight's first volley of
+# kegs lands all five blasts. The "do" line plays his laughing fit (in BurakBossLaugh.gd), and the dialogue
+# waits for it. Danny heckles from ringside and has no node in the arena; `deafened` is his ringing ears.
+# Never [wait=N] or "do wait(N)" in here (see BurakBossPreFight.dialogue).
+
+~ start
+do bursts_out_laughing()
+Captain Burak: ...pfffft.... hahahahaha! I've never seen someone get hit by all 5 barrels! Hahahahaha! Danny did you see that? [#captain=laugh, #glance=left]
+Danny: .... [#deafened]
+Captain Burak: Let's get back to it! C'mon kiddo! Think! [#captain=point]
+=> END

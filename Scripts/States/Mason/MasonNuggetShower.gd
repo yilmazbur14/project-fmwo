@@ -16,6 +16,10 @@ const NuggetMeteor := preload("res://Scripts/NuggetMeteorScript.gd")
 # reliably rather than by a hair.
 const MIN_PLAYER_OVERLAP := 4.0
 const RANDOM_TRIES := 30
+# The rain and Carter's slams each come off tweens of their own, stepped a frame at a time, so either
+# can come down a frame or so off its schedule: the clear time around a slam is kept this much wider on
+# both sides, so what the player sees still keeps to slam_clear_before and slam_clear_after.
+const SLAM_CLEAR_GUARD := 2.0 / 60.0
 # Nuggets moved off the spot they were meant for go to the nearest spot that works, searched for on
 # rings this many px apart.
 const SEARCH_STEP := 10.0
@@ -32,6 +36,14 @@ var landing_spots : Array[Vector2] = []
 var landing_times : Array[float] = []
 var keep_out: Rect2
 var shower_done := false
+# Carter called in while it rains (MasonStateMachine.carter_in_shower), on MasonCallCarter's own call,
+# which this makes on its own tween.
+var with_carter := false
+var carter_call: State
+var phone: Tween
+# When each of his slams switches its hitbox on, in seconds from the heave, and for how long.
+var slams : Array[float] = []
+var slam_live := 0.0
 
 
 func Enter() -> void:
@@ -43,6 +55,9 @@ func Enter() -> void:
 	landing_spots.clear()
 	landing_times.clear()
 	shower_done = false
+	with_carter = state_machine.carter_in_shower[state_machine.cycle_phase]
+	carter_call = state_machine.states["CallCarter"]
+	slams.clear()
 
 
 # Called by the nugget_toss animation on its heave frame, as the nuggets leave the bucket.
@@ -50,11 +65,20 @@ func start_shower() -> void:
 	var phase: int = state_machine.cycle_phase
 	var count: int = state_machine.nugget_count[phase]
 	var interval: float = state_machine.nugget_shower_time[phase] / count
+	var warning: float = state_machine.nugget_warning[phase]
+	if with_carter:
+		_call_carter()
 	# One tween runs the whole shower, so leaving the state stops it in one go.
 	shower = create_tween()
+	var gap := 0.0
 	for i in count:
 		if i > 0:
-			shower.tween_interval(interval)
+			gap += interval
+		if _near_a_slam(i * interval + warning):
+			continue
+		if gap > 0.0:
+			shower.tween_interval(gap)
+			gap = 0.0
 		shower.tween_callback(_drop_nugget.bind((i + 1) % target_every == 0, i * interval))
 	shower.tween_callback(func(): shower_done = true)
 
@@ -63,15 +87,53 @@ func Exit() -> void:
 	# Leaving during the toss comes before the animation has started the shower.
 	if shower:
 		shower.kill()
+	if phone:
+		phone.kill()
 	for nugget in nuggets:
 		if is_instance_valid(nugget):
 			nugget.queue_free()
+	if with_carter:
+		carter_call.hang_up()
 
 
-# The cycle moves on once the last impact has finished playing.
+func Physics_Update(_delta: float) -> void:
+	if with_carter:
+		carter_call.follow_drops()
+
+
+# The cycle moves on once the last impact has finished playing, and Carter is done.
 func Update(_delta: float) -> void:
-	if shower_done and not nuggets.any(func(nugget): return is_instance_valid(nugget)):
-		state_machine.next_attack(self)
+	if not shower_done or nuggets.any(func(nugget): return is_instance_valid(nugget)):
+		return
+	if with_carter and is_instance_valid(carter_call.carter):
+		return
+	state_machine.next_attack(self)
+
+
+# Carter is set up at the heave, so the rain can be timed around his slams, and sent in once Mason has
+# made the call.
+func _call_carter() -> void:
+	var player = state_machine.get_player()
+	if not player:
+		return
+	var carter: Node2D = carter_call.summon_carter(player)
+	carter.marker_sort_y = carter_call.ROPES.position.y
+	var sent_at: float = state_machine.shower_call_after + carter_call.phone_duration
+	for slam in carter.slam_times(state_machine.elbow_drops[state_machine.cycle_phase]):
+		slams.append(sent_at + slam)
+	slam_live = carter.hitbox_active_time
+	phone = create_tween()
+	phone.tween_interval(state_machine.shower_call_after)
+	phone.tween_callback(carter_call.pick_up_phone)
+	phone.tween_interval(carter_call.phone_duration)
+	phone.tween_callback(carter_call.send_carter)
+
+
+func _near_a_slam(landing: float) -> bool:
+	for slam in slams:
+		if landing > slam - state_machine.slam_clear_before - SLAM_CLEAR_GUARD and landing < slam + slam_live + state_machine.slam_clear_after + SLAM_CLEAR_GUARD:
+			return true
+	return false
 
 
 func _drop_nugget(aimed: bool, drop_time: float) -> void:
@@ -123,15 +185,38 @@ func _reaches(spot: Vector2, hurtbox: Rect2) -> bool:
 	return ((spot.clamp(hurtbox.position, hurtbox.end) - spot) / semi_axes).length() < 1.0
 
 
-# Nuggets land anywhere a poo bomb can.
+# Nuggets land anywhere a poo bomb can: of the phase's nugget_spread open spots, the one with the most
+# room around it.
 func _random_open_spot(drop_time: float) -> Vector2:
 	var area: Rect2 = state_machine.BOMB_AREA
+	var wanted: int = state_machine.nugget_spread[state_machine.cycle_phase]
 	var spot := Vector2.ZERO
+	var best := Vector2.INF
+	var best_room := -1.0
+	var found := 0
 	for attempt in RANDOM_TRIES:
 		spot = Vector2(randf_range(area.position.x, area.end.x), randf_range(area.position.y, area.end.y))
-		if _is_open(spot, drop_time):
-			return spot
+		if not _is_open(spot, drop_time):
+			continue
+		var room := _room_around(spot)
+		if room > best_room:
+			best_room = room
+			best = spot
+		found += 1
+		if found >= wanted:
+			break
+	if best != Vector2.INF:
+		return best
 	return _nearest_open_spot(spot, drop_time)
+
+
+# How far the nearest of this shower's landings is, aimed or not and landed or not, counted twice over
+# up and down: the ovals are twice as wide as they are tall, and so is the mat they have to cover.
+func _room_around(spot: Vector2) -> float:
+	var room := INF
+	for other in landing_spots:
+		room = minf(room, ((other - spot) * Vector2(1.0, 2.0)).length())
+	return room
 
 
 func _nearest_open_spot(aim: Vector2, drop_time: float) -> Vector2:

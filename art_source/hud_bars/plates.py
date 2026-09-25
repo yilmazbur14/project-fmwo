@@ -46,6 +46,18 @@ def emblem(key, size=EMBLEM):
     from PIL import ImageDraw
     b = bosses.by_key(key)
     shape, col, _ = b["mark"]
+    grid = emblems.GRIDS.get(shape)
+    if grid is not None:
+        # Hand-drawn at the slot's own size (emblems.GRIDS), so stamp it as drawn.  Its
+        # polygons would land on the same texels today, but only because Pillow fills a
+        # one-row polygon; the stamp does not depend on that.
+        im = Image.new("RGBA", (len(grid[0]), len(grid)), (0, 0, 0, 0))
+        px = im.load()
+        for gy, row in enumerate(grid):
+            for gx, ch in enumerate(row):
+                if ch == "#":
+                    px[gx, gy] = rgba(col)
+        return im.resize((size, size), Image.NEAREST) if im.size != (size, size) else im
     box_w, box_h = 30, int(round(size / 0.8))
     im = Image.new("RGBA", (box_w, box_h), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)

@@ -5,8 +5,9 @@ centreline, the integer scale that makes them fill a 116x120 bust, and where to
 paste it. Pairs list two layers, back one first.
 
 Scale is chosen per character from their source size, not fixed: Eric, Greyson,
-Computah, Mason, Josh, Carter and Liam crop at 2x; Danny and Bixby have large
-sheets and crop at 1x; Jordan is a narrow 28px figure and crops at 3x.
+Computah, Mason, Josh, Carter, Liam and Jordan crop at 2x; Danny and Bixby have
+large sheets and crop at 1x. (Jordan cropped his old 28px jordan.png at 3x until
+his v2 redesign was approved on 2026-09-24; he is now the v2 sheet's idle frame.)
 
 Burak is NOT here - his sprite's figure is 15x25, which would need 5x, and 5x
 blocks are not art. He is the one deliberate redraw, and the brief to raise him
@@ -32,7 +33,9 @@ TABLE = {
     # Liam rides small at the bottom-left. Both at 1x, so the pixel size matches.
     "liam":     [("Bixby/bixby_beast.png", (0, 0, 192, 160), (44, 0, 160, 120), 1, (0, 0)),
                  ("Liam/liam.png", None, (14, 0, 44, 46), 1, (2, 72))],
-    "jordan":   [("Jordan/jordan.png", None, (0, 0, 28, 40), 3, (16, 0))],
+    # v2 (thin, frail, greasy; approved 2026-09-24): the idle frame, the box up by his face.
+    # His ink is 48 px wide, so the crop is 48x60 at 2x, centred in the 116 px bust.
+    "jordan":   [("Jordan/jordan_redesign_v2.png", (0, 0, 96, 96), (0, 0, 48, 60), 2, (10, 0))],
 }
 
 # Tones deliberately added past what the sheet holds, where a source is too thin
@@ -40,7 +43,8 @@ TABLE = {
 # the density.
 EXTRA = {
     "computah": ["#E8F4FF", "#7A8CA4"],
-    "jordan": ["#F6E2C4", "#C0A078"],
+    # (Jordan's two warm skin tones were for the 28px v1 sprite; v2's 40-colour sheet carries its
+    # own sallow skin ramp, so it gets none.)
 }
 
 
