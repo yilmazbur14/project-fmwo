@@ -28,6 +28,7 @@
 [ext_resource type="Script" path="res://Scripts/StatusIconsUI.gd" id="25_status_icons"]
 [ext_resource type="Script" path="res://Scripts/PlayerDashFx.gd" id="26_dash_fx"]
 [ext_resource type="PackedScene" path="res://Scenes/Player/PunchFx.tscn" id="27_punch_fx"]
+[ext_resource type="Script" path="res://Scripts/States/MainPlayer/PlayerPosed.gd" id="29_posed"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_h87yu"]
 size = Vector2(12, 27)
@@ -225,6 +226,11 @@ player = NodePath("../..")
 
 [node name="DashRecovery" type="Node" parent="CharacterBody2D/StateMachine" node_paths=PackedStringArray("animation_player", "player")]
 script = ExtResource("20_dash_recovery")
+animation_player = NodePath("../../AnimationPlayer")
+player = NodePath("../..")
+
+[node name="Posed" type="Node" parent="CharacterBody2D/StateMachine" node_paths=PackedStringArray("animation_player", "player")]
+script = ExtResource("29_posed")
 animation_player = NodePath("../../AnimationPlayer")
 player = NodePath("../..")
 

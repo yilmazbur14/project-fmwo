@@ -11,7 +11,9 @@ extends State
 # it with the fight. Nothing here uses get_tree().create_timer() or a tree-level tween.
 #
 # A cut-short entrance never kills a tween something is waiting on: `finished` makes every beat bail
-# and every stepping callback a no-op instead, so nothing is left half-drawn and nothing hangs.
+# and every stepping callback a no-op instead, so nothing is left half-drawn and nothing hangs. A
+# held skip runs those waits out on the spot rather than letting them run their time
+# (BossEntrance.run_out).
 
 const BossEntrance := preload("res://Scripts/BossEntrance.gd")
 const MasonArtLayout := preload("res://Scripts/MasonArtLayout.gd")
@@ -59,7 +61,7 @@ const STARTLE_DOWN_TIME := 0.1
 
 @onready var state_machine = get_parent()
 
-# The entrance layer: the hold on the player, their walk and the skip hint.
+# The entrance layer: the hold on the player, their walk, and the skip and its hint through the lines.
 var entrance: CanvasLayer
 # The trail on the floor, and the pile standing at each stop of it.
 var trail: Node2D
@@ -74,6 +76,10 @@ var dialogue_started := false
 # Enter() is deferred, so anything that can reach in from outside checks this first: there is no ring
 # to set before it has run.
 var entered := false
+# A held skip took everything up to the VS card, and the lines are gone.
+var cut := false
+# The tweens the walk-in is waiting on, for the skip to run out.
+var waits: Array[Tween] = []
 var startle: Tween
 var sfx_players := {}
 # Piles eaten, so a test can see that every one of them went.
@@ -90,6 +96,13 @@ func Enter() -> void:
 	var player := _player()
 	player_home = player.global_position if player != null else Vector2.ZERO
 	_build_sfx()
+	# On the retry path too: the walk-in is skipped there, but the lines still play and the hold
+	# still skips them.
+	entrance = BossEntrance.new()
+	entrance.name = "BossEntrance"
+	add_child(entrance)
+	entrance.skipped.connect(_on_skipped)
+	entrance.begin(player)
 	if BossEntrance.already_seen(FIGHT_SCENE):
 		animation_player.play("idle")
 		finish_entrance()
@@ -119,12 +132,6 @@ func Exit() -> void:
 #THE WALK-IN
 
 func _play() -> void:
-	entrance = BossEntrance.new()
-	entrance.name = "BossEntrance"
-	add_child(entrance)
-	entrance.skipped.connect(_on_skipped)
-	entrance.begin(_player())
-
 	# HIS BARS COME UP WITH THE GATES, NOT BEFORE HIM. They sit across the top of the ring, which is
 	# where his mark is: left up they cover the top rope, both the doorway he comes through and the
 	# gate that shuts it, and the whole first half of the trail - the gobbles nobody could see were
@@ -165,9 +172,8 @@ func _play() -> void:
 	await _beat(SETTLE_BEAT)
 	if finished:
 		return
-	# The ring is set, so the entrance hands the player, the hint and the Escape key straight on to
-	# the lines rather than sitting on all three through them and the card. His own last beat does
-	# this where Eric's last dialogue line does it: Mason's lines call nothing.
+	# The ring is set, so the player goes straight on to the lines, and the skip with them. His own
+	# last beat does this where Eric's last dialogue beat does it: Mason's lines call nothing.
 	finish_entrance()
 	_start_dialogue()
 
@@ -183,7 +189,7 @@ func _walk_the_trail() -> void:
 		march.tween_method(_step.bind(_stop_point(stop - 1), _stop_point(stop)), 0.0, 1.0, leg)
 		march.tween_callback(_gobble.bind(stop))
 		march.tween_interval(GOBBLE_TIME)
-	await march.finished
+	await _wait(march)
 	if finished:
 		return
 	body.global_position = home
@@ -364,23 +370,47 @@ func finish_entrance() -> void:
 	if player != null:
 		player.global_position = player_home
 	if is_instance_valid(entrance):
-		entrance.end()
+		entrance.release_player()
 	BossEntrance.mark_seen(FIGHT_SCENE)
 
 
-# What a held ui_cancel does: the ring set at once and the lines started. Public, so a test can cut
-# the entrance exactly the way a player cuts it.
+# The walk-in cut on the spot and the lines started: where a second go at the fight starts on its
+# own. Public, so the defence suite can cut the entrance this way - its modes are about the fight,
+# and read the lines or throw them away themselves.
 func skip() -> void:
-	_on_skipped()
-
-
-func _on_skipped() -> void:
+	if cut:
+		return
 	finish_entrance()
 	_start_dialogue()
 
 
+# What a held ui_cancel does: the walk-in, whatever is left of the lines and the card's build-up, all
+# at once, landing on the card's flash. His lines call no beats, so the ring finish_entrance() sets
+# is all there is to leave.
+func skip_to_fight() -> void:
+	if not entered or cut:
+		return
+	cut = true
+	BossEntrance.close_balloon(state_machine.pre_fight_balloon)
+	finish_entrance()
+	BossEntrance.run_out(waits)
+	state_machine.end_pre_fight_dialogue()
+	BossEntrance.settle_arena(get_tree())
+	BossEntrance.card_to_flash(get_tree())
+
+
+func _on_skipped() -> void:
+	skip_to_fight()
+
+
+# The lines have handed over to the VS card, and the skip goes with them.
+func lines_over() -> void:
+	if is_instance_valid(entrance):
+		entrance.end()
+
+
 func _start_dialogue() -> void:
-	if dialogue_started:
+	if dialogue_started or cut:
 		return
 	dialogue_started = true
 	state_machine.show_pre_fight_dialogue()
@@ -414,7 +444,13 @@ func _play_sfx(key: String) -> void:
 func _beat(seconds: float) -> void:
 	var tween := create_tween()
 	tween.tween_interval(seconds)
+	await _wait(tween)
+
+
+func _wait(tween: Tween) -> void:
+	waits.append(tween)
 	await tween.finished
+	waits.erase(tween)
 
 
 func _player() -> Node:

@@ -1,0 +1,13 @@
+# Danny's pre-fight lines, approved by the user. The "do" line plays his evolve (in DannyBossIntro.gd), and the
+# dialogue waits for it to finish before the next line.
+# Never [wait=N] or "do wait(N)" in here: both run on a SceneTree timer, which ticks through the pause screen
+# and which the hold-to-skip can't run out. A pause is a beat.
+
+~ start
+Danny: ...oh. it's you.
+Burak: Danny? The training room guy?
+Danny: helper rank. i guard #helper. which means i have to fight you. ugh.
+Danny: hold on. gotta get serious for this.
+do evolve()
+Danny: ...okay. i'm awake. let's make this quick, i've got a raid at nine.
+=> END

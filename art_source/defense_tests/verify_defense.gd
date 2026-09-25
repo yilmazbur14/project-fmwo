@@ -25,10 +25,20 @@ const SCENES := {
 	# uses Arena/CarterAkumaScene. Pointing this row at the split fight is its own job - it means
 	# reworking those four node paths - and is NOT a one-line change.
 	"carter": "res://Scenes/Bosses/CarterAndJoshBossFightScene.tscn",
+	# The shipped Carter fight, under its own key so the row above keeps its four modes working.
+	"carter_akuma": "res://Scenes/Bosses/CarterBossFightScene.tscn",
 	"josh": "res://Scenes/Bosses/JoshBossFightScene.tscn",
 	"mason": "res://Scenes/Bosses/MasonBossFightScene.tscn",
 	"jordan": "res://Scenes/Bosses/JordanBossFightScene.tscn",
 	"liam": "res://Scenes/Bosses/LiamBossFightScene.tscn",
+	"matt": "res://Scenes/Bosses/MattBossFightScene.tscn",
+	# Captain Burak, fight 01 of the ladder.
+	"burak": "res://Scenes/Bosses/BurakBossFightScene.tscn",
+	# Danny, fight 07 of the ladder.
+	"danny": "res://Scenes/Bosses/DannyBossFightScene.tscn",
+	# Greyson, fight 03's second half, on his own: his test scene starts him active at HOME, the takeover's end
+	# state, with Computah already down. greyson_takeover plays the takeover in Computah's fight instead.
+	"greyson": "res://Scenes/Bosses/GreysonTestFightScene.tscn",
 }
 
 const DEFENSE_BINDINGS_PATH := "user://input_bindings_defense_tests.cfg"
@@ -48,9 +58,9 @@ var fight := "eric"
 var tier := "normal"
 # Eric's pacing (EricPacing.version) for smoke and approach: 1 or 2, or 0 for the one that ships.
 var ver := 0
-# Which of Eric's phases smoke drives: 0 for the fight as it starts, 2 for after his sword has been
-# knocked out of the ring. His health never moves in smoke - the player is parked and never punches
-# him - so phase two would otherwise get no smoke coverage at all.
+# Which of Liam's phases smoke, blocks and approach drive: 0 for the fight as it starts, 2 for his
+# enraged cycle (enrage_liam). His health never moves in those modes - the player is parked and never
+# punches him - so the Inferno would otherwise get no coverage at all.
 var phase := 0
 
 # The modes written against Eric's fight as it was (EricPacing V1): they run on it, whatever ships. With
@@ -63,6 +73,16 @@ const ERIC_V1_MODES := [
 	"baseline", "guard_break", "guard_break_grab", "dodge_bosses",
 ]
 const ERIC_PACING := "res://Scripts/EricPacing.gd"
+# The game ships with blocking off (PlayerDefense.BLOCKING_ENABLED). These modes exist to test the
+# blocking it keeps behind that switch, so they switch it back on for themselves and keep it working
+# for the day it is flipped back. Every other mode plays the game as it ships.
+const BLOCKING_MODES := [
+	"stamina", "block_eric", "behind", "blocks", "guard_break", "guard_break_timeout", "guard_break_grab",
+	"guard_break_lose",
+]
+const PLAYER_DEFENSE := "res://Scripts/PlayerDefense.gd"
+# blocking=on or blocking=off overrides BLOCKING_MODES for one run, whatever the mode.
+var blocking_arg := ""
 
 
 func _initialize() -> void:
@@ -77,12 +97,24 @@ func _initialize() -> void:
 			ver = int(arg.substr(4))
 		elif arg.begins_with("phase="):
 			phase = int(arg.substr(6))
+		elif arg.begins_with("blocking="):
+			blocking_arg = arg.substr(9)
 	_main.call_deferred()
 
 
 # Before the fight loads: his _ready reads it.
 func pin_eric(version: int) -> void:
 	load(ERIC_PACING).version = version
+
+
+# Whether a held guard blocks in this run (PlayerDefense.BLOCKING_ENABLED, which the game ships off).
+func blocking() -> bool:
+	return load(PLAYER_DEFENSE).BLOCKING_ENABLED
+
+
+# What a guarded hit that isn't parried comes out as: 2 (BLOCKED) with blocking, 1 (HIT) without.
+func unparried() -> int:
+	return 2 if blocking() else 1
 
 
 # A PlayerFeel number under this player's feel_v2.
@@ -142,10 +174,29 @@ func tap(code: int) -> void:
 	release(code)
 
 
-func load_fight(key_name: String, keep_balloon := false) -> void:
-	change_scene_to_file(SCENES[key_name])
-	while current_scene == null or current_scene.scene_file_path != SCENES[key_name]:
+# The longest a scene may take to become the current one once it has opened.
+const SCENE_LOAD_FRAMES := 600
+
+
+# Changes to the scene at `path` and waits until it is the current one. One that can't be opened, or
+# never arrives, fails the run and ends it here, rather than leaving the wait for it spinning forever.
+func open_scene(path: String) -> void:
+	var err := change_scene_to_file(path)
+	if err == OK:
+		for i in SCENE_LOAD_FRAMES:
+			if current_scene != null and current_scene.scene_file_path == path:
+				return
+			await process_frame
+	check(false, "%s opens and becomes the current scene (error %d)" % [path, err])
+	log_p("RESULT mode=%s fails=%d" % [mode, fails])
+	quit(fails)
+	# Parked until the quit lands, so the mode never goes on to run on a scene it doesn't have.
+	while true:
 		await process_frame
+
+
+func load_fight(key_name: String, keep_balloon := false) -> void:
+	await open_scene(SCENES[key_name])
 	await wait(3)
 	player = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
 	defense = player.get_node("Defense")
@@ -154,6 +205,10 @@ func load_fight(key_name: String, keep_balloon := false) -> void:
 	var scratch := current_scene.get_node_or_null("ScratchEricDriver")
 	if scratch:
 		scratch.free()
+	if key_name == "matt" and mode != "matt_yell":
+		park_matt_yell()
+	if key_name == "matt" and not matt_glass_mode():
+		park_matt_glass()
 	await skip_entrance()
 	if keep_balloon:
 		return
@@ -276,35 +331,8 @@ func load_eric(keep_balloon := false) -> void:
 	await load_fight("eric", keep_balloon)
 	boss = current_scene.get_node("Arena/EricBossScene/CharacterBody2D")
 	sm = boss.state_machine
-	guard_phase_cut()
 	if not keep_balloon:
 		sm.post_dialogue_pre_fight_timer.stop()
-
-
-# Eric's phase-two cut (EricPhaseTwo) stops the fight for a cutscene and three lines nobody in a test
-# is going to read. Any mode that takes half his health off walks into it - pace_bot does it every
-# run, and the juggle, Break and mash modes can - so it is cut here on every frame it is up, the way
-# a player cuts it, with a tap to read the lines through behind it. Installed globally rather than per
-# mode: a mode that has never heard of phase two is exactly the one that would hang in it.
-# Keyed off the state, not a scene path: a fight without a PhaseTwo simply has nothing to watch.
-var phase_cut_frames := 0
-
-
-func guard_phase_cut() -> void:
-	if not physics_frame.is_connected(_cut_phase_two):
-		physics_frame.connect(_cut_phase_two)
-
-
-func _cut_phase_two() -> void:
-	if sm == null or not is_instance_valid(sm):
-		return
-	var cut = sm.states.get("PhaseTwo")
-	if cut == null or sm.current_state != cut:
-		return
-	phase_cut_frames += 1
-	if phase_cut_frames % 4 == 0:
-		tap(KEY_ENTER)
-	cut.skip()
 
 
 func _main() -> void:
@@ -316,6 +344,7 @@ func _main() -> void:
 	settings.reset_to_defaults()
 	if ERIC_V1_MODES.has(mode):
 		pin_eric(1)
+	load(PLAYER_DEFENSE).BLOCKING_ENABLED = blocking_arg == "on" or (blocking_arg != "off" and BLOCKING_MODES.has(mode))
 	match mode:
 		"stamina": await test_stamina()
 		"baseline": await test_baseline()
@@ -329,6 +358,8 @@ func _main() -> void:
 		"guard_break_lose": await test_guard_break_lose()
 		"parry_projectiles": await test_parry_projectiles()
 		"parry_rules": await test_parry_rules()
+		"no_block": await test_no_block()
+		"broken_combo": await load("res://art_source/defense_tests/combo/broken_combo.gd").run(self)
 		"stagger": await test_stagger()
 		"stagger_chain": await test_stagger_chain()
 		"stagger_win": await test_stagger_end(true)
@@ -366,6 +397,9 @@ func _main() -> void:
 		"clone_cadence": await test_clone_cadence()
 		"beam_rush": await test_beam_rush()
 		"beam_rush_live": await test_beam_rush_live()
+		"carter_hud": await test_carter_hud()
+		"messatsu": await test_messatsu()
+		"messatsu_live": await test_messatsu_live()
 		"auto_finisher": await test_auto_finisher()
 		"auto_kill": await test_auto_kill()
 		"tells": await test_tells()
@@ -382,6 +416,7 @@ func _main() -> void:
 		"delayed_slam": await test_delayed_slam()
 		"whirl_lunges": await test_whirl_lunges()
 		"hug_mixup": await test_hug_mixup()
+		"hug_reach": await test_hug_reach()
 		"break_gauge": await test_break_gauge()
 		"break_entry": await test_break_entry()
 		"mash_tiers": await test_mash_tiers()
@@ -389,12 +424,12 @@ func _main() -> void:
 		"juggle": await test_juggle()
 		"juggle_kill": await test_juggle_kill()
 		"juggle_super": await test_juggle_super()
+		"gauge_extra": await test_gauge_extra()
+		"mason_contact": await test_mason_contact()
+		"mason_combined": await test_mason_combined()
+		"mason_bots": await test_mason_bots()
 		"reflect_auto_v2": await test_reflect_auto_v2()
 		"sword_gate": await test_sword_gate()
-		"phase_cut": await test_phase_cut()
-		"p2_mixup": await test_p2_mixup()
-		"p2_leap": await test_p2_leap()
-		"p2_grab_escape": await test_p2_grab_escape()
 		"mine_trap": await test_mine_trap()
 		"mine_mash": await test_mine_mash()
 		"computah_overload": await test_computah_overload()
@@ -405,6 +440,7 @@ func _main() -> void:
 		"pause_mash": await test_pause_mash()
 		"pause_barrage": await test_pause_barrage()
 		"pause_beam_rush": await test_pause_beam_rush()
+		"pause_messatsu": await test_pause_messatsu()
 		"pause_dialogue": await test_pause_dialogue()
 		"pause_no_leak": await test_pause_no_leak()
 		"pause_blocked": await test_pause_blocked()
@@ -412,6 +448,44 @@ func _main() -> void:
 		"pause_quit": await test_pause_quit()
 		"vs_card": await test_vs_card()
 		"entrance": await test_entrance()
+		"drift": await test_drift()
+		"inferno": await test_inferno()
+		"combined": await test_combined()
+		"static_dodge": await test_static_dodge()
+		"josh_layout": await test_josh_layout()
+		"matt_pass_through": await test_matt_pass_through()
+		"matt_bounces": await test_matt_bounces()
+		"matt_trueshot": await test_matt_trueshot()
+		"matt_yell": await test_matt_yell()
+		"matt_entrance": await test_matt_entrance()
+		"matt_bots": await test_matt_bots()
+		"matt_glass_row": await test_matt_glass_row()
+		"matt_glass_damage": await test_matt_glass_damage()
+		"matt_glass_release": await test_matt_glass_release()
+		"matt_deafen": await test_matt_deafen()
+		"matt_glass_bots": await test_matt_glass_bots()
+		"burak_shots": await test_burak_shots()
+		"burak_cutlass": await test_burak_cutlass()
+		"burak_entrance": await test_burak_entrance()
+		"burak_laugh": await test_burak_laugh()
+		"burak_barrels": await test_burak_barrels()
+		"burak_volley": await test_burak_volley()
+		"burak_ramp": await test_burak_ramp()
+		"burak_bots": await test_burak_bots()
+		"danny_entrance": await load(DANNY_MODES + "entrance.gd").run(self)
+		"danny_sleep": await load(DANNY_MODES + "sleep.gd").run(self)
+		"danny_spit": await load(DANNY_MODES + "spit.gd").run(self)
+		"danny_headbutt": await load(DANNY_MODES + "headbutt.gd").run(self)
+		"danny_slams": await load(DANNY_MODES + "slams.gd").run(self)
+		"danny_sumo": await load(DANNY_MODES + "sumo.gd").run(self)
+		"greyson_takeover": await load(GREYSON_MODES + "takeover.gd").run(self)
+		"greyson_plates": await load(GREYSON_MODES + "plates.gd").run(self)
+		"greyson_slams": await load(GREYSON_MODES + "slams.gd").run(self)
+		"greyson_poses": await load(GREYSON_MODES + "poses.gd").run(self)
+		"greyson_race": await load(GREYSON_MODES + "race.gd").run(self)
+		"greyson_bomb": await load(GREYSON_MODES + "bomb.gd").run(self)
+		"greyson_brawl": await load(GREYSON_MODES + "brawl.gd").run(self)
+		"bounds": await load(RING_MODES + "bounds.gd").run(self)
 		_: log_p("unknown mode " + mode)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(DEFENSE_BINDINGS_PATH))
 	log_p("RESULT mode=%s fails=%d" % [mode, fails])
@@ -747,8 +821,12 @@ func test_grab_block() -> void:
 	)
 	await attack("BearHug")
 	process_frame.disconnect(watch_grab)
-	check(guard_at_grab[0], "guard was up when the grab landed")
-	check(grabbed[0], "the hug grabbed the blocking player")
+	# Without blocking a held guard drops once its parry window is over, long before the hug arrives.
+	if blocking():
+		check(guard_at_grab[0], "guard was up when the grab landed")
+	else:
+		check(not guard_at_grab[0], "the guard held from the start had dropped long before the grab landed")
+	check(grabbed[0], "the hug grabbed the player holding block")
 	check(events_of("HIT", &"eric_bear_hug_squeeze").size() == 3 and player.playerHealth == 97, "three squeezes land (health %d)" % player.playerHealth)
 	release(KEY_SHIFT)
 
@@ -1124,7 +1202,7 @@ func test_parry_rules() -> void:
 	results.append(front_hit(&"eric_quake_wave", dummy_source()))
 	release(KEY_SHIFT)
 	await wait(40)
-	log_p("-- a press whose window has passed only blocks")
+	log_p("-- a press whose window has passed doesn't parry")
 	press(KEY_SHIFT)
 	# The window is measured in game time, which a freeze slows, so wait for the window itself.
 	await past_window()
@@ -1139,25 +1217,98 @@ func test_parry_rules() -> void:
 		await wait(6)
 	press(KEY_SHIFT)
 	await wait(3)
+	# Without blocking the hits before this one land, and their i-frames would swallow it.
+	clear_iframes()
 	results.append(front_hit(&"eric_quake_wave", dummy_source()))
 	release(KEY_SHIFT)
 	await wait(40)
 	log_p("-- guard held from earlier")
 	press(KEY_SHIFT)
 	await wait(60)
+	clear_iframes()
 	results.append(front_hit(&"eric_quake_wave", dummy_source()))
 	release(KEY_SHIFT)
 	await wait(40)
 	log_p("-- after mashing stops for 0.5 s, a press parries again")
 	press(KEY_SHIFT)
 	await wait(3)
+	clear_iframes()
 	results.append(front_hit(&"eric_quake_wave", dummy_source()))
 	release(KEY_SHIFT)
-	log_p("results %s (1 HIT, 2 BLOCKED, 3 PARRIED)" % [results])
-	check(results == [3, 3, 2, 2, 2, 3], "parry, re-armed parry, late block, mash block, held block, parry")
+	var late := unparried()
+	log_p("results %s (1 HIT, 2 BLOCKED, 3 PARRIED), blocking %s" % [results, "on" if blocking() else "off"])
+	check(results == [3, 3, late, late, late, 3], "parry, re-armed parry, then the late press, the mash and the held guard all %s, then a parry" % ("blocked" if blocking() else "hit"))
 	# (step 4b tests below)
-	check(player.playerHealth == 100, "no damage")
-	check(is_equal_approx(defense.stamina, 100.0 - 60.0) or defense.stamina > 40.0, "only the three blocks cost stamina (%.1f)" % defense.stamina)
+	if blocking():
+		check(player.playerHealth == 100, "no damage")
+		check(is_equal_approx(defense.stamina, 100.0 - 60.0) or defense.stamina > 40.0, "only the three blocks cost stamina (%.1f)" % defense.stamina)
+	else:
+		check(player.playerHealth == 97, "the three that weren't parried each cost a half-heart (%d)" % player.playerHealth)
+		check(defense.stamina == defense.max_stamina, "and nothing cost stamina (%.1f)" % defense.stamina)
+
+
+# The game as it ships, with blocking off (PlayerDefense.BLOCKING_ENABLED): the guard is only the parry's
+# stance. It shows for the press's parry window and drops after it with the key still held, and the
+# player walks again; a held guard takes light and heavy blockable hits as HITs, pays nothing for them
+# and never breaks; holding it never pauses the refill; and the parry inside the window is untouched.
+func test_no_block() -> void:
+	await load_eric()
+	park_eric()
+	health_ok()
+	track()
+	track_parries()
+	var source: String = FileAccess.get_file_as_string(PLAYER_DEFENSE)
+	check(source.contains("static var BLOCKING_ENABLED := false") and not blocking(), "blocking ships switched off, and this run plays it that way")
+	await settle_player(Vector2(972, 800))
+
+	log_p("-- the guard is only the parry's stance")
+	press(KEY_SHIFT)
+	await wait(3)
+	check(defense.is_guarding() and player.state_machine.current_state.name == "Blocking", "a press puts the guard up (%s)" % player.state_machine.current_state.name)
+	await past_window()
+	await wait(2)
+	check(not defense.is_guarding() and player.state_machine.current_state.name != "Blocking", "and it drops once the parry window is over, the key still held (%s)" % player.state_machine.current_state.name)
+	var held_from: Vector2 = player.global_position
+	press(KEY_RIGHT)
+	await wait(20)
+	release(KEY_RIGHT)
+	await wait(10)
+	var walked: float = player.global_position.x - held_from.x
+	check(walked > 100.0, "so a player still holding it walks (%.0f px)" % walked)
+	check(not defense.is_guarding(), "and holding it never brings the guard back")
+	release(KEY_SHIFT)
+	await wait(40)
+
+	log_p("-- a held guard takes the hits, pays nothing and never breaks")
+	await settle_player(Vector2(972, 800))
+	health_ok()
+	defense._set_stamina(defense.max_stamina)
+	press(KEY_SHIFT)
+	await past_window()
+	var landed := [front_hit(&"eric_quake_wave", dummy_source())]
+	for i in 5:
+		clear_iframes()
+		landed.append(front_hit(&"eric_whirlwind", dummy_source()))
+	clear_iframes()
+	release(KEY_SHIFT)
+	log_p("a light hit then five heavy ones on a held guard: %s, stamina %.1f" % [landed, defense.stamina])
+	check(landed == [1, 1, 1, 1, 1, 1] and events_of("BLOCKED").is_empty(), "a light and five heavy hits all land (%s)" % [landed])
+	check(defense.stamina == defense.max_stamina and not defense.is_guard_broken, "none of it cost stamina, and the guard never broke (%.1f)" % defense.stamina)
+	health_ok()
+	await wait(40)
+
+	log_p("-- holding it never pauses the refill")
+	defense._spend(60.0)
+	var low: float = defense.stamina
+	press(KEY_SHIFT)
+	await wait(roundi((defense.stamina_regen_delay + 0.5) * 60.0))
+	check(not defense.is_regen_paused() and defense.stamina > low + 10.0, "the bar refills with the key held (%.1f -> %.1f)" % [low, defense.stamina])
+	release(KEY_SHIFT)
+	await wait(40)
+
+	log_p("-- the parry is untouched")
+	var parried: int = await parry_once()
+	check(parried == 3 and parries.size() == 1, "a fresh press inside the window still parries (%d)" % parried)
 
 
 # ------------------------------------------------------------------ step 4b
@@ -1284,7 +1435,7 @@ func test_stagger_chain() -> void:
 	check(await wait_until(func(): return finisher.phase == FINISHER_OFF and boss.boss_health < boss.max_health - 1, 400), "the finisher lands")
 	check(await wait_until(func(): return not hurtbox.monitoring, 240), "it closed the punish window")
 	check(sm.states["ParryStaggered"].stagger_timer.is_stopped(), "the stagger timer is done with")
-	check(await wait_until(func(): return sm.attacks().has(sm.current_state.name), 400), "the chain carries on with the next attack (%s)" % sm.current_state.name)
+	check(await wait_until(func(): return sm.ATTACKS.has(sm.current_state.name), 400), "the chain carries on with the next attack (%s)" % sm.current_state.name)
 	await wait_until(func(): return sm.current_state.name == "Downed", 900)
 	sm.downed_state_timer.stop()
 
@@ -1603,7 +1754,7 @@ func test_dash_recovery() -> void:
 	check(await wait_until(func(): return player.state_machine.current_state.name == "Punching", 6), "a punch comes out at once")
 	await wait_until(func(): return player.state_machine.current_state.name != "Punching", 40)
 
-	log_p("-- a block that isn't a parry does not cancel it")
+	log_p("-- a press that isn't a parry does not cancel it")
 	defense.dash_recovery_time = 0.6
 	await settle_player(Vector2(972, 760))
 	await wait(20)
@@ -1613,11 +1764,11 @@ func test_dash_recovery() -> void:
 	# The recovery is set to 0.6 s above, so it is still running once the parry window has passed.
 	await past_window()
 	result = front_hit(&"eric_quake_wave", dummy_source())
-	check(result == 2, "blocked (%d)" % result)
-	check(defense.is_dash_recovering(), "a plain block leaves the recovery running")
+	check(result == unparried(), "not parried (%d)" % result)
+	check(defense.is_dash_recovering(), "a press that isn't a parry leaves the recovery running")
 	tap(KEY_Q)
 	await wait(3)
-	check(player.state_machine.current_state.name == "Blocking", "no punch during the recovery (%s)" % player.state_machine.current_state.name)
+	check(player.state_machine.current_state.name != "Punching", "no punch during the recovery (%s)" % player.state_machine.current_state.name)
 	release(KEY_SHIFT)
 	defense.dash_recovery_time = 0.25
 
@@ -1750,14 +1901,8 @@ func test_hype() -> void:
 	check(is_equal_approx(hype.hype, 30.0), "a hit costs 20 (%.0f)" % hype.hype)
 	clear_iframes()
 	hype._set_hype(50.0)
-	defense.stamina = 20.0
-	defense.last_spend_time = defense.clock
-	press(KEY_SHIFT)
-	# Blocked, not parried, so the block is what empties the bar.
-	await past_window()
-	front_hit(&"eric_quake_wave", dummy_source())
+	await break_guard()
 	check(defense.is_guard_broken and is_equal_approx(hype.hype, 20.0), "a guard break costs 30 (50 -> %.0f)" % hype.hype)
-	release(KEY_SHIFT)
 	defense.clear_guard_break()
 	clear_iframes()
 
@@ -2025,8 +2170,10 @@ func catalogue_block_cost(id: StringName) -> float:
 	if not entry.blockable:
 		return 0.0
 	return defense.heavy_block_cost if entry.weight == CATALOG.Weight.HEAVY else defense.light_block_cost
-# Hits that land inside the i-frames on purpose, because the player is held and cannot dodge.
-const IGNORES_IFRAMES := [&"eric_bear_hug_squeeze", &"eric_p2_crush", &"computah_slam"]
+# Hits that land inside the i-frames on purpose, because the player is held and cannot dodge, or, for
+# Captain Burak's keg blasts, because the bill is one hit for every keg left, one after another, and for
+# his pistol pair, so a hit on the first shot never swallows the second's parry.
+const IGNORES_IFRAMES := [&"eric_bear_hug_squeeze", &"computah_slam", &"burak_barrel_blast", &"burak_shot"]
 
 const SMOKE_SPOTS := {
 	"eric": Vector2(972, 700),
@@ -2036,6 +2183,10 @@ const SMOKE_SPOTS := {
 	"jordan": Vector2(960, 640),
 	"liam": Vector2(960, 640),
 	"josh": Vector2(960, 640),
+	"matt": Vector2(960, 760),
+	"burak": Vector2(960, 800),
+	"danny": Vector2(960, 800),
+	"greyson": Vector2(960, 800),
 }
 
 
@@ -2048,16 +2199,7 @@ func test_smoke() -> void:
 	var settled := await clear_intro(fight)
 	if settled != "":
 		log_p("%s's intro ended in %s" % [fight, settled])
-	# His health never moves here - the player is parked and never punches him - so the phase-two
-	# latch has to be set by hand, before his first chain, or phase two gets no smoke at all. The cut
-	# is not played: enter_phase_two() is the flag on its own, and the fight after it is what smoke is
-	# for.
-	if fight == "eric" and phase == 2:
-		boss = current_scene.get_node("Arena/EricBossScene/CharacterBody2D")
-		sm = boss.state_machine
-		guard_phase_cut()
-		boss.enter_phase_two()
-		log_p("eric in phase two: %s" % [sm.attacks()])
+	enrage_liam()
 	player.playerHealth = 1000
 	track()
 	track_parries()
@@ -2104,25 +2246,7 @@ func test_smoke() -> void:
 		if gap < 1.0 - 0.001 and not IGNORES_IFRAMES.has(hits[i].id):
 			bad_gaps.append("%s after %.3f s" % [hits[i].id, gap])
 	check(bad_gaps.is_empty(), "every hit is followed by a second of i-frames (%s)" % [bad_gaps])
-	if fight == "eric" and phase == 2:
-		# The two attacks phase two has, and the ids only they can produce.
-		var p2_ids := [&"eric_p2_haymaker", &"eric_p2_grab", &"eric_p2_crush", &"eric_p2_tremor"]
-		var strays: Array = ids.keys().filter(func(id): return not p2_ids.has(id))
-		check(strays.is_empty(), "nothing but his phase-two attacks lands (%s)" % [strays])
-		check(ids.has(&"eric_p2_tremor"), "the leap's tremors land")
-		check(ids.has(&"eric_p2_haymaker") or ids.has(&"eric_p2_grab"), "and the mixup connects")
-		var holds := []
-		for e in hits:
-			if e.id == &"eric_p2_grab":
-				holds.append(0)
-			elif e.id == &"eric_p2_crush" and not holds.is_empty():
-				holds[-1] += 1
-		var still_held: bool = player.is_grabbed and not holds.is_empty()
-		if still_held:
-			holds.pop_back()
-		log_p("holds that finished: %s%s" % [holds, ", and one still holding at the cut-off" if still_held else ""])
-		check(holds.all(func(count): return count == 3), "a player who never mashes is crushed three times and tossed (%s)" % [holds])
-	elif fight == "eric":
+	if fight == "eric":
 		# Each hold's squeezes belong to the grab before them. The 45 s window can close mid-hold, which
 		# V2 hugs often enough to do regularly, so a hold still on at the cut-off isn't counted.
 		var hugs := []
@@ -2139,15 +2263,22 @@ func test_smoke() -> void:
 		check(hugs.all(func(count): return count == 3), "every bear hug that finished squeezed three times (%s)" % [hugs])
 	if fight == "carter":
 		check(ids.has(&"wrestler_punish"), "punching a wrestler still hurts")
+	if fight == "liam" and phase == 2:
+		check(ids.has(&"bixby_fireball") and ids.has(&"bixby_inferno"), "his Inferno lands: its fireballs and its breath (%s)" % [ids.keys()])
+		check_liam_perch()
+	elif fight == "liam":
+		check(ids.has(&"bixby_quake_ring") and ids.has(&"bixby_sonic_beam") and not ids.has(&"bixby_quake_burst"),
+			"his combined attack lands its quake rings and its beams, and plants no crack (%s)" % [ids.keys()])
 
 
 # What each attack should cost the guard, and what should never be blockable at all.
-const UNBLOCKABLE := [&"computah_beam", &"computah_chase", &"computah_slam", &"computah_overload_blast", &"wrestler_punish", &"eric_quake_ring", &"eric_bear_hug_squeeze", &"eric_p2_haymaker", &"eric_p2_grab", &"eric_p2_crush"]
+const UNBLOCKABLE := [&"computah_beam", &"computah_chase", &"computah_slam", &"computah_overload_blast", &"wrestler_punish", &"eric_quake_ring", &"eric_bear_hug_squeeze", &"mason_poo_contact", &"bixby_inferno", &"bixby_ember", &"bixby_quake_ring", &"bixby_sonic_beam", &"matt_yell", &"matt_glass", &"burak_barrel_blast", &"burak_cutlass", &"danny_quake_ring", &"danny_headbutt", &"greyson_plate", &"greyson_eruption", &"greyson_brawl_hook_l", &"greyson_brawl_hook_r", &"greyson_brawl_straight", &"greyson_brawl_straight_unguarded"]
 
 
 func test_blocks() -> void:
 	await load_fight(fight, STATE_INTROS.has(fight))
 	await clear_intro(fight)
+	enrage_liam()
 	player.playerHealth = 1000
 	track()
 	track_parries()
@@ -2188,6 +2319,9 @@ func test_blocks() -> void:
 	for id in hit_ids:
 		if UNBLOCKABLE.has(id):
 			check(not costs.has(id), "%s is never blocked" % id)
+	if fight == "liam" and phase == 2:
+		check(costs.has(&"bixby_fireball") and hit_ids.has(&"bixby_inferno"), "his Inferno came: a fireball blocked, and the breath through the guard (%s, %s)" % [costs, hit_ids])
+		check_liam_perch()
 	if player.fight_over:
 		log_p("-- the fight ended on its own; the direction rules are checked in the other fights")
 		return
@@ -2286,6 +2420,14 @@ const PUNISH_WINDOWS := {
 	"mason": ["Arena/MasonScene/MasonCharacterBody", "Eat"],
 	"jordan": ["Arena/JordanScene/JordanCharacterBody", "Taunt"],
 	"liam": ["Arena/BixbyBeastScene/BixbyBeastCharacterBody", "Recover"],
+	# His Recover needs nothing from the attack before it, so a bare transition opens a working window.
+	"matt": ["Arena/MattScene/MattCharacterBody", "Recover"],
+	"josh": ["Arena/JoshCardsScene/JoshCardsCharacterBody", "Recover"],
+	"carter_akuma": ["Arena/CarterAkumaScene/CarterAkumaCharacterBody", "Recover"],
+	"burak": ["Arena/BurakBossScene/BurakBossCharacterBody", "Taunt"],
+	# His nap needs nothing from the string before it, so a bare transition opens a working window.
+	"danny": ["Arena/DannyBossScene/DannyBossCharacterBody", "Sleep"],
+	"greyson": ["Arena/GreysonScene/GreysonCharacterBody", "Pose"],
 }
 # The ring floor, from ArenaScene's wallBoundaries.
 const ROPES := Rect2(105, 105, 1710, 870)
@@ -2346,7 +2488,13 @@ func test_knockback_boss() -> void:
 	check(pause > 1.7, "he stays staggered about 1.8 s (%.2f s)" % pause)
 	check(boss.get_health_ratio() > 0.0, "the fight carries on")
 	await wait(120)
-	check(boss.sprite.offset.distance_to(rest) < 2.0, "the recoil settles back (%s)" % boss.sprite.offset)
+	# Two seconds on his chain can have him on another sheet, and a boss whose sheets each stand on
+	# their own offset (sheet_offset: Danny's, Burak's) is settled on whichever one is showing, less
+	# any lift (Danny's set_lift).
+	var settled: Vector2 = rest
+	if "sheet_offset" in boss:
+		settled = boss.sheet_offset - Vector2(0, boss.lift_px if "lift_px" in boss else 0.0) / boss.sprite.global_scale
+	check(boss.sprite.offset.distance_to(settled) < 2.0, "the recoil settles back (%s, the sheet showing stands on %s)" % [boss.sprite.offset, settled])
 
 
 # A killing uppercut leaves the boss where he stands: no shove, no recoil, his defeat plays from the
@@ -2567,7 +2715,7 @@ func test_clone_cadence() -> void:
 	log_p("-- pressing the instant the light comes up is still too early")
 	defense.rearm_parry()
 	var on_sight: int = await parry_at(clone_frames(strike))
-	check(on_sight == 2, "a press on sight only blocks (%d)" % on_sight)
+	check(on_sight == unparried(), "a press on sight doesn't parry (%d)" % on_sight)
 	check(strike > window + 1.0 / 60.0, "the strike is %.2f s past the light, the window covers %.2f s" % [strike, window])
 
 	log_p("-- and the read, on the dash, parries")
@@ -2577,13 +2725,13 @@ func test_clone_cadence() -> void:
 	# The window opens this long after the light, which is what the player has to wait out.
 	log_p("the window opens %.2f s into the light, %.0f%% of the way through it" % [strike - window, 100.0 * (strike - window) / show_time])
 
-	log_p("-- a clone bitten on sight is blocked, not parried, and the guard holds")
+	log_p("-- a clone bitten on sight isn't parried")
 	defense.rearm_parry()
 	press(KEY_SHIFT)
 	await wait(clone_frames(strike))
 	var bitten := front_hit(&"eric_quake_wave", dummy_source())
 	release(KEY_SHIFT)
-	check(bitten == 2, "the bitten clone lands as a block (%d)" % bitten)
+	check(bitten == unparried(), "the bitten clone isn't parried (%d)" % bitten)
 	clear_iframes()
 	defense._set_stamina(defense.max_stamina)
 	await past_window()
@@ -2600,7 +2748,7 @@ func test_clone_cadence() -> void:
 	release(KEY_SHIFT)
 	await wait(to_next_read)
 	var spilled: int = await parry_at(clone_frames(window))
-	check(spilled == 2, "with nothing rearming it, the feint's press costs the next clone too (%d)" % spilled)
+	check(spilled == unparried(), "with nothing rearming it, the feint's press costs the next clone too (%d)" % spilled)
 	clear_iframes()
 	defense._set_stamina(defense.max_stamina)
 	await past_window()
@@ -2629,11 +2777,6 @@ const WINDUP_READS := {
 	# and 1.85x at none: 0.42 s of raised sword before the first wave exists, 0.36 s once he is
 	# enraged. The enraged one is the number here, because it is the one that can fall under the bar.
 	&"eric_quake_wave": 0.360,
-	# Each of beast Bixby's pounds cracks the floor where the player is standing, and the crack glows
-	# and throbs there for BixbyBeastStateMachine.quake_warning before it erupts, its beat tightening
-	# over the last 0.6 s. The two later cracks burn quake_stagger longer again, so the first one is
-	# the number here: it is the one that can fall under the bar.
-	&"bixby_quake_burst": 1.200,
 	# Computah's pounce, the grab at the end of his chase: ComputahStateMachine.pounce_tell, floored
 	# at POUNCE_TELL_FLOOR. The chase is not in his rotation yet, so nothing drives this today.
 	&"computah_chase": 0.320,
@@ -2649,6 +2792,32 @@ const WINDUP_READS := {
 	# The bear hug's charge, red or yellow on the same timing.
 	&"eric_bear_hug_grab_v2": 0.450,
 	&"eric_shoulder_charge": 0.450,
+	# Beast Bixby's Inferno floods three quarters of the ring from his mouths: nothing flies, so its read
+	# is the wind-up he rears back through under the yellow ring. BixbyBeastStateMachine.inferno_windup.
+	&"bixby_inferno": 1.400,
+	# Matt's Trueshot: THE LATCH-TO-RELEASE HOLD, like Computah's beam. The aim tracks the player through the
+	# charge, so there is nothing to be elsewhere from until it latches, trueshot_lock_lead before the
+	# release; and from the station nearest the player the wave has almost no flight at all.
+	&"matt_trueshot": 0.350,
+	# His yell in the punish window: the ring blows out from his mouth, so its read is the yellow tell
+	# before it, MattStateMachine.yell_tell.
+	&"matt_yell": 0.400,
+	# Captain Burak's pistol pair: each ball is slowed to take at least 0.40 s to reach the point it was
+	# aimed at (his plan's number), and that floor is its read, held to the window as a wind-up is.
+	&"burak_shot": 0.400,
+	# His cutlass strikes the step its wind-up ends, so its read is that wind-up: 0.55 s held under the
+	# red badge.
+	&"burak_cutlass": 0.550,
+	# Danny's Sumo Smash lands where he latched, and the red badge over the marked spot is up from the latch:
+	# DannyBossSlams' latch-to-impact, 0.12 s of latch and the 0.28 s drop.
+	&"danny_butt_slam": 0.400,
+	# His headbutt's read is its wind-up under the red badge, from the crouch to the launch; the 0.22 s flight
+	# after it is shorter than the parry window by design (his plan's section 6).
+	&"danny_headbutt": 0.550,
+	# Greyson's plates, Burak's pistol balls again: each plate's first leg is slowed to take at least 0.40 s to
+	# reach the player's feet as it left his hand (GreysonThrow.min_flight, his plan's number), and that floor is
+	# its read, held to the window as a wind-up is.
+	&"greyson_plate": 0.400,
 }
 
 
@@ -2661,6 +2830,7 @@ func test_approach() -> void:
 		pin_eric(ver)
 	await load_fight(fight, STATE_INTROS.has(fight))
 	await clear_intro(fight)
+	enrage_liam()
 	player.playerHealth = 100000
 	var born := {}
 	var approaches := {}
@@ -2690,6 +2860,27 @@ func test_approach() -> void:
 			var blade: Node = hazard.get_node_or_null("Hitbox")
 			if blade and not born.has(blade.get_instance_id()):
 				born[blade.get_instance_id()] = defense.clock
+		# Matt's bolts and waves report their own hits the same way, off their own Hitbox.
+		for hazard in get_nodes_in_group("matt_hazard"):
+			var shot: Node = hazard.get_node_or_null("Hitbox")
+			if shot and not born.has(shot.get_instance_id()):
+				born[shot.get_instance_id()] = defense.clock
+		# Captain Burak's report their own hits too, some off the hazard itself (his balls are their own
+		# Area2D) and any off a Hitbox under it.
+		for hazard in get_nodes_in_group("burak_hazard"):
+			for source in [hazard, hazard.get_node_or_null("Hitbox")]:
+				if source and not born.has(source.get_instance_id()):
+					born[source.get_instance_id()] = defense.clock
+		# Danny's report their own hits the same way: a slam's hit node and a quake ring are their own sources.
+		for hazard in get_nodes_in_group("danny_hazard"):
+			for source in [hazard, hazard.get_node_or_null("Hitbox")]:
+				if source and not born.has(source.get_instance_id()):
+					born[source.get_instance_id()] = defense.clock
+		# Greyson's plates and zones are their own hit sources too.
+		for hazard in get_nodes_in_group("greyson_hazard"):
+			for source in [hazard, hazard.get_node_or_null("Hitbox")]:
+				if source and not born.has(source.get_instance_id()):
+					born[source.get_instance_id()] = defense.clock
 		await physics_frame
 	var window: float = defense.parry_window
 	var tight := []
@@ -2723,6 +2914,9 @@ func test_approach() -> void:
 			tight.append("%s (%.2f s)" % [id, shortest])
 	log_p("%s: attacks a press on sight would parry: %s" % [fight, tight if not tight.is_empty() else "none"])
 	check(tight.is_empty(), "every attack gives longer than the parry window to read it (%s)" % [tight])
+	if fight == "liam" and phase == 2:
+		check(approaches.has(&"bixby_fireball") and approaches.has(&"bixby_inferno"), "his Inferno's fireballs and breath were both read (%s)" % [approaches.keys()])
+		check_liam_perch()
 
 
 # ------------------------------------------------------------------ parry feel
@@ -2767,7 +2961,7 @@ func test_parry_window() -> void:
 	check(new_band.size() >= old_band.size(), "the shipped window is no tighter than the old 0.15 s (%d frames against %d)" % [new_band.size(), old_band.size()])
 	check(absf(new_band.size() - shipped * 60.0) <= 2.0, "the band matches the %.2f s it is set to (%d frames)" % [shipped, new_band.size()])
 	check(new_band[0] == 1 and new_band[-1] == new_band.size(), "every gap up to %d frames parries (%s)" % [new_band.size(), new_band])
-	check(await parry_at(new_band.size() + 1) == 2, "a press a frame earlier than that is only a block")
+	check(await parry_at(new_band.size() + 1) == unparried(), "a press a frame earlier than that doesn't parry")
 	defense.parry_window = shipped
 
 	log_p("-- what that means for the attacks that matter")
@@ -2778,7 +2972,7 @@ func test_parry_window() -> void:
 	var old_dash: int = await parry_at(dash_frames)
 	defense.parry_window = shipped
 	log_p("the same press at the old window: %d (1 HIT, 2 BLOCKED, 3 PARRIED)" % old_dash)
-	check(old_dash == 2, "at 0.15 that same read was too early and only blocked (%d)" % old_dash)
+	check(old_dash == unparried(), "at 0.15 that same read was too early and not parried (%d)" % old_dash)
 	# Josh's cards land 0.9 s apart: a whiff at one still clears the mash lockout before the next.
 	check(defense.parry_mash_lockout < 0.9, "a whiffed press clears before the next card (%.2f < 0.9)" % defense.parry_mash_lockout)
 	# Eric's thrown sword: what the window is worth against the fastest thing in the game.
@@ -3101,7 +3295,7 @@ func test_parry_rearm() -> void:
 	await wait(12)
 	# Without the rearm, a press this soon after cannot parry.
 	var carried: int = await parry_once()
-	check(carried == 2, "inside the lockout the hit is only blocked (%d)" % carried)
+	check(carried == unparried(), "inside the lockout the hit isn't parried (%d)" % carried)
 	clear_iframes()
 	await wait(12)
 	press(KEY_SHIFT)
@@ -3123,7 +3317,7 @@ func test_parry_rearm() -> void:
 	release(KEY_SHIFT)
 	await wait(20)
 	var early: int = await parry_once()
-	check(early == 2, "the early press whiffs and the mash lockout keeps the clone (%d)" % early)
+	check(early == unparried(), "the early press whiffs and the mash lockout keeps the clone (%d)" % early)
 	clear_iframes()
 
 	log_p("-- end_parry_streak is callable from a fight")
@@ -3443,8 +3637,13 @@ func test_status() -> void:
 	await wait(90)
 	check(defense.stamina > settled, "the bar refills again once it is over (%.0f -> %.0f)" % [settled, defense.stamina])
 
-	log_p("-- the drain breaks a held guard")
-	defense._set_stamina(40.0)
+	log_p("-- the drain breaks a guard that is up when the bar runs out")
+	# Without blocking the guard is only up for the parry window, so the bar is all but out already,
+	# and spent just now so the refill can't top it up before the drain starts.
+	if blocking():
+		defense._set_stamina(40.0)
+	else:
+		defense._spend(defense.stamina - 1.0)
 	press(KEY_SHIFT)
 	await wait(6)
 	check(defense.is_guarding(), "guarding")
@@ -3562,6 +3761,21 @@ func parry_once(id := &"eric_quake_wave") -> int:
 	return result
 
 
+# Breaks the player's guard from a nearly empty bar: with blocking, by blocking `id` past the parry
+# window; without it, the one way left, the bar emptied while the guard is up.
+func break_guard(id := &"eric_quake_wave") -> void:
+	defense.stamina = 20.0
+	defense.last_spend_time = defense.clock
+	press(KEY_SHIFT)
+	if blocking():
+		await past_window()
+		front_hit(id, dummy_source())
+	else:
+		await wait(3)
+		defense.drain_stamina(defense.max_stamina)
+	release(KEY_SHIFT)
+
+
 func test_parry_streak() -> void:
 	await load_eric()
 	park_eric()
@@ -3613,13 +3827,7 @@ func test_parry_streak() -> void:
 	log_p("-- a guard break ends it")
 	check(await parry_once() == 3, "parry lands")
 	check(defense.parry_streak == 1, "streak restarts at 1")
-	defense.stamina = 20.0
-	defense.last_spend_time = defense.clock
-	press(KEY_SHIFT)
-	# Blocked, not parried, so the block empties the bar.
-	await past_window()
-	front_hit(&"eric_quake_wave", dummy_source())
-	release(KEY_SHIFT)
+	await break_guard()
 	check(defense.is_guard_broken and defense.parry_streak == 0, "a guard break resets the streak")
 	defense.clear_guard_break()
 	clear_iframes()
@@ -3674,15 +3882,23 @@ func meet_the_lunge(hold_from_the_start: bool) -> void:
 	sm.downed_state_timer.stop()
 	sm.on_child_transition(sm.current_state, "BearHug")
 	var hug: Node = sm.states["BearHug"]
-	var grab_shape: CollisionShape2D = boss.get_node("GrabArea2D/CollisionShape2D")
-	var shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
-	await wait_until(func():
-		if hug.phase != hug.Phase.LUNGE:
-			return false
-		var half: Vector2 = grab_shape.shape.size * grab_shape.global_scale.abs() / 2.0
-		return (shape.global_position.y - 27.0) - (grab_shape.global_position.y + half.y) < 1500.0 * 0.09, 400)
+	await wait_until(func(): return hug_lands_within(hug, 0.09), 400)
 	if not hold_from_the_start:
 		press(KEY_SHIFT)
+
+
+# Whether his hug's lunge reaches the player inside `lead` seconds: V2's rush off its own clock, since
+# it lands on hug_rush_time from any range, and V1's straight lunge off the gap left to close at its
+# 1500 px/s.
+func hug_lands_within(hug: Node, lead: float) -> bool:
+	if hug.phase != hug.Phase.LUNGE:
+		return false
+	if load(ERIC_PACING).is_v2():
+		return hug.lunge_left <= lead
+	var grab_shape: CollisionShape2D = boss.get_node("GrabArea2D/CollisionShape2D")
+	var shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var half: Vector2 = grab_shape.shape.size * grab_shape.global_scale.abs() / 2.0
+	return (shape.global_position.y - 27.0) - (grab_shape.global_position.y + half.y) < 1500.0 * lead
 
 
 func test_grab_parry() -> void:
@@ -4451,7 +4667,7 @@ func test_dash_recovery_v2() -> void:
 	check(await wait_until(func(): return player.is_dodging, 6), "so the next dash comes out at once")
 	await wait_until(func(): return not player.is_dodging, 20)
 
-	log_p("-- a block that isn't a parry leaves it running")
+	log_p("-- a press that isn't a parry leaves it running")
 	await wait_until(func(): return Engine.time_scale == 1.0, 120)
 	defense.dash_recovery_time_v2 = 0.6
 	await dash_ready()
@@ -4463,7 +4679,7 @@ func test_dash_recovery_v2() -> void:
 	# The landing is stretched to 0.6 s above, so it is still running once the parry window has passed.
 	await past_window()
 	result = front_hit(&"eric_quake_wave", dummy_source())
-	check(result == 2 and defense.is_dash_recovering(), "blocked, and the landing runs on (%d)" % result)
+	check(result == unparried() and defense.is_dash_recovering(), "not parried, and the landing runs on (%d)" % result)
 	release(KEY_SHIFT)
 	defense.dash_recovery_time_v2 = 0.09
 
@@ -4724,7 +4940,7 @@ func test_dash_parry() -> void:
 	check(through == 4 and dodges.size() == 1 and parries.is_empty(), "dodged, never parried (%d)" % through)
 	await dash_parry_reset()
 
-	log_p("-- a late press cancels the dash and buys a block, not a parry")
+	log_p("-- a late press cancels the dash and buys %s, not a parry" % ("a block" if blocking() else "nothing"))
 	stretch_dash(40)
 	await dash_ready()
 	var bar: float = defense.stamina
@@ -4734,12 +4950,13 @@ func test_dash_parry() -> void:
 	await past_window()
 	var late := front_hit(&"eric_quake_wave", dummy_source())
 	log_p("stamina %.0f -> %.0f, result %d" % [bar, defense.stamina, late])
-	check(late == 2, "past the window it is a block (%d)" % late)
-	check(is_equal_approx(bar - defense.stamina, defense.dash_stamina_cost + defense.light_block_cost), "and it costs the dash and the block, %.0f in all (%.1f)" % [defense.dash_stamina_cost + defense.light_block_cost, bar - defense.stamina])
+	check(late == unparried(), "past the window it isn't parried (%d)" % late)
+	var late_cost: float = defense.dash_stamina_cost + (defense.light_block_cost if blocking() else 0.0)
+	check(is_equal_approx(bar - defense.stamina, late_cost), "and it costs %.0f in all: the dash%s (%.1f)" % [late_cost, " and the block" if blocking() else "", bar - defense.stamina])
 	player.dodge_time = dash_length
 	await dash_parry_reset()
 
-	log_p("-- a mashed press cancels it and buys a block too: the lockout still bites")
+	log_p("-- a mashed press cancels it and buys no parry either: the lockout still bites")
 	for i in 3:
 		press(KEY_SHIFT)
 		await wait(6)
@@ -4748,7 +4965,7 @@ func test_dash_parry() -> void:
 	var mashed_state: Array = await dash_then_press()
 	var mashed := front_hit(&"eric_quake_wave", dummy_source())
 	log_p("still dashing %s, press credited %s, result %d" % [mashed_state[0], defense.press_credited, mashed])
-	check(not mashed_state[0] and mashed == 2 and not defense.press_credited, "the dash ends, the guard blocks, nothing parries (%d)" % mashed)
+	check(not mashed_state[0] and mashed == unparried() and not defense.press_credited, "the dash ends and nothing parries (%d)" % mashed)
 	await dash_parry_reset()
 
 	log_p("-- and a cancel leaves parry credit exactly where a standing press would")
@@ -5246,8 +5463,9 @@ const V2_PACE := {
 }
 # Every tell's floor: a red timing tell is 1.5x the parry window, a single-answer read 0.40 s, and a
 # colour decision 0.40 s with its margin.
-const TELL_FLOORS := {"Earthquake": 0.36, "Whirlwind": 0.40, "BearHug": 0.45, "SwordThrow": 0.40, "P2Mixup": 0.45}
-# Far enough from his spawn that his bear hug's lunge falls short and a lunge's sweep starts well off.
+const TELL_FLOORS := {"Earthquake": 0.36, "Whirlwind": 0.40, "BearHug": 0.45, "SwordThrow": 0.40}
+# Far enough from his spawn that a whirlwind lunge's sweep starts well off. V2's bear hug reaches it
+# all the same: its rush homes on the player from anywhere in the ring.
 const OUT_OF_REACH := Vector2(1780, 940)
 
 
@@ -5505,10 +5723,13 @@ func test_v2_cadence() -> void:
 			clear_iframes()
 			health_ok()
 			var lead: float = seen.impact - seen.tell
-			var own: float = {"Earthquake": pacing.value("slam_tell_time"), "Whirlwind": pacing.raged("whirl_windup", rage), "BearHug": pacing.raged("hug_charge_time", rage), "SwordThrow": sm.states["SwordThrow"].TELL_TIME}[attack]
+			# The hug's badge is up for its charge, and its rush then takes a fixed hug_rush_time to arrive:
+			# two clocks counted down in frames, each of which can run a frame over, so one frame more slack.
+			var own: float = {"Earthquake": pacing.value("slam_tell_time"), "Whirlwind": pacing.raged("whirl_windup", rage), "BearHug": pacing.raged("hug_charge_time", rage) + pacing.value("hug_rush_time"), "SwordThrow": sm.states["SwordThrow"].TELL_TIME}[attack]
+			var slack: float = (3.0 if attack == "BearHug" else 2.0) * FRAME_TIME + 0.001
 			log_p("%s at rage %.0f: a %s tell %.3f s before it strikes (its own %.2f, floor %.2f)" % [attack, rage, seen.look, lead, own, TELL_FLOORS[attack]])
 			check(seen.tell >= 0.0 and seen.impact >= 0.0, "%s at rage %.0f: the tell, then the attack" % [attack, rage])
-			check(lead >= TELL_FLOORS[attack] - 0.001 and absf(lead - own) <= 2.0 * FRAME_TIME + 0.001, "%s at rage %.0f: the tell leads by its own %.2f s, at or over its %.2f s floor (%.3f)" % [attack, rage, own, TELL_FLOORS[attack], lead])
+			check(lead >= TELL_FLOORS[attack] - 0.001 and absf(lead - own) <= slack, "%s at rage %.0f: the tell leads by its own %.2f s, at or over its %.2f s floor (%.3f)" % [attack, rage, own, TELL_FLOORS[attack], lead])
 			var looks := {"Earthquake": ["red"], "Whirlwind": ["yellow"], "BearHug": ["strong red", "yellow"], "SwordThrow": ["strong red"]}
 			check(looks[attack].has(seen.look), "%s: its tell is %s (%s)" % [attack, " or ".join(looks[attack]), seen.look])
 
@@ -6017,7 +6238,7 @@ func test_hug_mixup() -> void:
 	var hug: Node = sm.states["BearHug"]
 	var hurtbox: Area2D = boss.get_node("Hurtbox")
 
-	log_p("-- the colours and their tells, with the player out of reach")
+	log_p("-- the colours and their tells, with the player across the ring")
 	var sequence := []
 	for i in 14:
 		boss.global_position = Vector2(960, 380)
@@ -6096,7 +6317,7 @@ func test_hug_mixup() -> void:
 	sm.on_child_transition(sm.current_state, "Idle")
 	await wait(60)
 
-	log_p("-- red: stepping out of its line makes it whiff, into the stumble")
+	log_p("-- red: stepping out of its line doesn't save them, the rush follows")
 	events.clear()
 	clear_iframes()
 	health_ok()
@@ -6105,10 +6326,11 @@ func test_hug_mixup() -> void:
 	await await_hug_lunge()
 	press(KEY_LEFT)
 	tap(KEY_W)
-	await wait(5)
+	var stepped_grabbed := await wait_until(func(): return player.is_grabbed, 40)
 	release(KEY_LEFT)
-	var whiff_stumble := await time_stumble(hug, hurtbox)
-	check(not player.is_grabbed and events_of("HIT").is_empty() and absf(whiff_stumble[0] - pacing.value("hug_stumble_time")) <= FRAME_TIME + 0.001 and whiff_stumble[1], "red: stepped out of, it whiffs into a %.2f s stumble, open to punches (%.3f s)" % [pacing.value("hug_stumble_time"), whiff_stumble[0]])
+	check(not hug.yellow and stepped_grabbed and events_of("HIT", &"eric_bear_hug_grab_v2").size() == 1, "red: stepped and dashed out of its line, grabbed all the same")
+	await wait_until(func(): return sm.current_state.name == "Winded", 600)
+	sm.downed_state_timer.stop()
 	sm.on_child_transition(sm.current_state, "Idle")
 	await wait(60)
 
@@ -6162,13 +6384,7 @@ func await_hug_lunge() -> void:
 	sm.downed_state_timer.stop()
 	sm.on_child_transition(sm.current_state, "BearHug")
 	var hug: Node = sm.states["BearHug"]
-	var grab_shape: CollisionShape2D = boss.get_node("GrabArea2D/CollisionShape2D")
-	var shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
-	await wait_until(func():
-		if hug.phase != hug.Phase.LUNGE:
-			return false
-		var half: Vector2 = grab_shape.shape.size * grab_shape.global_scale.abs() / 2.0
-		return (shape.global_position.y - 27.0) - (grab_shape.global_position.y + half.y) < 1500.0 * 0.09, 400)
+	await wait_until(func(): return hug_lands_within(hug, 0.09), 400)
 
 
 # Waits for his hug's stumble and returns [how long it lasted, whether his hurtbox was open all through].
@@ -6180,6 +6396,163 @@ func time_stumble(hug: Node, hurtbox: Area2D) -> Array:
 		open = open and hurtbox.monitoring
 		await physics_frame
 	return [defense.clock - started, open]
+
+
+# The bear hug's reach: V2's rush homes on the player and lands on hug_rush_time from anywhere in the
+# ring, near or far, and his arms are harmless until it arrives. From the far side: red grabs a player
+# who stands still and one who runs, and a parry still staggers it; yellow lands for 1 and holds no one,
+# and a dash through it is still a perfect dodge into his stumble. Then the player pushed flush into
+# every corner and against every rope, with the hug started from across the ring: red holds them there.
+func test_hug_reach() -> void:
+	await load_eric_v2()
+	hold_gauge()
+	track()
+	track_parries()
+	track_dodges()
+	var pacing = load(ERIC_PACING)
+	var hug: Node = sm.states["BearHug"]
+	var rush: float = pacing.value("hug_rush_time")
+	var old_reach: float = pacing.TABLE["hug_lunge_max_distance"][0]
+	var far_from := Vector2(300, 380)
+	var far_at := Vector2(1700, 880)
+	var arrivals := []
+	log_p("-- red from the far side of the ring, %.0f px away, where V1's lunge stopped at %.0f" % [far_from.distance_to(far_at), old_reach])
+	for answer in ["stand", "run", "parry"]:
+		var at: Vector2 = Vector2(1000, 500) if answer == "run" else far_at
+		var seen: Dictionary = await run_hug_at(false, far_from, at, answer)
+		arrivals.append(snappedf(seen.arrive - seen.rush, 0.001))
+		log_p("red, %s: rushed %.3f s from %s to %s, the player from %s to %s, live on the way %s, grabbed %s, now %s, events %s, parries %s" % [answer, seen.arrive - seen.rush, far_from, seen.to, at, seen.player_to, seen.live_early, seen.grabbed, seen.state, events.map(func(e): return "%s %s" % [e.kind, e.id]), parries.map(func(p): return p.id)])
+		check(seen.to.distance_to(far_from) > old_reach, "red, %s: he crossed the ring to them (%.0f px)" % [answer, seen.to.distance_to(far_from)])
+		check(not seen.live_early, "red, %s: his arms were harmless until he arrived" % answer)
+		if answer == "parry":
+			check(parries.size() == 1 and parries[0].id == &"eric_bear_hug_grab_v2" and parries[0].staggered and seen.state == "ParryStaggered", "red, parried just before it lands: it staggers him")
+			check(not player.is_grabbed and player.playerHealth == 100, "and the player is free and unhurt")
+		else:
+			check(seen.grabbed and events_of("HIT", &"eric_bear_hug_grab_v2").size() == 1, "red, %s: it reaches them and grabs" % answer)
+		if answer == "run":
+			check(seen.player_to.distance_to(at) > 100.0, "and they were on the move all the way (%.0f px)" % seen.player_to.distance_to(at))
+		await end_hug()
+
+	log_p("-- yellow from the far side")
+	for answer in ["stand", "dash"]:
+		var seen: Dictionary = await run_hug_at(true, far_from, far_at, answer)
+		arrivals.append(snappedf(seen.arrive - seen.rush, 0.001))
+		log_p("yellow, %s: rushed %.3f s to %s, live on the way %s, stumbled %s, events %s, dodges %s, health %d" % [answer, seen.arrive - seen.rush, seen.to, seen.live_early, seen.stumbled, events.map(func(e): return "%s %s" % [e.kind, e.id]), dodges.map(func(d): return d.id), player.playerHealth])
+		check(not seen.live_early and seen.to.distance_to(far_from) > old_reach, "yellow, %s: he crossed the ring to them, harmless on the way" % answer)
+		if answer == "stand":
+			check(events_of("HIT", &"eric_shoulder_charge").size() == 1 and player.playerHealth == 99 and not seen.grabbed, "yellow, standing: it lands, for 1, and holds no one")
+		else:
+			check(events_of("HIT").is_empty() and player.playerHealth == 100, "yellow, dashed just before it lands: it misses")
+			check(dodges.any(func(d): return d.id == &"eric_shoulder_charge"), "and the dash is a perfect dodge (%s)" % [dodges.map(func(d): return d.id)])
+		check(seen.stumbled, "yellow, %s: he stumbles, open to punches" % answer)
+		await end_hug()
+
+	log_p("-- red from close up")
+	var near: Dictionary = await run_hug_at(false, Vector2(900, 460), Vector2(960, 640), "stand")
+	arrivals.append(snappedf(near.arrive - near.rush, 0.001))
+	check(near.grabbed and not near.live_early, "from close up it grabs too, harmless until it lands")
+	await end_hug()
+	check(arrivals.all(func(a): return absf(a - rush) <= 2.0 * FRAME_TIME + 0.001), "every rush lands %.2f s after it starts, near or far (%s)" % [rush, arrivals])
+
+	log_p("-- flush against every rope and in every corner, from across the ring")
+	var area: Rect2 = load("res://Scripts/EricArtLayout.gd").PLAYER_AREA
+	var pushes := {
+		"the top-left corner": [KEY_LEFT, KEY_UP], "the left rope": [KEY_LEFT], "the bottom-left corner": [KEY_LEFT, KEY_DOWN],
+		"the top rope": [KEY_UP], "the bottom rope": [KEY_DOWN],
+		"the top-right corner": [KEY_RIGHT, KEY_UP], "the right rope": [KEY_RIGHT], "the bottom-right corner": [KEY_RIGHT, KEY_DOWN],
+	}
+	var steps := {KEY_LEFT: Vector2.LEFT, KEY_RIGHT: Vector2.RIGHT, KEY_UP: Vector2.UP, KEY_DOWN: Vector2.DOWN}
+	var missed := []
+	for where in pushes:
+		var keys: Array = pushes[where]
+		var out := Vector2.ZERO
+		for k in keys:
+			out += steps[k]
+		# A little way in from that edge of the floor, then walked into the ropes until they stop.
+		await settle_player(area.get_center() + out * (area.size / 2.0 - Vector2(80, 80)))
+		for k in keys:
+			press(k)
+		await wait(60)
+		for k in keys:
+			release(k)
+		await wait(4)
+		var spot: Vector2 = player.global_position
+		var from: Vector2 = (area.get_center() * 2.0 - spot).clamp(hug.RUSH_AREA.position, hug.RUSH_AREA.end)
+		var seen: Dictionary = await run_hug_at(false, from, spot, "stand")
+		log_p("%s: the player at %s, him from %s to %s, grabbed %s" % [where, spot, from, seen.to, seen.grabbed])
+		if not seen.grabbed:
+			missed.append("%s %s" % [where, spot])
+		await end_hug()
+	check(missed.is_empty(), "red holds them flush against every rope and in every corner (missed %s)" % [missed])
+
+
+# Runs one bear hug of the colour asked for, him from `from` at a player on `at`, and hands back what
+# it did: when the rush started and when it arrived, where he and the player were then, whether his
+# arms were live on the way, and how it ended. `answer`: "stand" still, "run" away from him the whole
+# way, or "parry" or "dash" just before it lands.
+func run_hug_at(yellow: bool, from: Vector2, at: Vector2, answer: String) -> Dictionary:
+	var hug: Node = sm.states["BearHug"]
+	var grab_area: Area2D = boss.get_node("GrabArea2D")
+	var hurtbox: Area2D = boss.get_node("Hurtbox")
+	sm.chain = []
+	sm.rest_timer.stop()
+	sm.downed_state_timer.stop()
+	boss.global_position = from
+	await settle_player(at)
+	events.clear()
+	parries.clear()
+	dodges.clear()
+	clear_iframes()
+	health_ok()
+	defense._set_stamina(defense.max_stamina)
+	defense.clear_dash_recovery()
+	# The fight's first hug is red; after two reds the next is yellow.
+	hug.hugs_started = 1 if yellow else 0
+	hug.recent_yellows.assign([false, false] if yellow else [])
+	var seen := {"rush": -1.0, "arrive": -1.0, "to": Vector2.INF, "player_to": Vector2.INF, "live_early": false, "grabbed": false, "stumbled": false, "state": ""}
+	var probe := func():
+		if sm.current_state != hug:
+			return
+		if hug.phase == hug.Phase.LUNGE:
+			if seen.rush < 0.0:
+				seen.rush = defense.clock
+			seen.live_early = seen.live_early or grab_area.monitoring
+		if seen.arrive < 0.0 and hug.phase == hug.Phase.CONTACT:
+			seen.arrive = defense.clock
+			seen.to = boss.global_position
+			seen.player_to = player.global_position
+	physics_frame.connect(probe)
+	var away: Array = []
+	if answer == "run":
+		away = [KEY_RIGHT if at.x >= from.x else KEY_LEFT, KEY_DOWN if at.y >= from.y else KEY_UP]
+	await process_frame
+	sm.on_child_transition(sm.current_state, "BearHug")
+	for k in away:
+		press(k)
+	if answer == "parry" or answer == "dash":
+		await wait_until(func(): return hug_lands_within(hug, 0.09), 400)
+		if answer == "parry":
+			press(KEY_SHIFT)
+		else:
+			tap(KEY_W)
+	await wait_until(func(): return player.is_grabbed or sm.current_state != hug or hug.phase == hug.Phase.STUMBLE, 400)
+	for k in away:
+		release(k)
+	seen.grabbed = player.is_grabbed
+	seen.state = str(sm.current_state.name)
+	if sm.current_state == hug and hug.phase == hug.Phase.STUMBLE:
+		await wait(2)
+		seen.stumbled = hug.phase == hug.Phase.STUMBLE and hurtbox.monitoring
+	physics_frame.disconnect(probe)
+	return seen
+
+
+# Takes him out of whatever a hug left him in, and gives the player back.
+func end_hug() -> void:
+	release(KEY_SHIFT)
+	sm.downed_state_timer.stop()
+	sm.on_child_transition(sm.current_state, "Idle")
+	await wait(30)
 
 
 # ---- the Break
@@ -6254,12 +6627,7 @@ func test_break_gauge() -> void:
 	health_ok()
 	await wait(40)
 	var before_break: float = gauge.value
-	defense.stamina = 20.0
-	defense.last_spend_time = defense.clock
-	press(KEY_SHIFT)
-	await past_window()
-	front_hit(&"eric_quake_wave_v2", dummy_source())
-	release(KEY_SHIFT)
+	await break_guard(&"eric_quake_wave_v2")
 	check(defense.is_guard_broken and gauge.value == before_break - 35.0, "a guard break: -35 (%.0f -> %.0f)" % [before_break, gauge.value])
 	defense.clear_guard_break()
 	clear_iframes()
@@ -6275,12 +6643,7 @@ func test_break_gauge() -> void:
 	await wait(45)
 
 	log_p("-- it stops at 0 and never decays")
-	defense.stamina = 20.0
-	defense.last_spend_time = defense.clock
-	press(KEY_SHIFT)
-	await past_window()
-	front_hit(&"eric_quake_wave_v2", dummy_source())
-	release(KEY_SHIFT)
+	await break_guard(&"eric_quake_wave_v2")
 	defense.clear_guard_break()
 	clear_iframes()
 	check(gauge.value == 0.0, "a second guard break takes it to 0, not under (%.0f)" % gauge.value)
@@ -6426,6 +6789,11 @@ func test_break_entry() -> void:
 			sm.chain = ["Earthquake", "Earthquake"]
 			sm.rest_timer.start(1.0)
 			sm.state_after_rest = "Earthquake"
+		elif case[0] == "the hug's stumble":
+			# The yellow charge ends in the stumble whether it lands or not. Nowhere in the ring is out of
+			# the red grab's reach, so a red one would hold them instead.
+			hug.hugs_started = 1
+			hug.recent_yellows.assign([false, false])
 		sm.on_child_transition(sm.current_state, case[1])
 		if case[0] == "the slam, held before impact":
 			quake.delayed_slam = quake.slams_left
@@ -6744,6 +7112,13 @@ func test_mash_tiers() -> void:
 		var margins := []
 		for frames in [TIER_PASS_FRAMES[bar], TIER_PASS_FRAMES[bar] + 1]:
 			var run: Dictionary = model_mash(finisher, frames, 0, -1, open_windows)
+			# MashCurve's top can hold a rate short of a bar for good. For the fail that is as clear of the
+			# window as it gets; for the pass it is a miss.
+			if run.banked_at.size() <= bar:
+				var failing: bool = frames != TIER_PASS_FRAMES[bar]
+				margins.append(INF if failing else -INF)
+				log_p("bar %d, every %d frames: never fills, held short of its top" % [bar + 1, frames])
+				continue
 			var from: float = run.banked_at[bar - 1] if bar > 0 else 0.0
 			var fill: float = run.banked_at[bar] - from
 			var interval: float = frames / 60.0
@@ -6801,7 +7176,8 @@ func test_mash_tiers_live() -> void:
 	for i in 12:
 		tap(KEY_LEFT)
 		await wait(5)
-	check(finisher.meter <= finisher.tier_gain + 0.001 and banks.is_empty(), "twelve lefts are one press (%.2f)" % finisher.meter)
+	var one_press: float = load("res://Scripts/MashCurve.gd").gain(finisher.tier_gain, 0.0)
+	check(finisher.meter <= one_press + 0.001 and banks.is_empty(), "twelve lefts are one press (%.2f)" % finisher.meter)
 	await wait_until(func(): return finisher.phase == FINISHER_OFF, 400)
 	await wait(60)
 
@@ -6832,7 +7208,8 @@ func test_mash_tiers_live() -> void:
 	sm = boss.state_machine
 	finisher = player.get_node("Finisher")
 	player.playerHealth = 1000
-	await reset_gauged(GAUGE_FIGHTS["mason"].home)
+	use_gauge_spec("mason")
+	await reset_gauged(fight_spec.home)
 	sm.on_child_transition(sm.current_state, "Eat")
 	await wait(5)
 	stop_boss_timers()
@@ -6842,8 +7219,8 @@ func test_mash_tiers_live() -> void:
 	check(await wait_until(func(): return finisher.phase == FINISHER_DAZED, 120), "and reaches the daze")
 	check(not finisher.tiered, "from the eat window: the plain single-bar finisher")
 	await wait_until(func(): return finisher.phase == FINISHER_OFF, 400)
-	await reset_gauged(GAUGE_FIGHTS["mason"].home)
-	await settle_player(GAUGE_FIGHTS["mason"].home + Vector2(-320, 60))
+	await reset_gauged(fight_spec.home)
+	await settle_player(fight_spec.home + Vector2(-320, 60))
 	boss.break_gauge.add(boss.break_gauge.max_value)
 	check(await wait_until(func(): return sm.current_state.name == "Broken", 30), "and a Break")
 	await wait_until(func(): return not player.is_action_locked, 120)
@@ -7402,13 +7779,11 @@ func _bot_threat(profile: Dictionary, bot: Dictionary) -> String:
 		var eta := sweep_eta(sweep.global_position, state.lunge_velocity, state.phase_left, radii)
 		if eta >= 0.0 and eta <= 3.0 * FRAME_TIME and _bot_reads(profile, bot, "lunge%d" % state.lunges_left):
 			return "dash_up" if sweep_escape(state.lunge_velocity).y < 0.0 else "dash_down"
-	if state == sm.states["BearHug"] and state.phase == state.Phase.LUNGE:
-		var grab: CollisionShape2D = boss.get_node("GrabArea2D/CollisionShape2D")
-		var half: Vector2 = grab.shape.size * grab.global_scale.abs() / 2.0
-		var gap: float = (at - grab.global_position).abs().y - half.y - 27.0
+	if state == sm.states["BearHug"]:
 		var lead := 0.06 if state.yellow else 0.09
-		if gap < 1500.0 * lead and _bot_reads(profile, bot, "hug%d" % state.hugs_started):
+		if hug_lands_within(state, lead) and _bot_reads(profile, bot, "hug%d" % state.hugs_started):
 			if state.yellow:
+				var grab: CollisionShape2D = boss.get_node("GrabArea2D/CollisionShape2D")
 				return "dash_up" if at.y < grab.global_position.y else "dash_down"
 			return "parry"
 	return ""
@@ -7948,9 +8323,7 @@ func fight_state_machine() -> Node:
 # caller is the mode that tests it.
 func enter_fight(scene: String, keep_entrance := false) -> void:
 	root.get_node("GameProgress").reset_progress()
-	change_scene_to_file(scene)
-	while current_scene == null or current_scene.scene_file_path != scene:
-		await process_frame
+	await open_scene(scene)
 	await wait(3)
 	player = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
 	defense = player.get_node("Defense")
@@ -8185,16 +8558,43 @@ func test_entrance() -> void:
 	await wait(20)
 	check(not paused and not player.global_position.is_equal_approx(walked), "the resume carries it on from there")
 
+	# One hold takes all of it - the walk-in, his lines and their beats, and the card's build-up - and
+	# lands on the card's flash, where a watched entrance ends.
+	card = vs_card()
+	var card_art: GDScript = load(VS_CARD_LAYOUT)
 	press(KEY_ESCAPE)
-	check(await wait_until(func(): return intro.finished, 120), "a held Escape skipped it")
+	check(await wait_until(func(): return card.is_playing(), 120), "a held Escape skipped it, lines and all, to the card")
+	check(card.clock >= card_art.HOLD_END, "which it jumped to its flash")
 	release(KEY_ESCAPE)
 	await wait(4)
 	check(not pause.is_open() and not paused, "and never opened the pause screen")
+	check(live_balloon() == null, "and not one of his lines came up")
 	check(not gates.is_open() and not is_instance_valid(intro.planted), "the ring is set: gates shut, sword in his hands")
 	check(player.global_position.is_equal_approx(intro.player_home) and boss.global_position.is_equal_approx(intro.home), "both of them on their marks")
-	check(await wait_until(func(): return live_balloon() != null, 120), "and the lines started anyway")
+	check(boss.music_player.playing, "his theme is playing, as it is after the pull")
+	check(player.state_machine.is_processing() and player.is_talking, "the player has their state machine back, and the card has the hold")
+	await wait_until(func(): return not card.is_playing(), 60)
+	card.grace_until_msec = 0
+	check(await wait_until(func(): return not sm.post_dialogue_pre_fight_timer.is_stopped() or sm.current_state != intro, 180), "and the fight starts behind it")
+	check(not player.is_talking, "with the player free")
+
+	log_p("-- a second go at the same fight in the same run doesn't play it again")
+	change_scene_to_file(scene)
+	while current_scene == null or current_scene.scene_file_path != scene:
+		await process_frame
+	await wait(6)
+	player = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
+	boss = current_scene.get_node("Arena/EricBossScene/CharacterBody2D")
+	sm = boss.state_machine
+	gates = current_scene.get_node("Arena/Gates")
+	intro = entrance_state()
+	check(intro != null and intro.finished, "the entrance is already over on arrival")
+	check(not gates.is_open(), "and the ring was never opened")
+	check(await wait_until(func(): return live_balloon() != null, 120), "and his lines start straight away")
+	check(player.state_machine.is_processing(), "with the player's state machine running")
 
 	log_p("-- paused mid-line, the fight still starts")
+	pause = pause_menu()
 	await tap_pause()
 	check(pause.is_open(), "paused on a line")
 	await wait(60)
@@ -8215,460 +8615,117 @@ func test_entrance() -> void:
 	card.grace_until_msec = 0
 	check(await wait_until(func(): return not sm.post_dialogue_pre_fight_timer.is_stopped(), 180), "and the fight starts")
 
-	log_p("-- a second go at the same fight in the same run doesn't play it again")
+	log_p("-- on a second go the lines still play, and a held Escape still skips them to the card")
 	change_scene_to_file(scene)
 	while current_scene == null or current_scene.scene_file_path != scene:
 		await process_frame
 	await wait(6)
 	player = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
-	gates = current_scene.get_node("Arena/Gates")
-	intro = entrance_state()
-	check(intro != null and intro.finished, "the entrance is already over on arrival")
-	check(not gates.is_open(), "and the ring was never opened")
-	check(await wait_until(func(): return live_balloon() != null, 120), "and his lines start straight away")
-	check(player.state_machine.is_processing(), "with the player's state machine running")
+	card = vs_card()
+	check(await wait_until(func(): return live_balloon() != null, 120), "his first line is up")
+	press(KEY_ESCAPE)
+	check(await wait_until(func(): return card.is_playing(), 120), "a held Escape skipped the rest of them to the card")
+	check(card.clock >= card_art.HOLD_END, "at its flash")
+	release(KEY_ESCAPE)
+	await wait(4)
+	check(live_balloon() == null and not paused, "with the balloon gone and nothing paused")
 
 
-# ---- phase two
+# ------------------------------------------------------------------ the gauge, the Break and the juggle in every other fight
+# Everything above was written against Eric, the first fight with a Break gauge, and the modes above
+# hand over to these for any fight= but his. These read every expectation off the boss - his live
+# gauge's numbers, his get_max_health(), the finisher's shares of it - and off the fight's spec file,
+# never off Eric's literals. Adding a fight means one file, gauge_fights/<fight>.gd, and nothing here:
+#   const SPEC := {
+#     "body": his body's path under the fight scene,
+#     "home": where he is parked: somewhere he may stand, with room over his head for a juggle and
+#             beside him for the player,
+#     "light": one of his own attacks, parried, blocked and landed: it has to fill and drain,
+#     "strong": the one worth grab_parry_gain, or &"" for none,
+#     "foreign": an attack that isn't his at all,
+#     "punish_state": his ordinary punish window, where punches are measured,
+#     "broken_state": the state his Break puts him in, or "" for a fight whose Break window isn't one,
+#     "cycle_states": the states that mean his fight has started again once he is up,
+#     "defeated_state": the state he is beaten in,
+#     "reads_to_break": N on the rule "N clean reads from empty is a Break", 0 for a fight not on it,
+#     "art": his layout script,
+#     "juggle_via": "clip" for a BossJuggled, "animation_player" for one on his AnimationPlayer,
+#     "drives_player": whether his Break drives the player in beside him,
+#     "guard_break_attack": OPTIONAL, the blockable attack break_gauge breaks the guard with, for a
+#                           fight with nothing of its own a guard can take; without it, strong or light,
+#     "gauge_gains": OPTIONAL, false for a fight whose body credits his reads itself and leaves the
+#                    gauge's own gains at 0: break_gauge reads those gains, so it leaves him to extra(t),
+#   }
+# and, all optional, statics that are handed the harness as `t` (t.boss, t.sm, t.player, t.check(),
+# t.wait() and the rest). All may await but timer_roots and break_feet, which must return at once:
+#   park(t, home: Vector2)     puts him at home; without it, boss.global_position = home
+#   reset(t)                   whatever else reset_gauged() has to put back
+#   force_break(t)             breaks him; without it, his gauge is filled
+#   entry_cases(t) -> Array    break_entry's cases: [name, start: Callable, reached: Callable]
+#   timer_roots(t) -> Array    nodes whose Timers (themselves included) a Break must stop; without
+#                              it, his body, state machine and all
+#   break_feet(t) -> Vector2   his feet as his Break window stands him; without it, the broken
+#                              state's _feet()
+#   before_kill(t)             juggle_kill's own setup, with his health set and the prompt up
+#   after_kill(t)              juggle_kill's own checks, after the shared ones
+#   extra(t)                   the whole of mode gauge_extra, after a reset_gauged()
+const GAUGE_FIGHTS_DIR := "res://art_source/defense_tests/gauge_fights/"
+# Danny's own modes, one file each and owned by whoever built what it tests: extends RefCounted, one
+# `static func run(t)` taking this suite, explicit types.
+const DANNY_MODES := "res://art_source/defense_tests/danny/"
+# Greyson's, the same way.
+const GREYSON_MODES := "res://art_source/defense_tests/greyson/"
+# The ring's own modes, the same way: what keeps the player inside the ropes, across every fight.
+const RING_MODES := "res://art_source/defense_tests/ring/"
+# The longest the VS card may take to come up once a state intro is over.
+const VS_CARD_WAIT_FRAMES := 60
 
-# Eric with his sword already out of the ring and the cut skipped: the fight as it is from there.
-func load_eric_p2() -> void:
-	await load_eric_v2()
-	boss.enter_phase_two()
-	await wait(2)
-
-
-# His rage, set the way a chain sets it, so the phase-two numbers (EricPacing.p2) read at the end of
-# their range the test asks for. `ratio` is his health ratio: 0.5 is the moment the sword goes, 0 is
-# his last half-heart.
-func rage_at(ratio: float) -> void:
-	sm.rage = clampf(1.0 - ratio, 0.0, 1.0)
-
-
-# Puts the next mixup's colour where the test wants it, the way test_hug_mixup does with the hug's.
-func next_mixup(yellow: bool) -> void:
-	var mixup: Node = sm.states["P2Mixup"]
-	if yellow:
-		# Two reds in a row: the next one must be yellow.
-		mixup.mixups_started = 1
-		mixup.recent_yellows.assign([false, false])
-	else:
-		# The fight's first mixup is always red.
-		mixup.mixups_started = 0
-		mixup.recent_yellows.clear()
-
-
-# Starts a mixup of the colour asked for, from Idle, with his rage left where the caller set it.
-func start_mixup(yellow: bool) -> void:
-	next_mixup(yellow)
-	sm.chain = []
-	sm.rest_timer.stop()
-	sm.downed_state_timer.stop()
-	await process_frame
-	var rage: float = sm.rage
-	sm.on_child_transition(sm.current_state, "P2Mixup")
-	sm.rage = rage
-
-
-# Runs one mixup through and hands back what it looked like: its colour, its badge, when the wind-up
-# started, when the rush started and when his arms arrived.
-func run_mixup(yellow: bool) -> Dictionary:
-	var mixup: Node = sm.states["P2Mixup"]
-	var seen := {"windup": -1.0, "rush": -1.0, "contact": -1.0, "look": "", "id": &"", "yellow": false}
-	var probe := func():
-		if seen.windup < 0.0 and mixup.phase == mixup.Phase.WINDUP:
-			seen.windup = defense.clock
-			seen.id = mixup.hit_id()
-			seen.yellow = mixup.yellow
-		var tell := tell_node()
-		if seen.look.is_empty() and tell != null:
-			seen.look = "yellow" if tell.dodge else ("strong red" if tell.strong else "red")
-		if seen.rush < 0.0 and mixup.phase == mixup.Phase.RUSH:
-			seen.rush = defense.clock
-		if seen.contact < 0.0 and mixup.phase == mixup.Phase.CONTACT:
-			seen.contact = defense.clock
-	physics_frame.connect(probe)
-	await start_mixup(yellow)
-	await wait_until(func(): return sm.current_state != mixup, 900)
-	physics_frame.disconnect(probe)
-	return seen
+# The fight's SPEC, and an instance of its file so has_method() can see which statics it has.
+var fight_spec := {}
+var fight_hooks: Object
 
 
-func settle_mixup() -> void:
-	await wait_until(func(): return not player.is_grabbed, 600)
-	sm.downed_state_timer.stop()
-	sm.rest_timer.stop()
-	sm.on_child_transition(sm.current_state, "Idle")
-	clear_iframes()
-	health_ok()
-	await wait(20)
+func use_gauge_spec(key_name: String) -> bool:
+	var path := GAUGE_FIGHTS_DIR + key_name + ".gd"
+	if not ResourceLoader.exists(path):
+		check(false, "%s has a gauge spec (%s)" % [key_name, path])
+		return false
+	var script: GDScript = load(path)
+	fight_spec = script.SPEC
+	fight_hooks = script.new()
+	return true
 
 
-# The transition itself: the latch, the cut, and what the cut refuses to be interrupted by.
-func test_phase_cut() -> void:
-	await load_eric_v2()
-	health_ok()
-	hold_gauge()
-	var pacing = load(ERIC_PACING)
-	var cut: Node = sm.states["PhaseTwo"]
-	var ratio: float = pacing.value("phase_two_health_ratio")
-
-	log_p("-- the latch")
-	check(not boss.phase_two and sm.attacks() == sm.PHASE_ONE_ATTACKS, "he starts the fight in phase one (%s)" % [sm.attacks()])
-	boss.boss_health = int(boss.max_health * ratio) - 1
-	await wait(2)
-	check(not boss.phase_two, "poking his health straight through the line does NOT latch it (%d of %d)" % [boss.boss_health, boss.max_health])
-	boss.boss_health = boss.max_health
-	boss.take_punch(boss.max_health - int(boss.max_health * ratio))
-	await wait(2)
-	check(boss.phase_two and boss.phase_two_pending, "a hit that takes him across %.0f%% does (%d of %d)" % [100.0 * ratio, boss.boss_health, boss.max_health])
-	check(sm.attacks() == sm.PHASE_TWO_ATTACKS and sm.attacks() == ["P2Mixup", "BarbaricLeap"], "and his attacks are phase two's (%s)" % [sm.attacks()])
-	var strong: Array = boss.break_gauge.strong_parry_ids
-	check(strong == [&"eric_p2_haymaker"], "the parry worth grab_parry_gain moves to the haymaker (%s)" % [strong])
-	boss.enter_phase_two()
-	check(boss.phase_two, "it is a one-way latch: entering again changes nothing")
-	check(not cut.has_method("finish_entrance"), "PhaseTwo has no finish_entrance(): skip_entrance() must keep finding the entrance")
-
-	log_p("-- the cut, at the start of the next chain")
-	await settle_player(Vector2(972, 800))
-	boss.break_gauge.locked = false
-	boss.break_gauge.value = boss.break_gauge.max_value - 1.0
-	sm.chain = []
-	sm.rest_timer.stop()
-	sm.downed_state_timer.stop()
-	sm.start_chain(0.0)
-	await wait(2)
-	check(sm.current_state == cut and not boss.phase_two_pending, "start_chain plays it instead of the chain (%s)" % sm.current_state.name)
-	check(boss.break_gauge.locked, "the Break gauge is locked for it")
-	check(cut.entered and is_instance_valid(cut.sword), "his sword is in the air, out of the ring")
-	check(not cut.sword.get_node("Hitbox").monitoring, "and it cannot touch anyone on the way")
-	check(player.is_talking, "the player is held through it")
-	sm.enter_broken()
-	sm.enter_juggled()
-	await wait(2)
-	check(sm.current_state == cut, "a Break and a juggle both bounce off it (%s)" % sm.current_state.name)
-
-	log_p("-- its lines, then phase two")
-	# The watchdog (guard_phase_cut) is already cutting it and reading the lines through, which is
-	# exactly how every other mode meets it.
-	var done: bool = await wait_until(func(): return cut.finished, 1800)
-	check(done and cut.dialogue_started, "the lines run and finish_phase() ends it")
-	check(not is_instance_valid(cut.sword), "the thrown sword is gone")
-	var ringside: Array = current_scene.find_children("EricRingsideSword", "Sprite2D", true, false)
-	check(ringside.size() == 1 and not ringside[0].is_in_group(sm.HAZARD_GROUP), "a sword is left standing ringside, out of the hazard group")
-	check(player.state_machine.is_processing() and not player.is_talking, "the player has themselves back")
-	var reached: bool = await wait_until(func(): return sm.attacks().has(sm.current_state.name), 600)
-	check(reached, "and he goes straight into a phase-two chain (%s)" % sm.current_state.name)
-	var sheet: String = str(boss.sprite.texture.resource_path).get_file()
-	check(sheet != "eric_sheet_v2.png", "he is drawn off his sworded sheet from here (%s)" % sheet)
-	cut.finish_phase()
-	check(current_scene.find_children("EricRingsideSword", "Sprite2D", true, false).size() == 1, "finish_phase() is idempotent")
+func has_hook(hook: String) -> bool:
+	return fight_hooks != null and fight_hooks.has_method(hook)
 
 
-# The mixup: the colours swapped over, one wind-up, and two contacts that land together so the timing
-# says nothing about which branch it is.
-func test_p2_mixup() -> void:
-	await load_eric_p2()
-	health_ok()
-	hold_gauge()
-	track()
-	track_parries()
-	track_dodges()
-	var pacing = load(ERIC_PACING)
-	var catalog = load("res://Scripts/AttackCatalog.gd")
-	var mixup: Node = sm.states["P2Mixup"]
-	var hurtbox: Area2D = boss.get_node("Hurtbox")
-	var entry: float = pacing.value("phase_two_health_ratio")
-
-	log_p("-- the catalogue: one answer each, and neither answers the other")
-	var red: Dictionary = catalog.get_attack(&"eric_p2_haymaker")
-	var yellow: Dictionary = catalog.get_attack(&"eric_p2_grab")
-	var crush: Dictionary = catalog.get_attack(&"eric_p2_crush")
-	check(red.parryable and red.parry_stagger and red.tell and not red.blockable and not red.dash_through and red.damage == 2, "eric_p2_haymaker: red, parry-only, staggers, 2 damage")
-	check(yellow.grab and yellow.dash_through and yellow.dodge_tell and not yellow.parryable and not yellow.blockable and yellow.damage == 0, "eric_p2_grab: yellow, dash-only, no parry, no range cutoff")
-	check(crush.bypass_invincibility and not crush.hype_loss and crush.damage == 1, "eric_p2_crush: 1 a tick, inside the i-frames, no hype lost")
-
-	log_p("-- the read's arithmetic, at both ends of his rage")
-	var travels := {}
-	for ratio in [entry, 0.0]:
-		for want_yellow in [false, true]:
-			boss.global_position = Vector2(500, 380)
-			await settle_player(Vector2(1500, 800))
-			rage_at(ratio)
-			player.is_invincible = true
-			var seen: Dictionary = await run_mixup(want_yellow)
-			var windup: float = seen.rush - seen.windup
-			var travel: float = seen.contact - seen.rush
-			travels["%.2f %s" % [ratio, "Y" if want_yellow else "R"]] = travel
-			var own: float = pacing.p2("p2_windup", 1.0 - ratio)
-			log_p("at %.0f%% health, %s: a %s wind-up of %.3f s (its own %.2f), then %.3f s of rush" % [100.0 * ratio, "yellow" if want_yellow else "red", seen.look, windup, own, travel])
-			check(seen.yellow == want_yellow and seen.id == (&"eric_p2_grab" if want_yellow else &"eric_p2_haymaker"), "the branch is the one asked for (%s)" % seen.id)
-			check(seen.look == ("yellow" if want_yellow else "strong red"), "red is the haymaker, yellow the grab - the colours swapped sides")
-			check(absf(windup - own) <= 2.0 * FRAME_TIME + 0.001 and own >= TELL_FLOORS["P2Mixup"] - 0.001, "its wind-up is %.2f s, at or over the %.2f s colour-read floor (%.3f)" % [own, TELL_FLOORS["P2Mixup"], windup])
-			await settle_mixup()
-	var nominal: float = pacing.value("p2_strike_travel")
-	log_p("travels %s (nominal %.2f)" % [travels, nominal])
-	for key in travels:
-		check(absf(travels[key] - nominal) <= 2.0 * FRAME_TIME + 0.001, "%s reaches the player %.2f s after the wind-up (%.3f)" % [key, nominal, travels[key]])
-	for ratio in [entry, 0.0]:
-		var r: float = travels["%.2f R" % ratio]
-		var y: float = travels["%.2f Y" % ratio]
-		check(r <= y + FRAME_TIME + 0.001, "at %.0f%% health the RED branch lands at or before the yellow one (%.3f vs %.3f), so the press that parries the haymaker is always at or before the grab's own contact and giving the dash's i-frames up for it is the choice" % [100.0 * ratio, r, y])
-	var immunity: float = float(roundi(catalog.DASH_IMMUNITY_TIME * 60.0)) / 60.0
-	var dash_window: float = immunity - pacing.value("p2_strike_hot")
-	log_p("the grab's arms stay open %.3f s, out of %.3f s of dash immunity: %.3f s to place the dash in" % [pacing.value("p2_strike_hot"), immunity, dash_window])
-	check(dash_window >= 0.10, "a dash answering the grab has at least 0.10 s to start in (%.3f)" % dash_window)
-
-	log_p("-- red: a parry staggers him, a held guard does not")
-	for answer in ["guard", "parry"]:
-		boss.global_position = Vector2(700, 380)
-		await settle_player(Vector2(1100, 800))
-		rage_at(entry)
-		events.clear()
-		parries.clear()
-		clear_iframes()
-		health_ok()
-		await start_mixup(false)
-		if answer == "guard":
-			press(KEY_SHIFT)
-			await past_window()
-		await wait_until(func(): return mixup.phase == mixup.Phase.RUSH, 300)
-		if answer == "parry":
-			await wait(roundi(pacing.value("p2_strike_travel") * 60.0) - 6)
-			press(KEY_SHIFT)
-		await wait_until(func(): return mixup.phase != mixup.Phase.RUSH, 120)
-		await wait(4)
-		release(KEY_SHIFT)
-		log_p("%s: events %s, parries %s, health %d, state %s" % [answer, events.map(func(e): return "%s %s" % [e.kind, e.id]), parries.map(func(p): return p.id), player.playerHealth, sm.current_state.name])
-		if answer == "guard":
-			check(events_of("HIT", &"eric_p2_haymaker").size() == 1 and parries.is_empty() and events_of("BLOCKED").is_empty() and player.playerHealth == 98, "red, held guard: it lands anyway, for 2")
-		else:
-			check(parries.size() == 1 and parries[0].id == &"eric_p2_haymaker" and parries[0].staggered and player.playerHealth == 100, "red, parried: negated, and it staggers him")
-			check(await wait_until(func(): return sm.current_state.name == "ParryStaggered", 20), "and he picks himself up where the mixup started")
-		await settle_mixup()
-
-	log_p("-- yellow: a dash goes through it and earns a perfect dodge, a held guard is grabbed")
-	for answer in ["guard", "dash"]:
-		boss.global_position = Vector2(700, 380)
-		await settle_player(Vector2(1100, 800))
-		rage_at(entry)
-		events.clear()
-		parries.clear()
-		dodges.clear()
-		clear_iframes()
-		health_ok()
-		defense._set_stamina(defense.max_stamina)
-		defense.clear_dash_recovery()
-		await start_mixup(true)
-		if answer == "guard":
-			press(KEY_SHIFT)
-		await wait_until(func(): return mixup.phase == mixup.Phase.RUSH, 300)
-		if answer == "dash":
-			# The dash has to cover the whole of the grab's contact window out of its own immunity.
-			await wait(roundi(pacing.value("p2_strike_travel") * 60.0) - 5)
-			press(KEY_UP)
-			tap(KEY_W)
-		else:
-			await past_window()
-		var grabbed: bool = await wait_until(func(): return player.is_grabbed, 60)
-		release(KEY_SHIFT)
-		release(KEY_UP)
-		log_p("%s: grabbed %s, events %s, dodges %s, health %d" % [answer, grabbed, events.map(func(e): return "%s %s" % [e.kind, e.id]), dodges.map(func(d): return d.id), player.playerHealth])
-		if answer == "guard":
-			check(grabbed and events_of("HIT", &"eric_p2_grab").size() == 1 and parries.is_empty(), "yellow, held guard: grabbed all the same")
-		else:
-			check(not grabbed and events_of("HIT").is_empty(), "yellow, dashed: it closes on nobody")
-			check(dodges.any(func(d): return d.id == &"eric_p2_grab"), "and it is a perfect dodge (%s)" % [dodges.map(func(d): return d.id)])
-			check(await wait_until(func(): return mixup.phase == mixup.Phase.STUMBLE and hurtbox.monitoring, 120), "and he stumbles, open to punches")
-		await settle_mixup()
-
-
-# The barbaric leap: five jumps at the player, a tremor from every landing, and never two landings
-# closer together than a dash can answer.
-func test_p2_leap() -> void:
-	await load_eric_p2()
-	health_ok()
-	hold_gauge()
-	track()
-	var pacing = load(ERIC_PACING)
-	var catalog = load("res://Scripts/AttackCatalog.gd")
-	var leap: Node = sm.states["BarbaricLeap"]
-	var hurtbox: Area2D = boss.get_node("Hurtbox")
-	var tremor: Dictionary = catalog.get_attack(&"eric_p2_tremor")
-	check(tremor.blockable and tremor.weight == catalog.Weight.LIGHT and tremor.dash_through and tremor.tell, "eric_p2_tremor: red, blocked light, and a dash beats it")
-
-	for ratio in [pacing.value("phase_two_health_ratio"), 0.0]:
-		boss.global_position = Vector2(500, 380)
-		await settle_player(Vector2(1400, 800))
-		rage_at(ratio)
-		player.is_invincible = true
-		var trace := []
-		var marks := []
-		var rings := []
-		var probe := func():
-			var mark = leap.mark
-			if is_instance_valid(mark) and (marks.is_empty() or marks[-1].mark != mark):
-				marks.append({"mark": mark, "commit_at": mark.commit_at, "air": leap.air_time, "committed": -1.0})
-			if not marks.is_empty() and is_instance_valid(marks[-1].mark) and marks[-1].committed < 0.0 and mark_committed(marks[-1].mark):
-				marks[-1].committed = defense.clock
-			trace.append({"t": defense.clock, "phase": leap.phase, "lift": boss.sprite.offset.y, "open": hurtbox.monitoring})
-			for ring in hazards_of("EricQuakeRingScript.gd"):
-				if not rings.any(func(r): return r.ring == ring):
-					rings.append({"ring": ring, "t": defense.clock, "id": ring.attack_id, "speed": ring.speed})
-		sm.chain = []
-		sm.rest_timer.stop()
-		sm.downed_state_timer.stop()
-		await process_frame
-		physics_frame.connect(probe)
-		var rage: float = sm.rage
-		sm.on_child_transition(sm.current_state, "BarbaricLeap")
-		sm.rage = rage
-		await wait_until(func(): return sm.current_state != leap, 2400)
-		physics_frame.disconnect(probe)
-		var landings := []
-		for i in range(1, trace.size()):
-			if trace[i].phase == leap.Phase.LAND and trace[i - 1].phase != leap.Phase.LAND:
-				landings.append(trace[i].t)
-		var gaps := []
-		for i in range(1, landings.size()):
-			gaps.append(snappedf(landings[i] - landings[i - 1], 0.001))
-		var floor_gap: float = catalog.DASH_IMMUNITY_COOLDOWN + pacing.value("p2_leap_dodge_lead")
-		var want_speed: float = pacing.p2("p2_tremor_speed", 1.0 - ratio)
-		log_p("at %.0f%% health: %d leaps, %d tremors, landing-to-landing %s (floor %.2f)" % [100.0 * ratio, landings.size(), rings.size(), gaps, floor_gap])
-		check(landings.size() == pacing.value("p2_leaps"), "%d leaps (%d)" % [pacing.value("p2_leaps"), landings.size()])
-		check(rings.size() == landings.size(), "one tremor from every landing (%d of %d)" % [rings.size(), landings.size()])
-		check(rings.all(func(r): return r.id == &"eric_p2_tremor" and absf(r.speed - want_speed) < 1.0), "every tremor is his, at %.0f px/s" % want_speed)
-		check(not gaps.is_empty() and gaps.all(func(g): return g >= floor_gap - 0.001), "no two landings closer than the dash cooldown plus its lead (%.2f s), so every tremor can be dashed" % floor_gap)
-		var airborne: Array = trace.filter(func(s): return s.phase == leap.Phase.AIR)
-		check(airborne.all(func(s): return not s.open) and airborne.any(func(s): return s.lift < trace[0].lift - 1.0), "he is off the mat and untouchable through the air")
-		var flat: Array = trace.filter(func(s): return s.phase == leap.Phase.LAND or s.phase == leap.Phase.REST)
-		check(flat.all(func(s): return absf(s.lift - trace[0].lift) < 0.001), "and back on his ground line the moment he lands")
-		var rest: Array = trace.filter(func(s): return s.phase == leap.Phase.REST)
-		var want_rest: float = pacing.p2("p2_leap_rest", 1.0 - ratio)
-		check(rest.size() > 0 and rest.all(func(s): return s.open) and absf(rest.size() * FRAME_TIME - want_rest) <= 2.0 * FRAME_TIME + 0.001, "then a %.2f s rest, open to punches (%.3f)" % [want_rest, rest.size() * FRAME_TIME])
-		var leads: Array = marks.map(func(m): return snappedf((1.0 - m.commit_at) * m.air, 0.001))
-		var measured := []
-		for i in mini(marks.size(), landings.size()):
-			if marks[i].committed >= 0.0:
-				measured.append(snappedf(landings[i] - marks[i].committed, 0.001))
-		log_p("marks %d, commit lead %s, measured commit-to-landing %s (parry window %.2f)" % [marks.size(), leads, measured, defense.parry_window])
-		check(marks.size() == landings.size(), "a floor marker for every leap (%d)" % marks.size())
-		check(leads.all(func(l): return absf(l - defense.parry_window) < 0.001), "its commit frame lights exactly a parry window before he touches down")
-		check(measured.size() == landings.size() and measured.all(func(m): return absf(m - defense.parry_window) <= 2.0 * FRAME_TIME + 0.001), "measured on the mark itself (%s)" % [measured])
-		clear_iframes()
-		health_ok()
-		sm.downed_state_timer.stop()
-		sm.on_child_transition(sm.current_state, "Idle")
-		await wait(20)
-
-
-# Whether a landing mark is showing its commit look, drawn art or placeholder rings.
-func mark_committed(mark: Node) -> bool:
-	if mark.sprite != null:
-		return mark.sprite.frame == mark.spec.commit_frame
-	return not mark.closing_ring.visible
-
-
-# The hold: the mash that gets them out, what it costs them if they don't, and that he always lets go.
-func test_p2_grab_escape() -> void:
-	await load_eric_p2()
-	health_ok()
-	hold_gauge()
-	track()
-	var pacing = load(ERIC_PACING)
-	var escape: Node = player.get_node("GrabEscape")
-	var layout = load("res://Scripts/FinisherArtLayout.gd")
-	var ticks: int = pacing.value("p2_crush_ticks")
-	# Real seconds gate the finisher's mash too, and a headless frame is far shorter than one. This
-	# presses on physics frames, so the interval that de-duplicates one input flush is switched off
-	# and the rate below is what the meter is actually measured against.
-	escape.min_press_interval = 0.0
-	check(escape.prompt_key == &"escape" and layout.PROMPT_WORDS.has(&"escape"), "the prompt is the alarm-red ESCAPE!, not the finisher's gold MASH!")
-	check(escape.mash_actions() == player.get_node("Finisher").mash_actions(), "on the same keys the finisher mashes (%s)" % [escape.mash_actions()])
-	var prompt: Node = current_scene.get_node("Arena/MainPlayer/CanvasLayer/EscapePrompt")
-	check(prompt != null and prompt.finisher == escape, "and it has its own prompt, wired to it")
-
-	for answer in ["mash", "still"]:
-		boss.global_position = Vector2(700, 380)
-		await settle_player(Vector2(1100, 800))
-		rage_at(pacing.value("phase_two_health_ratio"))
-		events.clear()
-		clear_iframes()
-		health_ok()
-		await hold_the_player()
-		check(escape.is_active() and prompt.visible, "%s: the hold starts the escape mash and puts its prompt up" % answer)
-		var keys := [KEY_LEFT, KEY_RIGHT]
-		var step := 0
-		var frames := 0
-		while player.is_grabbed and frames < 600:
-			if answer == "mash" and frames % 6 == 0:
-				tap(keys[step % 2])
-				step += 1
-			frames += 1
-			await physics_frame
-		await wait(2)
-		var crushes: int = events_of("HIT", &"eric_p2_crush").size()
-		log_p("%s: held %.2f s, %d crushes, escaped %s, health %d" % [answer, frames * FRAME_TIME, crushes, escape.escaped, player.playerHealth])
-		check(not player.is_grabbed, "%s: he always lets go" % answer)
-		check(not escape.is_active() and not prompt.visible, "%s: and the prompt goes with the hold" % answer)
-		if answer == "mash":
-			check(escape.escaped and crushes < ticks, "mashing at ten presses a second gets them out before the ticks run out (%d of %d)" % [crushes, ticks])
-		else:
-			check(not escape.escaped and crushes == ticks, "never mashing is crushed the full %d times and tossed anyway (%d)" % [ticks, crushes])
-		check(player.playerHealth == 100 - crushes, "%s: one half-heart a tick, %d in all" % [answer, crushes])
-		for k in keys:
-			release(k)
-		await settle_mixup()
-
-	log_p("-- the grab can kill: at three half-hearts and no mash it is the whole bar")
-	boss.global_position = Vector2(700, 380)
-	await settle_player(Vector2(1100, 800))
-	rage_at(pacing.value("phase_two_health_ratio"))
-	events.clear()
-	clear_iframes()
-	player.playerHealth = ticks
-	await hold_the_player()
-	await wait_until(func(): return player.playerHealth <= 0 or not player.is_grabbed, 600)
-	await wait(6)
-	log_p("at %d half-hearts: %d crushes, health %d, fight over %s" % [ticks, events_of("HIT", &"eric_p2_crush").size(), player.playerHealth, player.fight_over])
-	check(player.playerHealth == 0, "it kills them")
-	check(not player.is_grabbed, "and he still lets go")
-
-
-# Runs a yellow mixup on a player standing still, and waits for his arms to close on them.
-func hold_the_player() -> void:
-	await start_mixup(true)
-	await wait_until(func(): return player.is_grabbed, 300)
-	await wait(1)
-
-
-# ------------------------------------------------------------------ the gauge, the Break and the juggle in a second fight
-# Everything above was written against Eric, the only fight that had a Break gauge. Mason is the
-# second, with his own numbers, so these read every expectation off the boss - his BREAK table, his
-# get_max_health(), the finisher's shares of it - rather than off Eric's literals, and the modes above
-# hand over to them for any fight= but his. Adding a third fight means one row here.
-
-# Per fight: one of his own light attacks, the one worth grab_parry_gain, one that isn't his at all,
-# and the spot he is parked on. The spot has to be somewhere he is allowed to stand, with room over
-# his head for a juggle and room beside him for the player.
-const GAUGE_FIGHTS := {
-	"mason": {
-		"light": &"mason_poo_blast",
-		"strong": &"carter_elbow_drop",
-		"foreign": &"josh_card_throw",
-		"home": Vector2(960, 700),
-		"art": "res://Scripts/MasonArtLayout.gd",
-	},
-}
-
-
-func load_gauged() -> void:
+func load_gauged() -> bool:
+	if not use_gauge_spec(fight):
+		return false
 	await load_fight(fight, STATE_INTROS.has(fight))
 	await clear_intro(fight)
-	boss = current_scene.get_node(PUNISH_WINDOWS[fight][0])
+	# A fight whose intro is a state of its own comes out of it into the VS card, which load_fight()
+	# returned before it could skip, and which holds the player's presses.
+	if STATE_INTROS.has(fight):
+		await wait_until(func(): return vs_card() != null and vs_card().is_playing(), VS_CARD_WAIT_FRAMES)
+		await skip_vs_card()
+	boss = current_scene.get_node(fight_spec.body)
 	sm = boss.state_machine
-	# His fight goes on around these checks, and its bombs and nuggets would whittle the player down.
+	# His fight goes on around these checks, and its hazards would whittle the player down.
 	player.playerHealth = 1000
+	return true
+
+
+# For a bot or a sweep that reads a fight far more often than a player does, whose own counts a Break
+# in the middle of it would wreck: his gauge is pinned empty and can't break him for the rest of the
+# run. It is held from outside, so the gauge's rules in play are untouched. Nothing for a boss without one.
+func hold_break_gauge(target: Node) -> void:
+	if target == null or not ("break_gauge" in target) or target.break_gauge == null:
+		return
+	target.break_gauge.value = 0.0
+	target.break_gauge.locked = true
+	target.break_gauge.set_physics_process(false)
 
 
 # Every clock of his: the state machine's own, and the stagger the finisher starts.
@@ -8687,13 +8744,18 @@ func reset_gauged(home: Vector2) -> void:
 	for hazard in get_nodes_in_group(sm.HAZARD_GROUP):
 		hazard.queue_free()
 	player.unlock_actions()
-	boss.global_position = home
+	if has_hook("park"):
+		await fight_hooks.park(self, home)
+	else:
+		boss.global_position = home
 	boss.boss_health = boss.get_max_health()
 	if "phase_two" in boss:
 		boss.phase_two = false
 	boss.break_gauge.locked = false
 	boss.break_gauge.value = 0.0
 	boss.break_gauge.set_physics_process(true)
+	if has_hook("reset"):
+		await fight_hooks.reset(self)
 	clear_iframes()
 	player.playerHealth = 1000
 	await wait(20)
@@ -8704,7 +8766,16 @@ func live_tells() -> Array:
 	return current_scene.find_children("ParryTell*", "", true, false).filter(func(t): return not t.name.ends_with("Spent") and not t.is_queued_for_deletion())
 
 
-# A Break, the player driven in beside him, and the opener landed: the finisher's prompt is up.
+# His Break, however his fight takes one.
+func force_break() -> void:
+	if has_hook("force_break"):
+		await fight_hooks.force_break(self)
+	else:
+		boss.break_gauge.add(boss.break_gauge.max_value)
+
+
+# A Break, the player beside him (driven there, or put there for a fight that doesn't drive them), and
+# the opener landed: the finisher's prompt is up.
 func break_into_prompt_fight(spec: Dictionary) -> bool:
 	var finisher: Node = player.get_node("Finisher")
 	sm.on_child_transition(sm.current_state, "Idle")
@@ -8712,9 +8783,13 @@ func break_into_prompt_fight(spec: Dictionary) -> bool:
 	await settle_player(spec.home + Vector2(-320, 60))
 	boss.break_gauge.locked = false
 	boss.break_gauge.value = 0.0
-	boss.break_gauge.add(boss.break_gauge.max_value)
-	await wait_until(func(): return sm.current_state.name == "Broken", 30)
+	await force_break()
+	if not spec.broken_state.is_empty():
+		await wait_until(func(): return sm.current_state.name == spec.broken_state, 30)
 	await wait_until(func(): return not player.is_action_locked, 120)
+	if not spec.drives_player:
+		place_under(boss.get_finisher_hurtbox())
+		await wait(6)
 	for i in 3:
 		await swing()
 		if i < 2:
@@ -8723,9 +8798,17 @@ func break_into_prompt_fight(spec: Dictionary) -> bool:
 
 
 func test_break_gauge_fight() -> void:
-	await load_gauged()
-	var spec: Dictionary = GAUGE_FIGHTS[fight]
-	var numbers: Dictionary = boss.BREAK
+	if not await load_gauged():
+		return
+	var spec: Dictionary = fight_spec
+	if spec.broken_state.is_empty():
+		log_p("%s's Break window isn't a state of its own: its gauge_extra covers the gauge" % fight)
+		return
+	if not spec.get("gauge_gains", true):
+		log_p("%s's body credits his reads, not his gauge's own gains: its gauge_extra covers the gauge" % fight)
+		return
+	var broken_state: String = spec.broken_state
+	var strong: StringName = spec.get("strong", &"")
 	var gauge: Node = boss.break_gauge
 	check(gauge != null, "%s has a Break gauge" % fight)
 	if gauge == null:
@@ -8736,25 +8819,28 @@ func test_break_gauge_fight() -> void:
 	var bars: Array = boss.hud_layer.get_children().filter(func(c): return c.get_script() != null and str(c.get_script().resource_path).ends_with("BreakGaugeUI.gd"))
 	var ui: Control = bars[0] if bars.size() == 1 else null
 	var gauge_art: Dictionary = load("res://Scripts/EricArtLayout.gd").break_gauge()
-	log_p("his numbers %s, bar at %s" % [numbers, ui.position if ui else Vector2.ZERO])
+	log_p("his numbers: parry %s, strong parry %s, perfect dodge %s, punches %s and %s, hit %s, guard break %s, unlock %s s; bar at %s" % [gauge.parry_gain, gauge.grab_parry_gain, gauge.perfect_dodge_gain, gauge.punch_gain, gauge.charged_punch_gain, gauge.hit_loss, gauge.guard_break_loss, gauge.unlock_delay, ui.position if ui else Vector2.ZERO])
 	check(ui != null and ui.size == gauge_art.size and ui.position == boss.health_bar.break_gauge_anchor(), "a gauge bar hung under his health bar")
 	check(gauge.max_value == 100.0 and gauge.value == 0.0, "it holds 100 and starts empty")
 	await settle_player(Vector2(500, 700))
 
 	log_p("-- what fills it")
-	check(await parry_once(spec.light) == 3 and gauge.value == numbers.parry_gain, "a parry: %.0f (%.0f)" % [numbers.parry_gain, gauge.value])
+	# A light attack that is one of his strong parries too is worth what a strong parry is.
+	var light_gain: float = gauge.grab_parry_gain if spec.light in gauge.strong_parry_ids else gauge.parry_gain
+	check(await parry_once(spec.light) == 3 and is_equal_approx(gauge.value, light_gain), "a parry of %s: %.3f (%.3f)" % [spec.light, light_gain, gauge.value])
 	clear_iframes()
 	defense._set_stamina(defense.max_stamina)
 	await wait(40)
-	press(KEY_SHIFT)
-	await wait(3)
-	var strong := front_hit(spec.strong, dummy_source())
-	release(KEY_SHIFT)
-	check(strong == 3 and gauge.value == numbers.parry_gain + numbers.grab_parry_gain, "a parry of %s: %.0f (%.0f)" % [spec.strong, numbers.grab_parry_gain, gauge.value])
-	clear_iframes()
-	defense._set_stamina(defense.max_stamina)
-	await wait(40)
-	sm.on_child_transition(sm.current_state, PUNISH_WINDOWS[fight][1])
+	if not strong.is_empty():
+		press(KEY_SHIFT)
+		await wait(3)
+		var strong_parry := front_hit(strong, dummy_source())
+		release(KEY_SHIFT)
+		check(strong_parry == 3 and is_equal_approx(gauge.value, light_gain + gauge.grab_parry_gain), "a parry of %s: %.3f (%.3f)" % [strong, gauge.grab_parry_gain, gauge.value])
+		clear_iframes()
+		defense._set_stamina(defense.max_stamina)
+		await wait(40)
+	sm.on_child_transition(sm.current_state, spec.punish_state)
 	await wait(5)
 	stop_boss_timers()
 	boss.daze_used = true
@@ -8767,26 +8853,25 @@ func test_break_gauge_fight() -> void:
 		steps.append(gauge.value - before)
 		if i < 2:
 			await wait(6)
-	check(steps == [8.0, 8.0, 14.0], "punches that land: 8 each, 14 for the charged third (%s)" % [steps])
+	var want_steps := [gauge.punch_gain, gauge.punch_gain, gauge.charged_punch_gain]
+	check(steps.size() == 3 and range(3).all(func(k): return is_equal_approx(steps[k], want_steps[k])), "punches that land: %s each, %s for the charged third (%s)" % [gauge.punch_gain, gauge.charged_punch_gain, steps])
 
 	log_p("-- what drains it")
 	await reset_gauged(spec.home)
 	await settle_player(Vector2(500, 700))
-	gauge.value = numbers.guard_break_loss + numbers.hit_loss + 10.0
+	gauge.value = gauge.guard_break_loss + gauge.hit_loss + 10.0
 	var before_hit: float = gauge.value
 	front_hit(spec.light, dummy_source())
-	check(gauge.value == before_hit - numbers.hit_loss, "a hit: -%.0f (%.0f -> %.0f)" % [numbers.hit_loss, before_hit, gauge.value])
+	check(is_equal_approx(gauge.value, before_hit - gauge.hit_loss), "a hit: -%.3f (%.3f -> %.3f)" % [gauge.hit_loss, before_hit, gauge.value])
 	clear_iframes()
 	player.playerHealth = 1000
 	await wait(40)
 	var before_break: float = gauge.value
-	defense.stamina = 20.0
-	defense.last_spend_time = defense.clock
-	press(KEY_SHIFT)
-	await past_window()
-	front_hit(spec.strong, dummy_source())
-	release(KEY_SHIFT)
-	check(defense.is_guard_broken and gauge.value == before_break - numbers.guard_break_loss, "a guard break: -%.0f (%.0f -> %.0f)" % [numbers.guard_break_loss, before_break, gauge.value])
+	# With blocking, any block takes the last 20 stamina. A fight with nothing of its own a guard can take
+	# names someone else's (guard_break_attack): a guard break drains the gauge whoever's attack it was.
+	var breaker: StringName = spec.get("guard_break_attack", spec.light if strong.is_empty() else strong)
+	await break_guard(breaker)
+	check(defense.is_guard_broken and is_equal_approx(gauge.value, before_break - gauge.guard_break_loss), "a guard break: -%.3f (%.3f -> %.3f)" % [gauge.guard_break_loss, before_break, gauge.value])
 	defense.clear_guard_break()
 	clear_iframes()
 	player.playerHealth = 1000
@@ -8803,7 +8888,7 @@ func test_break_gauge_fight() -> void:
 	await wait(45)
 
 	log_p("-- it stops at 0 and never decays")
-	gauge.value = numbers.hit_loss - 1.0
+	gauge.value = gauge.hit_loss - 1.0
 	front_hit(spec.light, dummy_source())
 	clear_iframes()
 	player.playerHealth = 1000
@@ -8817,22 +8902,46 @@ func test_break_gauge_fight() -> void:
 	await settle_player(Vector2(640, 700))
 	var broke := [0]
 	gauge.broke.connect(func(): broke[0] += 1)
-	gauge.value = gauge.max_value - numbers.parry_gain
+	gauge.value = gauge.max_value - light_gain
 	check(await parry_once(spec.light) == 3, "the parry that fills it")
 	await wait(2)
 	log_p("gauge %.0f locked %s, state %s, broke %d" % [gauge.value, gauge.locked, sm.current_state.name, broke[0]])
-	check(broke[0] == 1 and gauge.value == 0.0 and gauge.locked and sm.current_state.name == "Broken", "breaks him, and it empties")
+	check(broke[0] == 1 and gauge.value == 0.0 and gauge.locked and sm.current_state.name == broken_state, "breaks him, and it empties")
 	await wait_until(func(): return not player.is_action_locked, 120)
 	clear_iframes()
 	await wait(40)
 	check(await parry_once(spec.light) == 3 and gauge.value == 0.0, "a parry now fills nothing (%.0f)" % gauge.value)
 
 	log_p("-- it fills again %.0f s after he is back up" % gauge.unlock_delay)
-	await wait_until(func(): return sm.current_state.name != "Broken", 400)
+	await wait_until(func(): return sm.current_state.name != broken_state, 400)
 	var got_up: float = defense.clock
 	await wait_until(func(): return not gauge.locked, 400)
 	var unlocked_after: float = defense.clock - got_up
 	check(absf(unlocked_after - gauge.unlock_delay) <= FRAME_TIME + 0.001, "%.1f s after he got up (%.3f)" % [gauge.unlock_delay, unlocked_after])
+
+	var reads: int = spec.reads_to_break
+	if reads > 0:
+		log_p("-- %d clean reads from empty break him, %d don't, and a hit between them costs one" % [reads, reads - 1])
+		var read_breaks := [0]
+		var count_read_break := func(): read_breaks[0] += 1
+		gauge.broke.connect(count_read_break)
+		await reset_gauged(spec.home)
+		for i in reads - 1:
+			gauge.add(gauge.parry_gain)
+		check(read_breaks[0] == 0, "%d reads leave him standing (%.6f)" % [reads - 1, gauge.value])
+		gauge.add(gauge.parry_gain)
+		check(read_breaks[0] == 1, "the %dth breaks him" % reads)
+		await wait(2)
+		await reset_gauged(spec.home)
+		for i in reads - 1:
+			gauge.add(gauge.parry_gain)
+		gauge.add(-gauge.hit_loss)
+		gauge.add(gauge.parry_gain)
+		check(read_breaks[0] == 1, "with a hit between them, %d reads leave him standing (%.6f)" % [reads, gauge.value])
+		gauge.add(gauge.parry_gain)
+		check(read_breaks[0] == 2, "and the %dth breaks him" % (reads + 1))
+		await wait(2)
+		gauge.broke.disconnect(count_read_break)
 
 	log_p("-- what can't break him")
 	await reset_gauged(spec.home)
@@ -8841,42 +8950,51 @@ func test_break_gauge_fight() -> void:
 	gauge.broke.connect(func(): breaks[0] += 1)
 	gauge.add(gauge.max_value)
 	await wait(2)
-	var time_left: float = sm.states["Broken"].time_left
+	var time_left: float = sm.states[broken_state].time_left
 	sm.enter_broken()
 	gauge.add(500.0)
 	await wait(2)
-	check(breaks[0] == 1 and sm.current_state.name == "Broken" and sm.states["Broken"].time_left < time_left, "Broken, he can't be broken again: the gauge takes nothing and his time runs on")
+	check(breaks[0] == 1 and sm.current_state.name == broken_state and sm.states[broken_state].time_left < time_left, "Broken, he can't be broken again: the gauge takes nothing and his time runs on")
 	sm.on_child_transition(sm.current_state, "Idle")
 	gauge.add(500.0)
 	await wait(2)
-	check(breaks[0] == 1 and sm.current_state.name != "Broken", "nor while the gauge waits to fill again")
+	check(breaks[0] == 1 and sm.current_state.name != broken_state, "nor while the gauge waits to fill again")
 	boss.boss_health = 0
 	await wait(3)
 	gauge.locked = false
 	gauge.add(500.0)
 	await wait(2)
-	check(sm.current_state.name != "Broken", "nor once he is beaten (%s)" % sm.current_state.name)
+	check(sm.current_state.name != broken_state, "nor once he is beaten (%s)" % sm.current_state.name)
 
 
-# A Break from inside each of his attacks, his windows and the gap between them. Mason's own table,
-# not Eric's: the squat is the case that matters, because MasonPooSquat has no Exit() and its squat
-# timer drops a bomb whether or not he is still standing over it.
+# The Timers a Break has to leave stopped: the spec's timer_roots(t), each root counted too, or
+# everything under his body, which is where every fight keeps its clocks, his state machine included.
+func break_timers() -> Array:
+	var roots: Array = fight_hooks.timer_roots(self) if has_hook("timer_roots") else [boss]
+	var timers := []
+	for root_node in roots:
+		if root_node is Timer:
+			timers.append(root_node)
+		timers.append_array(root_node.find_children("*", "Timer", true, false))
+	return timers
+
+
+# A Break from inside each of his attacks, his windows and the gap between them: the spec's own table
+# (entry_cases). Mason's is the first: the squat is the case that matters there, because
+# MasonPooSquat's Exit() leaves its squat timer running, and that timer drops a bomb whether or not he
+# is still standing over it.
 func test_break_entry_fight() -> void:
-	await load_gauged()
-	var spec: Dictionary = GAUGE_FIGHTS[fight]
+	if not await load_gauged():
+		return
+	var spec: Dictionary = fight_spec
+	if spec.broken_state.is_empty():
+		log_p("%s's Break window isn't a state of its own: its gauge_extra covers the Break" % fight)
+		return
+	if not has_hook("entry_cases"):
+		check(false, "gauge_fights/%s.gd has entry_cases(t)" % fight)
+		return
 	var gauge: Node = boss.break_gauge
-	var timers: Array = [sm.post_dialogue_pre_fight_timer, sm.squat_timer, sm.release_timer, sm.phone_timer, sm.eat_timer]
-	var cases := [
-		["the squat, before the bomb drops", func(): sm.start_cycle(), func(): return sm.current_state.name == "PooSquat" and not sm.squat_timer.is_stopped()],
-		["a line being laid", func(): sm.start_cycle(), func(): return sm.current_state.name == "Waddle" and sm.line_bombs.size() >= 2],
-		["a nugget shower in the sky", func(): sm.on_child_transition(sm.current_state, "NuggetShower"), func(): return hazards_of("NuggetMeteorScript.gd").size() >= 2],
-		["Carter's drop in the air", func(): sm.on_child_transition(sm.current_state, "CallCarter"), func():
-			var drops := hazards_of("CarterElbowDropScript.gd")
-			return not drops.is_empty() and drops[0].carter_sprite.visible],
-		["waiting for the delivery", func(): sm.on_child_transition(sm.current_state, "AwaitDelivery"), func(): return not hazards_of("UberDriverScript.gd").is_empty()],
-		["the eat window", func(): sm.on_child_transition(sm.current_state, "Eat"), func(): return sm.current_state.name == "Eat"],
-		["between two attacks", func(): sm.on_child_transition(sm.current_state, "Idle"), func(): return sm.current_state.name == "Idle"],
-	]
+	var cases: Array = await fight_hooks.entry_cases(self)
 	for case in cases:
 		await reset_gauged(spec.home)
 		await settle_player(OUT_OF_REACH)
@@ -8887,21 +9005,36 @@ func test_break_entry_fight() -> void:
 		await wait(2)
 		var left := live_hazards()
 		var tells := live_tells()
-		var running := timers.filter(func(t): return not t.is_stopped())
-		log_p("%s: reached %s, now %s, hazards left %d, tells %d, timers running %d" % [case[0], reached, sm.current_state.name, left.size(), tells.size(), running.size()])
-		check(reached and sm.current_state.name == "Broken", "%s: broken out of it" % case[0])
+		var running := break_timers().filter(func(t): return not t.is_stopped())
+		log_p("%s: reached %s, now %s, hazards left %d, tells %d, timers running %s" % [case[0], reached, sm.current_state.name, left.size(), tells.size(), running.map(func(t): return t.name)])
+		check(reached and sm.current_state.name == spec.broken_state, "%s: broken out of it" % case[0])
 		check(left.is_empty(), "%s: everything he sent out is gone (%s)" % [case[0], left.map(func(h): return h.name)])
 		check(tells.is_empty(), "%s: no parry badge survives" % case[0])
 		check(running.is_empty(), "%s: every one of his timers is stopped" % case[0])
-		check(await wait_until(func(): return sm.current_state.name == "PooSquat", 400), "%s: and his cycle starts again" % case[0])
+		var freed := await wait_until(func(): return not player.is_action_locked, 120)
+		check(freed and not player.lock_seals_guard and not player.scripted_pose and not player.is_posed(), "%s: the player is theirs again, not locked, sealed or posed" % case[0])
+		check(await wait_until(func(): return spec.cycle_states.has(str(sm.current_state.name)), 400), "%s: and his cycle starts again" % case[0])
+
+
+# His feet as his Break window stands him: the spec's break_feet(t), or else his broken state's
+# _feet(). null for a fight with neither.
+func break_feet() -> Variant:
+	if has_hook("break_feet"):
+		return fight_hooks.break_feet(self)
+	var broken: Node = null if fight_spec.broken_state.is_empty() else sm.states.get(fight_spec.broken_state)
+	if broken and broken.has_method("_feet"):
+		return broken._feet()
+	return null
 
 
 # Tier 3 from start to finish in a fight of its own, watched frame by frame.
 func test_juggle_fight() -> void:
-	await load_gauged()
-	var spec: Dictionary = GAUGE_FIGHTS[fight]
+	if not await load_gauged():
+		return
+	var spec: Dictionary = fight_spec
+	var by_clip: bool = spec.juggle_via == "clip"
 	var finisher: Node = player.get_node("Finisher")
-	var anim: AnimationPlayer = boss.get_node("AnimationPlayer")
+	var anim: AnimationPlayer = null if by_clip else boss.get_node("AnimationPlayer")
 	var art: GDScript = load(spec.art)
 	await reset_gauged(spec.home)
 	var juggled: Node = sm.states["Juggled"]
@@ -8911,10 +9044,20 @@ func test_juggle_fight() -> void:
 	for k in 3:
 		want.append(maxi(1, roundi(boss.get_max_health() * finisher.juggle_shares[k])))
 	var hits := []
-	finisher.juggle_hit.connect(func(index, last): hits.append({"t": defense.clock, "index": index, "last": last, "health": boss.boss_health}))
+	# As the first uppercut lands, with him just handed to Juggled: where his juggle sheet puts his feet
+	# against where his Break window stood him, which is what a wrong juggle offset gets wrong.
+	var launch := {}
+	finisher.juggle_hit.connect(func(index, last):
+		hits.append({"t": defense.clock, "index": index, "last": last, "health": boss.boss_health})
+		if index == 0:
+			launch["lift_scale"] = finisher.lift_scale
+			var stood: Variant = break_feet()
+			if juggled.has_method("feet_point") and stood != null:
+				launch["feet"] = juggled.feet_point().y
+				launch["stood"] = stood.y)
 	var trace := []
 	var watch := func():
-		trace.append({"t": defense.clock, "drawn": juggled.drawn_lift, "airborne": finisher.airborne, "phase": finisher.phase, "state": sm.current_state.name, "anim": anim.assigned_animation})
+		trace.append({"t": defense.clock, "drawn": juggled.drawn_lift, "airborne": finisher.airborne, "phase": finisher.phase, "state": sm.current_state.name, "anim": juggled.clip_name if by_clip else anim.assigned_animation})
 	physics_frame.connect(watch)
 	var health: int = boss.boss_health
 	await mash_tiered(5)
@@ -8929,6 +9072,11 @@ func test_juggle_fight() -> void:
 	check(hits.size() == 3 and hits[2].last, "three uppercuts, the third the last")
 	check(dealt == want, "%s of his %d, the finisher's shares of it (%s)" % [want, boss.get_max_health(), dealt])
 	check(not dealt.has(0), "and not one of them deals 0 (%s)" % [dealt])
+	if launch.has("feet"):
+		check(absf(launch.feet - launch.stood) <= 2.0, "his juggle sheet stands his feet where his Break window stood them (y %.1f against %.1f)" % [launch.feet, launch.stood])
+	else:
+		log_p("no juggle feet to hold to his Break window's: %s is not on BossJuggled, or the spec has no break_feet" % fight)
+	check(launch.get("lift_scale", 0.0) >= 0.49, "drawn at least half its height where he was Broken (lift scale %.2f)" % launch.get("lift_scale", 0.0))
 	var gaps := []
 	for k in range(1, hits.size()):
 		gaps.append(hits[k].t - hits[k - 1].t)
@@ -8940,18 +9088,28 @@ func test_juggle_fight() -> void:
 	var landed_at: Array = trace.filter(func(s): return s.phase == FINISHER_JUGGLE_FALL)
 	var crashed_at: Array = trace.filter(func(s): return s.t > last and not s.airborne and s.state == "Juggled")
 	check(not landed_at.is_empty() and not crashed_at.is_empty() and landed_at[0].t < crashed_at[0].t, "the player lands before he does")
-	check(trace.any(func(s): return s.anim == art.juggle().crash), "he crashes")
-	check(await wait_until(func(): return sm.current_state.name == "PooSquat", 400), "then he gets up and his cycle starts again")
+	var crash: StringName = &"crash" if by_clip else art.juggle().crash
+	check(trace.any(func(s): return s.anim == crash), "he crashes")
+	check(await wait_until(func(): return spec.cycle_states.has(str(sm.current_state.name)), 400), "then he gets up and his cycle starts again")
+
+
+# The longest a fight may take from his defeat to its outro, and how long after that it is watched for
+# a second one.
+const OUTRO_WAIT_FRAMES := 240
+const OUTRO_SETTLE_FRAMES := 90
 
 
 # The uppercut numbered `tier` kills him: nothing follows, one outro, and his defeat once he has landed.
 func test_juggle_kill_fight() -> void:
-	await load_gauged()
-	var spec: Dictionary = GAUGE_FIGHTS[fight]
+	if not await load_gauged():
+		return
+	var spec: Dictionary = fight_spec
+	var by_clip: bool = spec.juggle_via == "clip"
 	var n := int(tier) if tier.is_valid_int() else 3
 	var finisher: Node = player.get_node("Finisher")
-	var anim: AnimationPlayer = boss.get_node("AnimationPlayer")
+	var anim: AnimationPlayer = null if by_clip else boss.get_node("AnimationPlayer")
 	var art: GDScript = load(spec.art)
+	var juggled: Node = sm.states["Juggled"]
 	await reset_gauged(spec.home)
 	check(await break_into_prompt_fight(spec), "a Break and the opener put up the prompt")
 	# Past the phase floor: under it the uppercuts after the one that reaches it deal nothing, which
@@ -8963,6 +9121,8 @@ func test_juggle_kill_fight() -> void:
 	for k in n - 1:
 		health += maxi(1, roundi(boss.get_max_health() * finisher.juggle_shares[k]))
 	boss.boss_health = health
+	if has_hook("before_kill"):
+		await fight_hooks.before_kill(self)
 	var hits := []
 	finisher.juggle_hit.connect(func(index, last): hits.append({"index": index, "last": last, "health": boss.boss_health, "at": boss.global_position}))
 	var states := []
@@ -8971,17 +9131,1297 @@ func test_juggle_kill_fight() -> void:
 			states.append(sm.current_state.name)
 	physics_frame.connect(watch)
 	await mash_tiered(5)
-	await wait_until(func(): return sm.current_state.name == "Defeated", 400)
-	var defeat_anim: String = anim.assigned_animation
-	await wait(90)
+	await wait_until(func(): return sm.current_state.name == spec.defeated_state, 400)
+	# A juggle drawn from clips leaves him on the juggle sheet's `down` loop, lingering past the state.
+	var defeat_anim: String = str(juggled.clip_name) if by_clip else anim.assigned_animation
+	var lying: bool = juggled.lingering if by_clip else true
+	var down: String = "down" if by_clip else str(art.juggle().down)
+	# Every outro started from here on, told apart by instance so a second beside the first still counts.
+	# A fight whose defeat plays out before its lines (Bixby lies, then coughs Liam up) starts its outro
+	# late, so the first is waited for, then the watch runs on for a second.
+	var outro_ids := {}
+	var watch_outros := func():
+		for c in root.get_children():
+			if c.get_script() != null and str(c.get_script().resource_path).ends_with("FightOutro.gd"):
+				outro_ids[c.get_instance_id()] = true
+	physics_frame.connect(watch_outros)
+	await wait_until(func(): return not outro_ids.is_empty(), OUTRO_WAIT_FRAMES)
+	await wait(OUTRO_SETTLE_FRAMES)
+	physics_frame.disconnect(watch_outros)
 	physics_frame.disconnect(watch)
-	var outros: int = root.get_children().filter(func(c): return c.name == "FightOutro").size()
+	var outros: int = outro_ids.size()
 	var moved: float = hits[0].at.distance_to(boss.global_position) if not hits.is_empty() else -1.0
 	log_p("tier=%d from %d: hits %s, states %s, defeat anim %s, outros %d, moved %.1f px" % [n, health, hits.map(func(h): return [h.index, h.last, h.health]), states, defeat_anim, outros, moved])
 	check(hits.size() == n and hits[-1].health == 0 and hits[-1].last, "the uppercut numbered %d kills him, and none follows (%d)" % [n, hits.size()])
 	check(outros == 1, "one outro (%d)" % outros)
-	check(states.find("Juggled") >= 0 and states.find("Juggled") < states.find("Defeated") and defeat_anim == art.juggle().down, "he finishes his fall and crash, then lies there beaten (%s)" % [states])
+	check(states.find("Juggled") >= 0 and states.find("Juggled") < states.find(spec.defeated_state) and defeat_anim == down and lying, "he finishes his fall and crash, then lies there beaten (%s)" % [states])
 	check(moved >= 0.0 and moved < 1.0, "the killing uppercut doesn't shove him (%.1f px)" % moved)
+	if has_hook("after_kill"):
+		await fight_hooks.after_kill(self)
+
+
+# A fight's own checks on its gauge, its Break and its juggle, past what the shared modes can say: the
+# spec's extra(t), from a reset.
+func test_gauge_extra() -> void:
+	if not await load_gauged():
+		return
+	if not has_hook("extra"):
+		check(false, "gauge_fights/%s.gd has an extra(t)" % fight)
+		return
+	await reset_gauged(fight_spec.home)
+	await fight_hooks.extra(self)
+
+
+# ------------------------------------------------------------------ Captain Burak: his pistol pair and his cutlass string
+# On his fight with his next attack held off, the Laugh already had and his order pinned
+# (load_burak_attacks). His Break gauge is his own (BurakBossScript.BREAK): max 60, +30 a parried shot and
+# +20 a parried swing through his body's own Defense.parried connection, -20 a hit, never under 0.
+#   burak_shots    tier=parry|block|hit|carry|lock|phit, parry without one
+#   burak_cutlass  tier=walk|guard|dash|parry|mixed, walk without one
+const BURAK_BODY := "Arena/BurakBossScene/BurakBossCharacterBody"
+const BURAK_SEED := 20260923
+
+
+func load_burak_attacks(order: Array) -> void:
+	await load_fight("burak")
+	boss = current_scene.get_node(BURAK_BODY)
+	sm = boss.state_machine
+	sm.rng.seed = BURAK_SEED
+	sm.laugh_played = true
+	sm.ATTACK_ORDER.assign(order)
+	burak_park()
+	player.playerHealth = 1000
+
+
+# Idle, with his next attack held off: entering Idle starts the beat to it.
+func burak_park() -> void:
+	sm.on_child_transition(sm.current_state, "Idle")
+	stop_boss_timers()
+
+
+# Back at HOME and parked, an empty open gauge, the player fresh at `at` with every key up, and past the
+# parry's mash lockout.
+func burak_reset(at: Vector2) -> void:
+	burak_park()
+	boss.global_position = sm.HOME
+	boss.break_gauge.locked = false
+	boss.break_gauge.value = 0.0
+	for code in [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN, KEY_SHIFT]:
+		release(code)
+	await settle_player(at)
+	clear_iframes()
+	player.playerHealth = 1000
+	defense._set_stamina(defense.max_stamina)
+	await wait(40)
+	events.clear()
+	parries.clear()
+	dodges.clear()
+
+
+# By id: a lambda holding a ball itself errors once the ball frees.
+func burak_live(id: int) -> Node2D:
+	return instance_from_id(id) as Node2D if is_instance_id_valid(id) else null
+
+
+# Physics steps until a ball's circle reaches the player's hurtbox where it is now.
+func burak_steps_to_contact(ball: Node2D) -> float:
+	var rect := area_rect(player.hurtBox)
+	var at: Vector2 = ball.global_position
+	var gap: float = at.distance_to(at.clamp(rect.position, rect.end)) - ball.hit_radius
+	return gap / maxf(ball.speed * FRAME_TIME, 0.001)
+
+
+# One pistol pair, shot k answered as answers[k] says: "parry" a fresh press as it arrives, "block" a guard
+# raised as its aim starts and held to the end of the pair, "hit" nothing. `start` enters Shots, or else
+# waits for his cycle to. Returns every step's picture and each ball's flight to the point it was aimed at.
+func burak_run_shots(answers: Array, start := true) -> Dictionary:
+	var shots: Node = sm.states["Shots"]
+	var steps := []
+	var flights := []
+	var seen := {}
+	var watch := func():
+		steps.append({"beat": shots.beat, "fired": shots.fired, "tell": not live_tells().is_empty(), "pips": boss.pips.pips.size(), "state": str(sm.current_state.name)})
+		for ball in shots.balls:
+			if is_instance_valid(ball) and not seen.has(ball.get_instance_id()):
+				seen[ball.get_instance_id()] = true
+				var from: Vector2 = ball.global_position - ball.heading * ball.speed * ball.life
+				flights.append(from.distance_to(ball.target) / ball.speed)
+	if start:
+		sm.on_child_transition(sm.current_state, "Shots")
+	else:
+		await wait_until(func(): return sm.current_state == shots, 400)
+	physics_frame.connect(watch)
+	var guarding := false
+	for k in answers.size():
+		var aiming := func(): return sm.current_state != shots or (shots.beat == shots.Beat.AIM and shots.fired == k)
+		if not await wait_until(aiming, 400) or sm.current_state != shots:
+			break
+		if answers[k] == "block" and not guarding:
+			press(KEY_SHIFT)
+			guarding = true
+		await wait_until(func(): return sm.current_state != shots or shots.fired > k, 120)
+		if shots.balls.size() <= k:
+			break
+		var id: int = shots.balls[k].get_instance_id()
+		if answers[k] == "parry":
+			await wait_until(func(): return burak_live(id) == null or burak_steps_to_contact(burak_live(id)) <= 5.0, 120)
+			press(KEY_SHIFT)
+		await wait_until(func(): return burak_live(id) == null, 120)
+		if answers[k] == "parry":
+			release(KEY_SHIFT)
+	if guarding:
+		release(KEY_SHIFT)
+	await wait_until(func(): return sm.current_state != shots, 400)
+	physics_frame.disconnect(watch)
+	return {"steps": steps, "flights": flights}
+
+
+# Whatever the answers: the red badge up on every step from the load's start until the last release, with
+# its pips beside him, the releases recoil + aim_second apart, and no ball reaching the point it was aimed
+# at in under min_flight.
+func burak_check_pair(run: Dictionary) -> void:
+	var shots: Node = sm.states["Shots"]
+	var armed: Array = run.steps.filter(func(s): return s.state == "Shots" and s.beat != shots.Beat.RETURN and s.beat != shots.Beat.SETTLE and s.fired < shots.bullets)
+	check(not armed.is_empty() and armed.all(func(s): return s.tell), "the red badge is up on all %d steps from the load's start to the last release" % armed.size())
+	check(not armed.is_empty() and armed.all(func(s): return s.pips == shots.bullets), "with %d pips beside him" % shots.bullets)
+	var times: Array = shots.release_times
+	if times.size() == shots.bullets:
+		var gap: float = times[1] - times[0]
+		var want: float = shots.recoil + shots.aim_second
+		check(absf(gap - want) <= FRAME_TIME + 0.001, "the releases %.2f s apart, to the frame (%.4f)" % [want, gap])
+	var flights: Array = run.flights
+	check(flights.size() == times.size() and flights.all(func(f): return f >= shots.min_flight - 0.005), "every ball at least %.2f s from the point it was aimed at (%s)" % [shots.min_flight, flights.map(func(f): return snappedf(f, 0.001))])
+
+
+func burak_parries_of(id: StringName) -> int:
+	return parries.filter(func(p): return p.id == id).size()
+
+
+# The Cutlass's strike results, one by one: they are a typed Array[int].
+func burak_results_are(want: Array) -> bool:
+	var got: Array = sm.states["Cutlass"].results
+	return got.size() == want.size() and range(want.size()).all(func(i): return got[i] == want[i])
+
+
+func test_burak_shots() -> void:
+	await load_burak_attacks(["Shots"])
+	track()
+	track_parries()
+	var gauge: Node = boss.break_gauge
+	var values := []
+	gauge.changed.connect(func(value, _max_value): values.append(value))
+	var breaks := [0]
+	gauge.broke.connect(func(): breaks[0] += 1)
+	var shots: Node = sm.states["Shots"]
+	await burak_reset(Vector2(960, 800))
+	var answer := "parry" if tier == "normal" else tier
+	match answer:
+		"parry":
+			log_p("-- both shots parried: the first fills 30, the second 60 and breaks him")
+			var run := await burak_run_shots(["parry", "parry"])
+			var broken := await wait_until(func(): return sm.current_state.name == "Broken", 30)
+			log_p("parries %d, events %s, gauge %s, Breaks %d, now %s" % [burak_parries_of(&"burak_shot"), events.map(func(e): return e.kind), values, breaks[0], sm.current_state.name])
+			burak_check_pair(run)
+			check(burak_parries_of(&"burak_shot") == 2 and shots.parries == 2 and events.is_empty() and player.playerHealth == 1000, "2 PARRIED, and nothing landed")
+			check(not values.is_empty() and values[0] == 30.0 and breaks[0] == 1 and broken, "the gauge 30, then 60 breaks him (%s)" % [values])
+		"block":
+			log_p("-- a held guard: %s" % ("both BLOCKED for 20 stamina each, and the gauge never moves" if blocking() else "no answer without blocking, so both land"))
+			var run := await burak_run_shots(["block", "block"])
+			var blocks := events_of("BLOCKED", &"burak_shot")
+			log_p("blocks %s, parries %d, gauge %s" % [blocks.map(func(b): return b.stamina), parries.size(), values])
+			burak_check_pair(run)
+			if blocking():
+				check(blocks.size() == 2 and is_equal_approx(blocks[-1].stamina, defense.max_stamina - 40.0) and events_of("HIT").is_empty() and parries.is_empty(), "2 BLOCKED, -40 stamina")
+			else:
+				check(events_of("HIT", &"burak_shot").size() == 2 and player.playerHealth == 998 and blocks.is_empty() and parries.is_empty() and defense.stamina == defense.max_stamina, "2 HITs through the held guard, a half-heart each, and no stamina spent")
+			check(values.is_empty() and gauge.value == 0.0 and breaks[0] == 0, "and the gauge stays 0")
+		"hit":
+			log_p("-- no answer: both land for half a heart, and each drains 20 from 30: 10, then 0, not under")
+			gauge.add(30.0)
+			values.clear()
+			var run := await burak_run_shots(["hit", "hit"])
+			log_p("hits %d, health %d, gauge %s" % [events_of("HIT", &"burak_shot").size(), player.playerHealth, values])
+			burak_check_pair(run)
+			check(events_of("HIT", &"burak_shot").size() == 2 and player.playerHealth == 998 and parries.is_empty() and events_of("BLOCKED").is_empty(), "2 HITs, a half-heart each")
+			check(values == [10.0, 0.0] and gauge.value == 0.0 and breaks[0] == 0, "the gauge 10, then 0 (%s)" % [values])
+		"carry":
+			log_p("-- 40 carried in: the first parry breaks him, and the second shot never comes")
+			gauge.add(40.0)
+			values.clear()
+			var run := await burak_run_shots(["parry", "parry"])
+			var broken := await wait_until(func(): return sm.current_state.name == "Broken", 30)
+			await wait(60)
+			log_p("released %d, balls %d, parries %d, Breaks %d, now %s" % [shots.release_times.size(), shots.balls.size(), parries.size(), breaks[0], sm.current_state.name])
+			burak_check_pair(run)
+			check(broken and breaks[0] == 1 and burak_parries_of(&"burak_shot") == 1, "the first parry breaks him: 40 + 30")
+			check(shots.release_times.size() == 1 and shots.balls.size() == 1 and sm.current_state.name == "Broken", "and the second shot never fires")
+		"lock":
+			log_p("-- a locked gauge holds Idle; once it opens the pair comes, and a parry in it counts")
+			gauge.locked = true
+			gauge.unlock_left = gauge.unlock_delay
+			var clocks := {"unlocked": -1.0, "shots": -1.0}
+			var start: float = defense.clock
+			var watch := func():
+				if clocks.unlocked < 0.0 and not gauge.locked:
+					clocks.unlocked = defense.clock
+				if clocks.shots < 0.0 and sm.current_state == shots:
+					clocks.shots = defense.clock
+			physics_frame.connect(watch)
+			sm.on_child_transition(sm.current_state, "Idle")
+			var came := await wait_until(func(): return sm.current_state == shots, 400)
+			physics_frame.disconnect(watch)
+			log_p("the gauge opened %.3f s in, the pair came %.3f s in (Idle's own beat %.2f s)" % [clocks.unlocked - start, clocks.shots - start, sm.idle_beat])
+			check(came and clocks.unlocked > 0.0 and clocks.shots >= clocks.unlocked and clocks.shots - start > sm.idle_beat + FRAME_TIME, "Idle held the pair past its beat until the gauge opened")
+			var run := await burak_run_shots(["parry", "block"], false)
+			burak_check_pair(run)
+			# Without blocking the held guard is no answer, so the second shot lands and drains its 20.
+			var credited: Array = [30.0] if blocking() else [30.0, 10.0]
+			check(burak_parries_of(&"burak_shot") == 1 and values == credited and breaks[0] == 0, "and the parry is credited (%s)" % [values])
+		"phit":
+			log_p("-- parry, hit, then the next pair's parry: 30, 10, 40, and no Break (C1)")
+			await burak_run_shots(["parry", "hit"])
+			await burak_run_shots(["parry", "block"], false)
+			log_p("gauge %s, Breaks %d" % [values, breaks[0]])
+			# Without blocking the last shot lands through the held guard and drains its 20 as well.
+			var path: Array = [30.0, 10.0, 40.0] if blocking() else [30.0, 10.0, 40.0, 20.0]
+			check(values == path and gauge.value == path[-1] and breaks[0] == 0, "the gauge goes %s and never breaks him (%s)" % [path, values])
+		_:
+			check(false, "burak_shots has no tier %s" % tier)
+
+
+# One cutlass string from HOME, swing k answered as answers[k] says: "walk" a diagonal held away from him
+# the whole string, "guard" block held the whole string, "dash" a dash straight up two steps before the
+# strike, "parry" a block press two steps before it. Returns every step's picture.
+func burak_run_cutlass(answers: Array) -> Array:
+	var cutlass: Node = sm.states["Cutlass"]
+	var steps := []
+	var watch := func():
+		steps.append({"beat": cutlass.beat, "swing": cutlass.swing, "tell": not live_tells().is_empty(), "state": str(sm.current_state.name)})
+	var held := []
+	if answers.has("walk"):
+		held = [KEY_LEFT, KEY_DOWN]
+	elif answers.has("guard"):
+		held = [KEY_SHIFT]
+	for code in held:
+		press(code)
+	sm.on_child_transition(sm.current_state, "Cutlass")
+	physics_frame.connect(watch)
+	for k in answers.size():
+		if answers[k] != "dash" and answers[k] != "parry":
+			continue
+		var due := func(): return sm.current_state != cutlass or (cutlass.beat == cutlass.Beat.WINDUP and cutlass.swing == k and cutlass.beat_clock >= cutlass.windup - 2.0 * FRAME_TIME - 0.0001)
+		if not await wait_until(due, 400) or sm.current_state != cutlass:
+			break
+		var key := KEY_SHIFT
+		if answers[k] == "dash":
+			key = KEY_UP
+			press(KEY_UP)
+			tap(KEY_W)
+		else:
+			press(KEY_SHIFT)
+		await wait_until(func(): return sm.current_state != cutlass or cutlass.results.size() > k, 30)
+		release(key)
+	await wait_until(func(): return sm.current_state != cutlass, 600)
+	for code in held:
+		release(code)
+	physics_frame.disconnect(watch)
+	return steps
+
+
+# Whatever the answers: strikes at least follow + reaim_min + windup apart, each wind-up under its own red
+# badge for the whole of it, and no badge anywhere else in the string.
+func burak_check_string(steps: Array) -> void:
+	var cutlass: Node = sm.states["Cutlass"]
+	var times: Array = cutlass.strike_times
+	var gaps := []
+	for i in range(1, times.size()):
+		gaps.append(times[i] - times[i - 1])
+	var least: float = cutlass.follow + cutlass.reaim_min + cutlass.windup
+	check(gaps.all(func(g): return g >= least - FRAME_TIME - 0.001), "strikes at least %.2f s apart (%s)" % [least, gaps.map(func(g): return snappedf(g, 0.001))])
+	var mine: Array = steps.filter(func(s): return s.state == "Cutlass")
+	for k in times.size():
+		var up: Array = mine.filter(func(s): return s.beat == cutlass.Beat.WINDUP and s.swing == k)
+		check(not up.is_empty() and up.all(func(s): return s.tell) and absf(up.size() * FRAME_TIME - cutlass.windup) <= 2.0 * FRAME_TIME + 0.001, "swing %d's wind-up under its own red badge the whole %.2f s (%d steps)" % [k, cutlass.windup, up.size()])
+	check(mine.filter(func(s): return s.beat != cutlass.Beat.WINDUP).all(func(s): return not s.tell), "and no badge anywhere else in the string")
+
+
+# The chase from eight starts round his floor on a player fleeing diagonally away from him the whole time:
+# he gets to his spot beside them and winds up inside chase_max every time.
+func burak_chase_sweep() -> void:
+	var cutlass: Node = sm.states["Cutlass"]
+	var walk: Rect2 = sm.WALK_RECT.grow(-20.0)
+	var mid := walk.get_center()
+	var starts := [walk.position, Vector2(mid.x, walk.position.y), Vector2(walk.end.x, walk.position.y), Vector2(walk.end.x, mid.y),
+		walk.end, Vector2(mid.x, walk.end.y), Vector2(walk.position.x, walk.end.y), Vector2(walk.position.x, mid.y)]
+	var took := []
+	for from: Vector2 in starts:
+		await burak_reset(Vector2(960, 640))
+		boss.global_position = from
+		var keys := [KEY_LEFT if player.global_position.x < from.x else KEY_RIGHT, KEY_UP if player.global_position.y < from.y else KEY_DOWN]
+		for code in keys:
+			press(code)
+		var start: float = defense.clock
+		sm.on_child_transition(sm.current_state, "Cutlass")
+		await wait_until(func(): return cutlass.beat == cutlass.Beat.WINDUP or sm.current_state != cutlass, 240)
+		took.append(defense.clock - start if sm.current_state == cutlass and cutlass.beat == cutlass.Beat.WINDUP else INF)
+		for code in keys:
+			release(code)
+		burak_park()
+	log_p("the chase from %s reached its first wind-up in %s s" % [starts, took.map(func(t): return snappedf(t, 0.01))])
+	check(took.all(func(t): return t <= cutlass.chase_max), "it catches a fleeing diagonal walker from all %d starts inside %.1f s" % [starts.size(), cutlass.chase_max])
+
+
+func test_burak_cutlass() -> void:
+	await load_burak_attacks(["Cutlass"])
+	track()
+	track_parries()
+	track_dodges()
+	var gauge: Node = boss.break_gauge
+	var values := []
+	gauge.changed.connect(func(value, _max_value): values.append(value))
+	var breaks := [0]
+	gauge.broke.connect(func(): breaks[0] += 1)
+	var cutlass: Node = sm.states["Cutlass"]
+	var slash_script: GDScript = load("res://Scripts/BurakBossSlashScript.gd")
+	var boxes: Array = load("res://Scripts/BurakBossArtLayout.gd").SLASH_BOXES
+	check(boxes.size() == 3 and boxes.all(func(b): return slash_script.reaches(b)), "every SLASH_BOX overlaps %s, which every player position at a strike covers (%s)" % [slash_script.REACH, boxes])
+	var hit: int = load("res://Scripts/HitInfo.gd").Result.HIT
+	var parried: int = load("res://Scripts/HitInfo.gd").Result.PARRIED
+	var dodged: int = load("res://Scripts/HitInfo.gd").Result.DODGED
+	var answer := "walk" if tier == "normal" else tier
+	match answer:
+		"walk", "guard":
+			if answer == "walk":
+				await burak_chase_sweep()
+			await burak_reset(Vector2(700, 800))
+			log_p("-- %s: there is no getting out of it, all three swings land" % ("walking away" if answer == "walk" else "a held guard"))
+			var steps := await burak_run_cutlass([answer, answer, answer])
+			log_p("results %s, hits %d, health %d, now at %s" % [cutlass.results, events_of("HIT", &"burak_cutlass").size(), player.playerHealth, player.global_position])
+			burak_check_string(steps)
+			check(burak_results_are([hit, hit, hit]) and events_of("HIT", &"burak_cutlass").size() == 3 and player.playerHealth == 997 and parries.is_empty() and events_of("BLOCKED").is_empty(), "3 HITs, a half-heart each")
+		"dash":
+			await burak_reset(Vector2(700, 850))
+			await fresh_dash_ready()
+			log_p("-- a dash two steps before each strike: all three DODGED, nothing landed, nothing credited")
+			var steps := await burak_run_cutlass(["dash", "dash", "dash"])
+			log_p("results %s, perfect dodges %d, stamina %.0f, health %d, gauge %.0f" % [cutlass.results, dodges.size(), defense.stamina, player.playerHealth, gauge.value])
+			burak_check_string(steps)
+			check(burak_results_are([dodged, dodged, dodged]) and events_of("HIT").is_empty() and player.playerHealth == 1000, "3 DODGED, no damage")
+			check(dodges.size() >= 1 and gauge.value == 0.0 and values.is_empty(), "perfect dodges that fill nothing")
+		"parry":
+			await burak_reset(Vector2(700, 800))
+			log_p("-- a fresh press two steps before each strike: all three PARRIED, and the third breaks him")
+			var steps := await burak_run_cutlass(["parry", "parry", "parry"])
+			var broken := await wait_until(func(): return sm.current_state.name == "Broken", 30)
+			log_p("results %s, gauge %s, Breaks %d, now %s, his sprite at %s" % [cutlass.results, values, breaks[0], sm.current_state.name, boss.sprite.position])
+			burak_check_string(steps)
+			check(burak_results_are([parried, parried, parried]) and burak_parries_of(&"burak_cutlass") == 3 and events.is_empty() and player.playerHealth == 1000, "3 PARRIED, nothing landed")
+			check(values == [20.0, 40.0, 0.0] and breaks[0] == 1 and broken, "the gauge 20, 40, then 60 breaks him on the third (%s)" % [values])
+			check(boss.sprite.position == boss.sprite_base_position, "his sprite back on its rest after the jolts")
+		"mixed":
+			await burak_reset(Vector2(700, 800))
+			log_p("-- parry, dash, parry: 40 and no Break, and the next pair's first parry breaks him")
+			var steps := await burak_run_cutlass(["parry", "dash", "parry"])
+			sm.ATTACK_ORDER.assign(["Shots"])
+			log_p("results %s, gauge %s, Breaks %d" % [cutlass.results, values, breaks[0]])
+			burak_check_string(steps)
+			check(burak_results_are([parried, dodged, parried]) and values == [20.0, 40.0] and breaks[0] == 0, "PARRIED, DODGED, PARRIED: 20, then 40, and no Break (%s)" % [values])
+			await burak_run_shots(["parry", "parry"], false)
+			var broken := await wait_until(func(): return sm.current_state.name == "Broken", 30)
+			log_p("gauge %s, Breaks %d, now %s" % [values, breaks[0], sm.current_state.name])
+			check(broken and breaks[0] == 1 and burak_parries_of(&"burak_shot") == 1, "and the next Shots' first parry breaks him: 40 + 30")
+		_:
+			check(false, "burak_cutlass has no tier %s" % tier)
+
+
+# ------------------------------------------------------------------ Mason's body while he lays a line
+# Touching him hurts from the squat that starts a poo line to the step that ends it
+# (MasonScript.set_contact_live), and at no other time. A process only gets one ending, so the run ends
+# on the contact killing the player, or with `tier=won` on his defeat mid-line.
+
+const CONTACT_ID := &"mason_poo_contact"
+# Off to one side of where his line starts, so only its run across the mat reaches the player: the run
+# crosses their row right at their x, which walks him straight through a player who stands still.
+const CONTACT_PATH_SPOT := Vector2(560, 520)
+
+
+func contact_hits() -> Array:
+	return events_of("HIT", CONTACT_ID)
+
+
+func contact_live() -> bool:
+	return boss.contact_hitbox.is_in_group("enemy projectile")
+
+
+# The player's hurtbox centred on his contact box, wherever he is, for `seconds` of game time: a
+# Break's hit-stop stretches frames.
+func hold_in_him(seconds: float) -> void:
+	var until: float = defense.clock + seconds
+	while defense.clock < until:
+		var into: Vector2 = boss.contact_hitbox.get_node("CollisionShape2D").global_position
+		player.global_position += into - player.hurtBox.get_node("CollisionShape2D").global_position
+		player.velocity = Vector2.ZERO
+		await physics_frame
+
+
+# Idle at home, with his next line starting where he stands rather than where the last one ended.
+func reset_contact(spec: Dictionary) -> void:
+	await reset_gauged(spec.home)
+	sm.rest_point = boss.global_position + sm.BOMB_SPAWN_OFFSET
+	events.clear()
+	dodges.clear()
+
+
+func test_mason_contact() -> void:
+	fight = "mason"
+	if not await load_gauged():
+		return
+	var spec: Dictionary = fight_spec
+	var entry: Dictionary = CATALOG.get_attack(CONTACT_ID)
+	check(entry.damage == 1 and not entry.blockable and not entry.parryable and not entry.tell and not entry.dodge_tell and entry.dash_through and not entry.bypass_invincibility, "catalogued: half a heart, no guard, no badge, dashed through, spaced by the i-frames (%s)" % [entry])
+	check(boss.ATTACK_IDS.has(CONTACT_ID), "his own attack, for his Break gauge")
+	track()
+	track_dodges()
+	var laying := ["PooSquat", "Waddle"]
+	var hit_in := []
+	defense.hit_taken.connect(func(hit):
+		if hit.attack_id == CONTACT_ID:
+			hit_in.append(str(sm.current_state.name)))
+	var watched := {"frames": 0, "live": 0, "wrong": 0, "first": ""}
+	var watch_contact := func():
+		var live: bool = contact_live()
+		watched.frames += 1
+		if live:
+			watched.live += 1
+		if live != laying.has(str(sm.current_state.name)):
+			watched.wrong += 1
+			if watched.first.is_empty():
+				watched.first = "%s, live %s" % [sm.current_state.name, live]
+	physics_frame.connect(watch_contact)
+
+	log_p("-- outside a line, standing in him costs nothing")
+	await reset_contact(spec)
+	for state_name in ["Idle", "Eat"]:
+		sm.on_child_transition(sm.current_state, state_name)
+		stop_boss_timers()
+		await hold_in_him(1.5)
+		check(sm.current_state.name == state_name and contact_hits().is_empty(), "%s: 1.5 s in him, no hit (%d)" % [state_name, contact_hits().size()])
+
+	log_p("-- already in him as a line starts, and still in him as the i-frames run out")
+	await reset_contact(spec)
+	hit_in.clear()
+	await hold_in_him(0.2)
+	var health: int = player.playerHealth
+	var start: float = defense.clock
+	sm.start_cycle()
+	# Held in the squat over the player, rather than laying its bomb and walking off.
+	sm.squat_timer.stop()
+	await hold_in_him(3.55)
+	var hits := contact_hits()
+	log_p("held in the squat over the player: hits at %s s, in %s" % [hits.map(func(e): return snappedf(e.t - start, 0.001)), hit_in])
+	check(hits.size() == 4 and hit_in.all(func(s): return s == "PooSquat"), "hit as the line starts, then each time the i-frames run out: 4 in 3.55 s (%d)" % hits.size())
+	check(not hits.is_empty() and hits[0].t - start <= FRAME_TIME + 0.001, "the first on the line's first frame, with no entry to report it (%.3f s)" % (hits[0].t - start if not hits.is_empty() else -1.0))
+	var gaps := []
+	for i in range(1, hits.size()):
+		gaps.append(snappedf(hits[i].t - hits[i - 1].t, 0.001))
+	check(not gaps.is_empty() and gaps.all(func(g): return g >= 1.0 - 0.001 and g <= 1.0 + 2.0 * FRAME_TIME + 0.001), "a second of i-frames apart and no more (%s)" % [gaps])
+	check(health - player.playerHealth == hits.size() * catalogue_damage(CONTACT_ID), "half a heart each (%d lost)" % (health - player.playerHealth))
+
+	log_p("-- standing in his path while he walks a line")
+	await reset_contact(spec)
+	hit_in.clear()
+	await settle_player(CONTACT_PATH_SPOT)
+	health = player.playerHealth
+	sm.start_cycle()
+	var walked := await wait_until(func():
+		player.global_position = CONTACT_PATH_SPOT
+		return sm.lines_done >= 1, 400)
+	hits = contact_hits()
+	log_p("standing at %s through his first line: %d hits, in %s" % [CONTACT_PATH_SPOT, hits.size(), hit_in])
+	check(walked, "his line reached its end")
+	check(hits.size() == 1 and hit_in == ["Waddle"], "he walks through them once and it hurts once, mid-waddle")
+	check(health - player.playerHealth == catalogue_damage(CONTACT_ID), "half a heart (%d lost)" % (health - player.playerHealth))
+
+	log_p("-- a dash through him mid-line")
+	await reset_contact(spec)
+	var box_shape: CollisionShape2D = boss.contact_hitbox.get_node("CollisionShape2D")
+	var box: Rect2 = box_shape.global_transform * box_shape.shape.get_rect()
+	var hurt_shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var hurt: Rect2 = hurt_shape.global_transform * hurt_shape.shape.get_rect()
+	# Level with him, the player's right edge 12 px short of his left one.
+	await settle_player(player.global_position + Vector2(box.position.x - 12.0 - hurt.end.x, box.get_center().y - hurt.get_center().y))
+	sm.start_cycle()
+	sm.squat_timer.stop()
+	await wait(3)
+	var gauge_before: float = boss.break_gauge.value
+	press(KEY_RIGHT)
+	tap(KEY_W)
+	await wait(4)
+	release(KEY_RIGHT)
+	await wait(30)
+	hurt = hurt_shape.global_transform * hurt_shape.shape.get_rect()
+	log_p("dashed to x %.0f past his box %.0f-%.0f: dodges %s, contact hits %d, gauge %.0f -> %.0f" % [hurt.position.x, box.position.x, box.end.x, dodges.map(func(d): return d.id), contact_hits().size(), gauge_before, boss.break_gauge.value])
+	check(contact_hits().is_empty() and hurt.position.x > box.end.x, "through him and out the other side without a hit")
+	check(dodges.size() == 1 and dodges[0].id == CONTACT_ID, "and it is a perfect dodge")
+	check(boss.break_gauge.value - gauge_before == boss.break_gauge.perfect_dodge_gain, "which his gauge takes as his own (+%.0f)" % (boss.break_gauge.value - gauge_before))
+
+	log_p("-- every way out of a line takes it with it")
+	await reset_contact(spec)
+	await settle_player(OUT_OF_REACH)
+	sm.start_cycle()
+	sm.lines_done = sm.lines_per_cycle[sm.cycle_phase] - 1
+	var ended := await wait_until(func(): return not laying.has(str(sm.current_state.name)), 400)
+	check(ended and not contact_live(), "the cycle's last line ends: off as %s starts" % sm.current_state.name)
+	for case in [["a Break out of the squat", "PooSquat"], ["a Break out of the waddle", "Waddle"]]:
+		await reset_contact(spec)
+		await settle_player(OUT_OF_REACH)
+		sm.start_cycle()
+		var reached := await wait_until(func(): return sm.current_state.name == case[1], 120)
+		boss.break_gauge.add(boss.break_gauge.max_value)
+		await wait_until(func(): return sm.current_state.name == "Broken", 30)
+		var off := not contact_live()
+		await hold_in_him(1.2)
+		check(reached and sm.current_state.name == "Broken" and off and contact_hits().is_empty(), "%s: off, and 1.2 s in him while he is down costs nothing (%d)" % [case[0], contact_hits().size()])
+
+	if tier == "won":
+		log_p("-- his defeat mid-line")
+		await reset_contact(spec)
+		await settle_player(OUT_OF_REACH)
+		sm.start_cycle()
+		var waddling := await wait_until(func(): return sm.current_state.name == "Waddle", 120)
+		boss.phase_two = true
+		boss.boss_health = 1
+		boss.take_finisher(1)
+		var beaten := await wait_until(func(): return sm.current_state.name == "Defeated", 60)
+		await hold_in_him(1.2)
+		check(waddling and beaten and not contact_live() and contact_hits().is_empty(), "beaten mid-waddle: off, and nothing from him after (%s)" % sm.current_state.name)
+	else:
+		log_p("-- the contact kills the player mid-line")
+		await reset_contact(spec)
+		await hold_in_him(0.2)
+		player.playerHealth = 1
+		sm.start_cycle()
+		sm.squat_timer.stop()
+		var lost := await wait_until(func(): return player.fight_over, 60)
+		await hold_in_him(1.2)
+		var landed := events_of("HIT")
+		check(lost and player.playerHealth == 0 and landed.size() == 1 and landed[0].id == CONTACT_ID, "the contact is the killing blow (%s)" % [landed.map(func(e): return e.id)])
+		check(not contact_live() and sm.current_state.name == "Idle" and sm.player_defeated, "the outro stands him down with it off (%s)" % sm.current_state.name)
+	physics_frame.disconnect(watch_contact)
+	log_p("watched %d frames, %d live, %d wrong%s" % [watched.frames, watched.live, watched.wrong, (": first " + watched.first) if watched.wrong > 0 else ""])
+	check(watched.live > 0 and watched.wrong == 0, "live on exactly the frames he is in PooSquat or Waddle")
+
+
+# ------------------------------------------------------------------ Mason's phase-two combined attack
+# Under half his health his one finisher is the nugget shower with Carter called in while it rains
+# (MasonNuggetShower, MasonStateMachine.carter_in_shower). The rain is timed around Carter: no nugget
+# lands from slam_clear_before ahead of one of his slams to slam_clear_after past its hitbox, anywhere
+# on the mat, so answering him is never answering a nugget in the same breath. A process gets one
+# ending: the run ends on the player killed mid-attack, or with `tier=won` on Mason beaten mid-attack.
+
+# Where he stands for it, on the wall column his lines end on, and where a player stands it out.
+const MASON_COMBINED_AT := Vector2(1660, 480)
+const MASON_STAND_AT := Vector2(760, 640)
+# The dodging bot keeps a person's pace rather than a perfect bot's: it sees anything new this long
+# after it appears, and picks its next step every few frames, off where each marker says its hit lands.
+const MASON_BOT_REACTION := 0.3
+const MASON_BOT_REPLAN := 6
+# How far outside an oval it wants its hurtbox, and the floor it keeps to so a wall never pins it.
+const MASON_BOT_MARGIN := 10.0
+const MASON_BOT_AREA := Rect2(150, 175, 1620, 760)
+const MASON_BOT_SPOTS := [Vector2(760, 640), Vector2(400, 820), Vector2(1200, 300), Vector2(300, 300)]
+const MASON_BOT_DIRECTIONS := [Vector2.ZERO, Vector2(1, 0), Vector2(1, 1), Vector2(0, 1), Vector2(-1, 1), Vector2(-1, 0), Vector2(-1, -1), Vector2(0, -1), Vector2(1, -1)]
+# feel_v2's dash: 250 px over three frames, then five standing.
+const MASON_BOT_DASH := 250.0
+const MASON_BOT_DASH_TIME := 8.0 / 60.0
+const MASON_BOT_SPEED := 600.0
+# The most one attack may cost the bot, from a full bar of six half-hearts.
+const MASON_BOT_MAX_HITS := 2
+const MASON_FULL_HEALTH := 6
+# The floor a player's body can stand on and the grid it is read on, as the tuning script reads them
+# (art_source/mason_tuning/verify_mason_tuning.gd), but with the player's own hurtbox.
+const MASON_STAND_AREA := Rect2(117, 132, 1686, 816)
+const MASON_GRID_STEP := 40.0
+# A blast is live from its detonation's EXPLOSION_HITBOX_DELAY to 0.3 s in (PooBombScene's explode track).
+const MASON_BOMB_LIVE := 0.2
+# How finely, and how far ahead, the bot reads Mason's body along the line he is laying.
+const MASON_BOT_BODY_STEP := 1.0 / 30.0
+const MASON_BOT_BODY_AHEAD := 1.0
+# The parrying bot presses this long before Carter's slam, well inside PlayerDefense.parry_window, and
+# keeps its guard up this long after his hitbox is gone.
+const MASON_BOT_PARRY_LEAD := 0.12
+const MASON_BOT_GUARD_AFTER := 0.05
+
+var mason_log := {}
+var mason_bot := {}
+
+
+# Idle on his wall column in phase two, with the player at `at`: his next finisher is the combined one.
+func mason_ready_combined(at: Vector2) -> void:
+	await reset_gauged(fight_spec.home)
+	boss.global_position = MASON_COMBINED_AT
+	sm.rest_point = boss.global_position + sm.BOMB_SPAWN_OFFSET
+	boss.phase_two = true
+	boss.boss_health = floori(boss.get_max_health() * boss.PHASE_TWO_RATIO)
+	await settle_player(at)
+
+
+func mason_start_combined() -> void:
+	sm.cycle_phase = 1
+	sm.finishers = []
+	sm.on_child_transition(sm.current_state, "NuggetShower")
+
+
+# Deep in it: Carter coming down or on the mat, with nuggets in the sky around him.
+func mason_mid_attack() -> bool:
+	if sm.current_state.name != "NuggetShower" or not sm.states["CallCarter"].sent:
+		return false
+	var drops := hazards_of("CarterElbowDropScript.gd")
+	var in_sky := hazards_of("NuggetMeteorScript.gd").filter(func(nugget): return nugget.marker.visible)
+	return not drops.is_empty() and drops[0].carter_sprite.visible and in_sky.size() >= 2
+
+
+func mason_new_log() -> void:
+	mason_log = {"nuggets": {}, "drops": {}, "marks": [], "slams": [], "phone_told": 0, "both_up": 0, "overlaps": 0, "under": 0, "under_first": "", "sorted_off": 0,
+		"cells": 0, "samples": 0, "free_sum": 0, "worst_free": 1 << 30, "worst_at": 0.0, "worst_patch": 0, "furthest": 0.0, "furthest_at": 0.0, "covered": {}}
+
+
+# Every nugget's landing, each of Carter's marks and slams with the badge over each approach, and how
+# his marker and the nuggets' stack wherever they overlap. Game time, on the player's own clock.
+func mason_record() -> void:
+	var log: Dictionary = mason_log
+	var now: float = defense.clock
+	if Engine.get_physics_frames() % 6 == 0:
+		mason_sample_cells()
+	var told := not live_tells().is_empty()
+	var target: Sprite2D = null
+	var markers := []
+	for hazard in live_hazards():
+		if hazard.get_script() == null:
+			continue
+		var id: int = hazard.get_instance_id()
+		match hazard.get_script().resource_path.get_file():
+			"NuggetMeteorScript.gd":
+				var nugget: Dictionary = log.nuggets.get(id, {"at": hazard.global_position, "landed": -1.0})
+				log.nuggets[id] = nugget
+				if nugget.landed < 0.0 and not hazard.hitbox_shape.disabled:
+					nugget.landed = now
+				if hazard.marker.visible:
+					markers.append(hazard.marker)
+			"CarterElbowDropScript.gd":
+				var drop: Dictionary = log.drops.get(id, {"marked": false, "live": false, "approach": 0, "told": 0})
+				log.drops[id] = drop
+				var marked: bool = hazard.target_sprite.visible
+				if marked:
+					target = hazard.target_sprite
+					if not drop.marked:
+						log.marks.append({"t": now, "at": hazard.global_position})
+						drop.approach = 0
+						drop.told = 0
+					drop.approach += 1
+					if told:
+						drop.told += 1
+					var drawn: Vector2 = (target.get_global_transform() * target.get_rect()).get_center()
+					if absf(target.global_position.y - sm.states["CallCarter"].ROPES.position.y) > 0.5 or drawn.distance_to(hazard.global_position) > 0.5:
+						log.sorted_off += 1
+				drop.marked = marked
+				var live: bool = not hazard.hitbox_shape.disabled
+				if live and not drop.live:
+					log.slams.append({"t": now, "end": INF, "at": hazard.global_position, "approach": drop.approach, "told": drop.told})
+				elif drop.live and not live:
+					log.slams[-1].end = now
+				drop.live = live
+	if told and log.marks.is_empty():
+		log.phone_told += 1
+	if target == null or markers.is_empty():
+		return
+	log.both_up += 1
+	var target_rect: Rect2 = target.get_global_transform() * target.get_rect()
+	for marker: Sprite2D in markers:
+		if not (marker.get_global_transform() * marker.get_rect()).intersects(target_rect):
+			continue
+		log.overlaps += 1
+		if marker.z_index > target.z_index or (marker.z_index == target.z_index and marker.global_position.y > target.global_position.y):
+			continue
+		log.under += 1
+		if log.under_first.is_empty():
+			log.under_first = "the marker at %s under his at %s" % [marker.global_position, target.global_position]
+
+
+# The nearest any landing came to a slam: before it, and after its hitbox went off.
+func mason_clearances() -> Dictionary:
+	var before := INF
+	var after := INF
+	var inside := 0
+	for nugget in mason_log.nuggets.values():
+		if nugget.landed < 0.0:
+			continue
+		for slam in mason_log.slams:
+			if nugget.landed < slam.t:
+				before = minf(before, slam.t - nugget.landed)
+			elif nugget.landed >= slam.end:
+				after = minf(after, nugget.landed - slam.end)
+			else:
+				inside += 1
+	return {"before": before, "after": after, "inside": inside}
+
+
+# The floor on the grid right now: which cells a hurtbox standing in is caught by nothing, by a nugget
+# marker, or only by Carter's marker or slam, whose own answer is his parry or a dash. Kept: the worst
+# moment's free count and its biggest open patch, every cell a marker ever covered, and the furthest a
+# cell under a nugget marker was from a free one, counted in grid steps round whatever is in the way.
+func mason_sample_cells() -> void:
+	var log: Dictionary = mason_log
+	var nugget_ovals := []
+	var carter_ovals := []
+	for hazard in live_hazards():
+		if hazard.get_script() == null:
+			continue
+		match hazard.get_script().resource_path.get_file():
+			"NuggetMeteorScript.gd":
+				if hazard.marker.visible:
+					nugget_ovals.append([hazard.global_position, hazard.HIT_SIZE / 2.0])
+			"CarterElbowDropScript.gd":
+				if hazard.target_sprite.visible or not hazard.hitbox_shape.disabled:
+					carter_ovals.append([hazard.global_position, hazard.hit_size() / 2.0])
+	var shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var half: Vector2 = shape.shape.size * shape.global_scale.abs() / 2.0
+	var offset: Vector2 = shape.global_position - player.global_position
+	var free := {}
+	var blocked := {}
+	var under_nugget := []
+	var columns := int(MASON_STAND_AREA.size.x / MASON_GRID_STEP) + 1
+	var rows := int(MASON_STAND_AREA.size.y / MASON_GRID_STEP) + 1
+	for column in columns:
+		for row in rows:
+			var cell := Vector2i(column, row)
+			var centre: Vector2 = MASON_STAND_AREA.position + Vector2(cell) * MASON_GRID_STEP + offset
+			var by_nugget := nugget_ovals.any(func(oval): return ((Vector2(oval[0]).clamp(centre - half, centre + half) - oval[0]) / oval[1]).length() < 1.0)
+			if by_nugget or carter_ovals.any(func(oval): return ((Vector2(oval[0]).clamp(centre - half, centre + half) - oval[0]) / oval[1]).length() < 1.0):
+				blocked[cell] = true
+				log.covered[cell] = true
+				if by_nugget:
+					under_nugget.append(cell)
+			else:
+				free[cell] = true
+	log.cells = columns * rows
+	log.samples += 1
+	log.free_sum += free.size()
+	if free.size() < log.worst_free:
+		log.worst_free = free.size()
+		log.worst_at = defense.clock
+		log.worst_patch = mason_largest_patch(free)
+	var steps := {}
+	var queue: Array = free.keys()
+	for cell in queue:
+		steps[cell] = 0
+	var head := 0
+	while head < queue.size():
+		var at: Vector2i = queue[head]
+		head += 1
+		for step: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var next: Vector2i = at + step
+			if blocked.has(next) and not steps.has(next):
+				steps[next] = steps[at] + 1
+				queue.append(next)
+	for cell in under_nugget:
+		var far: float = steps.get(cell, INF) * MASON_GRID_STEP
+		if far > log.furthest:
+			log.furthest = far
+			log.furthest_at = defense.clock
+
+
+func mason_largest_patch(cells: Dictionary) -> int:
+	var seen := {}
+	var best := 0
+	for start in cells:
+		if seen.has(start):
+			continue
+		var size := 0
+		var stack: Array = [start]
+		seen[start] = true
+		while not stack.is_empty():
+			var at: Vector2i = stack.pop_back()
+			size += 1
+			for step: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var next: Vector2i = at + step
+				if cells.has(next) and not seen.has(next):
+					seen[next] = true
+					stack.append(next)
+		best = maxi(best, size)
+	return best
+
+
+# One whole attack as mason_record saw it: the two overlapping, the rain clear of every slam, both
+# tells up and readable, and nothing of it left behind.
+func mason_check_attack(case: String, ended: bool, needs_overlap: bool) -> void:
+	var log: Dictionary = mason_log
+	var landings: Array = log.nuggets.values().filter(func(n): return n.landed >= 0.0).map(func(n): return n.landed)
+	landings.sort()
+	var slams: Array = log.slams
+	var drops: int = sm.elbow_drops[1]
+	check(ended and sm.current_state.name == "AwaitDelivery", "%s: it plays out and hands over to the delivery (%s)" % [case, sm.current_state.name])
+	check(slams.size() == drops and log.marks.size() == drops, "%s: all %d of Carter's drops come down (%d marks, %d slams)" % [case, drops, log.marks.size(), slams.size()])
+	if landings.is_empty() or slams.is_empty():
+		check(false, "%s: the rain and Carter both came (%d landings, %d slams)" % [case, landings.size(), slams.size()])
+		return
+	var between := []
+	for i in range(1, slams.size()):
+		between.append(landings.filter(func(l): return l > slams[i - 1].t and l < slams[i].t).size())
+	var first_before: int = landings.filter(func(l): return l < slams[0].t).size()
+	log_p("%s: %d nuggets landed from %.2f to %.2f s and %d slams from %.2f to %.2f s; %d landings before the first slam, then %s between each and the next; his marker and nugget markers down together on %d frames" % [case, landings.size(), landings[0], landings[-1], slams.size(), slams[0].t, slams[-1].t, first_before, between, log.both_up])
+	check(first_before > 0 and between.all(func(n): return n > 0) and log.both_up > 0, "%s: they overlap: nuggets land before his first slam and between every two, with their markers down alongside his" % case)
+	log_p("%s: free standing cells (%.0f px grid): %d of %d at worst (%.2f s), its biggest open patch %d; %.0f%% free on average; %.0f%% of the floor under a marker at some point; the furthest a cell under a nugget marker was from a free one %.0f px (%.2f s)" % [case, MASON_GRID_STEP, log.worst_free, log.cells, log.worst_at, log.worst_patch, 100.0 * log.free_sum / maxf(log.samples * log.cells, 1.0), 100.0 * log.covered.size() / maxf(log.cells, 1.0), log.furthest, log.furthest_at])
+	check(log.worst_free > 0 and log.furthest / MASON_BOT_SPEED <= sm.nugget_warning[1] - MASON_BOT_REACTION, "%s: at every moment there is somewhere free to stand, and it is a walk from anywhere under a nugget marker that fits in its warning less a reaction (%.0f px)" % [case, log.furthest])
+	var clear := mason_clearances()
+	log_p("%s: the nearest a nugget landed to a slam was %.3f s before one and %.3f s after its hitbox; %d landed during one" % [case, clear.before, clear.after, clear.inside])
+	check(clear.inside == 0 and clear.before >= sm.slam_clear_before - 0.001 and clear.after >= sm.slam_clear_after - 0.001, "%s: no nugget lands within %.2f s before a slam or %.2f s after its hitbox, anywhere on the mat" % [case, sm.slam_clear_before, sm.slam_clear_after])
+	var untold := slams.filter(func(s): return s.told < s.approach - 2)
+	log_p("%s: the badge was up %d frames of the call before his first mark, and on %s of each approach's frames" % [case, log.phone_told, slams.map(func(s): return "%d/%d" % [s.told, s.approach])])
+	check(log.phone_told > 0 and untold.is_empty(), "%s: Carter's badge is up through the call and over every drop's approach" % case)
+	log_p("%s: %d overlaps of a nugget marker with his, %d drawn under it; his marker off the rope line or moved on %d frames" % [case, log.overlaps, log.under, log.sorted_off])
+	check((log.overlaps > 0 or not needs_overlap) and log.under == 0, "%s: a nugget marker lying on his is drawn over it%s" % [case, "" if log.under == 0 else " (first: %s)" % log.under_first])
+	check(log.sorted_off == 0, "%s: his marker sorts on the back rope's line and still draws on his landing spot" % case)
+	# His last slam's sound outlives him (CarterElbowDropScript._finish), and his last dust still has a
+	# frame or two to play as the call ends.
+	var lingering := hazards_of("CarterElbowDropScript.gd")
+	log_p("%s: left as it ends: %d nuggets, %d badges, Carter %s" % [case, hazards_of("NuggetMeteorScript.gd").size(), live_tells().size(), lingering.map(func(d): return "hitbox off %s, him %s, marker %s, dust %s" % [d.hitbox_shape.disabled, d.carter_sprite.visible, d.target_sprite.visible, d.impact_sprite.visible])])
+	check(hazards_of("NuggetMeteorScript.gd").is_empty() and live_tells().is_empty() and lingering.all(func(d): return d.hitbox_shape.disabled and not d.carter_sprite.visible and not d.target_sprite.visible), "%s: nothing of it is left: no nugget, no badge, and Carter at most ringing out, hidden with his hitbox off (%d)" % [case, lingering.size()])
+	var shower: Node = sm.states["NuggetShower"]
+	var call: Node = sm.states["CallCarter"]
+	check(call.carter == null and not call.sent and not call.telling and not (shower.shower and shower.shower.is_valid()) and not (shower.phone and shower.phone.is_valid()), "%s: the call is let go and both of the shower's tweens are done" % case)
+
+
+# Everything of the attack stopped by whatever ended it: no nugget and no Carter, no badge, none of his
+# clocks running, the shower and the call's tweens dead and the call let go.
+func mason_check_released(case: String) -> void:
+	var shower: Node = sm.states["NuggetShower"]
+	var call: Node = sm.states["CallCarter"]
+	var nuggets := hazards_of("NuggetMeteorScript.gd")
+	var carters := hazards_of("CarterElbowDropScript.gd")
+	var running := break_timers().filter(func(t): return not t.is_stopped())
+	var tweens := [shower.shower, shower.phone].filter(func(t): return t != null and t.is_valid())
+	log_p("%s: now %s, nuggets %d, Carter %d, badges %d, timers running %s, tweens alive %d, call %s sent %s telling %s" % [case, sm.current_state.name, nuggets.size(), carters.size(), live_tells().size(), running.map(func(t): return t.name), tweens.size(), call.carter, call.sent, call.telling])
+	check(nuggets.is_empty() and carters.is_empty(), "%s: every nugget and Carter are gone" % case)
+	check(live_tells().is_empty(), "%s: no badge survives" % case)
+	check(running.is_empty(), "%s: none of his timers is running" % case)
+	check(tweens.is_empty(), "%s: the shower's rain and its call have stopped" % case)
+	check(call.carter == null and not call.sent and not call.telling, "%s: the call is let go" % case)
+
+
+# Everything of the attack that moves or counts down, read off the live nodes.
+func mason_snapshot() -> Array:
+	var shower: Node = sm.states["NuggetShower"]
+	var snap := [defense.clock]
+	for tween: Tween in [shower.shower, shower.phone]:
+		snap.append(tween.get_total_elapsed_time() if tween and tween.is_valid() else -1.0)
+	for nugget in hazards_of("NuggetMeteorScript.gd"):
+		snap.append([nugget.get_instance_id(), nugget.meteor.position, nugget.meteor.visible, nugget.marker.frame, nugget.impact_sprite.frame])
+	for drop in hazards_of("CarterElbowDropScript.gd"):
+		snap.append([drop.global_position, drop.carter_sprite.position, drop.carter_sprite.frame, drop.target_sprite.visible, drop.target_sprite.frame, drop.impact_sprite.frame])
+	for tell in live_tells():
+		snap.append(tell.time_left)
+	return snap
+
+
+func mason_bot_reset(parry := false) -> void:
+	mason_bot = {"known": [], "seen": {}, "marked": {}, "held": {}, "dir": Vector2.ZERO, "last_dash": -INF, "dashes": 0, "offset": Vector2.ZERO, "half": Vector2.ZERO, "body": [], "line": null, "line_seen": -INF,
+		"parry": parry, "guard_until": -INF, "pressed": {}, "presses": 0, "guards": []}
+
+
+func mason_bot_frame() -> void:
+	mason_bot_perceive()
+	if mason_bot.parry and mason_bot_guard():
+		return
+	if Engine.get_physics_frames() % MASON_BOT_REPLAN == 0:
+		mason_bot_plan()
+
+
+# The parrying bot's answer to Carter: it stays planted where his marker has it, presses a beat before
+# his slam and holds the guard until his hitbox is gone. True while it is planted.
+func mason_bot_guard() -> bool:
+	var now: float = defense.clock
+	if mason_bot.guard_until > now:
+		return true
+	if mason_bot.guard_until > -INF:
+		release(KEY_SHIFT)
+		mason_bot.guard_until = -INF
+	for threat in mason_bot.known:
+		if threat.kind != "carter" or now - threat.seen < MASON_BOT_REACTION or mason_bot.pressed.has(threat.lands):
+			continue
+		var left: float = threat.lands - now
+		if left <= 0.0 or left > MASON_BOT_PARRY_LEAD or mason_bot_reach(player.global_position, threat) >= 1.0:
+			continue
+		mason_bot.pressed[threat.lands] = true
+		mason_bot.presses += 1
+		mason_bot_hold(Vector2.ZERO)
+		press(KEY_SHIFT)
+		mason_bot.guard_until = threat.lands + threat.live + MASON_BOT_GUARD_AFTER
+		mason_bot.guards.append([now, mason_bot.guard_until])
+		return true
+	return false
+
+
+# Each nugget marker and each of Carter's marks as it appears, with where its hit lands and when: the
+# fight's own numbers, which the markers' own count-downs show a player.
+func mason_bot_perceive() -> void:
+	var now: float = defense.clock
+	for hazard in live_hazards():
+		if hazard.get_script() == null:
+			continue
+		var id: int = hazard.get_instance_id()
+		match hazard.get_script().resource_path.get_file():
+			"NuggetMeteorScript.gd":
+				if not mason_bot.seen.has(id):
+					mason_bot.seen[id] = true
+					mason_bot.known.append({"kind": "nugget", "at": hazard.global_position, "seen": now, "lands": now + sm.nugget_warning[sm.cycle_phase], "live": hazard.HITBOX_ACTIVE_TIME, "semi": hazard.HIT_SIZE / 2.0})
+			"CarterElbowDropScript.gd":
+				var marked: bool = hazard.target_sprite.visible
+				if marked and not mason_bot.marked.get(id, false):
+					mason_bot.known.append({"kind": "carter", "at": hazard.global_position, "seen": now, "lands": now + hazard.telegraph_time + hazard.dive_time, "live": hazard.hitbox_active_time, "semi": hazard.hit_size() / 2.0})
+				mason_bot.marked[id] = marked
+			"PooBombScript.gd":
+				# From the moment its line is laid and it starts counting down, as the line going off in
+				# order from its start ring shows a player.
+				if not hazard.detonate_timer.is_stopped() and not mason_bot.seen.has(id):
+					mason_bot.seen[id] = true
+					var blast: float = (hazard.explosion_hitbox_shape.shape as CircleShape2D).radius
+					mason_bot.known.append({"kind": "bomb", "at": hazard.global_position, "seen": now, "lands": now + hazard.detonate_timer.time_left + hazard.EXPLOSION_HITBOX_DELAY, "live": MASON_BOMB_LIVE, "semi": Vector2.ONE * blast})
+	mason_bot.known = mason_bot.known.filter(func(k): return k.lands + k.live > now)
+	mason_bot_follow_mason(now)
+
+
+# Mason himself while he lays a line: where he stands until the line's start ring has been up a
+# reaction's time, and after that where the ring's path takes him, which is what it shows a player.
+func mason_bot_follow_mason(now: float) -> void:
+	mason_bot.body = []
+	var state := str(sm.current_state.name)
+	if state != "PooSquat" and state != "Waddle":
+		return
+	if sm.line_start != mason_bot.line:
+		mason_bot.line = sm.line_start
+		mason_bot.line_seen = now
+	var shape: CollisionShape2D = boss.contact_hitbox.get_node("CollisionShape2D")
+	var half: Vector2 = shape.shape.size * shape.global_scale.abs() / 2.0
+	var offset: Vector2 = shape.global_position - boss.global_position
+	var read: bool = now - mason_bot.line_seen >= MASON_BOT_REACTION
+	var walked: float = sm.states["Waddle"].distance if state == "Waddle" else 0.0
+	var squatting := 0.0
+	if state == "PooSquat":
+		squatting = sm.release_timer.time_left if sm.squat_timer.is_stopped() else sm.squat_timer.time_left + sm.states["PooSquat"].release_hold
+	var speed: float = sm.waddle_speed[sm.cycle_phase]
+	var ahead := 0.0
+	while ahead <= MASON_BOT_BODY_AHEAD:
+		var at: Vector2 = boss.global_position
+		if read:
+			at = sm.walk_position(minf(walked + speed * maxf(0.0, ahead - squatting), sm.line_length))
+		mason_bot.body.append({"at": at + offset, "t": now + ahead, "half": half})
+		ahead += MASON_BOT_BODY_STEP
+
+
+# The step, from standing still to a dash and a walk in any of eight directions, whose path is clear of
+# everything it has seen by its hit's time, keeping off the walls.
+func mason_bot_plan() -> void:
+	var now: float = defense.clock
+	var shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	mason_bot.offset = shape.global_position - player.global_position
+	mason_bot.half = shape.shape.size * shape.global_scale.abs() / 2.0
+	# Standing in Carter's marker, the parrying bot leaves him to its guard (mason_bot_guard); outside it,
+	# it keeps out, as a player would rather than walk in on a slam.
+	var here: Vector2 = player.global_position
+	var threats: Array = mason_bot.known.filter(func(k): return now - k.seen >= MASON_BOT_REACTION and not (mason_bot.parry and k.kind == "carter" and mason_bot_reach(here, k) < 1.0))
+	var can_dash: bool = defense.stamina >= defense.dash_stamina_cost and not defense.is_dash_cooling_down() and not defense.is_dash_recovering()
+	var best := {"cost": INF, "dir": Vector2.ZERO, "dash": false}
+	for dir: Vector2 in MASON_BOT_DIRECTIONS:
+		for move_for: float in ([0.0] if dir == Vector2.ZERO else [0.1, 0.2, 0.35, 0.5, 0.8]):
+			for dash: bool in ([false, true] if can_dash and dir != Vector2.ZERO else [false]):
+				var cost := mason_bot_cost(threats, dir, dash, move_for)
+				if cost < best.cost:
+					best = {"cost": cost, "dir": dir, "dash": dash}
+	mason_bot_hold(best.dir)
+	mason_bot.dir = best.dir
+	if best.dash:
+		mason_bot.last_dash = now
+		mason_bot.dashes += 1
+		tap(KEY_W)
+
+
+func mason_bot_cost(threats: Array, dir: Vector2, dash: bool, move_for: float) -> float:
+	var now: float = defense.clock
+	var from: Vector2 = player.global_position
+	var cost := 0.0
+	for threat in threats:
+		for t: float in [threat.lands, threat.lands + threat.live * 0.5, threat.lands + threat.live]:
+			if t < now:
+				continue
+			var reach := mason_bot_reach(mason_bot_at(from, dir, dash, move_for, t), threat)
+			if reach < 1.0:
+				cost += 1000.0
+				break
+			if reach < 1.4:
+				cost += (1.4 - reach) * 50.0
+	# His body is dash_through: a dash's own immunity carries the bot through him.
+	var immune_until: float = now + (CATALOG.DASH_IMMUNITY_TIME if dash and now - mason_bot.last_dash >= CATALOG.DASH_IMMUNITY_COOLDOWN else 0.0)
+	for body in mason_bot.body:
+		if body.t < immune_until:
+			continue
+		var centre: Vector2 = mason_bot_at(from, dir, dash, move_for, body.t) + mason_bot.offset
+		var gap: Vector2 = (centre - body.at).abs() - (mason_bot.half + body.half + Vector2.ONE * MASON_BOT_MARGIN)
+		if gap.x < 0.0 and gap.y < 0.0:
+			cost += 1000.0
+			break
+	var rest := mason_bot_at(from, dir, dash, move_for, now + 1.0)
+	var middle := MASON_BOT_AREA.get_center()
+	cost += maxf(0.0, absf(rest.x - middle.x) - 500.0) * 0.05 + maxf(0.0, absf(rest.y - middle.y) - 220.0) * 0.1
+	cost += move_for * 4.0 + (30.0 if dash else 0.0) + (3.0 if dir != mason_bot.dir else 0.0)
+	return cost
+
+
+func mason_bot_at(from: Vector2, dir: Vector2, dash: bool, move_for: float, t: float) -> Vector2:
+	var left: float = t - defense.clock
+	if left <= 0.0:
+		return from
+	var heading := dir.normalized()
+	var at := from
+	if dash:
+		at += heading * MASON_BOT_DASH
+		left -= MASON_BOT_DASH_TIME
+	at += heading * MASON_BOT_SPEED * clampf(minf(left, move_for), 0.0, INF)
+	return at.clamp(MASON_BOT_AREA.position, MASON_BOT_AREA.end)
+
+
+# Under 1, the hurtbox of a player standing at `body` is inside the threat's oval grown by the margin.
+func mason_bot_reach(body: Vector2, threat: Dictionary) -> float:
+	var centre: Vector2 = body + mason_bot.offset
+	var spot: Vector2 = threat.at
+	return ((spot.clamp(centre - mason_bot.half, centre + mason_bot.half) - spot) / (threat.semi + Vector2.ONE * MASON_BOT_MARGIN)).length()
+
+
+func mason_bot_hold(dir: Vector2) -> void:
+	var want := {KEY_LEFT: dir.x < 0.0, KEY_RIGHT: dir.x > 0.0, KEY_UP: dir.y < 0.0, KEY_DOWN: dir.y > 0.0}
+	for code in want:
+		if want[code] == mason_bot.held.get(code, false):
+			continue
+		if want[code]:
+			press(code)
+		else:
+			release(code)
+		mason_bot.held[code] = want[code]
+
+
+func test_mason_combined() -> void:
+	fight = "mason"
+	if not await load_gauged():
+		return
+	var shower: Node = sm.states["NuggetShower"]
+	var hits := []
+	defense.hit_taken.connect(func(hit): hits.append(hit.attack_id))
+	var theirs := func(id): return id == &"mason_nugget" or id == &"carter_elbow_drop"
+
+	log_p("-- phase one takes turns, phase two has the one attack")
+	check(sm.FINISHERS[0] == [["CallCarter"], ["NuggetShower"]] and not sm.carter_in_shower[0], "phase one still takes turns between Carter and the nuggets, each on its own")
+	check(sm.FINISHERS[1] == [["NuggetShower"]] and sm.carter_in_shower[1], "phase two's one finisher is the shower with Carter called into it")
+
+	log_p("-- a real phase-two cycle into it, the player standing still")
+	await mason_ready_combined(MASON_STAND_AT)
+	hold_break_gauge(boss)
+	sm.start_cycle()
+	check(sm.cycle_phase == 1 and sm.finishers == ["NuggetShower"], "the cycle's finisher is the shower (%s)" % [sm.finishers])
+	sm.lines_done = sm.lines_per_cycle[1] - 1
+	var handed := await wait_until(func(): return sm.current_state.name == "NuggetShower", 400)
+	check(handed and shower.with_carter, "its last line hands over to the shower, with Carter called in")
+	hits.clear()
+	mason_new_log()
+	physics_frame.connect(mason_record)
+	var ended := await wait_until(func(): return sm.current_state.name != "NuggetShower", 900)
+	physics_frame.disconnect(mason_record)
+	var stood: Array = hits.filter(theirs)
+	log_p("standing still through it: %d hits, %s" % [stood.size(), stood])
+	mason_check_attack("standing still", ended, true)
+
+	log_p("-- a Break mid-attack, Carter in the air and nuggets in the sky")
+	await mason_ready_combined(MASON_STAND_AT)
+	mason_start_combined()
+	var deep := await wait_until(mason_mid_attack, 600)
+	var out: int = hazards_of("NuggetMeteorScript.gd").size()
+	boss.break_gauge.value = boss.break_gauge.max_value - 1.0
+	boss.break_gauge.add(1.0)
+	await wait(2)
+	check(deep and sm.current_state.name == "Broken", "broken out of it, with Carter in the air and %d nuggets out" % out)
+	mason_check_released("the Break")
+	var came := 0
+	for i in 120:
+		await physics_frame
+		came += hazards_of("NuggetMeteorScript.gd").size() + hazards_of("CarterElbowDropScript.gd").size()
+	check(came == 0, "the Break: nothing of it comes down in the 2 s after (%d)" % came)
+	var freed := await wait_until(func(): return not player.is_action_locked, 120)
+	check(freed and not player.lock_seals_guard and not player.scripted_pose and not player.is_posed(), "the Break: the player is theirs again once the drive is over")
+	var again := await wait_until(func(): return sm.current_state.name == "PooSquat", 400)
+	check(again and sm.cycle_phase == 1 and sm.finishers == ["NuggetShower"], "the Break: he gets up into a phase-two cycle with the combined attack still to come")
+
+	log_p("-- paused mid-attack")
+	await mason_ready_combined(MASON_STAND_AT)
+	hold_break_gauge(boss)
+	mason_new_log()
+	physics_frame.connect(mason_record)
+	mason_start_combined()
+	deep = await wait_until(mason_mid_attack, 600)
+	await tap_pause()
+	var held := mason_snapshot()
+	await wait(40)
+	var still := mason_snapshot()
+	check(deep and pause_menu().is_open() and paused and held == still, "paused with Carter in the air and nuggets in the sky, 40 frames move none of it (%d things watched)" % held.size())
+	await tap_pause()
+	check(not paused, "and the resume carries it on")
+	# The resume's input grace is in real seconds, and the bot below must have every dash it presses.
+	pause_menu().grace_until_msec = 0
+	ended = await wait_until(func(): return sm.current_state.name != "NuggetShower", 900)
+	physics_frame.disconnect(mason_record)
+	mason_check_attack("paused and resumed", ended, false)
+
+	log_p("-- a human-paced dodging bot from full health: it sees things %.2f s late and picks a step every %d frames" % [MASON_BOT_REACTION, MASON_BOT_REPLAN])
+	var per_attack := []
+	for i in MASON_BOT_SPOTS.size():
+		seed(20260924 + i)
+		await mason_ready_combined(MASON_BOT_SPOTS[i])
+		hold_break_gauge(boss)
+		player.playerHealth = MASON_FULL_HEALTH
+		clear_iframes()
+		hits.clear()
+		mason_bot_reset()
+		mason_start_combined()
+		physics_frame.connect(mason_bot_frame)
+		var over := await wait_until(func(): return sm.current_state.name != "NuggetShower" or player.fight_over, 900)
+		physics_frame.disconnect(mason_bot_frame)
+		mason_bot_hold(Vector2.ZERO)
+		var taken: Array = hits.filter(theirs)
+		per_attack.append(taken.size())
+		log_p("from %s: %d hits %s, %d dashes, health %d of %d, now %s" % [MASON_BOT_SPOTS[i], taken.size(), taken, mason_bot.dashes, player.playerHealth, MASON_FULL_HEALTH, sm.current_state.name])
+		check(over and not player.fight_over and taken.size() <= MASON_BOT_MAX_HITS, "from %s the bot comes through it alive, hit %d times, at most %d" % [MASON_BOT_SPOTS[i], taken.size(), MASON_BOT_MAX_HITS])
+		if player.fight_over:
+			return
+		player.playerHealth = 1000
+	log_p("the bot over %d attacks: %s hits, %d in all; standing still took %d in one" % [per_attack.size(), per_attack, per_attack.reduce(func(a, b): return a + b, 0), stood.size()])
+
+	log_p("-- the same pace, parrying Carter where his marker has it and walking out of the rain")
+	var timed := []
+	var parried := []
+	defense.hit_taken.connect(func(hit): timed.append({"t": defense.clock, "id": hit.attack_id}))
+	defense.parried.connect(func(hit, _point, _staggered, _streak): parried.append(hit.attack_id))
+	for i in MASON_BOT_SPOTS.size():
+		seed(20260924 + i)
+		await mason_ready_combined(MASON_BOT_SPOTS[i])
+		hold_break_gauge(boss)
+		player.playerHealth = MASON_FULL_HEALTH
+		clear_iframes()
+		timed.clear()
+		parried.clear()
+		mason_bot_reset(true)
+		mason_start_combined()
+		physics_frame.connect(mason_bot_frame)
+		var through := await wait_until(func(): return sm.current_state.name != "NuggetShower" or player.fight_over, 900)
+		physics_frame.disconnect(mason_bot_frame)
+		mason_bot_hold(Vector2.ZERO)
+		release(KEY_SHIFT)
+		var planted_hits: Array = timed.filter(func(h): return mason_bot.guards.any(func(g): return h.t >= g[0] and h.t <= g[1]))
+		var taken: Array = timed.map(func(h): return h.id).filter(theirs)
+		log_p("from %s: planted %d times, parried %s, hit %d times %s, %d of them while planted" % [MASON_BOT_SPOTS[i], mason_bot.presses, parried, taken.size(), taken, planted_hits.size()])
+		check(through and not player.fight_over and planted_hits.is_empty() and not taken.has(&"carter_elbow_drop") and taken.size() <= MASON_BOT_MAX_HITS, "from %s the parrying bot is never hit while planted for Carter, never hit by him, and hit at most %d times" % [MASON_BOT_SPOTS[i], MASON_BOT_MAX_HITS])
+		if player.fight_over:
+			return
+		player.playerHealth = 1000
+
+	if tier == "won":
+		log_p("-- Mason beaten mid-attack")
+		await mason_ready_combined(MASON_STAND_AT)
+		hold_break_gauge(boss)
+		mason_start_combined()
+		deep = await wait_until(mason_mid_attack, 600)
+		boss.boss_health = 1
+		boss.take_finisher(1)
+		var beaten := await wait_until(func(): return sm.current_state.name == "Defeated", 60)
+		await wait(2)
+		check(deep and beaten, "beaten with Carter in the air and nuggets in the sky (%s)" % sm.current_state.name)
+		mason_check_released("beaten")
+		hits.clear()
+		await wait(72)
+		check(hits.is_empty() and hazards_of("NuggetMeteorScript.gd").is_empty() and hazards_of("CarterElbowDropScript.gd").is_empty(), "beaten: nothing of it lands on the player after (%s)" % [hits])
+		check(root.get_children().filter(func(n): return n.name == "FightOutro").size() == 1, "beaten: exactly one outro")
+	else:
+		log_p("-- the player killed mid-attack")
+		await mason_ready_combined(MASON_STAND_AT)
+		hold_break_gauge(boss)
+		mason_start_combined()
+		deep = await wait_until(mason_mid_attack, 600)
+		clear_iframes()
+		player.playerHealth = 1
+		hits.clear()
+		var lost := await wait_until(func(): return player.fight_over, 300)
+		await wait(2)
+		check(deep and lost and player.playerHealth == 0 and hits.size() == 1 and theirs.call(hits[0]), "killed by it with Carter in the air and nuggets in the sky (%s)" % [hits])
+		check(sm.current_state.name == "Idle" and sm.player_defeated, "the outro stands him down (%s)" % sm.current_state.name)
+		mason_check_released("the player's death")
+		await wait(72)
+		check(hazards_of("NuggetMeteorScript.gd").is_empty() and hazards_of("CarterElbowDropScript.gd").is_empty() and hits.size() == 1, "the player's death: nothing of it comes down after")
+		check(root.get_children().filter(func(n): return n.name == "FightOutro").size() == 1, "the player's death: exactly one outro")
+
+
+# ------------------------------------------------------------------ Mason's whole cycles, played through
+# His cycles from the first squat to the delivery: a phase-one cycle ending on Carter, one ending on the
+# shower, and two phase-two cycles ending on the combined attack. The dodging bot plays them, or with
+# `tier=still` a player who never moves, and each cycle reports what its lines cost and what its
+# finisher cost.
+
+const MASON_CYCLES := [[false, 0], [false, 1], [true, 0], [true, 1]]
+const MASON_LINE_IDS := [&"mason_poo_blast", &"mason_poo_contact"]
+
+
+func test_mason_bots() -> void:
+	fight = "mason"
+	if not await load_gauged():
+		return
+	var still := tier == "still"
+	var hits := []
+	var hit_times := []
+	defense.hit_taken.connect(func(hit):
+		hits.append(hit.attack_id)
+		hit_times.append(defense.clock))
+	log_p("-- %s, through whole cycles" % ("a player standing still" if still else "the dodging bot: it sees things %.2f s late and picks a step every %d frames" % [MASON_BOT_REACTION, MASON_BOT_REPLAN]))
+	var totals := []
+	for i in MASON_CYCLES.size():
+		var phase_two: bool = MASON_CYCLES[i][0]
+		seed(20260925 + i)
+		await reset_gauged(fight_spec.home)
+		hold_break_gauge(boss)
+		boss.global_position = MASON_COMBINED_AT
+		sm.rest_point = boss.global_position + sm.BOMB_SPAWN_OFFSET
+		boss.phase_two = phase_two
+		boss.boss_health = floori(boss.get_max_health() * boss.PHASE_TWO_RATIO) if phase_two else boss.get_max_health()
+		sm.cycles_started = MASON_CYCLES[i][1]
+		await settle_player(MASON_STAND_AT)
+		clear_iframes()
+		hits.clear()
+		hit_times.clear()
+		if not still:
+			mason_bot_reset()
+			physics_frame.connect(mason_bot_frame)
+		var started: float = defense.clock
+		sm.start_cycle()
+		var finisher: String = sm.finishers[0]
+		var lines: int = sm.lines_per_cycle[sm.cycle_phase]
+		var through := await wait_until(func(): return sm.current_state.name == "AwaitDelivery", 3600)
+		if not still:
+			physics_frame.disconnect(mason_bot_frame)
+			mason_bot_hold(Vector2.ZERO)
+		var from_lines: int = hits.filter(func(id): return MASON_LINE_IDS.has(id)).size()
+		var from_finisher: int = hits.size() - from_lines
+		totals.append([from_lines, from_finisher])
+		var dead_at: String = "never" if hit_times.size() < MASON_FULL_HEALTH else "%.2f s in" % (hit_times[MASON_FULL_HEALTH - 1] - started)
+		log_p("phase %d, %d lines then %s%s: the lines hit %d times and the finisher %d %s%s; a full bar of %d would run out %s" % [2 if phase_two else 1, lines, finisher, " with Carter in it" if phase_two else "", from_lines, from_finisher, hits, "" if still else ", %d dashes" % mason_bot.dashes, MASON_FULL_HEALTH, dead_at])
+		check(through, "phase %d, cycle %d plays through to the delivery" % [2 if phase_two else 1, i + 1])
+		if not still:
+			check(from_lines <= MASON_BOT_MAX_HITS and from_finisher <= MASON_BOT_MAX_HITS and hits.size() < MASON_FULL_HEALTH, "the bot comes through the lines and the %s with at most %d hits each, alive from full health (%d and %d)" % [finisher, MASON_BOT_MAX_HITS, from_lines, from_finisher])
+	log_p("hits per cycle, lines then finisher: %s" % [totals])
 
 
 # ------------------------------------------------------------------ Carter's Beam Rush
@@ -8990,79 +10430,91 @@ func test_juggle_kill_fight() -> void:
 # has something to hold his fight to if his scripts aren't in a build. beam_rush reads the live ones
 # off CarterStateMachine and checks these still match them.
 const BEAM_SUMMON := 0.70
-const BEAM_CHARGE := 0.45
+const BEAM_CHARGE := 1.20
+const BEAM_ESCAPE := 0.80
+const BEAM_LIVE := 1.20
+const BEAM_VOLLEYS := 3
+const BEAM_END := 0.40
+const RUSH_BEAM_ID := &"carter_rush_beam"
 const STRIKE_SHOW := 0.36
 const STRIKE_DASH := 0.08
 const STRIKE_GAP := 0.06
-const STRIKE_CAP := 12
 const STRIKE_REACH := 120.0
+const STRIKE_FROM := 0.15
+const STRIKE_CLEAR := 0.30
 const BEAM_RECOVER_BREAK := 5.0
 const BEAM_RECOVER_SPENT := 1.5
-# The player's hurtbox, from Scenes/MainPlayer.tscn: 36 px across.
-const PLAYER_WIDTH := 36.0
 const DEFEAT_SCENE := "res://Scenes/Core/DefeatScene.tscn"
+# beam_rush's escape model: the grid it walks the ring on, how near the ropes the player's hurtbox
+# centre gets, and the time it leaves a player to see the lock and react to it.
+const ESCAPE_GRID := 40.0
+const ESCAPE_ROPE_MARGIN := 20.0
+const ESCAPE_REACTION := 0.25
+# beam_rush_live's walk out of each volley's lines as they lock: 390 px, where the model wants about
+# 300 in the lower middle of the ring.
+const ESCAPE_WALK := 0.65
+# And its timed dash through a line: this far out of the crossing first, so the dash's 250 px and a few
+# steps after it clear every band before its immunity runs out.
+const DASH_THROUGH_LEAD := 0.10
 
 
 # The Beam Rush against the parry window and the ring's own geometry, modelled rather than run, so it
-# needs no Carter scene: the strikes are dealt to a parked Eric through the same player path.
-# THE ATTACK HAS NO TIMEOUT AND MUST NEVER GROW ONE. The numbers here are the ones that decide whether
-# its read is a read and whether a player who answers it by walking can stay in their lane.
+# needs no Carter scene: his strike is dealt to a parked Eric through the same player path, and the
+# escape from the four locked lines is walked out over the whole ring on paper.
+# THE ATTACK HAS NO TIMEOUT AND MUST NEVER GROW ONE.
 func test_beam_rush() -> void:
 	await load_eric()
 	health_ok()
 	park_eric()
 	await settle_player(Vector2(972, 800))
-	var show_time := STRIKE_SHOW
-	var dash_time := STRIKE_DASH
-	var gap_time := STRIKE_GAP
-	var cap := STRIKE_CAP
-	var reach := STRIKE_REACH
+	var mirrored := {
+		"beam_summon": BEAM_SUMMON, "beam_charge": BEAM_CHARGE, "beam_escape": BEAM_ESCAPE, "beam_live": BEAM_LIVE,
+		"beam_volleys": BEAM_VOLLEYS, "beam_end": BEAM_END, "strike_show": STRIKE_SHOW, "strike_dash": STRIKE_DASH,
+		"strike_gap": STRIKE_GAP, "strike_reach": STRIKE_REACH, "strike_from": STRIKE_FROM,
+		"strike_clear": STRIKE_CLEAR, "messatsu_tell": MESSATSU_TELL, "messatsu_travel": MESSATSU_TRAVEL,
+		"messatsu_fade": MESSATSU_FADE,
+	}
+	var n := mirrored.duplicate()
 	if ResourceLoader.exists(CARTER_STATE_MACHINE):
 		var probe: Node = load(CARTER_STATE_MACHINE).new()
-		show_time = probe.strike_show
-		dash_time = probe.strike_dash
-		gap_time = probe.strike_gap
-		cap = probe.strike_cap
-		reach = probe.strike_reach
-		var live_period: float = probe.strike_period()
+		for knob in mirrored:
+			n[knob] = probe.get(knob)
 		probe.free()
-		log_p("read off his fight: show %.2f, dash %.2f, gap %.2f, period %.2f, cap %d, reach %.0f" % [show_time, dash_time, gap_time, live_period, cap, reach])
-		check(is_equal_approx(show_time, STRIKE_SHOW) and is_equal_approx(dash_time, STRIKE_DASH) and is_equal_approx(gap_time, STRIKE_GAP) and cap == STRIKE_CAP and is_equal_approx(reach, STRIKE_REACH), "the numbers in this file still mirror his fight (%.2f/%.2f/%.2f/%d/%.0f)" % [show_time, dash_time, gap_time, cap, reach])
-		check(is_equal_approx(live_period, show_time + dash_time + gap_time), "strike_period() is show + dash + gap (%.2f)" % live_period)
+		var drifted := mirrored.keys().filter(func(knob): return not is_equal_approx(float(n[knob]), float(mirrored[knob])))
+		log_p("read off his fight: %s" % [n])
+		check(drifted.is_empty(), "the numbers in this file still mirror his fight (drifted: %s)" % [drifted])
 	else:
 		log_p("his fight is not in this build, so the numbers in this file are what is modelled")
 	var window: float = defense.parry_window
-	var strike: float = show_time + dash_time
-	var period: float = strike + gap_time
-	log_p("badge %.2f s, dash %.2f s, contact at %.2f s, period %.2f s, window %.2f s" % [show_time, dash_time, strike, period, window])
-	check(show_time >= 0.36, "the read is at its floor or above it (%.2f s)" % show_time)
-	check(strike < period, "one strike is done before the next starts (%.2f s of life, %.2f s period)" % [strike, period])
+	var strike: float = n.strike_show + n.strike_dash
+	log_p("badge %.2f s, dash %.2f s, contact at %.2f s, window %.2f s" % [n.strike_show, n.strike_dash, strike, window])
+	check(n.strike_show >= 0.36, "the strike's read is at its floor or above it (%.2f s)" % n.strike_show)
 
 	log_p("-- pressing the instant he appears is too early")
 	defense.rearm_parry()
 	var on_sight: int = await parry_at(clone_frames(strike))
-	check(on_sight == 2, "a press on sight only blocks (%d)" % on_sight)
+	check(on_sight == unparried(), "a press on sight doesn't parry (%d)" % on_sight)
 	check(strike > window + 1.0 / 60.0, "contact is %.2f s past the badge, the window covers %.2f s" % [strike, window])
 
 	log_p("-- and the read, as he lunges, parries")
 	defense.rearm_parry()
-	var on_dash: int = await parry_at(clone_frames(dash_time))
+	var on_dash: int = await parry_at(clone_frames(n.strike_dash))
 	check(on_dash == 3, "a press as he lunges parries (%d)" % on_dash)
 
-	# 0.50 s lands EXACTLY on parry_mash_lockout, so the rearm the fight makes as each strike appears
-	# is load-bearing rather than a safety net: without it a press that whiffed on one strike leaves
-	# the next one mathematically unparryable.
-	log_p("-- the period sits on the lockout, so the rearm is what keeps strikes answerable")
-	check(period <= defense.parry_mash_lockout + 0.0001, "the period %.2f s is inside the %.2f s lockout" % [period, defense.parry_mash_lockout])
-	var whiff_at := clone_frames(show_time + dash_time * 0.5)
-	var to_next_read := clone_frames(period + strike - window) - whiff_at
-	log_p("  a whiffed press %.2f s into a strike, then the next strike's read %.2f s later" % [whiff_at / 60.0, to_next_read / 60.0])
+	# He comes in the middle of a charge, where a player may already have pressed at nothing. Inside
+	# parry_mash_lockout that press would cost the strike, and the rearm he makes as he appears is what
+	# gives it back.
+	log_p("-- a press whiffed just before he appears")
+	var early := 0.2
+	var to_read := clone_frames(early + strike - window)
+	log_p("  a press %.2f s before he appears, then his read %.2f s after it" % [early, to_read / 60.0])
+	check(early + strike - window < defense.parry_mash_lockout, "which is inside the %.2f s lockout" % defense.parry_mash_lockout)
 	press(KEY_SHIFT)
 	await wait(2)
 	release(KEY_SHIFT)
-	await wait(to_next_read)
+	await wait(to_read - 2)
 	var spilled: int = await parry_at(clone_frames(window))
-	check(spilled == 2, "with nothing rearming it, the whiff costs the next strike too (%d)" % spilled)
+	check(spilled == unparried(), "with nothing rearming it, the whiff costs the strike (%d)" % spilled)
 	clear_iframes()
 	defense._set_stamina(defense.max_stamina)
 	await past_window()
@@ -9070,42 +10522,167 @@ func test_beam_rush() -> void:
 	press(KEY_SHIFT)
 	await wait(2)
 	release(KEY_SHIFT)
-	await wait(to_next_read)
-	# What the fight does as each strike appears.
+	await wait(to_read - 2)
+	# What the fight does as he appears.
 	defense.rearm_parry()
 	var saved: int = await parry_at(clone_frames(window))
-	check(saved == 3, "the rearm gives the next strike back (%d)" % saved)
+	check(saved == 3, "the rearm he makes as he appears gives it back (%d)" % saved)
 
-	# The curtains are lane dividers, and a strike is answered by stepping out of its box. Both are
-	# geometry, and neither works if a lane is too narrow to stand a sidestep in.
-	log_p("-- the ring, divided")
+	log_p("-- a volley's tell and its escape")
+	var to_hit: float = n.beam_escape + n.messatsu_travel
+	log_p("the lines lock %.2f s before the heads land and the beams start to hurt; the yellow badge is up %.2f s of that, %.2f s before they do" % [to_hit, n.messatsu_tell, n.messatsu_tell + n.messatsu_travel])
+	check(n.beam_escape >= n.messatsu_tell, "the tell comes after the lock, inside the escape (%.2f s of %.2f)" % [n.messatsu_tell, n.beam_escape])
+	check(n.messatsu_tell + n.messatsu_travel >= 0.36, "and it is up at the read floor or over it before they hurt (%.2f s)" % (n.messatsu_tell + n.messatsu_travel))
+
+	# By the user's call the Beam Rush's beams are escaped and never parried: his strike is the one parry
+	# in the attack.
+	log_p("-- the beams can only be escaped")
+	var hits: Dictionary = (load("res://Scripts/HitInfo.gd") as GDScript).Result
+	var rush_beam: Dictionary = CATALOG.get_attack(RUSH_BEAM_ID)
+	check(not rush_beam.blockable and not rush_beam.parryable and not rush_beam.tell and rush_beam.dodge_tell, "no guard and no parry answers them, and their badge is the yellow one")
+	check(rush_beam.dash_through and not rush_beam.bypass_invincibility, "a dash's immunity carries the player through one, and the i-frames space their hits")
+	defense.rearm_parry()
+	press(KEY_SHIFT)
+	await wait(3)
+	var pressed: int = omni_hit(RUSH_BEAM_ID, dummy_source())
+	release(KEY_SHIFT)
+	await wait(4)
+	clear_iframes()
+	check(pressed == hits.HIT, "a fresh press with the guard up takes the hit (%s)" % hits.keys()[pressed])
+	press(KEY_RIGHT)
+	tap(KEY_W)
+	await wait(2)
+	var dashed: int = omni_hit(RUSH_BEAM_ID, dummy_source())
+	release(KEY_RIGHT)
+	await wait(30)
+	clear_iframes()
+	await settle_player(Vector2(972, 800))
+	check(dashed == hits.DODGED, "and a dash through one is dodged (%s)" % hits.keys()[dashed])
+
+	# Four lines latched on the player's hurtbox centre wherever in the ring they stand: how soon can the
+	# player be out of every band, walking along one of the eight directions the keys give - the axes are
+	# separate, so a diagonal is faster - or dashing first?
+	log_p("-- the escape from four locked lines, over the whole ring")
 	var art: GDScript = load(CARTER_ART_LAYOUT)
 	var machine: GDScript = load(CARTER_STATE_MACHINE)
 	var ropes: Rect2 = machine.ROPES
-	var lane: float = (ropes.size.x - art.BEAM_COUNT * art.BEAM_HIT_WIDTH) / (art.BEAM_COUNT + 1)
-	log_p("%d curtains at %s, %.0f px drawn and %.0f px of each hurting, leaving %d lanes of %.1f px" % [art.BEAM_COUNT, art.BEAM_X, art.BEAM_DRAW_WIDTH, art.BEAM_HIT_WIDTH, art.BEAM_COUNT + 1, lane])
-	check(art.BEAM_HIT_WIDTH < art.BEAM_DRAW_WIDTH, "what hurts is narrower than what is drawn: %.0f px of forgiveness a side" % ((art.BEAM_DRAW_WIDTH - art.BEAM_HIT_WIDTH) / 2.0))
-	check(lane >= 6.0 * PLAYER_WIDTH, "a lane holds six players across (%.1f px against %.0f)" % [lane, 6.0 * PLAYER_WIDTH])
-	check(lane / 2.0 >= reach, "and a sidestep out of a strike stays inside it: %.1f px to the nearest edge against a reach of %.0f" % [lane / 2.0, reach])
+	var shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var half: Vector2 = (shape.shape as RectangleShape2D).size * shape.global_scale.abs() / 2.0
+	var area := ropes.grow(-ESCAPE_ROPE_MARGIN)
+	var budget: float = to_hit - ESCAPE_REACTION
+	var speed: float = player.get_script().SPEED
+	var worst := {"walk": 0.0, "walk_at": Vector2.ZERO, "dash": 0.0, "dash_at": Vector2.ZERO}
+	var walked := 0
+	var spots := 0
+	var y := area.position.y
+	while y <= area.end.y:
+		var x := area.position.x
+		while x <= area.end.x:
+			var at := Vector2(x, y)
+			var lines := beam_rush_lines(art, at, half)
+			var walk := beam_rush_walk_out(lines, at, area, speed)
+			var dash := beam_rush_dash_out(lines, at, area, speed)
+			spots += 1
+			if walk <= budget:
+				walked += 1
+			if walk > worst.walk:
+				worst.walk = walk
+				worst.walk_at = at
+			if dash > worst.dash:
+				worst.dash = dash
+				worst.dash_at = at
+			x += ESCAPE_GRID
+		y += ESCAPE_GRID
+	log_p("ESCAPE: from %d spots, a dash and a walk get out of all four in %.2f s at worst (%s); walking alone in %.2f s at worst (%s), and inside %.2f s from %d of them (%.0f%%)" % [spots, worst.dash, worst.dash_at, worst.walk, worst.walk_at, budget, walked, 100.0 * walked / spots])
+	check(worst.dash <= budget, "from anywhere in the ring a dash gets out of all four and leaves %.2f s to react to the lock (%.2f s of %.2f)" % [ESCAPE_REACTION, worst.dash, to_hit])
+	check(walked >= spots * 0.75, "and walking alone does from most of it (%.0f%%)" % (100.0 * walked / spots))
 	for i in art.BEAM_COUNT:
 		var want: float = ropes.position.x + ropes.size.x * (i + 1) / float(art.BEAM_COUNT + 1)
-		check(absf(art.BEAM_X[i] - want) <= 1.0, "curtain %d is spaced off the ropes, not written down (%.0f against %.1f)" % [i + 1, art.BEAM_X[i], want])
-	check(art.BEAM_TOP_Y <= ropes.position.y and art.BEAM_BOTTOM_Y >= ropes.end.y - 1.0, "they run the whole ring, so there is no free lane change at the top (%.0f to %.0f against %.0f to %.0f)" % [art.BEAM_TOP_Y, art.BEAM_BOTTOM_Y, ropes.position.y, ropes.end.y])
+		check(absf(art.BEAM_X[i] - want) <= 1.0, "clone %d stands spaced off the ropes, not written down (%.0f against %.1f)" % [i + 1, art.BEAM_X[i], want])
 
-	log_p("-- what the attack costs a player who does nothing")
+	log_p("-- the strike's place in its charge")
+	var latest: float = n.beam_charge - strike - n.strike_clear
+	var after_hit: float = n.messatsu_fade + n.strike_from + strike
+	var before_hit: float = n.strike_clear + to_hit
+	log_p("he appears %.2f to %.2f s into a charge: his blow lands %.2f s after the last volley's beams stop hurting at the least, and %.2f s before the lock and %.2f s before the next beams hurt at the least" % [n.strike_from, latest, after_hit, n.strike_clear, before_hit])
+	check(latest >= n.strike_from, "every charge has room for him (%.2f to %.2f s)" % [n.strike_from, latest])
+	check(after_hit > window and before_hit > window, "so his blow never lands with a beam")
+	check(before_hit >= to_hit + n.strike_clear - 0.0001, "and a player who stood rooted to parry it still has the whole escape ahead of them")
+
+	log_p("-- what the attack costs a player who never moves")
 	var catalog: Dictionary = CATALOG.get_attack(&"carter_teleport_strike")
 	check(not catalog.bypass_invincibility, "the strike does NOT bypass the i-frames, unlike the barrage's clones")
-	check(catalog.blockable and catalog.tell, "it is blockable and it advertises itself")
+	check(catalog.blockable and catalog.tell, "it is blockable and it advertises itself: the attack's one parry")
 	var iframes: float = player.invincibility_timer.wait_time
-	var landing := 0
-	var free_until := -1000.0
-	for i in cap:
-		var contact: float = i * period + strike
-		if contact >= free_until:
-			landing += 1
-			free_until = contact + iframes
-	log_p("%d strikes %.2f s apart against %.2f s of i-frames: %d of them land" % [cap, period, iframes, landing])
-	check(landing >= 6, "a player who does nothing at all dies to it (%d landing strikes against 6 half-hearts)" % landing)
+	var per_volley := 0
+	var since_live := 0.0
+	while since_live <= n.beam_live:
+		per_volley += 1
+		since_live += iframes
+	var landing: int = n.beam_volleys * per_volley
+	log_p("in a beam all the %.2f s it hurts, against %.2f s of i-frames: %d hits a volley and %d in all, and his strike %.2f s after the beams before it stopped hurting" % [n.beam_live, iframes, per_volley, landing, after_hit])
+	check(landing + 1 >= 6, "a player who never moves dies to it (%d beam hits and the strike against 6 half-hearts)" % landing)
+
+
+# Where the four's lines run when they lock on a player whose hurtbox centre is `at`: from each one's
+# palms, facing the player as CarterBeamRush turns them. Each line carries the half-width its band has
+# across it for a hurtbox of half-size `half` (CarterBeamRush._in_band).
+func beam_rush_lines(art: GDScript, at: Vector2, half: Vector2) -> Array:
+	var lines := []
+	for x in art.BEAM_X:
+		var feet := Vector2(x, art.BEAM_CLONE_Y)
+		var palms: Vector2 = feet + art.local(art.MESSATSU_MUZZLE, at.x < feet.x)
+		var n := (at - palms).normalized().orthogonal()
+		lines.append({"palms": palms, "n": n, "across": art.MESSATSU_HIT_WIDTH / 2.0 + half.x * absf(n.x) + half.y * absf(n.y)})
+	return lines
+
+
+# How far along `dir` from `at` a hurtbox centre has to go to be out of every band, or INF if it
+# reaches the ropes first. Each band is an interval along the ray, so it is solved rather than
+# stepped. The 60 px a band reaches behind the palms is left out, which can only make a band longer.
+func beam_rush_ray_out(lines: Array, at: Vector2, dir: Vector2, area: Rect2) -> float:
+	var s := 0.0
+	var moved := true
+	while moved:
+		moved = false
+		for line in lines:
+			var a: float = (at - line.palms).dot(line.n)
+			var b: float = dir.dot(line.n)
+			var w: float = line.across
+			if absf(a + s * b) > w:
+				continue
+			if absf(b) < 0.0001:
+				return INF
+			s = maxf((w - a) / b, (-w - a) / b) + 0.5
+			moved = true
+	return s if area.has_point(at + dir * s) else INF
+
+
+# The soonest walking gets out, along one of the eight directions the keys give.
+func beam_rush_walk_out(lines: Array, at: Vector2, area: Rect2, speed: float) -> float:
+	var best := INF
+	for i in 8:
+		var pace: float = speed * (sqrt(2.0) if i % 2 == 1 else 1.0)
+		best = minf(best, beam_rush_ray_out(lines, at, Vector2.from_angle(i * PI / 4.0), area) / pace)
+	return best
+
+
+# A dash first - DASH_LENGTH over three frames along one of the eight directions, or to the ropes -
+# then V2_STILL_FRAMES stood still and walking the rest.
+func beam_rush_dash_out(lines: Array, at: Vector2, area: Rect2, speed: float) -> float:
+	var best := INF
+	for i in 8:
+		var dir := Vector2.from_angle(i * PI / 4.0)
+		var length := DASH_LENGTH
+		while length > 0.0 and not area.has_point(at + dir * length):
+			length -= 1.0
+		var landed := at + dir * length
+		var out := beam_rush_ray_out(lines, landed, dir, area)
+		if out == 0.0:
+			best = minf(best, 3.0 / 60.0)
+			continue
+		best = minf(best, 3.0 / 60.0 + V2_STILL_FRAMES / 60.0 + beam_rush_walk_out(lines, landed, area, speed))
+	return best
 
 
 # The shipped Carter, set up the way test_pause_barrage does it: his machine fills its states and
@@ -9128,31 +10705,44 @@ func load_carter_akuma() -> Node:
 
 
 # Straight into a Beam Rush. Cycle 1 is always the barrage, so the counter is nudged and the cycle
-# started, which is also the alternation doing its job.
-func start_beam_rush(rush: Node) -> bool:
+# started, which is also the rotation doing its job. His strike is put where the caller wants it, so
+# every run plays the same attack.
+func start_beam_rush(rush: Node, strike_volley := 1, strike_at := 0.3) -> bool:
+	rush.forced_strike_volley = strike_volley
+	rush.forced_strike_at = strike_at
 	sm.cycles_started = 1
 	sm.start_cycle()
-	return await wait_until(func(): return sm.current_state == rush and rush.beat == rush.Beat.RUSH, 900)
+	return await wait_until(func(): return sm.current_state == rush, 60)
 
 
-# Presses the guard as a strike lunges, which is the read: the badge has just gone and contact is
-# strike_dash away. Waits for a strike past `index`, so each call answers a fresh one.
-func parry_strike(rush: Node, index: int) -> bool:
-	if not await wait_until(func(): return rush.strike_index > index, 240):
-		return false
-	if not await wait_until(func(): return rush.strike_shown, 240):
+# Presses the guard as his strike lunges, which is the read: the badge has just gone and contact is
+# strike_dash away. Held through the contact: a parry needs the guard up when the blow arrives.
+func parry_beam_rush_strike(rush: Node) -> bool:
+	if not await wait_until(func(): return rush.strike == rush.Strike.LUNGE, 900):
 		return false
 	press(KEY_SHIFT)
-	# Held through the contact: a parry needs the guard up when the blow arrives, not just at the press.
-	await wait_until(func(): return rush.strike_landed, 60)
+	await wait_until(func(): return rush.strike != rush.Strike.LUNGE, 60)
 	release(KEY_SHIFT)
 	await wait(2)
 	return true
 
 
-# The real thing, in his real fight. The check that matters most is the first: twelve strikes with no
-# input at all end the attack, because the strike cap is its only loop bound and there is no clock
-# anywhere in it.
+# The press a player standing in volley `v`'s lines makes as its beams land, the way a parry would be
+# timed: the frame the four fire, held until they hurt. The beams can't be parried, so it answers nothing.
+func press_at_beam_rush_landing(rush: Node, v: int) -> bool:
+	if not await wait_until(func(): return rush.volley == v and rush.beat == rush.Beat.STRING, 900):
+		return false
+	press(KEY_SHIFT)
+	await wait_until(func(): return rush.live or rush.beat != rush.Beat.STRING, 60)
+	await wait(2)
+	release(KEY_SHIFT)
+	defense._set_stamina(defense.max_stamina)
+	return true
+
+
+# The real thing, in his real fight. The check that matters most is the first: with no input at all the
+# attack ends on its own, because the volley count is its only bound and there is no clock anywhere in
+# it.
 func test_beam_rush_live() -> void:
 	var rush: Node = await load_carter_akuma()
 	check(rush != null, "his fight carries a BeamRush state")
@@ -9162,67 +10752,167 @@ func test_beam_rush_live() -> void:
 	sm.cycles_started = 1
 	check(sm.next_attack() == "RagingDemon", "cycle 1 is always the barrage, which teaches the read this attack assumes")
 	sm.cycles_started = 2
-	check(sm.next_attack() == "BeamRush", "and the two alternate after it")
+	check(sm.next_attack() == "BeamRush", "and this one comes second")
 	sm.cycles_started = 3
-	check(sm.next_attack() == "RagingDemon", "and back, strictly, rather than by a random pick")
+	check(sm.next_attack() == "Messatsu", "the Messatsu third")
+	sm.cycles_started = 4
+	check(sm.next_attack() == "RagingDemon", "and back to the barrage, strictly, rather than by a random pick")
 	sm.cycles_started = 0
+	track()
+	track_parries()
+	track_dodges()
+	var iframes: float = player.invincibility_timer.wait_time
+	var per_volley := int(floor(BEAM_LIVE / iframes)) + 1
 
-	log_p("-- twelve strikes with nothing pressed end it")
+	log_p("-- three volleys with nothing pressed end it")
 	player.playerHealth = 9999
 	await settle_player(Vector2(959, 800))
-	check(await start_beam_rush(rush), "the rush is running")
+	var beam_hits: int = events_of("HIT", RUSH_BEAM_ID).size()
+	var strike_hits: int = events_of("HIT", &"carter_teleport_strike").size()
+	check(await start_beam_rush(rush), "the rush is running, his strike put 0.30 s into the second charge")
 	check(is_equal_approx(gauge.value, 0.0) and not gauge.locked, "the gauge reads 0 on entry and takes fills (%.0f)" % gauge.value)
-	check(rush.beams.size() == 4 and rush.clones.size() == 4, "four curtains and four clones are up (%d, %d)" % [rush.beams.size(), rush.clones.size()])
-	var lanes := []
-	for curtain in rush.beams:
-		lanes.append(roundi(curtain.global_position.x))
-	log_p("the curtains stand at %s" % [lanes])
-	var still := [true]
-	var seen := [-1]
-	var watch_lanes := func() -> void:
-		seen[0] = maxi(seen[0], rush.strike_index)
-		var now := []
-		for curtain in rush.beams:
-			if is_instance_valid(curtain):
-				now.append(roundi(curtain.global_position.x))
-		if now.size() == lanes.size() and now != lanes:
-			still[0] = false
-	physics_frame.connect(watch_lanes)
+	check(rush.casters.size() == 4, "four clones are up (%d)" % rush.casters.size())
+	var seen := {"locks": [], "locked_at": [], "off": 0.0, "fired": {}, "moved": 0, "strike": [], "blow": -1.0, "away": 0}
+	var watch := func() -> void:
+		if sm.current_state != rush:
+			return
+		if rush.beat == rush.Beat.LOCK and seen.locks.size() == rush.volley:
+			seen.locks.append(rush.lock_point)
+			seen.locked_at.append(defense.clock)
+			seen.off = maxf(seen.off, rush.lock_point.distance_to(player_centre()))
+		if rush.beat == rush.Beat.STRING:
+			var now := []
+			for caster in rush.casters:
+				now.append([caster.beam_root.global_position, caster.beam_root.rotation, caster.aim_origin, caster.aim_angle])
+			if not seen.fired.has(rush.volley):
+				seen.fired[rush.volley] = now
+			elif seen.fired[rush.volley] != now:
+				seen.moved += 1
+		if rush.strike == rush.Strike.SHOW and seen.strike.is_empty():
+			seen.strike = [rush.volley, rush.beat, snappedf(rush.beat_clock, 0.001)]
+		if rush.strike == rush.Strike.HOLD and seen.blow < 0.0:
+			seen.blow = defense.clock
+		if rush.strike == rush.Strike.DONE and rush.beat != rush.Beat.END and boss.global_position != rush.home:
+			seen.away += 1
+	physics_frame.connect(watch)
 	var left: bool = await wait_until(func(): return sm.current_state != rush, 1800)
-	physics_frame.disconnect(watch_lanes)
-	log_p("he got to strike %d of %d, and the state settled in %s" % [seen[0] + 1, STRIKE_CAP, sm.current_state.name])
+	physics_frame.disconnect(watch)
+	var beams: Array = events_of("HIT", RUSH_BEAM_ID).slice(beam_hits)
+	var strikes: Array = events_of("HIT", &"carter_teleport_strike").slice(strike_hits)
+	var gaps := []
+	for i in range(1, beams.size()):
+		if i % per_volley != 0:
+			gaps.append(snappedf(beams[i].t - beams[i - 1].t, 0.001))
+	var firsts := []
+	for v in seen.locked_at.size():
+		if v * per_volley < beams.size():
+			firsts.append(snappedf(beams[v * per_volley].t - seen.locked_at[v], 0.001))
+	var blow_to_lock: float = seen.locked_at[1] - seen.blow if seen.locked_at.size() > 1 and seen.blow > 0.0 else -1.0
+	log_p("locks at %s, %.1f px off the player at worst; first hits %s s after them, the rest %s s apart; the strike %s, its blow %.2f s before that volley's lock; the state settled in %s" % [seen.locks, seen.off, firsts, gaps, seen.strike, blow_to_lock, sm.current_state.name])
 	check(left, "the attack ended on its own with no input")
-	check(seen[0] + 1 == STRIKE_CAP, "on the twelfth strike and not on a clock (%d)" % (seen[0] + 1))
-	check(still[0], "and the curtains never moved a pixel while it ran")
+	check(seen.locks.size() == BEAM_VOLLEYS, "after three volleys, and not on a clock (%d)" % seen.locks.size())
+	check(seen.off <= 1.0, "each locked onto the player's hurtbox centre where they stood")
+	check(seen.moved == 0, "and no beam moved off its latched line once it fired")
+	check(beams.size() == BEAM_VOLLEYS * per_volley, "a still player where four cross takes one hit at a time, %d a volley over the %.2f s the beams hurt: %d" % [per_volley, BEAM_LIVE, beams.size()])
+	check(not gaps.is_empty() and gaps.all(func(g): return absf(g - iframes) <= 1.5 / 60.0), "spaced by the i-frames, %.2f s (%s)" % [iframes, gaps])
+	check(firsts.size() == BEAM_VOLLEYS and firsts.all(func(f): return absf(f - BEAM_ESCAPE - MESSATSU_TRAVEL) <= 1.5 / 60.0), "each volley's first lands %.2f s after its lock (%s)" % [BEAM_ESCAPE + MESSATSU_TRAVEL, firsts])
+	check(seen.strike.size() == 3 and seen.strike[0] == 1 and seen.strike[1] == rush.Beat.CHARGE and absf(seen.strike[2] - 0.3) <= 1.5 / 60.0, "his strike came once, where it was put: 0.30 s into the second charge (%s)" % [seen.strike])
+	check(strikes.size() == 1, "and landed on a player who didn't answer it (%d)" % strikes.size())
+	check(blow_to_lock >= STRIKE_CLEAR - 0.001, "its blow landed %.2f s before that volley's lines locked" % blow_to_lock)
+	check(seen.away == 0, "and he stood back where he started from then on")
 	check(sm.current_state.name == "Recover", "into his punish window")
-	check(is_equal_approx(sm.recover_timer.wait_time, BEAM_RECOVER_SPENT), "a rush simply sat through earns the short window: %.2f s" % sm.recover_timer.wait_time)
+	check(is_equal_approx(sm.recover_timer.wait_time, BEAM_RECOVER_SPENT), "an attack simply sat through earns the short window: %.2f s" % sm.recover_timer.wait_time)
 	check(get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), "nothing is left on the mat")
 
-	log_p("-- seven parries break him")
+	log_p("-- a player who parries his strike rooted, then walks out of every volley's lines as they lock")
+	sm.recover_timer.stop()
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	await settle_player(Vector2(1250, 820))
+	clear_iframes()
+	beam_hits = events_of("HIT", RUSH_BEAM_ID).size()
+	var strike_parries: int = parries.filter(func(p): return p.id == &"carter_teleport_strike").size()
+	# As late in its charge as he may come, so its blow lands as near the lock as it ever does.
+	check(await start_beam_rush(rush, 1, sm.strike_latest()), "a second rush is running, his strike as late as it comes")
+	var walks := []
+	for v in BEAM_VOLLEYS:
+		if v == 1:
+			check(await parry_beam_rush_strike(rush), "he strikes in the second charge")
+		if not await wait_until(func(): return rush.volley == v and rush.beat == rush.Beat.LOCK, 900):
+			break
+		var toward := KEY_LEFT if player.global_position.x > sm.ARENA_CENTRE.x else KEY_RIGHT
+		var from_x: float = player.global_position.x
+		press(toward)
+		await wait(clone_frames(ESCAPE_WALK))
+		release(toward)
+		walks.append(roundi(player.global_position.x - from_x))
+	await wait_until(func(): return sm.current_state != rush, 900)
+	var landed: int = events_of("HIT", RUSH_BEAM_ID).size() - beam_hits
+	log_p("walked %s px as each volley locked; %d beam hits landed" % [walks, landed])
+	check(parries.filter(func(p): return p.id == &"carter_teleport_strike").size() == strike_parries + 1, "his strike was parried with the guard up, %.2f s before the lock" % sm.strike_clear)
+	check(walks.size() == BEAM_VOLLEYS and landed == 0, "and not one beam lands on a player who walks away as the lines lock (%d)" % landed)
+
+	# Still in the lines a moment before they go live, the player dashes out through them: the dash's
+	# immunity covers the frames it is still inside, and it is clear of every band before that runs out.
+	log_p("-- a timed dash out through the lines as they go live")
 	sm.recover_timer.stop()
 	sm.on_child_transition(sm.current_state, "Idle")
 	sm.beat_timer.stop()
 	await settle_player(Vector2(959, 800))
 	clear_iframes()
-	check(await start_beam_rush(rush), "a second rush is running")
+	defense._set_stamina(defense.max_stamina)
+	beam_hits = events_of("HIT", RUSH_BEAM_ID).size()
+	var dodged_before: int = dodges.size()
+	check(await start_beam_rush(rush, 2, 0.3), "a third rush is running, his strike out of the way in the last charge")
+	check(await wait_until(func(): return rush.volley == 0 and rush.beat == rush.Beat.LOCK, 900), "the first volley locks on the player")
+	press(KEY_RIGHT)
+	await wait(clone_frames(DASH_THROUGH_LEAD))
+	release(KEY_RIGHT)
+	# A press reaches the player on the next frame's input flush, so this is two frames before they go live.
+	check(await wait_until(func(): return rush.beat == rush.Beat.STRING and rush.fire_clock >= sm.messatsu_travel - 3.5 / 60.0, 120), "the four fire")
+	var inside: bool = rush.casters.any(func(c): return rush._in_band(c, rush._rect_of(player.hurtBox.get_node("CollisionShape2D"))))
+	press(KEY_RIGHT)
+	tap(KEY_W)
+	await wait(30)
+	release(KEY_RIGHT)
+	var dashed_hits: int = events_of("HIT", RUSH_BEAM_ID).size() - beam_hits
+	log_p("in the lines as the dash was pressed: %s; beam hits %d, perfect dodges %d" % [inside, dashed_hits, dodges.size() - dodged_before])
+	check(inside and dashed_hits == 0, "still in them as they went live, and not hit (%d)" % dashed_hits)
+	check(dodges.size() > dodged_before and dodges[-1].id == RUSH_BEAM_ID, "a perfect dodge through the beam")
+
+	log_p("-- his strike is the attack's one read: with seven carried in, its parry breaks him and ends it on the spot")
+	sm.recover_timer.stop()
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	await settle_player(Vector2(959, 800))
+	clear_iframes()
+	# His gauge is fight-long and carries over between attacks: seven reads come in from the attacks before.
+	gauge.locked = false
+	gauge.value = 7.0 * boss.BREAK_READ
 	var parried := []
-	defense.parried.connect(func(hit, _at, _staggered, _streak): parried.append(hit.attack_id))
-	var gains := []
-	var index := -1
-	for i in 7:
-		if not await parry_strike(rush, index):
-			break
-		index = rush.strike_index
-		gains.append(roundi(gauge.value))
-		defense._set_stamina(defense.max_stamina)
-		if rush.broke:
-			break
-	log_p("gauge after each parry: %s, ids %s" % [gains, parried])
-	check(parried.size() == 7 and parried.all(func(id): return id == &"carter_teleport_strike"), "seven strikes parried, all his (%d)" % parried.size())
-	check(rush.broke, "and the seventh broke him")
-	check(await wait_until(func(): return sm.current_state.name == "Recover", 240), "which ends the attack")
-	check(is_equal_approx(sm.recover_timer.wait_time, BEAM_RECOVER_BREAK), "into the long window a Break earns: %.2f s" % sm.recover_timer.wait_time)
-	check(get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), "and nothing is left on the mat")
+	# PlayerCombatFx._attack_art flicks the first visible Sprite2D among a parried source's siblings, and
+	# its handler runs before this one, so a hit source parented beside a sprite shows here as one of the
+	# four at the top lit up by the parry.
+	var flicked := []
+	defense.parried.connect(func(hit, _at, _staggered, _streak):
+		parried.append(hit.attack_id)
+		for c in rush.casters.size():
+			if rush.casters[c].figure.self_modulate != Color.WHITE:
+				flicked.append(c + 1))
+	check(await start_beam_rush(rush, 0, 0.3), "a fourth rush is running with %.1f in the gauge, his strike in the first charge" % gauge.value)
+	var answered: bool = await parry_beam_rush_strike(rush)
+	await wait(1)
+	var lock_badge: Node = boss.clone_layer.get_node_or_null("ParryTell%d" % rush.lock_ring.get_instance_id())
+	log_p("parried %s; the attack in volley %d, beat %s" % [parried, rush.volley, rush.Beat.keys()[rush.beat]])
+	check(answered and parried == [&"carter_teleport_strike"], "his strike, parried")
+	check(flicked.is_empty(), "and no parry flashed or knocked one of the four at the top (clones %s)" % [flicked])
+	check(rush.broke and rush.volley == 0 and rush.beat == rush.Beat.END, "it broke him, and the attack ended on the spot")
+	check(messatsu_badge() == null and lock_badge == null, "with no badge left, over him or over the lock")
+	check(not rush.lock_ring.visible and rush.casters.all(func(c): return not c.ball.visible and not c.aim_line.visible), "and no line, ball or lock ring left up")
+	check(await wait_until(func(): return sm.current_state.name == "Recover", 240), "into his window")
+	check(is_equal_approx(sm.recover_timer.wait_time, BEAM_RECOVER_BREAK), "the long window a Break earns: %.2f s" % sm.recover_timer.wait_time)
+	check(sm.current_state.from_break and boss.can_be_juggled(), "and it is a Break's window, which pays the tiered finisher")
+	check(get_nodes_in_group(sm.HAZARD_GROUP).is_empty() and rush.casters.is_empty(), "and nothing is left on the mat")
 
 	log_p("-- a player beaten in the middle of it leaves nothing behind")
 	sm.recover_timer.stop()
@@ -9232,104 +10922,939 @@ func test_beam_rush_live() -> void:
 	clear_iframes()
 	player.playerHealth = 6
 	var opened: float = defense.clock
-	check(await start_beam_rush(rush), "a third rush is running")
-	var first: float = defense.clock
+	check(await start_beam_rush(rush), "a fifth rush is running")
 	var died: bool = await wait_until(func(): return player.fight_over or player.playerHealth <= 0, 1800)
-	var took: float = defense.clock - first
-	log_p("TIME TO DEATH with nothing pressed: %.2f s from the first strike, %.2f s from the top of the attack, on strike %d" % [took, defense.clock - opened, rush.strike_index + 1])
-	check(died, "a player who never parries dies to it")
-	check(took < STRIKE_CAP * (STRIKE_SHOW + STRIKE_DASH + STRIKE_GAP), "inside the twelve strikes he gets (%.2f s)" % took)
+	log_p("TIME TO DEATH with nothing pressed: %.2f s from the top of the attack, in volley %d" % [defense.clock - opened, rush.volley + 1])
+	check(died, "a player who never moves dies to it")
 	await wait(20)
 	check(rush.released, "the rush was released by the end of the fight")
-	check(rush.beams.is_empty() and rush.clones.is_empty(), "no curtain and no clone is left")
+	check(rush.casters.is_empty(), "no clone and no beam is left")
 	check(get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), "nothing is left on the mat")
-	check(boss.get_parent().get_node_or_null("ParryTell%d" % boss.get_instance_id()) == null, "no badge is left over his head")
+	var badges: Array = boss.clone_layer.get_children().filter(func(c): return str(c.name).begins_with("ParryTell"))
+	check(messatsu_badge() == null and badges.is_empty(), "no badge is left over his head or over a lock (%d)" % badges.size())
 	check(not player.is_action_locked, "and the player was never locked by it anyway")
 	check(root.has_node(^"FightOutro") and not root.get_node(^"FightOutro").player_won, "the loss is running")
 	# The rest of the way to the screen: his pose, his outro line read the way a player reads one, and
-	# the fade behind it.
+	# the fade behind it. current_scene is null for the frame between the fight going and the loss
+	# screen coming, and a poll can land on it.
 	for i in 200:
 		if current_scene != null and current_scene.scene_file_path == DEFEAT_SCENE:
 			break
-		if live_balloon() != null:
+		if current_scene != null and live_balloon() != null:
 			await read_line()
 		else:
 			await wait(6)
 	check(current_scene != null and current_scene.scene_file_path == DEFEAT_SCENE, "and it reaches the loss screen (%s)" % [current_scene.scene_file_path if current_scene else "<none>"])
 
 
-# Four live curtains and a Carter halfway through a teleport, under a pause and under a finisher's
-# freeze. Every wait in the attack is a physics accumulator and every ramp a node-bound tween, so
-# both have to stop the whole of it dead.
+# The four forming, charging and firing, and a Carter halfway through his strike, under a pause and
+# under a finisher's freeze. Every wait in the attack is a physics accumulator and every ramp a
+# node-bound tween, so both have to stop the whole of it dead.
 func test_pause_beam_rush() -> void:
 	var rush: Node = await load_carter_akuma()
+	var art: GDScript = load(CARTER_ART_LAYOUT)
 	player.playerHealth = 9999
 	await settle_player(Vector2(959, 800))
 	var pause: Node = pause_menu()
 
-	# The one moment the curtains are on a live tween rather than sitting at full: catching the ramp
-	# is what proves it is node-bound and not a tree-level one, which a pause would not hold.
-	log_p("-- paused with the curtains still coming up")
-	sm.cycles_started = 1
-	sm.start_cycle()
-	check(await wait_until(func(): return sm.current_state == rush and rush.beat == rush.Beat.CHARGE and rush.beams.size() == 4, 300), "the charge is running and four curtains are building")
+	# The one moment the four are on a live tween rather than sitting at full: catching it is what
+	# proves it is node-bound and not a tree-level one, which a pause would not hold.
+	log_p("-- paused with the four still forming")
+	check(await start_beam_rush(rush, 0, 0.3), "the rush is running, his strike in the first charge")
+	check(await wait_until(func(): return rush.casters.size() == 4 and rush.casters[3].figure.modulate.a > 0.0 and rush.casters[3].figure.modulate.a < art.BEAM_CLONE_TINT.a - 0.01, 120), "the last of the four is still forming")
 	await tap_pause()
-	var ramping := []
-	for curtain in rush.beams:
-		ramping.append(curtain.modulate.a)
-	check(pause.is_open() and ramping.max() < 1.0, "paused mid-ramp (%s)" % [ramping])
+	var forming := beam_rush_alphas(rush)
+	check(pause.is_open(), "paused mid-form (%s)" % [forming])
 	await wait(40)
-	var still_ramping := []
-	for curtain in rush.beams:
-		still_ramping.append(curtain.modulate.a)
-	log_p("curtain alphas %s -> %s over 40 paused frames" % [ramping, still_ramping])
-	check(ramping == still_ramping, "no curtain brightened by a hair")
+	var still_forming := beam_rush_alphas(rush)
+	log_p("clone alphas %s -> %s over 40 paused frames" % [forming, still_forming])
+	check(forming == still_forming, "no clone formed by a hair")
 	await tap_pause()
-	check(await wait_until(func(): return rush.beat == rush.Beat.RUSH, 300), "and the charge finishes after the resume")
+	check(await wait_until(func(): return rush.beat == rush.Beat.CHARGE, 120), "and the charge starts after the resume")
 
-	log_p("-- and paused with him mid-teleport")
-	check(await wait_until(func(): return rush.beams.size() == 4 and rush.strike_shown and not rush.strike_landed, 240), "four curtains are up and he is mid-teleport")
+	log_p("-- paused in the charge, with him in to strike")
+	check(await wait_until(func(): return rush.strike == rush.Strike.SHOW and rush.strike_clock > 0.1, 240), "he is in beside the player with the badge up, mid-charge")
 	await tap_pause()
 	check(pause.is_open(), "paused inside the rush")
-	var beat: float = rush.beat_clock
-	var strike: float = rush.strike_clock
-	var index: int = rush.strike_index
-	var at: Vector2 = boss.global_position
-	var spots := []
-	for curtain in rush.beams:
-		spots.append(curtain.global_position)
+	var held := beam_rush_moving(rush)
 	await wait(40)
-	var after := []
-	for curtain in rush.beams:
-		after.append(curtain.global_position)
-	log_p("beat %.4f -> %.4f, strike %.4f -> %.4f, index %d -> %d, %d curtains out" % [beat, rush.beat_clock, strike, rush.strike_clock, index, rush.strike_index, spots.size()])
-	check(is_equal_approx(beat, rush.beat_clock) and is_equal_approx(strike, rush.strike_clock) and index == rush.strike_index, "the rush's own clocks stopped")
-	check(spots == after and boss.global_position == at, "no curtain and no Carter moved")
+	var after := beam_rush_moving(rush)
+	log_p("%s -> %s" % [held, after])
+	check(held == after, "the charge, his strike, the balls and the lock all held")
 	await tap_pause()
-	check(await wait_until(func(): return not is_equal_approx(strike, rush.strike_clock), 60), "and it carries on from there")
+	check(await wait_until(func(): return not is_equal_approx(held.strike, rush.strike_clock), 60), "and it carries on from there")
 
-	log_p("-- and a finisher's freeze")
-	check(await wait_until(func(): return rush.strike_shown and not rush.strike_landed, 240), "he is mid-teleport again")
+	log_p("-- paused with the beams out")
+	check(await wait_until(func(): return rush.beat == rush.Beat.STRING and rush.live and rush.fire_clock >= 0.35, 300), "four beams out and hurting")
+	await tap_pause()
+	held = beam_rush_moving(rush)
+	await wait(40)
+	after = beam_rush_moving(rush)
+	log_p("%s -> %s" % [held, after])
+	check(held == after, "the beams, their flow and their clock held")
+	await tap_pause()
+	check(await wait_until(func(): return rush.fire_clock > held.fire, 60), "and it carries on from there")
+
+	log_p("-- and a finisher's freeze, as the beams fade")
+	check(await wait_until(func(): return rush.beat == rush.Beat.FADE and rush.casters[0].beam_root.modulate.a > 0.0 and rush.casters[0].beam_root.modulate.a < 1.0, 300), "the beams mid-fade")
 	var freeze: GDScript = load("res://Scripts/FightFreeze.gd")
 	check(freeze.freeze(self, [player.get_parent()]), "the fight is frozen around the player")
-	var held: float = rush.strike_clock
-	var held_index: int = rush.strike_index
-	var held_at: Vector2 = boss.global_position
-	var held_alphas := []
-	for curtain in rush.beams:
-		held_alphas.append(curtain.modulate.a)
+	held = beam_rush_moving(rush)
 	await wait(40)
-	var now_alphas := []
-	for curtain in rush.beams:
-		now_alphas.append(curtain.modulate.a)
-	log_p("frozen: strike %.4f -> %.4f, index %d -> %d, alphas %s -> %s" % [held, rush.strike_clock, held_index, rush.strike_index, held_alphas, now_alphas])
-	check(is_equal_approx(held, rush.strike_clock) and held_index == rush.strike_index, "40 frozen frames don't advance the rush")
-	check(boss.global_position == held_at, "and don't move him")
-	check(held_alphas == now_alphas, "and no curtain ramps under it")
+	after = beam_rush_moving(rush)
+	log_p("frozen: %s -> %s" % [held, after])
+	check(held == after, "40 frozen frames don't advance the fade or anything else")
 	freeze.unfreeze(self)
 	await wait(2)
-	check(await wait_until(func(): return not is_equal_approx(held, rush.strike_clock), 60), "and it carries on after the unfreeze")
+	check(await wait_until(func(): return rush.beat_clock > held.beat, 60), "and it carries on after the unfreeze")
 	rush.release()
+
+
+func beam_rush_alphas(rush: Node) -> Array:
+	return rush.casters.map(func(c): return c.figure.modulate.a)
+
+
+# Everything in the Beam Rush that moves on its own: its clocks, him, the four and their balls, the
+# lock, and the beams, their flow and their fade.
+func beam_rush_moving(rush: Node) -> Dictionary:
+	var pieces := []
+	for c in rush.casters:
+		pieces.append([c.figure.frame, c.ball.scale, c.ball.get("frame")])
+		if is_instance_valid(c.beam_root):
+			pieces.append([c.beam_root.modulate.a, c.head.global_position, c.flare.get("frame")])
+			pieces.append(c.beam_parts.map(func(part): return part.get("texture")))
+	return {"beat": rush.beat_clock, "fire": rush.fire_clock, "strike": rush.strike_clock, "fx": rush.fx_clock,
+		"carter": boss.global_position, "lock": [rush.lock_ring.scale, rush.lock_ring.get("frame")], "pieces": pieces}
+
+
+# ------------------------------------------------------------------ Carter's reads and the HUD
+
+# Nothing the player has to read in Carter's fight may sit under the HUD or off the view: the Raging
+# Demon's clones and the lights over them, the Beam Rush's badge over the lock and his strike's, and the
+# Messatsu's badge over him. They are all placed against CarterArtLayout.HUD_KEEP_OUT, so the live HUD
+# is walked first and held to it; then each read is checked against the live HUD itself, where it is
+# placed and where it really draws.
+func test_carter_hud() -> void:
+	var rush: Node = await load_carter_akuma()
+	var art: GDScript = load(CARTER_ART_LAYOUT)
+	var demon: Node = sm.get_node("RagingDemon")
+	var m: Node = sm.get_node(MESSATSU_STATE)
+	var badge: Rect2 = art.TELL_BADGE
+	player.playerHealth = 9999
+	await wait(10)
+
+	log_p("-- the live HUD, held to his keep-out")
+	var hud := carter_hud_rects()
+	var loose := hud.filter(func(r): return not art.HUD_KEEP_OUT.any(func(k): return k.encloses(r)))
+	log_p("%d pieces of HUD drawn: %s" % [hud.size(), hud])
+	check(hud.size() > 5 and loose.is_empty(), "every piece of the HUD is inside his keep-out (outside it: %s)" % [loose])
+
+	log_p("-- the barrage, from where the player is locked")
+	var drawn: Rect2 = art.clone_drawn_rect()
+	var spawns := []
+	for direction: Vector2 in demon.COMPASS:
+		var at: Vector2 = demon._spawn_point(sm.ARENA_CENTRE, direction)
+		spawns.append([direction, at, carter_hud_gap(Rect2(at + drawn.position, drawn.size), hud)])
+	log_p("each direction, the clone's feet, and its drawn rect's gap to the nearest HUD: %s" % [spawns])
+	check(demon.COMPASS.size() == 7 and not demon.COMPASS.has(Vector2(0, -1)), "seven directions, and none of them due north")
+	check(spawns.all(func(s): return s[2] > 0.0), "every clone and the light over it - the punish clone's bigger one - clear of the HUD and in view")
+
+	log_p("-- a real barrage, dealt from every direction, with fakes in it")
+	track()
+	var samples := []
+	var watch := func() -> void:
+		if sm.current_state != demon or demon.beat != demon.Beat.RUSH or not is_instance_valid(demon.clone):
+			return
+		var c: Node = demon.clone
+		if c.light_sprite == null or not c.light.visible:
+			return
+		if samples.size() == demon.clone_index:
+			samples.append({"index": demon.clone_index, "feint": c.is_feint, "mark": c.light_sprite.texture.resource_path,
+				"ignite": c.light_sprite.frame == c.light_steps.ignite, "hold": false, "body": Rect2(), "light": Rect2()})
+		elif samples.size() == demon.clone_index + 1 and demon.clone_clock >= 0.25 and not samples[-1].hold:
+			samples[-1].hold = c.light_sprite.frame == c.light_steps.hold
+			samples[-1].body = carter_drawn_rect(c.sprite)
+			samples[-1].light = carter_drawn_rect(c.light_sprite)
+	sm.cycles_started = 0
+	sm.start_cycle()
+	var dealt: Array[Vector2] = []
+	var fakes: Array[bool] = []
+	for i in sm.clone_count:
+		dealt.append(demon.COMPASS[i % demon.COMPASS.size()])
+		fakes.append(i in [3, 7, 11])
+	demon.directions = dealt
+	demon.feints = fakes
+	demon.reds_total = sm.clone_count - 3
+	physics_frame.connect(watch)
+	await wait_until(func(): return sm.current_state.name == "Recover", 1200)
+	physics_frame.disconnect(watch)
+	var red_marks := samples.filter(func(s): return not s.feint).map(func(s): return s.mark)
+	var fake_marks := samples.filter(func(s): return s.feint).map(func(s): return s.mark)
+	var worst_clone := INF
+	for s in samples:
+		worst_clone = minf(worst_clone, minf(carter_hud_gap(s.body, hud), carter_hud_gap(s.light, hud)))
+	log_p("%d clones read; nearest any clone or light came to the HUD or the edge: %.0f px; reds wore %s, fakes %s" % [samples.size(), worst_clone, red_marks.slice(0, 1), fake_marks.slice(0, 1)])
+	check(samples.size() == sm.clone_count and worst_clone > 0.0, "no clone and no light over one sat under the HUD or off the view, from any of the seven")
+	var feint_mark: Dictionary = art.feint_tell()
+	var fake_wants: String = feint_mark.texture if not feint_mark.is_empty() else art.FINAL_CLONE_LIGHT.texture
+	check(fake_marks.size() == 3 and fake_marks.all(func(p): return p == fake_wants), "the fakes wore %s (%s)" % ["their own X" if not feint_mark.is_empty() else "the yellow ring, standing in until the X is imported", fake_wants])
+	check(red_marks.all(func(p): return p == art.FINAL_CLONE_LIGHT.texture), "and the reds their red light")
+	check(samples.all(func(s): return s.ignite and s.hold), "red or fake, every light ignites and holds on the same clock")
+	sm.recover_timer.stop()
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+
+	log_p("-- the Beam Rush's badges, wherever the player stands and wherever he comes in")
+	var locks := []
+	for spot: Vector2 in [Vector2(959, 250), Vector2(959, 800), Vector2(700, 300), Vector2(1220, 300),
+			Vector2(150, 150), Vector2(1770, 150), Vector2(150, 930), Vector2(1770, 930)]:
+		rush.lock_point = spot
+		var tip: Vector2 = art.clear_tell_anchor(rush._lock_tell_anchors())
+		locks.append([spot, tip, carter_hud_gap(Rect2(tip + badge.position, badge.size), hud)])
+	log_p("lock, badge tip, gap: %s" % [locks])
+	check(locks.all(func(l): return l[2] > 0.0), "the badge over the lock is clear of the HUD and in view wherever the lines lock")
+	var home: Vector2 = boss.global_position
+	var bounds: Rect2 = sm.ROPES.grow(-rush.WARP_MARGIN)
+	var worst_strike := INF
+	var worst_at := Vector2.ZERO
+	for side in [-1.0, 1.0]:
+		rush.strike_side = side
+		var y: float = bounds.position.y
+		while y <= bounds.end.y:
+			var x: float = bounds.position.x
+			while x <= bounds.end.x:
+				boss.global_position = Vector2(x, y)
+				var tip: Vector2 = art.clear_tell_anchor(rush._strike_tell_anchors())
+				var gap := carter_hud_gap(Rect2(tip + badge.position, badge.size), hud)
+				if gap < worst_strike:
+					worst_strike = gap
+					worst_at = Vector2(x, y)
+				x += 40.0
+			y += 40.0
+	boss.global_position = home
+	log_p("his strike's badge, wherever in the ring he comes in: %.0f px from the HUD or the edge at worst, at %s" % [worst_strike, worst_at])
+	check(worst_strike > 0.0, "his strike's badge is clear of the HUD and in view wherever he comes in")
+
+	log_p("-- and live, with the player standing under the bar")
+	await settle_player(Vector2(959, 250))
+	clear_iframes()
+	check(await start_beam_rush(rush, 0, 0.3), "a Beam Rush, his strike in the first charge")
+	check(await wait_until(func(): return rush.strike == rush.Strike.SHOW and rush.strike_clock > 0.1, 600), "he comes in beside them")
+	var strike_badge: Node = messatsu_badge()
+	var strike_rect := carter_drawn_rect(strike_badge.sprite) if strike_badge else Rect2()
+	check(strike_badge != null and carter_hud_gap(strike_rect, hud) > 0.0, "his badge is clear of the bar and in view (%s)" % [strike_rect])
+	check(await wait_until(func(): return rush.beat == rush.Beat.TELL, 600), "the lines lock on them")
+	await wait(2)
+	var lock_badge: Node = boss.clone_layer.get_node_or_null("ParryTell%d" % rush.lock_ring.get_instance_id())
+	var lock_rect := carter_drawn_rect(lock_badge.sprite) if lock_badge else Rect2()
+	check(lock_badge != null and carter_hud_gap(lock_rect, hud) > 0.0, "and the yellow badge over the lock is clear of the bar and in view (%s)" % [lock_rect])
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+
+	log_p("-- the Messatsu's badge, wherever he reappears")
+	var worst_m := INF
+	var worst_spot := Vector2.ZERO
+	m.spot_override = Vector2.INF
+	for i in 300:
+		player.global_position = Vector2(randf_range(150.0, 1770.0), randf_range(150.0, 930.0))
+		var spot: Vector2 = m._pick_spot()
+		for offset: Vector2 in [art.MESSATSU_TELL_ANCHOR, Vector2(-art.MESSATSU_TELL_ANCHOR.x, art.MESSATSU_TELL_ANCHOR.y)]:
+			var gap := carter_hud_gap(Rect2(spot + offset + badge.position, badge.size), hud)
+			if gap < worst_m:
+				worst_m = gap
+				worst_spot = spot
+	log_p("300 spots picked for players all over the ring: his badge %.0f px from the HUD or the edge at worst, at %s" % [worst_m, worst_spot])
+	check(worst_m > 0.0, "his badge is clear of the HUD and in view from every spot, facing either way")
+	await settle_player(Vector2(959, 250))
+	clear_iframes()
+	check(await start_messatsu(m, Vector2.INF) and await wait_until(func(): return m.beat == m.Beat.TELL, 600), "and live, a Messatsu on a player under the bar")
+	await wait(2)
+	var m_badge: Node = messatsu_badge()
+	var m_rect := carter_drawn_rect(m_badge.sprite) if m_badge else Rect2()
+	check(m_badge != null and carter_hud_gap(m_rect, hud) > 0.0, "his badge as the lights come on is clear of the bar and in view (%s)" % [m_rect])
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+
+
+# The drawn pieces of the HUD in Carter's fight - his health bar block and the player's own - where the
+# view has them.
+func carter_hud_rects() -> Array:
+	var rects := []
+	for layer: Node in [boss.hud_layer, current_scene.get_node("Arena/MainPlayer/CanvasLayer")]:
+		for item: Node in layer.find_children("*", "", true, false):
+			if not item is CanvasItem or not item.is_visible_in_tree():
+				continue
+			var drawing: bool = item is Sprite2D or item is TextureRect or item is TextureProgressBar or item is ColorRect or item is NinePatchRect or (item is Label and not item.text.is_empty())
+			var rect := carter_drawn_rect(item)
+			if drawing and rect.has_area():
+				rects.append(rect)
+	return rects
+
+
+func carter_drawn_rect(item: CanvasItem) -> Rect2:
+	if item is Control:
+		return (item as Control).get_global_rect()
+	var sprite := item as Sprite2D
+	if sprite == null or sprite.texture == null:
+		return Rect2()
+	return sprite.get_global_transform() * sprite.get_rect()
+
+
+# How far `rect` is from the nearest piece of `hud` - negative where it overlaps one - or -1 if any of it
+# is off the view.
+func carter_hud_gap(rect: Rect2, hud: Array) -> float:
+	var art: GDScript = load(CARTER_ART_LAYOUT)
+	if not rect.has_area() or not art.VIEW_RECT.encloses(rect):
+		return -1.0
+	var gap := INF
+	for piece: Rect2 in hud:
+		var dx := maxf(piece.position.x - rect.end.x, rect.position.x - piece.end.x)
+		var dy := maxf(piece.position.y - rect.end.y, rect.position.y - piece.end.y)
+		gap = minf(gap, maxf(dx, dy))
+	return gap
+
+
+# ------------------------------------------------------------------ Carter's Messatsu
+
+# His third attack's numbers, mirrored the way the Beam Rush's are: messatsu reads the live ones off
+# CarterStateMachine and CarterArtLayout and fails if these copies have drifted from them.
+const MESSATSU_ID := &"carter_messatsu_beam"
+const MESSATSU_STATE := "Messatsu"
+const MESSATSU_CHARGE := 1.20
+const MESSATSU_TELL := 0.30
+const MESSATSU_TRAVEL := 0.10
+const MESSATSU_TICK := 0.50
+const MESSATSU_HITS := 6
+const MESSATSU_REARM_DELAY := 0.08
+const MESSATSU_PULSE_TRAVEL := 0.30
+const MESSATSU_END_HOLD := 0.20
+const MESSATSU_FADE := 0.30
+const MESSATSU_MIN_RANGE := 520.0
+const MESSATSU_HIT_WIDTH := 360.0
+const MESSATSU_BACK := 60.0
+const MESSATSU_MIN_AIM := 40.0
+# What his punish window comes to for a string sat through and for a perfect one (recover_window() on
+# six missed and six parried), and the damage six parries bank with the perfect bonus.
+const MESSATSU_WINDOW_STILL := 1.5
+const MESSATSU_WINDOW_PERFECT := 4.2
+const MESSATSU_BANKED_PERFECT := 4
+# Where the live modes put him and stand the player: 900 px apart, so the beam comes in about 10
+# degrees off level and a dash straight up is across it.
+const MESSATSU_CARTER_SPOT := Vector2(1500, 700)
+const MESSATSU_PLAYER_SPOT := Vector2(600, 700)
+
+
+# The Messatsu against the parry window and the player's own movement, modelled rather than run, so
+# it needs no Carter scene: the hits are dealt through the same player path, next to a parked Eric.
+func test_messatsu() -> void:
+	await load_eric()
+	health_ok()
+	park_eric()
+	await settle_player(Vector2(972, 800))
+	var numbers := {
+		"charge": MESSATSU_CHARGE, "tell": MESSATSU_TELL, "travel": MESSATSU_TRAVEL, "tick": MESSATSU_TICK,
+		"hits": MESSATSU_HITS, "rearm": MESSATSU_REARM_DELAY, "pulse": MESSATSU_PULSE_TRAVEL,
+		"hold": MESSATSU_END_HOLD, "fade": MESSATSU_FADE, "range": MESSATSU_MIN_RANGE,
+		"width": MESSATSU_HIT_WIDTH, "back": MESSATSU_BACK, "min_aim": MESSATSU_MIN_AIM,
+	}
+	if ResourceLoader.exists(CARTER_STATE_MACHINE):
+		var probe: Node = load(CARTER_STATE_MACHINE).new()
+		var art: GDScript = load(CARTER_ART_LAYOUT)
+		var live := {
+			"charge": probe.messatsu_charge, "tell": probe.messatsu_tell, "travel": probe.messatsu_travel,
+			"tick": probe.messatsu_tick, "hits": probe.messatsu_hits, "rearm": probe.messatsu_rearm_delay,
+			"pulse": probe.messatsu_pulse_travel, "hold": probe.messatsu_end_hold, "fade": probe.messatsu_fade,
+			"range": probe.messatsu_min_range, "width": art.MESSATSU_HIT_WIDTH, "back": art.MESSATSU_BACK,
+			"min_aim": art.MESSATSU_MIN_AIM,
+		}
+		var times := []
+		var want := []
+		for k in probe.messatsu_hits:
+			times.append(snappedf(probe.messatsu_hit_time(k), 0.001))
+			want.append(snappedf(probe.messatsu_travel + k * probe.messatsu_tick, 0.001))
+		probe.free()
+		var drifted := []
+		for key in numbers:
+			if not is_equal_approx(float(live[key]), float(numbers[key])):
+				drifted.append("%s %s against %s" % [key, live[key], numbers[key]])
+		log_p("read off his fight: %s; hits land %s s after the fire" % [live, times])
+		check(drifted.is_empty(), "the numbers in this file still mirror his fight (%s)" % ["they do" if drifted.is_empty() else str(drifted)])
+		check(times == want, "messatsu_hit_time() is travel + k * tick (%s)" % [times])
+		numbers = live
+	else:
+		log_p("his fight is not in this build, so the numbers in this file are what is modelled")
+	var tell: float = numbers.tell
+	var travel: float = numbers.travel
+	var tick: float = numbers.tick
+	var rearm: float = numbers.rearm
+	var pulse: float = numbers.pulse
+	var width: float = numbers.width
+	var window: float = defense.parry_window
+	var frame_time := 1.0 / 60.0
+	log_p("lights to hit 1 %.2f s, surges %.2f s long, %.2f s apart, rearmed %.2f s after each hit; window %.2f s, lockout %.2f s" % [tell + travel, pulse, tick, rearm, window, defense.parry_mash_lockout])
+	check(tell + travel >= 0.36 - 0.0001, "from the lights to the first hit is at or over the 0.36 s floor (%.2f s)" % (tell + travel))
+	check(pulse > window + frame_time, "a surge leaves his palms more than the window and a frame before it lands (%.2f s against %.3f s)" % [pulse, window + frame_time])
+	check(tick - rearm - window >= 0.15 - 0.0001, "there is at least 0.15 s of early zone between two hits (%.2f s)" % (tick - rearm - window))
+	check(rearm < tick - pulse, "the rearm comes before the next surge leaves (%.2f s against %.2f s)" % [rearm, tick - pulse])
+	check(tick <= defense.parry_mash_lockout + 0.0001, "the tick sits on parry_mash_lockout, so the rearm is load-bearing (%.2f s against %.2f s)" % [tick, defense.parry_mash_lockout])
+	var entry: Dictionary = CATALOG.get_attack(MESSATSU_ID)
+	check(entry.blockable and entry.weight == CATALOG.Weight.HEAVY and entry.tell and entry.bypass_invincibility and not entry.dash_through and not entry.parry_stagger, "its catalogue entry: blockable, HEAVY, a red tell, through the i-frames, no dash-through and no stagger")
+
+	log_p("-- pressing as a surge leaves his palms doesn't parry, pressing in the window does")
+	defense.rearm_parry()
+	var on_sight: int = await parry_at(clone_frames(pulse), MESSATSU_ID)
+	check(on_sight == unparried(), "a press as the surge appears isn't a parry (%d)" % on_sight)
+	defense.rearm_parry()
+	var in_window: int = await parry_at(clone_frames(window) - 2, MESSATSU_ID)
+	check(in_window == 3, "a press inside the window is a parry (%d)" % in_window)
+
+	# Times are from the hit before, which the model doesn't deliver: an early press, a panicked second
+	# one inside its lockout, then an honest one for the hit after.
+	log_p("-- an early whiff costs that hit, and the rearm gives the next one back")
+	var whiff := [0.13, 0.45, 2.0 * tick - 0.10]
+	var saved: Array = await messatsu_run(whiff, [rearm, tick + rearm], [tick, 2.0 * tick])
+	var spilled: Array = await messatsu_run(whiff, [rearm], [tick, 2.0 * tick])
+	log_p("  presses at %s s: %s with every rearm, %s with none after the first hit" % [whiff, saved, spilled])
+	check(saved == [unparried(), 3], "the early press costs only its own hit, and the next is parried (%s)" % [saved])
+	check(spilled == [unparried(), unparried()], "and without the rearm after that hit, the whiff would have cost the next one too (%s)" % [spilled])
+	log_p("-- and a press up to 0.08 s late costs nothing")
+	var late := [rearm - 0.03, tick - 0.10]
+	var forgiven: Array = await messatsu_run(late, [rearm], [tick])
+	var unforgiven: Array = await messatsu_run(late, [], [tick])
+	check(forgiven == [3], "a press %.2f s late for the last hit, then one in the window, parries the next (%s)" % [late[0], forgiven])
+	check(unforgiven == [unparried()], "which only the rearm makes true: %s without it" % [unforgiven])
+
+	log_p("-- six hits %.2f s apart on a player who does nothing" % tick)
+	player.playerHealth = 100
+	var landed := []
+	for k in MESSATSU_HITS:
+		if k > 0:
+			await wait(clone_frames(tick))
+		landed.append(omni_hit(MESSATSU_ID, dummy_source()))
+	log_p("  %s, health %d" % [landed, player.playerHealth])
+	check(landed.count(1) == MESSATSU_HITS, "all six land through each other's i-frames (%s)" % [landed])
+	check(player.playerHealth == 100 - MESSATSU_HITS * entry.damage, "for %d half-hearts, a full health bar (%d left of 100)" % [MESSATSU_HITS * entry.damage, player.playerHealth])
+	clear_iframes()
+	health_ok()
+	await wait(40)
+
+	log_p("-- a held guard %s" % ("breaks on the third block" if blocking() else "is no answer: all three land and nothing breaks"))
+	defense._set_stamina(defense.max_stamina)
+	press(KEY_SHIFT)
+	await past_window()
+	var blocks := []
+	var broke_on := 0
+	for k in 3:
+		if k > 0:
+			await wait(clone_frames(tick))
+		blocks.append(omni_hit(MESSATSU_ID, dummy_source()))
+		if broke_on == 0 and defense.is_guard_broken:
+			broke_on = k + 1
+	release(KEY_SHIFT)
+	log_p("  %s, broken on block %d" % [blocks, broke_on])
+	if blocking():
+		check(blocks == [2, 2, 2] and broke_on == 3, "three blocks at %.0f stamina each, and the third breaks the guard (%s, block %d)" % [defense.heavy_block_cost, blocks, broke_on])
+	else:
+		check(blocks == [1, 1, 1] and broke_on == 0, "three hits through the held guard, and it never breaks (%s)" % [blocks])
+	defense.clear_guard_break()
+	clear_iframes()
+	health_ok()
+	await wait(4)
+
+	# The first hit lands messatsu_travel after the aim latches. To be clear of it the hurtbox has to
+	# be half the width plus its own reach across the beam off the axis; a dash counts only the frames
+	# it moves after the latch, and walking only what it covers in the travel.
+	log_p("-- the dodge, worked out at every angle")
+	var shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var half: Vector2 = (shape.shape as RectangleShape2D).size * shape.global_scale.abs() / 2.0
+	var travel_frames := clone_frames(travel)
+	var dash_step: float = player.DODGE_SPEED / 60.0
+	var dash_frames := roundi(DASH_LENGTH / dash_step)
+	var early_px := dash_step * (dash_frames - 1)
+	var walk_step: float = player.SPEED / 60.0
+	check(dash_frames <= travel_frames, "a whole dash fits inside the travel (%d frames against %d)" % [dash_frames, travel_frames])
+	var worst := INF
+	var worst_at := 0.0
+	var widest := INF
+	var early_clears := []
+	var walk_clears := []
+	for i in 720:
+		var n := Vector2.from_angle(deg_to_rad(i * 0.5)).orthogonal()
+		var across := half.x * absf(n.x) + half.y * absf(n.y)
+		var need := width / 2.0 + across
+		var best := 0.0
+		for d in 4:
+			best = maxf(best, absf(Vector2.from_angle(d * PI / 4.0).dot(n)))
+		var margin := best * DASH_LENGTH - need
+		if margin < worst:
+			worst = margin
+			worst_at = i * 0.5
+		widest = minf(widest, 2.0 * (best * DASH_LENGTH - across))
+		if best * early_px >= need:
+			early_clears.append(i * 0.5)
+		var walked := 0.0
+		for v in [Vector2(1, 0), Vector2(0, 1), Vector2(1, 1), Vector2(1, -1)]:
+			walked = maxf(walked, absf((v * walk_step * travel_frames).dot(n)))
+		if walked >= need:
+			walk_clears.append(i * 0.5)
+	log_p("  the best of 8 dashes (%.0f px) clears the first hit by %.1f px at worst, at %.1f deg; above %.0f px wide the dodge would be gone at some angle" % [DASH_LENGTH, worst, worst_at, widest])
+	check(worst >= 0.0 and worst <= 60.0, "the best 8-way dash clears it at every angle, by 0 to 60 px at the worst (%.1f px)" % worst)
+	check(early_clears.is_empty(), "a dash one frame early - %.0f px after the latch - never clears (%d angles do)" % [early_px, early_clears.size()])
+	check(walk_clears.is_empty(), "and neither does walking, at most %.0f px in %d frames (%d angles do)" % [walk_step * travel_frames * sqrt(2.0), travel_frames, walk_clears.size()])
+
+
+# A stretch of the string on the player's own input path, with times in seconds from a hit the model
+# doesn't deliver: a guard press at each of `taps` (held until the next one), the fight's rearm at each
+# of `rearms`, and a hit at each of `hits`. Returns the hits' results.
+func messatsu_run(taps: Array, rearms: Array, hits: Array) -> Array:
+	var plan := []
+	for at in taps:
+		plan.append([at, 0])
+	for at in rearms:
+		plan.append([at, 1])
+	for at in hits:
+		plan.append([at, 2])
+	plan.sort_custom(func(a, b): return a[0] < b[0])
+	var now := 0
+	var held := false
+	var results := []
+	for step in plan:
+		var at_frame := clone_frames(step[0])
+		if at_frame > now:
+			await wait(at_frame - now)
+			now = at_frame
+		match step[1]:
+			0:
+				if held:
+					release(KEY_SHIFT)
+					await wait(1)
+					now += 1
+				press(KEY_SHIFT)
+				held = true
+			1:
+				defense.rearm_parry()
+			2:
+				results.append(front_hit(MESSATSU_ID, dummy_source()))
+				clear_iframes()
+	if held:
+		release(KEY_SHIFT)
+	await wait(4)
+	clear_iframes()
+	defense._set_stamina(defense.max_stamina)
+	await wait(40)
+	return results
+
+
+# Straight into a Messatsu from wherever his machine is: back to Idle with its beat stopped, then the
+# rotation's third cycle - the rotation doing its job - with him put on a known spot.
+func start_messatsu(m: Node, spot := MESSATSU_CARTER_SPOT) -> bool:
+	sm.recover_timer.stop()
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	m.spot_override = spot
+	sm.cycles_started = 2
+	sm.start_cycle()
+	return sm.current_state == m
+
+
+# How many frames after this one the Messatsu fires in, stepping its tell clock exactly as it does.
+func messatsu_frames_to_fire(m: Node) -> int:
+	var at: float = m.beat_clock
+	var n := 0
+	while at + 1.0 / 60.0 < sm.messatsu_tell - m.CLOCK_SLACK:
+		at += 1.0 / 60.0
+		n += 1
+	return n
+
+
+func player_centre() -> Vector2:
+	return player.hurtBox.get_node("CollisionShape2D").global_position
+
+
+func messatsu_badge() -> Node:
+	return boss.get_parent().get_node_or_null("ParryTell%d" % boss.get_instance_id())
+
+
+# Whether any of him is drawn - his body, his aura or his mark, shown and not faded right out - under
+# the curtain or not: drawn under it, about 7% of him shows through.
+func carter_shows() -> bool:
+	for part: CanvasItem in [boss.sprite, boss.aura, boss.mark_glow]:
+		if part.visible and part.modulate.a > 0.0:
+			return true
+	return false
+
+
+# How far the lock has closed, however it is drawn: the placeholder ring's rim, or the sheet's frame
+# and its squeeze.
+func messatsu_lock(m: Node) -> Array:
+	if m.lock_ring is Line2D:
+		return [m.lock_ring.points[0]]
+	return [m.lock_ring.frame, m.lock_ring.scale]
+
+
+# One Messatsu, with the player standing at `stand` and dashing toward `key` so that the dash's first
+# moving frame is `lead` frames after the fire frame (negative: before it). What the first hit did,
+# and the lead as measured: a press only reaches the player on the next frame's input flush.
+func messatsu_dash(m: Node, lead: int, key: int, stand := MESSATSU_PLAYER_SPOT) -> Dictionary:
+	await settle_player(stand)
+	clear_iframes()
+	defense._set_stamina(defense.max_stamina)
+	var hurt: int = events_of("HIT", MESSATSU_ID).size()
+	var dodged: int = dodges.size()
+	if not await start_messatsu(m) or not await wait_until(func(): return m.beat == m.Beat.TELL, 600):
+		return {"lead": 999, "hit": true, "dodged": false, "latched": false, "resolved": false}
+	var seen := {"fire": -1, "dash": -1, "angle": 0.0}
+	var watcher := func() -> void:
+		var now := Engine.get_physics_frames()
+		if seen.fire < 0 and m.latched:
+			seen.fire = now - 1
+			seen.angle = m.aim_angle
+		if seen.dash < 0 and player.is_dodging:
+			seen.dash = now
+	physics_frame.connect(watcher)
+	await wait(maxi(messatsu_frames_to_fire(m) + lead - 1, 0))
+	press(key)
+	tap(KEY_W)
+	var resolved := await wait_until(func(): return m.tick_index >= 1, 120)
+	await wait(1)
+	physics_frame.disconnect(watcher)
+	release(key)
+	var result := {
+		"lead": seen.dash - seen.fire if seen.dash >= 0 and seen.fire >= 0 else 999,
+		"hit": events_of("HIT", MESSATSU_ID).size() > hurt,
+		"dodged": dodges.size() > dodged and dodges[-1].id == MESSATSU_ID,
+		"latched": is_instance_valid(m.beam_root) and is_equal_approx(m.beam_root.rotation, seen.angle) and is_equal_approx(m.aim_angle, seen.angle),
+		"resolved": resolved,
+	}
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	await wait(2)
+	return result
+
+
+# The real thing, in his shipped fight, with him on a known spot. tier=death and tier=defeated each end
+# the fight, so each gets a process of its own.
+func test_messatsu_live() -> void:
+	await load_carter_akuma()
+	var m: Node = sm.get_node_or_null(MESSATSU_STATE)
+	check(m != null, "his fight carries a Messatsu state")
+	if m == null:
+		return
+	var art: GDScript = load(CARTER_ART_LAYOUT)
+	track()
+	track_parries()
+	track_dodges()
+	track_guard()
+	if tier == "death":
+		await messatsu_death(m)
+		return
+	if tier == "defeated":
+		await messatsu_defeated(m)
+		return
+
+	var order := []
+	for cycle in range(1, 5):
+		sm.cycles_started = cycle
+		order.append(sm.next_attack())
+	sm.cycles_started = 0
+	check(order == ["RagingDemon", "BeamRush", MESSATSU_STATE, "RagingDemon"], "his rotation is the barrage, the Beam Rush, the Messatsu, then the barrage again (%s)" % [order])
+
+	log_p("-- a player who presses nothing: the dark, the lights, six hits")
+	player.playerHealth = 9999
+	await settle_player(MESSATSU_PLAYER_SPOT)
+	var hurt: int = events_of("HIT", MESSATSU_ID).size()
+	check(await start_messatsu(m), "a Messatsu is running")
+	# He goes down with the curtain, so from the frame it is fully down nothing of him may be drawn.
+	var dark := {"frames": 0, "shown": 0}
+	var charging := false
+	for i in 300:
+		if m.beat == m.Beat.CHARGE:
+			charging = true
+			break
+		if boss.curtain.modulate.a >= 1.0:
+			dark.frames += 1
+			if carter_shows():
+				dark.shown += 1
+		await physics_frame
+	check(charging, "and charging")
+	# The player walks down and back up through the charge, so the line has something to follow.
+	var charge := {"frames": 0, "off": 0, "worst": 0.0, "lit": 0, "unlifted": 0, "carter": 0, "buried": 0}
+	press(KEY_DOWN)
+	while m.beat == m.Beat.CHARGE:
+		charge.frames += 1
+		var off: float = m.aim_line.to_global(m.aim_line.points[1]).distance_to(player_centre())
+		charge.worst = maxf(charge.worst, off)
+		if off > 1.0:
+			charge.off += 1
+		if not boss.dark_stage.visible or boss.curtain.modulate.a < 0.99:
+			charge.lit += 1
+		if player.get_parent().z_index != art.PLAYER_Z:
+			charge.unlifted += 1
+		if carter_shows():
+			charge.carter += 1
+		for fx: CanvasItem in [m.ball, m.eyes, m.aim_line, m.lock_ring]:
+			if not fx.visible or boss.clone_layer.z_index + fx.z_index <= boss.dark_stage.z_index:
+				charge.buried += 1
+		if charge.frames == 20:
+			release(KEY_DOWN)
+			press(KEY_UP)
+		elif charge.frames == 40:
+			release(KEY_UP)
+		await physics_frame
+	release(KEY_DOWN)
+	release(KEY_UP)
+	log_p("charge: %s; fully dark before it: %s" % [charge, dark])
+	check(charge.frames >= 60 and charge.off == 0, "the aim line was on the player's hurtbox centre every one of the %d charge frames while they walked (%.2f px off at worst)" % [charge.frames, charge.worst])
+	check(charge.lit == 0, "the arena was dark for all of the charge")
+	check(charge.unlifted == 0, "the player was lifted over it to z %d throughout" % art.PLAYER_Z)
+	check(dark.frames > 0 and dark.shown + charge.carter == 0, "and from the dark being fully down to the lights coming back, nothing of him was drawn: body, aura and mark (%d frames of it before the charge, %d in it)" % [dark.frames, charge.frames])
+	check(charge.buried == 0, "and the ball, the eyes, the line and the ring were all drawn over it, above z %d" % boss.dark_stage.z_index)
+	check(m.beat == m.Beat.TELL, "the lights are back (%s)" % m.Beat.keys()[m.beat])
+	check(not boss.dark_stage.visible and boss.curtain.modulate.a == 0.0 and messatsu_badge() != null, "and on the frame they come back, the dark is gone and the badge is up")
+	check(player.get_parent().z_index == 0, "the player is back under the ropes (z %d)" % player.get_parent().z_index)
+	check(await wait_until(func(): return m.latched, 60), "it fires")
+	var angle: float = m.aim_angle
+	var origin: Vector2 = m.aim_origin
+	check(messatsu_badge() == null, "the badge is gone the frame it fires")
+	check(is_instance_valid(m.beam_root) and is_equal_approx(m.beam_root.rotation, angle), "and the beam lies along the latched aim (%.1f deg)" % rad_to_deg(angle))
+	check(await wait_until(func(): return sm.current_state.name == "Recover", 600), "the string hands over to his punish window")
+	var hits: Array = events_of("HIT", MESSATSU_ID).slice(hurt)
+	var gaps := []
+	for i in range(1, hits.size()):
+		gaps.append(snappedf(hits[i].t - hits[i - 1].t, 0.001))
+	log_p("%d hits, %s s apart; the window %.2f s" % [hits.size(), gaps, sm.recover_timer.wait_time])
+	check(hits.size() == MESSATSU_HITS, "exactly six hits land on a still player (%d)" % hits.size())
+	check(gaps.all(func(gap): return absf(gap - MESSATSU_TICK) <= 1.5 / 60.0), "%.2f s apart (%s)" % [MESSATSU_TICK, gaps])
+	check(is_equal_approx(m.aim_angle, angle) and m.aim_origin == origin, "and the aim never moved after the fire")
+	check(is_equal_approx(sm.recover_timer.wait_time, MESSATSU_WINDOW_STILL), "a string sat through earns the short window: %.2f s" % sm.recover_timer.wait_time)
+	check(get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), "nothing is left on the mat")
+	check(not boss.dark_stage.visible and boss.curtain.modulate.a == 0.0, "no dark is left up")
+	check(is_equal_approx(boss.music_player.volume_db, boss.music_base_db), "the music is back to %.1f dB" % boss.music_base_db)
+	check(player.get_parent().z_index == 0, "the player is under the ropes")
+	check(not boss.sprite.flip_h, "he is facing the way he always stands")
+	check(messatsu_badge() == null, "and there is no badge over his head")
+
+	log_p("-- six parries")
+	await settle_player(MESSATSU_PLAYER_SPOT)
+	clear_iframes()
+	boss.boss_health = boss.max_health
+	var parried_before: int = parries.size()
+	check(await start_messatsu(m), "a second Messatsu is running")
+	for k in MESSATSU_HITS:
+		var at: float = sm.messatsu_hit_time(k) - 0.10
+		if not await wait_until(func(): return m.beat == m.Beat.STRING and m.tick_index == k and m.fire_clock >= at, 600):
+			break
+		press(KEY_SHIFT)
+		await wait_until(func(): return m.tick_index > k, 120)
+		release(KEY_SHIFT)
+		defense._set_stamina(defense.max_stamina)
+	check(await wait_until(func(): return sm.current_state.name == "Recover", 300), "into his punish window")
+	var got: Array = parries.slice(parried_before)
+	log_p("parried %d (%s), banked %d, window %.2f s" % [m.parried, got.map(func(p): return p.id), boss.max_health - boss.boss_health, sm.recover_timer.wait_time])
+	check(m.parried == MESSATSU_HITS and got.size() == MESSATSU_HITS and got.all(func(p): return p.id == MESSATSU_ID and not p.staggered), "all six parried, and none of them staggers him")
+	check(boss.boss_health == boss.max_health - MESSATSU_BANKED_PERFECT, "a perfect string banks %d (%d taken)" % [MESSATSU_BANKED_PERFECT, boss.max_health - boss.boss_health])
+	check(is_equal_approx(sm.recover_timer.wait_time, MESSATSU_WINDOW_PERFECT), "and earns a %.1f s window (%.2f s)" % [MESSATSU_WINDOW_PERFECT, sm.recover_timer.wait_time])
+
+	log_p("-- a player who turtles behind the guard")
+	await settle_player(MESSATSU_PLAYER_SPOT)
+	clear_iframes()
+	defense._set_stamina(defense.max_stamina)
+	hurt = events_of("HIT", MESSATSU_ID).size()
+	var broken_before: int = guard_events.filter(func(e): return e[0] == "broken").size()
+	check(await start_messatsu(m), "a third Messatsu is running")
+	check(await wait_until(func(): return m.beat == m.Beat.CHARGE, 300), "and the guard goes up in the dark")
+	press(KEY_SHIFT)
+	check(await wait_until(func(): return sm.current_state.name == "Recover", 900), "held all the way to his punish window")
+	release(KEY_SHIFT)
+	var breaks: int = guard_events.filter(func(e): return e[0] == "broken").size() - broken_before
+	var taken: int = events_of("HIT", MESSATSU_ID).size() - hurt
+	log_p("guard broken %d times, %d hits taken, %d blocked, %d parried" % [breaks, taken, m.blocked, m.parried])
+	if blocking():
+		check(breaks >= 1 and taken <= 2, "the guard breaks at least once and no more than two hits land (%d breaks, %d hits)" % [breaks, taken])
+	else:
+		check(breaks == 0 and taken == MESSATSU_HITS and m.blocked == 0, "without blocking the guard is no answer: all %d land and nothing breaks (%d breaks, %d hits)" % [MESSATSU_HITS, breaks, taken])
+	defense.clear_guard_break()
+	await wait(4)
+
+	log_p("-- a player who takes the first hit and walks out of the beam")
+	await settle_player(MESSATSU_PLAYER_SPOT)
+	clear_iframes()
+	defense._set_stamina(defense.max_stamina)
+	hurt = events_of("HIT", MESSATSU_ID).size()
+	check(await start_messatsu(m), "a fourth Messatsu is running")
+	check(await wait_until(func(): return m.tick_index >= 1, 600), "the first hit is in")
+	press(KEY_UP)
+	await wait(36)
+	release(KEY_UP)
+	check(await wait_until(func(): return sm.current_state.name == "Recover", 600), "into his punish window")
+	taken = events_of("HIT", MESSATSU_ID).size() - hurt
+	log_p("%d hits taken, window %.2f s" % [taken, sm.recover_timer.wait_time])
+	check(taken == 1, "walking out of the beam after the first hit caps the bill at one (%d)" % taken)
+
+	# A dash straight up, started a frame at a time either side of the fire. The aim tracks until the
+	# fire frame and the player moves before he does in a frame, so only dash frames AFTER it count.
+	log_p("-- the dodge: a dash up, frame by frame around the fire")
+	var sweep := []
+	for lead in range(-2, 7):
+		var r: Dictionary = await messatsu_dash(m, lead, KEY_UP)
+		sweep.append(r)
+		log_p("  dash %+d frames from the fire (measured %+d): %s%s%s" % [lead, r.lead, "HIT" if r.hit else "clear", ", PERFECT DODGE" if r.dodged else "", "" if r.latched else ", the beam moved"])
+	var escaped: Array = sweep.filter(func(r): return not r.hit).map(func(r): return r.lead)
+	escaped.sort()
+	check(sweep.all(func(r): return r.resolved and r.latched), "every one reached its first hit, and no beam followed a dash once it had fired")
+	check(sweep.filter(func(r): return r.lead <= -1).all(func(r): return r.hit), "a dash started before the fire is hit, every time")
+	check(sweep.any(func(r): return r.lead >= 1 and not r.hit and r.dodged), "a dash after it escapes, for a perfect dodge")
+	check(not escaped.is_empty() and escaped.size() <= 5 and escaped[-1] - escaped[0] + 1 == escaped.size(), "and the frames that escape are one unbroken run, 1 to 5 wide (%s)" % [escaped])
+	if not escaped.is_empty():
+		log_p("DODGE WINDOW: %d frames (%.0f ms), for a dash whose first moving frame is %d to %d frames after the fire" % [escaped.size(), escaped.size() * 1000.0 / 60.0, escaped[0], escaped[-1]])
+
+	log_p("-- and a dash back through him from close in, kept on purpose")
+	var palms: Vector2 = MESSATSU_CARTER_SPOT + art.local(art.MESSATSU_MUZZLE, true)
+	var lift: Vector2 = player_centre() - player.global_position
+	var through := []
+	for gap in [120.0, 150.0, 160.0, 170.0, 180.0, 200.0]:
+		var r: Dictionary = await messatsu_dash(m, 1, KEY_RIGHT, palms + Vector2(-gap, 0.0) - lift)
+		through.append(not r.hit)
+		log_p("  from %.0f px in front of his palms: %s%s" % [gap, "HIT" if r.hit else "out of the back of the band", ", PERFECT DODGE" if r.dodged else ""])
+	check(through[0] and not through[-1], "a dash through him gets out from 120 px and not from 200 px (%s)" % [through])
+
+	log_p("-- dashing in with a block press parries the first hit, with dash_parry off and on")
+	for flag in [false, true]:
+		player.dash_parry = flag
+		await settle_player(MESSATSU_PLAYER_SPOT)
+		clear_iframes()
+		defense._set_stamina(defense.max_stamina)
+		var before: int = parries.size()
+		check(await start_messatsu(m) and await wait_until(func(): return m.beat == m.Beat.TELL, 600), "a Messatsu for dash_parry %s" % flag)
+		await wait(messatsu_frames_to_fire(m))
+		press(KEY_RIGHT)
+		tap(KEY_W)
+		await wait(1)
+		press(KEY_SHIFT)
+		await wait_until(func(): return m.tick_index >= 1, 120)
+		release(KEY_SHIFT)
+		release(KEY_RIGHT)
+		var first: Array = parries.slice(before)
+		check(m.parried == 1 and first.size() == 1 and first[0].id == MESSATSU_ID, "dash_parry %s: a dash toward him with a press in it parries the first hit (%d)" % [flag, m.parried])
+		sm.on_child_transition(sm.current_state, "Idle")
+		sm.beat_timer.stop()
+		await wait(40)
+	player.dash_parry = false
+
+
+# tier=death: killed in the middle of the string, standing in it. Everything he sent out goes, the
+# badge with it; the dark was already down, so none is left for the KO to hand on.
+func messatsu_death(m: Node) -> void:
+	log_p("-- a player killed in the middle of the string")
+	player.playerHealth = 3
+	await settle_player(MESSATSU_PLAYER_SPOT)
+	check(await start_messatsu(m), "a Messatsu is running")
+	check(await wait_until(func(): return player.fight_over or player.playerHealth <= 0, 900), "and it kills a player who stands in it")
+	var on_hit: int = m.tick_index
+	await wait(20)
+	log_p("down on hit %d, and he settled in %s" % [on_hit, sm.current_state.name])
+	check(sm.current_state.name == "Victory", "into his victory pose")
+	check(m.released, "the Messatsu was released")
+	var left := [m.beam_root, m.ball, m.eyes, m.aim_line, m.lock_ring].filter(func(node): return is_instance_valid(node))
+	check(left.is_empty() and m.surges.is_empty() and get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), "nothing of it is left (%d nodes, %d hazards)" % [left.size(), get_nodes_in_group(sm.HAZARD_GROUP).size()])
+	check(messatsu_badge() == null, "no badge is left over his head")
+	check(boss.curtain.modulate.a == 0.0, "none of its dark is up for the KO to carry on")
+	check(player.get_parent().z_index == 0, "the player is under the ropes")
+	check(not player.is_action_locked, "and was never locked by it")
+	check(root.has_node(^"FightOutro") and not root.get_node(^"FightOutro").player_won, "the loss is running")
+
+
+# tier=defeated: he is beaten in the dark, mid-charge. That can't happen in play - his hurtbox is shut
+# outside his punish window - so this is the release path proving itself: the lights snap on, the duck
+# lifts and the player comes back down.
+func messatsu_defeated(m: Node) -> void:
+	log_p("-- Carter beaten in the middle of the charge, in the dark")
+	player.playerHealth = 9999
+	await settle_player(MESSATSU_PLAYER_SPOT)
+	check(await start_messatsu(m), "a Messatsu is running")
+	check(await wait_until(func(): return m.beat == m.Beat.CHARGE and m.beat_clock >= 0.3, 300), "into the charge")
+	check(boss.dark_stage.visible and player.get_parent().z_index > 0 and boss.music_player.volume_db < boss.music_base_db - 6.0 and boss.charge_sfx_player.playing, "dark, the player lifted, the music ducked and the charge humming")
+	boss.boss_health = 1
+	boss._apply_damage(1)
+	await wait(6)
+	log_p("he settled in %s" % sm.current_state.name)
+	check(sm.current_state.name == "Defeated", "he is beaten")
+	check(m.released, "the Messatsu was released")
+	check(not boss.dark_stage.visible and boss.curtain.modulate.a == 0.0, "the lights snapped back on")
+	check(is_equal_approx(boss.music_player.volume_db, boss.music_base_db), "the duck is undone (%.1f dB)" % boss.music_player.volume_db)
+	check(player.get_parent().z_index == 0, "the player is back under the ropes")
+	check(not boss.charge_sfx_player.playing, "the hum stopped")
+	var left := [m.beam_root, m.ball, m.eyes, m.aim_line, m.lock_ring].filter(func(node): return is_instance_valid(node))
+	check(left.is_empty() and get_nodes_in_group(sm.HAZARD_GROUP).is_empty() and messatsu_badge() == null, "and nothing of it is left (%d nodes)" % left.size())
+	check(root.has_node(^"FightOutro") and root.get_node(^"FightOutro").player_won, "the win is running")
+
+
+# The dark coming in, the charge and a surge in flight, under a pause and under a finisher's freeze.
+# Every wait in the attack is a physics accumulator and every ramp a node-bound tween, so both have to
+# stop the whole of it dead.
+func test_pause_messatsu() -> void:
+	await load_carter_akuma()
+	var m: Node = sm.get_node(MESSATSU_STATE)
+	player.playerHealth = 9999
+	await settle_player(MESSATSU_PLAYER_SPOT)
+	var pause: Node = pause_menu()
+
+	# The dark comes in over 0.10 s: the only moment it is on a live tween rather than at full, and
+	# catching it is what proves the tween is node-bound.
+	log_p("-- paused with the lights still going out")
+	check(await start_messatsu(m), "a Messatsu is running")
+	check(await wait_until(func(): return m.beat == m.Beat.VANISH, 120), "the lights are going out")
+	await tap_pause()
+	var ramp: float = boss.curtain.modulate.a
+	var eyes: float = m.eyes.modulate.a
+	check(pause.is_open() and ramp > 0.0 and ramp < 1.0, "paused mid-ramp (curtain %.3f)" % ramp)
+	await wait(40)
+	log_p("curtain %.3f -> %.3f, eyes %.3f -> %.3f over 40 paused frames" % [ramp, boss.curtain.modulate.a, eyes, m.eyes.modulate.a])
+	check(is_equal_approx(ramp, boss.curtain.modulate.a) and is_equal_approx(eyes, m.eyes.modulate.a), "the dark didn't deepen and his eyes didn't fade by a hair")
+	await tap_pause()
+	check(await wait_until(func(): return boss.curtain.modulate.a >= 1.0, 60), "and the dark finishes coming in after the resume")
+
+	log_p("-- paused in the middle of the charge")
+	check(await wait_until(func(): return m.beat == m.Beat.CHARGE and m.beat_clock >= 0.5, 300), "he is charging")
+	await tap_pause()
+	var beat: float = m.beat_clock
+	var ball: Vector2 = m.ball.scale
+	var ring: Array = messatsu_lock(m)
+	await wait(40)
+	log_p("charge clock %.4f -> %.4f, ball %s -> %s, ring %s -> %s" % [beat, m.beat_clock, ball, m.ball.scale, ring, messatsu_lock(m)])
+	check(is_equal_approx(beat, m.beat_clock) and ball == m.ball.scale and ring == messatsu_lock(m), "the charge clock, the ball and the lock ring all held")
+	await tap_pause()
+	check(await wait_until(func(): return not is_equal_approx(beat, m.beat_clock), 60), "and it carries on")
+
+	log_p("-- paused with a surge in flight")
+	var surge_due := func(k: int) -> bool:
+		return (m.beat == m.Beat.STRING and m.tick_index == k and not m.surges.is_empty()
+			and m.fire_clock > sm.messatsu_hit_time(k) - sm.messatsu_pulse_travel * 0.5)
+	check(await wait_until(func(): return surge_due.call(1), 600), "a surge is on its way down the beam")
+	await tap_pause()
+	var fire: float = m.fire_clock
+	var tick: int = m.tick_index
+	var at: Vector2 = m.surges[0].global_position
+	await wait(40)
+	log_p("fire clock %.4f -> %.4f, hit %d -> %d, surge %s -> %s" % [fire, m.fire_clock, tick, m.tick_index, at, m.surges[0].global_position])
+	check(is_equal_approx(fire, m.fire_clock) and tick == m.tick_index and at == m.surges[0].global_position, "the string's clock, its count and the surge all held")
+	await tap_pause()
+	check(await wait_until(func(): return not is_equal_approx(fire, m.fire_clock), 60), "and it carries on")
+
+	log_p("-- and a finisher's freeze")
+	check(await wait_until(func(): return surge_due.call(2), 600), "the next surge is on its way")
+	var freeze: GDScript = load("res://Scripts/FightFreeze.gd")
+	check(freeze.freeze(self, [player.get_parent()]), "the fight is frozen around the player")
+	fire = m.fire_clock
+	tick = m.tick_index
+	at = m.surges[0].global_position
+	await wait(40)
+	log_p("frozen: fire clock %.4f -> %.4f, hit %d -> %d, surge %s -> %s" % [fire, m.fire_clock, tick, m.tick_index, at, m.surges[0].global_position])
+	check(is_equal_approx(fire, m.fire_clock) and tick == m.tick_index and at == m.surges[0].global_position, "40 frozen frames don't advance the string or move the surge")
+	freeze.unfreeze(self)
+	await wait(2)
+	check(await wait_until(func(): return not is_equal_approx(fire, m.fire_clock), 60), "and it carries on after the unfreeze")
+	m.release()
 
 
 # ------------------------------------------------------------------ Computah's mine field
@@ -9341,11 +11866,18 @@ const COMPUTAH_SCENE := "Arena/ComputahScene"
 const COMPUTAH_MINE_SCENE := "res://Scenes/Bosses/ComputahMineScene.tscn"
 
 
-# His fight, driving itself from here rather than off its own opening timer.
+# His fight, driving itself from here rather than off its own opening timer. The modes on it test the mine
+# field and the overload, out of his live rotation since 2026-09-24 (ComputahStateMachine.live_attacks), so it
+# puts them back in for itself, with the health they were sized for.
 func load_computah_fight() -> void:
 	await load_fight("computah")
 	boss = current_scene.get_node(COMPUTAH_SCENE + "/ComputahCharacterBody")
 	sm = boss.state_machine
+	sm.live_attacks.assign(sm.ATTACKS)
+	boss.max_health = boss.FULL_ROTATION_HEALTH
+	boss.boss_health = boss.max_health
+	boss.health_bar.set_max(0, boss.max_health)
+	boss.health_bar.set_value(0, boss.boss_health, boss.health_bar.HIT_SILENT)
 	sm.post_dialogue_pre_fight_timer.stop()
 	# Out of the intro pose, which trap_allowed() refuses on purpose, and off the beat clock: from
 	# here the test drives his states itself.
@@ -9540,7 +12072,8 @@ func test_mine_trap() -> void:
 	check(boss.current_anim == &"uppercut_wind", "on the uppercut's load (%s)" % boss.current_anim)
 
 	log_p("-- the whiff, and the window it opens")
-	trapped.meter = 1.0 - sm.escape_gain * 0.5
+	# Half a press short, at what a press is worth at the top of the bar (MashCurve).
+	trapped.meter = 1.0 - load("res://Scripts/MashCurve.gd").gain(sm.escape_gain, 1.0) * 0.5
 	tap(MASH_KEYS[trapped.mash_actions()[0]])
 	await wait(2)
 	check(trapped.escaped, "the last press fills the meter and they are out")
@@ -9618,10 +12151,11 @@ func test_mine_trap() -> void:
 	boss.break_gauge.locked = false
 	boss.break_gauge.value = 0.0
 	check(boss.break_gauge.add(boss.break_gauge.max_value), "filling it breaks him")
-	check(await wait_until(func(): return sm.current_state.name == "Punish", 120), "which drops him into a window - the daze his finisher needs")
+	check(await wait_until(func(): return sm.current_state.name == "Broken", 120), "which puts him down Broken - the window the three-bar finisher needs")
 	check(boss.break_gauge.locked, "and the gauge locks behind it")
-	check(boss.is_down(), "is_down() reads that window, which is what the gauge's own wait runs on")
-	check(not player.is_action_locked, "the player is untouched by it")
+	check(boss.is_down(), "is_down() reads the Break, which is what the gauge's own wait runs on")
+	# The Break drives the player in beside him, and holds their actions for the drive.
+	check(await wait_until(func(): return not player.is_action_locked, 120), "the player is theirs again once the drive-in ends")
 	await park_computah()
 
 	log_p("-- every release path leaves them free")
@@ -9697,8 +12231,9 @@ func test_mine_mash() -> void:
 	release(MASH_KEYS[pair[0]])
 	release(MASH_KEYS[pair[1]])
 	await wait(2)
-	log_p("both keys in one flush: %.3f (one press is %.3f)" % [trapped.meter, sm.escape_gain])
-	check(trapped.meter <= sm.escape_gain + 0.001, "both keys pressed together count once")
+	var one_press: float = load("res://Scripts/MashCurve.gd").gain(sm.escape_gain, 0.0)
+	log_p("both keys in one flush: %.3f (one press is %.3f)" % [trapped.meter, one_press])
+	check(trapped.meter <= one_press + 0.001, "both keys pressed together count once")
 	trapped.meter = 0.0
 	trapped.last_action = &""
 	trapped.last_press_usec = 0
@@ -9959,7 +12494,7 @@ func test_computah_overload() -> void:
 	log_p("put in %d of %d in %.2f s over %d presses" % [run.damage, needed, run.seconds, run.presses])
 	check(run.damage >= needed, "the threshold is reached (%d of %d)" % [run.damage, needed])
 	check(ov.phase == ov.Phase.BROKEN, "which breaks the charge rather than the hit cap ending it (%d)" % ov.phase)
-	check(await wait_until(func(): return sm.current_state.name == "Punish", 200), "and he drops into a window")
+	check(await wait_until(func(): return sm.current_state.name == "Broken", 200), "and he drops into his Break")
 	physics_frame.disconnect(watch_daze)
 	log_p("gauge %.0f of %.0f, locked %s; blast fired %s; health %d" % [boss.break_gauge.value, boss.break_gauge.max_value, boss.break_gauge.locked, ov.blast_fired, player.playerHealth])
 	check(not ov.blast_fired and events_of("HIT", OVERLOAD_BLAST).is_empty(), "no blast went off at all")
@@ -9993,7 +12528,7 @@ func test_computah_overload() -> void:
 		check(absf(run.from - sm.overload_start_range) < 1.0, "%s: it started at the gate's own range (%.0f px)" % [how, run.from])
 		check(run.damage >= needed, "%s: the threshold is cleared from the worst legal start (%d of %d)" % [how, run.damage, needed])
 		check(ov.phase == ov.Phase.BROKEN and spare > 0.0, "%s: the charge broke with %.2f s to spare" % [how, spare])
-		await wait_until(func(): return sm.current_state.name == "Punish", 200)
+		await wait_until(func(): return sm.current_state.name == "Broken", 200)
 
 	log_p("-- FAIRNESS: every way of being unable to answer refuses the start")
 	await overload_reset()
@@ -10088,3 +12623,5162 @@ func test_computah_overload() -> void:
 	check(sm.current_state.name == "LayMines", "a cycle it is refused on is a plain one (%s)" % sm.current_state.name)
 	boss.break_gauge.locked = false
 	await park_computah()
+
+
+# ------------------------------------------------------------------ a fight's pull on the player
+# PlayerScript.add_drift(): px/s a fight adds on top of the player's own movement for one physics step,
+# through the same collision as walking. Beast Bixby's Inferno is what pulls; Eric's fight, parked, is
+# only the floor it is tested on here.
+
+const DRIFT := Vector2(330, 0)
+const DRIFT_SPOT := Vector2(700, 500)
+
+
+# Adds `velocity` on each of the next `frames` physics steps and returns how far the player went. Called
+# on a physics_frame, so each add is taken by the player's own step in the same frame.
+func drift_for(frames: int, velocity: Vector2) -> Vector2:
+	var from: Vector2 = player.global_position
+	for i in frames:
+		player.add_drift(velocity)
+		await physics_frame
+	return player.global_position - from
+
+
+# Adds DRIFT on every step `holding` stays true, up to `limit` steps: [steps, px moved, px it should
+# have moved]. What it should is counted in game time, which a hit-stop slows along with the pull.
+func drift_while(holding: Callable, limit: int) -> Array:
+	var from: Vector2 = player.global_position
+	var clock_from: float = defense.clock
+	var steps := 0
+	while holding.call() and steps < limit:
+		player.add_drift(DRIFT)
+		await physics_frame
+		steps += 1
+	return [steps, player.global_position - from, DRIFT * (defense.clock - clock_from)]
+
+
+func test_drift() -> void:
+	await load_quiet("eric")
+	log_p("-- an idle player in the open")
+	await settle_player(DRIFT_SPOT)
+	var moved: Vector2 = await drift_for(30, DRIFT)
+	log_p("30 steps of %s moved them %s" % [DRIFT, moved])
+	check(absf(moved.x - 165.0) <= 2.0 and absf(moved.y) <= 0.01, "30 steps at 330 px/s move an idle player 165 px (%.2f)" % moved.x)
+	var stopped_at: Vector2 = player.global_position
+	await wait(1)
+	var one_later: Vector2 = player.global_position - stopped_at
+	await wait(10)
+	check(one_later.length() < 0.01 and player.global_position.distance_to(stopped_at) < 0.01, "the step the calls stop, it stops (%s, then %s)" % [one_later, player.global_position - stopped_at])
+	player.add_drift(DRIFT * 10.0)
+	player.warp_to(DRIFT_SPOT)
+	await wait(2)
+	check(player.global_position.distance_to(DRIFT_SPOT) < 0.01, "a warp drops a pull still to come (%s)" % (player.global_position - DRIFT_SPOT))
+
+	log_p("-- into the right rope at a slant")
+	await settle_player(Vector2(1760, 500))
+	moved = await drift_for(30, Vector2(330, 330))
+	var body := body_rect()
+	log_p("pulled down and right: moved %s, body now %s, rope face %.0f" % [moved, body, ROPES.end.x])
+	check(body.end.x <= ROPES.end.x + 0.1, "the rope stops them (%.2f)" % body.end.x)
+	check(moved.y >= 160.0, "and they slide along it instead of stopping dead (%.2f of 165 down)" % moved.y)
+
+	log_p("-- into a solid body on layer 1")
+	var wall := StaticBody2D.new()
+	var shape := CollisionShape2D.new()
+	var box := RectangleShape2D.new()
+	box.size = Vector2(20, 400)
+	shape.shape = box
+	wall.add_child(shape)
+	wall.position = Vector2(1000, 500)
+	current_scene.add_child(wall)
+	await settle_player(Vector2(900, 500))
+	moved = await drift_for(30, DRIFT)
+	body = body_rect()
+	log_p("pulled into a block at x 990: moved %s, body right edge %.2f" % [moved, body.end.x])
+	check(moved.x > 60.0 and body.end.x <= 990.0 + 0.1, "it stops them at its face")
+	wall.queue_free()
+	await wait(2)
+
+	log_p("-- a pull drags a player who is guarding, swinging, landing a dash or stunned")
+	await settle_player(DRIFT_SPOT)
+	press(KEY_SHIFT)
+	var guarding := await wait_until(func(): return player.current_state.name == "Blocking", 20)
+	var run: Array = await drift_while(func(): return player.current_state.name == "Blocking", 10)
+	release(KEY_SHIFT)
+	log_p("guarding: %d steps, moved %s of %s" % run)
+	check(guarding and run[0] == 10 and run[1].distance_to(run[2]) <= 0.5, "guarding: %.2f of %.2f px" % [run[1].x, run[2].x])
+	await wait(10)
+
+	await settle_player(DRIFT_SPOT)
+	tap(KEY_Q)
+	var swinging := await wait_until(func(): return player.current_state.name == "Punching", 20)
+	run = await drift_while(func(): return player.current_state.name == "Punching", 60)
+	log_p("swinging: %d steps, moved %s of %s" % run)
+	check(swinging and run[0] > 3 and run[1].distance_to(run[2]) <= 0.5, "swinging: %.2f of %.2f px" % [run[1].x, run[2].x])
+	await wait(10)
+
+	await dash_ready()
+	await settle_player(DRIFT_SPOT)
+	press(KEY_DOWN)
+	tap(KEY_W)
+	await wait_until(func(): return player.is_dodging, 20)
+	await wait_until(func(): return not player.is_dodging, 20)
+	release(KEY_DOWN)
+	var landing: bool = defense.is_dash_recovering()
+	run = await drift_while(func(): return defense.is_dash_recovering(), 60)
+	log_p("a dash's landing beat: %d steps, moved %s of %s" % run)
+	check(landing and run[0] > 0 and run[1].distance_to(run[2]) <= 0.5, "landing a dash: %.2f of %.2f px" % [run[1].x, run[2].x])
+	await wait(10)
+
+	await settle_player(DRIFT_SPOT)
+	defense._start_guard_break()
+	await wait(2)
+	var stunned: bool = defense.is_guard_broken
+	run = await drift_while(func(): return defense.is_guard_broken, 10)
+	defense.clear_guard_break()
+	log_p("guard-broken: %d steps, moved %s of %s (its hit-stop slows the pull with the fight)" % run)
+	check(stunned and run[0] == 10 and run[1].distance_to(run[2]) <= 0.5, "guard-broken: %.2f of %.2f px" % [run[1].x, run[2].x])
+	await wait(10)
+
+	log_p("-- and none while talking, grabbed, finishing or locked, or at 0 health")
+	await settle_player(DRIFT_SPOT)
+	player.is_talking = true
+	moved = await drift_for(10, DRIFT)
+	player.is_talking = false
+	check(moved.length() < 0.01, "talking: no pull (%s)" % moved)
+	player.grab()
+	moved = await drift_for(10, DRIFT)
+	player.release_grab(Vector2.ZERO)
+	clear_iframes()
+	check(moved.length() < 0.01, "grabbed: no pull (%s)" % moved)
+	await wait(2)
+	player.is_finishing = true
+	moved = await drift_for(10, DRIFT)
+	player.is_finishing = false
+	check(moved.length() < 0.01, "finishing: no pull (%s)" % moved)
+	player.lock_actions()
+	moved = await drift_for(10, DRIFT)
+	player.unlock_actions()
+	check(moved.length() < 0.01, "action-locked: no pull (%s)" % moved)
+	# Last: at 0 health the fight is lost, and a process gets one ending.
+	await settle_player(DRIFT_SPOT)
+	player.playerHealth = 0
+	moved = await drift_for(10, DRIFT)
+	check(moved.length() < 0.01, "at 0 health: no pull (%s)" % moved)
+
+
+# ------------------------------------------------------------------ beast Bixby's Inferno
+# BixbyBeastInferno, forced from his hover with nothing else queued, on a fixed seed, five times over with the
+# player somewhere different for each breath. A process gets one ending, so the player dying mid-pull
+# (tier=death) and him beaten on the rope (tier=defeated) are runs of their own. The geometry is
+# BixbyInfernoArtLayout's, the numbers BixbyBeastStateMachine's.
+
+const LIAM_BEAST := "Arena/BixbyBeastScene/BixbyBeastCharacterBody"
+const INFERNO_LAYOUT := "res://Scripts/BixbyInfernoArtLayout.gd"
+const INFERNO_SEED := 20260923
+# Where a run starts the player: the first of these clear of the embers still burning from the run before.
+const INFERNO_STARTS := [Vector2(1400, 800), Vector2(520, 800), Vector2(300, 900), Vector2(1620, 900), Vector2(720, 650), Vector2(1200, 650)]
+# How far inside the cone the player stands before dashing out of it as it catches.
+const INFERNO_EDGE_DEPTH := 40.0
+# The shower's drop area (BixbyInfernoArtLayout.FIREBALL_AREA), and how long after the last landing its
+# hit is still worth counting.
+const INFERNO_FIREBALL_AREA := Rect2(170, 170, 1580, 720)
+const INFERNO_HIT_TAIL := 0.15
+# A landing further than this from a player's feet can't touch them: their hurtbox stands 81 px over their
+# feet, and a landing's oval reaches 33 px above and below its middle.
+const INFERNO_LANDING_REACH := 114.0
+# The circle a player walks the shower off on: well inside the floor, and long enough that nobody walking
+# it is back where they were a second ago.
+const INFERNO_CIRCLE_CENTRE := Vector2(960, 600)
+const INFERNO_CIRCLE_RADIUS := 280.0
+# "Roughly three quarters" of the ring, the user's own rough figure: with the perch art's apex the approved
+# cone covers 68%.
+const INFERNO_COVERAGE_RANGE := Vector2(0.65, 0.80)
+# What a player needs to see the wind-up before they move: the longest run out of the cone has to fit in
+# what is left of it.
+const INFERNO_REACTION := 0.25
+
+var inf: Node
+# Once a physics frame, what the frame before it left: {frame, phase (-1 outside the Inferno), pulled, t}.
+var inf_frames: Array = []
+var inf_rises := {}
+# Per fireball: where, and when it was first seen, its marker lit, its hitbox live and it landed.
+var inf_fireballs := {}
+# The game clock on every frame a live ParryTell stood over him, whether it was yellow, and how far off his
+# middle mouth it stood at most.
+var inf_tell: Array = []
+var inf_tell_dodge := false
+var inf_tell_off := 0.0
+# Per ember: where, when laid and where the player was, when it caught, started burning and burnt out.
+var inf_embers := {}
+var inf_land_frame := -1
+var inf_land_player := Vector2.INF
+# The perch and the HUD over it, by his own clock (fight_clock), which a freeze and a pause both hold:
+# frames on the rope that weren't at the middle facing down, and frames the HUD wasn't where it should
+# have settled by then.
+var inf_perched_since := -1.0
+var inf_left_rope_at := -1.0
+var inf_perched_frames := 0
+var inf_perch_wrong := []
+var inf_hud_wrong := []
+# How far every marker of every run went down from the player's feet as it appeared.
+var inf_marker_offsets: Array = []
+# Where each rising fireball of the volley left from, and the perch frame up as it went.
+var inf_rise_origins: Array = []
+var inf_rise_frames: Array = []
+var inf_tell_at := Vector2.INF
+var inf_land_feet := Vector2.INF
+# While he hangs off the rope: frames a fireball was seen, frames its burst was seen in flame and in scorch,
+# and whatever of the shower sorted or was drawn where it shouldn't be; frames an ember was seen, and any
+# that reached what he draws.
+var inf_floor_frames := 0
+var inf_burst_frames := [0, 0]
+var inf_floor_wrong := []
+var inf_ember_frames := 0
+var inf_ember_over := []
+var inf_perch_image: Image
+
+
+func load_liam() -> void:
+	await load_fight("liam", true)
+	await clear_intro("liam")
+	boss = current_scene.get_node(LIAM_BEAST)
+	sm = boss.state_machine
+	player.playerHealth = 1000
+
+
+# From his next hover with nothing else queued, so it ends on Land and Recover.
+func force_inferno() -> Node:
+	var inferno: Node = sm.states["Inferno"]
+	if not await wait_until(func(): return sm.current_state.name == "Hover", 900):
+		return null
+	sm.attacks = []
+	sm.on_child_transition(sm.current_state, "Inferno")
+	return inferno if sm.current_state == inferno else null
+
+
+func reach_phase(which: int, max_frames := 900) -> bool:
+	return await wait_until(func(): return sm.current_state == inf and inf.phase == which, max_frames)
+
+
+func burning_embers() -> Array:
+	return hazards_of("BixbyEmberScript.gd").filter(func(ember): return ember.is_active())
+
+
+func hud_alpha() -> float:
+	return boss.health_bar.modulate.a
+
+
+func on_rope() -> bool:
+	return sm.current_state == inf and inf.phase >= inf.Phase.PERCH
+
+
+# Where the player stands on the floor: the foot of their hurtbox, as the shower aims at it.
+func player_feet() -> Vector2:
+	var box := hurtbox_rect()
+	return Vector2(box.get_center().x, box.end.y)
+
+
+# Runs `step` a frame at a time through the rest of the shower, to its last landing's hit: the fireball hits
+# it took and how far the player went.
+func shower_hits(step: Callable) -> Dictionary:
+	var before := events_of("HIT", &"bixby_fireball").size()
+	var travelled := [0.0]
+	var last := [player.global_position]
+	var measure := func():
+		travelled[0] += player.global_position.distance_to(last[0])
+		last[0] = player.global_position
+	physics_frame.connect(measure)
+	var left: float = sm.inferno_first_marker + (sm.inferno_fireballs - 1) * sm.inferno_marker_interval + sm.inferno_fireball_warning - inf.elapsed
+	var until: float = defense.clock + left + INFERNO_HIT_TAIL
+	while defense.clock < until and inf.phase == inf.Phase.INHALE:
+		await step.call()
+	physics_frame.disconnect(measure)
+	for k in [KEY_RIGHT, KEY_LEFT, KEY_DOWN, KEY_UP]:
+		release(k)
+	return {"hits": events_of("HIT", &"bixby_fireball").slice(before), "walked": travelled[0]}
+
+
+func stand_still() -> void:
+	await physics_frame
+
+
+# One frame of walking round a circle, with the arrow keys against the pull as a player would: whichever
+# of the eight directions best carries them along it, the way it goes and back onto it.
+func walk_circle(centre: Vector2, radius: float) -> void:
+	var from_centre: Vector2 = player.global_position - centre
+	var along := Vector2(-from_centre.y, from_centre.x).normalized()
+	var want: Vector2 = along * 450.0 + from_centre.normalized() * (radius - from_centre.length()) * 4.0 - inf.pull_at(player.global_position)
+	var keys := {KEY_RIGHT: want.x > 150.0, KEY_LEFT: want.x < -150.0, KEY_DOWN: want.y > 150.0, KEY_UP: want.y < -150.0}
+	for k in keys:
+		if keys[k] != Input.is_physical_key_pressed(k):
+			if keys[k]:
+				press(k)
+			else:
+				release(k)
+	await physics_frame
+
+
+# The player's hurtbox if they stood at `at`.
+func hurtbox_at(at: Vector2) -> Rect2:
+	var rect := hurtbox_rect()
+	rect.position += at - player.global_position
+	return rect
+
+
+func hits_cone(rect: Rect2) -> bool:
+	return load(INFERNO_LAYOUT).rect_hits_cone(rect, inf.cone_apex, inf._half_angle())
+
+
+# Before anything steps: what the last physics frame left. The player's drift_velocity is then the pull
+# he added in it, which the player's own step is about to take.
+func watch_inferno() -> void:
+	var now: float = defense.clock
+	var at_frame := Engine.get_physics_frames()
+	inf_frames.append({"frame": at_frame, "phase": inf.phase if sm.current_state == inf else -1, "pulled": player.drift_velocity != Vector2.ZERO, "t": now})
+	for rise in hazards_of("BixbyFireballRiseScript.gd"):
+		if not inf_rises.has(rise.get_instance_id()):
+			inf_rises[rise.get_instance_id()] = true
+			inf_rise_origins.append(rise.at - rise.velocity * rise.clock)
+			inf_rise_frames.append(boss.sprite.frame)
+	for fireball in hazards_of("BixbyFireballScript.gd"):
+		var id: int = fireball.get_instance_id()
+		if not inf_fireballs.has(id):
+			var record := {"pos": fireball.global_position, "seen": now, "lit": -1.0, "hot": -1.0, "landed": -1.0, "landed_frame": -1}
+			# The feet the state aimed it at: nothing moves the player between its spawn and this frame's start.
+			var aimed_at: Vector2 = player_feet().clamp(INFERNO_FIREBALL_AREA.position, INFERNO_FIREBALL_AREA.end)
+			record["off"] = fireball.global_position.distance_to(aimed_at)
+			inf_marker_offsets.append(record.off)
+			inf_fireballs[id] = record
+			fireball.landed.connect(func():
+				record.landed = defense.clock
+				record.landed_frame = Engine.get_physics_frames()
+				record["landed_feet"] = player_feet())
+		var seen: Dictionary = inf_fireballs[id]
+		if seen.lit < 0.0 and fireball.marker.visible:
+			seen.lit = now
+		if seen.hot < 0.0 and not fireball.get_node("Hitbox/CollisionShape2D").disabled:
+			seen.hot = now
+	var tell := tell_node()
+	if tell and sm.current_state == inf:
+		inf_tell.append(now)
+		inf_tell_dodge = tell.dodge
+		inf_tell_off = maxf(inf_tell_off, tell.global_position.distance_to(inf._mouth(0).round()))
+		inf_tell_at = tell.global_position
+	for ember in hazards_of("BixbyEmberScript.gd"):
+		var id: int = ember.get_instance_id()
+		if not inf_embers.has(id):
+			inf_embers[id] = {"pos": ember.global_position, "laid": now, "player": player.global_position, "hurt": -1.0, "burning": -1.0, "out": -1.0}
+		var record: Dictionary = inf_embers[id]
+		if record.hurt < 0.0 and ember.is_hurting():
+			record.hurt = now
+		if record.burning < 0.0 and ember.phase == ember.Phase.BURNING:
+			record.burning = now
+		if record.out < 0.0 and ember.phase >= ember.Phase.BURN_OUT:
+			record.out = now
+	if inf_land_frame < 0 and sm.current_state.name == "Land":
+		inf_land_frame = at_frame
+		inf_land_player = player.global_position
+		inf_land_feet = boss.feet_position()
+	watch_perch()
+
+
+func watch_perch() -> void:
+	var clock: float = boss.fight_clock
+	var perched := on_rope()
+	if perched and inf_perched_since < 0.0:
+		inf_perched_since = clock
+	elif not perched and inf_perched_since >= 0.0:
+		inf_perched_since = -1.0
+		inf_left_rope_at = clock
+	var settle: float = boss.HUD_FADE_TIME + 2.0 * FRAME_TIME
+	if perched:
+		inf_perched_frames += 1
+		if boss.sprite.flip_h or not is_equal_approx(boss.feet_position().x, 960.0):
+			inf_perch_wrong.append("f%d x %.1f flipped %s" % [Engine.get_physics_frames(), boss.feet_position().x, boss.sprite.flip_h])
+		if clock - inf_perched_since >= settle and absf(hud_alpha() - sm.inferno_hud_fade_alpha) > 0.001:
+			inf_hud_wrong.append("f%d on the rope %.2f s, HUD at %.3f" % [Engine.get_physics_frames(), clock - inf_perched_since, hud_alpha()])
+		watch_perch_floor()
+	elif inf_left_rope_at >= 0.0 and clock - inf_left_rope_at >= settle and absf(hud_alpha() - 1.0) > 0.001:
+		inf_hud_wrong.append("f%d off the rope %.2f s, HUD at %.3f" % [Engine.get_physics_frames(), clock - inf_left_rope_at, hud_alpha()])
+
+
+# While he hangs over the floor: the shower's markers sort over him, as the warning they are, and under the
+# player; its bursts' flames are over everyone, as the ball falling onto them is, and from their first frame
+# of scorch they lie on the floor layer under him with the scorch; each is drawn on its spot. And no ember,
+# laid before he lets go or left from the last time, reaches what he draws.
+func watch_perch_floor() -> void:
+	var layout: GDScript = load(INFERNO_LAYOUT)
+	var spec: Dictionary = layout.FINAL_FIREBALL if layout.USE_FINAL_FIREBALL else layout.PLACEHOLDER_FIREBALL
+	var scorch_frames: Array = spec.impact_frames.slice(spec.impact_scorch_step)
+	var at_frame := Engine.get_physics_frames()
+	var his_y: float = boss.global_position.y
+	for fireball in hazards_of("BixbyFireballScript.gd"):
+		inf_floor_frames += 1
+		var spot: Vector2 = fireball.global_position
+		var holder: Node2D = fireball.floor_layer
+		var wrong := []
+		var marker_y: float = fireball.marker.global_position.y
+		if not (is_equal_approx(marker_y, layout.MARKER_LAYER_Y) and marker_y > his_y and marker_y < sm.PLAYER_FLOOR.position.y and marker_y < player.global_position.y):
+			wrong.append("marker sorting at y %.1f" % marker_y)
+		if not fireball.marker_sprite.global_position.is_equal_approx(spot + Vector2(0, -layout.MARKER_RAISE)):
+			wrong.append("marker drawn from %s" % fireball.marker_sprite.global_position)
+		if not (is_equal_approx(holder.global_position.y, layout.FLOOR_LAYER_Y) and holder.global_position.y < his_y and fireball.scorch.global_position.is_equal_approx(spot)):
+			wrong.append("scorch sorting at y %.1f, drawn from %s" % [holder.global_position.y, fireball.scorch.global_position])
+		if fireball.impact.visible:
+			var scorched: bool = fireball.impact.frame in scorch_frames
+			inf_burst_frames[1 if scorched else 0] += 1
+			var on_floor: bool = fireball.impact.get_parent() == holder and fireball.impact.z_index == 0
+			var over_all: bool = fireball.impact.get_parent() == fireball and fireball.impact.z_index > 0
+			if not (on_floor if scorched else over_all) or not fireball.impact.global_position.is_equal_approx(spot):
+				wrong.append("burst frame %d under %s at z %d, drawn from %s" % [fireball.impact.frame, fireball.impact.get_parent().name, fireball.impact.z_index, fireball.impact.global_position])
+		if [fireball, holder, fireball.marker, fireball.scorch].any(func(item: Node2D) -> bool: return item.z_index != 0) or boss.z_index != 0 or fireball.ball.z_index <= 0:
+			wrong.append("z: marker %d, scorch %d, ball %d, him %d" % [fireball.marker.z_index, fireball.scorch.z_index, fireball.ball.z_index, boss.z_index])
+		if not wrong.is_empty():
+			inf_floor_wrong.append("f%d fireball at %s: %s" % [at_frame, spot, wrong])
+	var body := perch_drawn_rect()
+	for ember in hazards_of("BixbyEmberScript.gd"):
+		inf_ember_frames += 1
+		var sprite: Sprite2D = ember.get_node("Sprite2D")
+		var drawn: Rect2 = sprite.global_transform * sprite.get_rect()
+		if drawn.intersects(body):
+			inf_ember_over.append("f%d ember at %s drawn over %s, his frame %d drawn over %s" % [at_frame, ember.global_position, drawn, boss.sprite.frame, body])
+
+
+# The opaque part of the perch frame he's drawing, in px.
+func perch_drawn_rect() -> Rect2:
+	var art: GDScript = load("res://Scripts/BixbyBeastArtLayout.gd")
+	if inf_perch_image == null:
+		inf_perch_image = Image.load_from_file(ProjectSettings.globalize_path(art.PERCH_SHEET))
+	var size := Vector2i(art.FRAME_SIZE)
+	var used: Rect2i = inf_perch_image.get_region(Rect2i(boss.sprite.frame * size.x, 0, size.x, size.y)).get_used_rect()
+	return Rect2(boss.air.global_position + art.local(Vector2(used.position)), Vector2(used.size) * art.SCALE)
+
+
+func inferno_reset() -> void:
+	inf_frames.clear()
+	inf_rises.clear()
+	inf_rise_origins.clear()
+	inf_rise_frames.clear()
+	inf_tell_at = Vector2.INF
+	inf_land_feet = Vector2.INF
+	inf_fireballs.clear()
+	inf_tell.clear()
+	inf_tell_dodge = false
+	inf_tell_off = 0.0
+	inf_land_frame = -1
+	inf_land_player = Vector2.INF
+
+
+# Puts the player at `at`, holds `keys` and lets the pull run `frames`: [px moved, game seconds, their
+# state as it started]. A warp, so the pull already added for this step, aimed from where they were, goes.
+func pull_run(at: Vector2, keys: Array, frames: int) -> Array:
+	player.warp_to(at)
+	for k in keys:
+		press(k)
+	await wait(4)
+	var state: String = player.current_state.name
+	var from: Vector2 = player.global_position
+	var clock_from: float = defense.clock
+	await wait(frames)
+	var moved: Vector2 = player.global_position - from
+	var took: float = defense.clock - clock_from
+	for k in keys:
+		release(k)
+	return [moved, took, state]
+
+
+# The first of `spots` where the player's hurtbox is clear of every ember still burning: the last run's
+# are still alight when the next one starts.
+func clear_of_embers(spots: Array) -> Vector2:
+	for spot in spots:
+		var body := hurtbox_at(spot).grow(8.0)
+		if not hazards_of("BixbyEmberScript.gd").any(func(ember): return ember.footprint().intersects(body)):
+			return spot
+	return spots[0]
+
+
+# The player's hurtbox centred on `ember`'s, for `seconds` of game time.
+func hold_in_ember(ember: Node2D, seconds: float) -> void:
+	var until: float = defense.clock + seconds
+	while defense.clock < until and is_instance_valid(ember):
+		var into: Vector2 = ember.get_node("Hitbox/CollisionShape2D").global_position
+		player.global_position += into - player.hurtBox.get_node("CollisionShape2D").global_position
+		player.velocity = Vector2.ZERO
+		await physics_frame
+
+
+# What a perch frame may draw on, in px: its whole width, from PERCH_HEADROOM rows above the rope down.
+func perch_frame_rect(layout: GDScript) -> Rect2:
+	var art: GDScript = load("res://Scripts/BixbyBeastArtLayout.gd")
+	var top: float = layout.PERCH_ROPE_ROW - layout.PERCH_HEADROOM
+	var drawn := Rect2(0.0, top, art.FRAME_SIZE.x, art.FRAME_SIZE.y - top)
+	return Rect2(layout.perch_point() + art.local(drawn.position), drawn.size * art.SCALE)
+
+
+func inferno_snapshot() -> Dictionary:
+	var clocks := []
+	for fireball in hazards_of("BixbyFireballScript.gd"):
+		clocks.append([fireball.get_instance_id(), fireball.clock])
+	return {"player": player.global_position, "phase": inf.phase, "elapsed": inf.elapsed, "fireballs": clocks, "boss": boss.global_position, "state": str(sm.current_state.name), "hud": hud_alpha()}
+
+
+# The share of INFERNO_AREA inside the cone, counted on a 5 px grid rather than worked out, so it checks
+# the layout's own sums rather than repeating them.
+func cone_coverage(layout: GDScript) -> float:
+	var area: Rect2 = layout.INFERNO_AREA
+	var inside := 0
+	var total := 0
+	var y := area.position.y + 2.5
+	while y < area.end.y:
+		var x := area.position.x + 2.5
+		while x < area.end.x:
+			total += 1
+			if layout.point_in_cone(Vector2(x, y), inf.cone_apex, inf._half_angle()):
+				inside += 1
+			x += 5.0
+		y += 5.0
+	return float(inside) / total
+
+
+# How long a player standing at `at` takes to walk to where the breath can't touch them: per axis at
+# walking speed, so a diagonal takes as long as its longer side. Up and to one side, or straight up, on
+# the floor they can stand on.
+func escape_time(at: Vector2) -> float:
+	var floor_area: Rect2 = sm.PLAYER_FLOOR
+	var best := INF
+	for side in [1.0, -1.0, 0.0]:
+		var reach := func(r: float) -> Vector2:
+			return Vector2(clampf(at.x + side * r, floor_area.position.x, floor_area.end.x), maxf(at.y - r, floor_area.position.y))
+		if hits_cone(hurtbox_at(reach.call(2000.0))):
+			continue
+		var low := 0.0
+		var high := 2000.0
+		for i in 30:
+			var mid := (low + high) / 2.0
+			if hits_cone(hurtbox_at(reach.call(mid))):
+				low = mid
+			else:
+				high = mid
+		best = minf(best, high)
+	return best / player.SPEED
+
+
+# The longest escape_time() from anywhere the breath reaches, on a 10 px grid over the floor and the
+# bottom-centre itself: [seconds, from].
+func worst_escape() -> Array:
+	var floor_area: Rect2 = sm.PLAYER_FLOOR
+	var spots := [Vector2(floor_area.get_center().x, floor_area.end.y)]
+	var y := floor_area.position.y
+	while y <= floor_area.end.y + 0.01:
+		var x := floor_area.position.x
+		while x <= floor_area.end.x + 0.01:
+			spots.append(Vector2(x, y))
+			x += 10.0
+		y += 10.0
+	var worst := [0.0, Vector2.INF]
+	for spot in spots:
+		if hits_cone(hurtbox_at(spot)):
+			var took := escape_time(spot)
+			if took > worst[0]:
+				worst = [took, spot]
+	return worst
+
+
+# Where a player stands in the upper corner on `side` (1 right, -1 left): 200 px down, halfway between the
+# cone's slant and the rope.
+func safe_corner(side: float) -> Vector2:
+	var floor_area: Rect2 = sm.PLAYER_FLOOR
+	var y := 200.0
+	var rect := hurtbox_at(Vector2(960, y))
+	var slant: float = inf.cone_apex.x + side * (rect.end.y - inf.cone_apex.y) * tan(inf._half_angle())
+	var clear_of_it := slant + side * (rect.size.x / 2.0 + 1.0)
+	var wall := floor_area.end.x if side > 0.0 else floor_area.position.x
+	return Vector2(roundf((clear_of_it + wall) / 2.0), y)
+
+
+# One whole Inferno with the player put at `spot` as the wind-up starts, through to his breath: the
+# inferno hits it cost them, and the health, counted from the wind-up so the shower's hits don't.
+func breath_at(spot: Vector2) -> Dictionary:
+	if not await reach_phase(inf.Phase.WINDUP, 900):
+		return {"hits": [], "lost": -1}
+	await settle_player(spot)
+	clear_iframes()
+	var health: int = player.playerHealth
+	var before := events_of("HIT", &"bixby_inferno").size()
+	await reach_phase(inf.Phase.SPENT, 200)
+	return {"hits": events_of("HIT", &"bixby_inferno").slice(before), "lost": health - player.playerHealth}
+
+
+func start_inferno_run(what: String) -> bool:
+	log_p("-- " + what)
+	await settle_player(clear_of_embers(INFERNO_STARTS))
+	inferno_reset()
+	inf = await force_inferno()
+	check(inf != null, "he goes into the Inferno from his hover")
+	return inf != null
+
+
+func test_inferno() -> void:
+	seed(INFERNO_SEED)
+	await load_liam()
+	# Five Infernos' dodges and windows in one fight add up to a Break, which would cut a run short.
+	hold_break_gauge(boss)
+	track()
+	track_dodges()
+	var fireball: Dictionary = CATALOG.get_attack(&"bixby_fireball")
+	var breath: Dictionary = CATALOG.get_attack(&"bixby_inferno")
+	var ember: Dictionary = CATALOG.get_attack(&"bixby_ember")
+	check(fireball.damage == 1 and fireball.blockable and fireball.weight == CATALOG.Weight.LIGHT and fireball.from_above and fireball.dodge_tell and not fireball.dash_through, "bixby_fireball is catalogued as mason_nugget is (%s)" % [fireball])
+	check(breath.damage == 2 and not breath.blockable and not breath.parryable and breath.dodge_tell and not breath.tell and not breath.dash_through, "bixby_inferno: a full heart, no guard, no parry, no dash through, a yellow tell (%s)" % [breath])
+	check(ember.damage == 1 and ember.dash_through and not ember.blockable and not ember.parryable and not ember.tell and not ember.dodge_tell and not ember.bypass_invincibility, "bixby_ember: half a heart, no guard, no badge, dashed through, spaced by the i-frames (%s)" % [ember])
+	if tier == "death":
+		await inferno_death()
+		return
+	if tier == "defeated":
+		await inferno_defeated()
+		return
+	var layout: GDScript = load(INFERNO_LAYOUT)
+	physics_frame.connect(watch_inferno)
+	await inferno_run_one(layout)
+	await inferno_run_two()
+	await inferno_run_three()
+	await inferno_run_four()
+	await inferno_run_five()
+	physics_frame.disconnect(watch_inferno)
+	log_p("%d markers over the five runs, %.1f px at most from the player's feet as each appeared" % [inf_marker_offsets.size(), inf_marker_offsets.max()])
+	check(inf_marker_offsets.size() == 5 * sm.inferno_fireballs and inf_marker_offsets.max() <= sm.inferno_track_scatter + 1.0, "every marker of every run tracked the player, within %.0f px" % sm.inferno_track_scatter)
+	log_p("%d frames on the rope; off the middle or mirrored on %s; the HUD not settled where it should be on %s" % [inf_perched_frames, inf_perch_wrong.slice(0, 5), inf_hud_wrong.slice(0, 5)])
+	check(inf_perched_frames > 0 and inf_perch_wrong.is_empty(), "every frame on the rope, he is on its middle facing down, never mirrored")
+	check(inf_hud_wrong.is_empty(), "the HUD is at %.2f whenever he has been on the rope %.2f s, and back to full whenever he has been off it that long" % [sm.inferno_hud_fade_alpha, boss.HUD_FADE_TIME])
+	log_p("on the rope: %d fireball frames, bursts seen in flame on %d and in scorch on %d, wrong on %s; %d ember frames, over his body on %s" % [inf_floor_frames, inf_burst_frames[0], inf_burst_frames[1], inf_floor_wrong.slice(0, 5), inf_ember_frames, inf_ember_over.slice(0, 5)])
+	check(inf_floor_frames > 0 and inf_burst_frames[0] > 0 and inf_burst_frames[1] > 0 and inf_floor_wrong.is_empty(), "while he hangs off the rope, the shower's markers sort over him and under the player, its bursts' flames over everyone and their scorch under him from its first frame, each on its own spot, and the ball falling onto it over him")
+	check(inf_ember_frames > 0 and inf_ember_over.is_empty(), "and no ember reaches what he draws until he lets go")
+
+
+func inferno_run_one(layout: GDScript) -> void:
+	if not await start_inferno_run("run 1: the perch and the HUD, the volley, the cone, the pull, the tell, the breath under him, the embers and the recharge"):
+		return
+	var start: float = defense.clock
+	check(await reach_phase(inf.Phase.PERCH, 200), "he takes the rope (%.2f s after he set off)" % (defense.clock - start))
+	var feet: Vector2 = layout.perch_point()
+	var frame_rect := perch_frame_rect(layout)
+	log_p("perched: feet %s (perch_point %s), sorting at y %.1f, frame %s, HUD at %.2f" % [boss.feet_position(), feet, boss.global_position.y, frame_rect, hud_alpha()])
+	check(is_equal_approx(feet.x, 960.0) and boss.feet_position().is_equal_approx(feet) and boss.air.global_position.is_equal_approx(feet), "his feet on perch_point, the middle of the rope")
+	check(not boss.sprite.flip_h, "facing down, not mirrored")
+	check(is_equal_approx(boss.global_position.y, sm.ROPES.position.y), "sorting at the rope line, y 114, behind everyone on the mat (%.1f)" % boss.global_position.y)
+	check(not boss.shadow.visible and boss.rope_sfx_player.playing, "no shadow on the rope, and the rope creaks")
+	check(Rect2(Vector2.ZERO, boss.VIEW_SIZE).encloses(frame_rect), "the perch frame is on screen")
+	var art: GDScript = load("res://Scripts/BixbyBeastArtLayout.gd")
+	var body_box: Rect2 = art.local_rect(art.PERCH_BODY_BOX)
+	check(area_rect(boss.hurtbox).is_equal_approx(Rect2(feet + body_box.position, body_box.size)), "while he hangs there his hurtbox is the spent pose's drawn body, %s" % area_rect(boss.hurtbox))
+	await wait(roundi(boss.HUD_FADE_TIME / FRAME_TIME) + 2)
+	log_p("HUD %.3f once he has hung there %.2f s" % [hud_alpha(), boss.HUD_FADE_TIME])
+	check(is_equal_approx(hud_alpha(), sm.inferno_hud_fade_alpha), "the boss bar and its plate over him fade to %.2f" % sm.inferno_hud_fade_alpha)
+
+	log_p("-- the cone")
+	var apex: Vector2 = inf.cone_apex
+	var coverage := cone_coverage(layout)
+	log_p("apex %s (%.0f px under the rope), half-angle %.1f deg: covers %.1f%% of the ring" % [apex, apex.y - layout.TOP_ROPE_Y, sm.inferno_cone_half_angle, coverage * 100.0])
+	check(coverage >= INFERNO_COVERAGE_RANGE.x and coverage <= INFERNO_COVERAGE_RANGE.y, "it covers roughly three quarters of the ring, %.0f%% to %.0f%% (%.1f%%)" % [INFERNO_COVERAGE_RANGE.x * 100.0, INFERNO_COVERAGE_RANGE.y * 100.0, coverage * 100.0])
+	check(apex.is_equal_approx(layout.perch_point() + load("res://Scripts/BixbyBeastArtLayout.gd").local(layout.CONE_APEX)), "the cone's tip is CONE_APEX on him")
+	var worst := worst_escape()
+	var budget: float = sm.inferno_windup - INFERNO_REACTION
+	var pulled_in := escape_time(inf.pull_target())
+	log_p("the longest walk out of it: %.3f s from %s, of the %.2f s the %.1f s wind-up leaves after a %.2f s reaction; from where the pull ends, %.3f s" % [worst[0], worst[1], budget, sm.inferno_windup, INFERNO_REACTION, pulled_in])
+	check(worst[0] <= budget, "anyone in it can walk out before it catches, with %.2f s to react (%.3f s at most)" % [INFERNO_REACTION, worst[0]])
+	check(hits_cone(hurtbox_at(inf.pull_target())), "and the pull drags the player into it, not past its tip")
+	check(inf.pull_target().is_equal_approx(layout.perch_mouth_point(layout.INHALE_FRAME, 0)), "the pull converges on his middle mouth as he inhales, %s" % inf.pull_target())
+
+	check(await reach_phase(inf.Phase.INHALE, 300), "the volley and the empty sky run on into the inhale")
+	var off_mouth := []
+	for i in inf_rise_origins.size():
+		var want: Vector2 = layout.perch_mouth_point(4 + i % 3, i % 3)
+		if inf_rise_origins[i].distance_to(want) > 0.5 or inf_rise_frames[i] != 4 + i % 3:
+			off_mouth.append("#%d from %s on frame %d, not %s on frame %d" % [i, inf_rise_origins[i], inf_rise_frames[i], want, 4 + i % 3])
+	log_p("volley: first three from %s on frames %s; off their mouth %s" % [inf_rise_origins.slice(0, 3), inf_rise_frames.slice(0, 3), off_mouth.slice(0, 3)])
+	check(inf_rise_origins.size() == sm.inferno_fireballs and off_mouth.is_empty(), "each fireball of the volley leaves the spitting head's mouth, the middle, left and right head in turn on frames 4, 5 and 6")
+	var suction: Array = hazards_of("BixbySuctionScript.gd")
+	var inhale_mouths: Array = [0, 1, 2].map(func(head): return layout.perch_mouth_point(layout.INHALE_FRAME, head))
+	log_p("the suction converges on %s" % [suction[0].mouths if not suction.is_empty() else []])
+	check(suction.size() == 1 and Array(suction[0].mouths) == inhale_mouths, "the suction's streaks converge on his three inhaling mouths %s" % [inhale_mouths])
+	log_p("%d fireballs went up; %d still up as the inhale starts" % [inf_rises.size(), hazards_of("BixbyFireballRiseScript.gd").size()])
+	check(inf_rises.size() == sm.inferno_fireballs, "%d rising shots (%d)" % [sm.inferno_fireballs, inf_rises.size()])
+	check(hazards_of("BixbyFireballRiseScript.gd").is_empty(), "every one off the screen and gone before the inhale")
+	check(boss.inhale_sfx_player.playing, "the inhale is heard")
+
+	log_p("-- the pull, past its ramp")
+	var target: Vector2 = inf.pull_target()
+	await wait_until(func(): return inf.elapsed >= sm.inferno_pull_ramp + 0.05, 60)
+	var far := Vector2(1400, 800)
+	var idle: Array = await pull_run(far, [], 30)
+	var speed: float = idle[0].length() / idle[1]
+	var off_aim: float = rad_to_deg(absf(idle[0].angle_to(target - far)))
+	log_p("idle at %s: dragged %s in %.3f s, %.1f px/s, %.2f degrees off the floor under him %s" % [far, idle[0], idle[1], speed, off_aim, target])
+	check(absf(speed - sm.inferno_pull_speed) <= 5.0 and off_aim <= 2.0, "an idle player is dragged at %.0f px/s, straight at him (%.1f, %.2f deg)" % [sm.inferno_pull_speed, speed, off_aim])
+	var away: Array = await pull_run(Vector2(target.x, 560), [KEY_DOWN], 30)
+	var net: float = away[0].y / away[1]
+	log_p("walking straight away from under him: moved %s in %.3f s, %.1f px/s" % [away[0], away[1], net])
+	check(absf(net - (player.SPEED - sm.inferno_pull_speed)) <= 5.0 and absf(away[0].x) < 0.5, "walking straight away nets %.0f px/s (%.1f)" % [player.SPEED - sm.inferno_pull_speed, net])
+	var guard: Array = await pull_run(far, [KEY_SHIFT], 30)
+	var dragged: float = guard[0].length() / guard[1]
+	log_p("guarding at %s (%s): dragged %s, %.1f px/s" % [far, guard[2], guard[0], dragged])
+	check(guard[2] == "Blocking" and absf(dragged - sm.inferno_pull_speed) <= 5.0, "the guard roots them, so the pull drags them at %.0f (%.1f)" % [sm.inferno_pull_speed, dragged])
+
+	log_p("-- under the cone's tip")
+	var under := Vector2(960, 300)
+	var burnt := await breath_at(under)
+	var flood: Node2D = inf.flood
+	var burst_at: Vector2 = flood.position + flood.burst.position if is_instance_valid(flood) else Vector2.INF
+	log_p("spent on frame %d; the breath's burst stood at %s" % [boss.sprite.frame, burst_at])
+	check(boss.sprite.frame == 13, "spent: he hangs in the spent pose, frame 13")
+	check(burst_at.is_equal_approx(apex + layout.BURST_ANCHOR_OFFSET), "the breath's burst sits on the cone's tip, %s" % apex)
+	log_p("at %s through the wind-up and the breath: %d inferno hits, %d health lost" % [under, burnt.hits.size(), burnt.lost])
+	check(burnt.hits.size() == 1 and burnt.lost == catalogue_damage(&"bixby_inferno"), "under the apex: exactly one hit, worth %d" % catalogue_damage(&"bixby_inferno"))
+
+	var tell_time: float = inf_tell[-1] - inf_tell[0] + FRAME_TIME if not inf_tell.is_empty() else 0.0
+	log_p("yellow ring up for %.3f s (%d frames), %.1f px off his middle mouth at most" % [tell_time, inf_tell.size(), inf_tell_off])
+	check(inf_tell_dodge and absf(tell_time - sm.inferno_windup) <= FRAME_TIME + 0.0001, "the yellow ring lives for the %.1f s wind-up, give or take a frame (%.3f)" % [sm.inferno_windup, tell_time])
+	check(inf_tell_off <= 1.0 and inf_tell_at.is_equal_approx(layout.perch_mouth_point(10, 0).round()), "and sits on his middle mouth as he rears back, %s" % inf_tell_at)
+
+	var balls: Array = inf_fireballs.values()
+	var last_landing := -1
+	var early := []
+	var strays := []
+	for a in balls:
+		last_landing = maxi(last_landing, a.landed_frame)
+		if a.lit < 0.0 or a.hot < 0.0 or a.hot - a.lit < sm.inferno_fireball_warning - FRAME_TIME - 0.0001:
+			early.append("%s lit %.3f hot %.3f" % [a.pos, a.lit, a.hot])
+		if a.off > sm.inferno_track_scatter + 1.0:
+			strays.append("%s %.1f px off" % [a.pos, a.off])
+	var offsets: Array = balls.map(func(b): return b.off)
+	log_p("%d markers, %.1f to %.1f px from the player's feet as each appeared; last landing on frame %d; too early %s; strays %s" % [balls.size(), offsets.min(), offsets.max(), last_landing, early, strays])
+	check(balls.size() == sm.inferno_fireballs and balls.all(func(b): return b.landed >= 0.0), "%d markers, and every fireball lands (%d)" % [sm.inferno_fireballs, balls.size()])
+	check(early.is_empty(), "each marker lit at least the %.1f s warning, less a frame, before its hitbox" % sm.inferno_fireball_warning)
+	check(strays.is_empty(), "each marker goes down on the player, within %.0f px of their feet as it appears" % sm.inferno_track_scatter)
+
+	var inhale_first := inf_frames.find_custom(func(f): return f.phase == inf.Phase.INHALE)
+	var inhale_end := inhale_first
+	while inhale_end < inf_frames.size() and inf_frames[inhale_end].phase == inf.Phase.INHALE:
+		inhale_end += 1
+	var pulled := []
+	for i in inf_frames.size():
+		if inf_frames[i].pulled:
+			pulled.append(i)
+	var expected := range(inhale_first + 1, inhale_end + 1)
+	var pull_to_frame: int = inf_frames[pulled[-1]].frame if not pulled.is_empty() else -1
+	log_p("inhale seen on frames %d to %d; the player felt the pull on %d frames, %d to %d; last landing on frame %d" % [inf_frames[inhale_first].frame, inf_frames[inhale_end - 1].frame, pulled.size(), inf_frames[pulled[0]].frame if not pulled.is_empty() else -1, pull_to_frame, last_landing])
+	check(pulled == expected, "the pull is felt from the inhale's first frame to the one after it ends, and on no other frame")
+	check(pull_to_frame == last_landing + 1, "the last frame of it is the one after the last fireball lands")
+
+	log_p("-- the embers it leaves")
+	await wait(1)
+	var ember_size: Vector2 = load("res://Scripts/BixbyEmberScript.gd").SIZE
+	var keep_out: Rect2 = inf._landing_box().grow(inf.EMBER_LANDING_KEEP_OUT)
+	var laid: Array = inf_embers.values()
+	var misplaced := []
+	for i in laid.size():
+		var at: Vector2 = laid[i].pos
+		var foot := Rect2(at - ember_size / 2.0, ember_size)
+		if not layout.rect_inside_cone(foot, apex, inf._half_angle()):
+			misplaced.append("%s outside the cone" % at)
+		if foot.intersects(keep_out):
+			misplaced.append("%s in his landing keep-out" % at)
+		if at.distance_to(laid[i].player) < inf.EMBER_PLAYER_CLEARANCE:
+			misplaced.append("%s %.0f px from the player" % [at, at.distance_to(laid[i].player)])
+		for j in range(i + 1, laid.size()):
+			if at.distance_to(laid[j].pos) < sm.inferno_lingering_spacing:
+				misplaced.append("%s and %s %.0f px apart" % [at, laid[j].pos, at.distance_to(laid[j].pos)])
+	log_p("%d embers at %s; the player at %s" % [laid.size(), laid.map(func(e): return e.pos), player.global_position])
+	check(laid.size() >= 1 and laid.size() <= sm.inferno_lingering_patches, "1 to %d embers (%d)" % [sm.inferno_lingering_patches, laid.size()])
+	check(misplaced.is_empty(), "each inside the burnt cone, %.0f px from the others, %.0f px from the player and clear of his landing (%s)" % [sm.inferno_lingering_spacing, inf.EMBER_PLAYER_CLEARANCE, misplaced])
+
+	check(await wait_until(func(): return inf_land_frame >= 0, 120), "he lets go and comes down")
+	var perch_image := Image.load_from_file(ProjectSettings.globalize_path(art.PERCH_SHEET))
+	var land_image := Image.load_from_file(ProjectSettings.globalize_path(art.LAND_SHEET))
+	var release_rows: Rect2i = perch_image.get_region(Rect2i(15 * 192, 0, 192, 160)).get_used_rect()
+	var land_rows: Rect2i = land_image.get_region(Rect2i(0, 0, 192, 160)).get_used_rect()
+	var land_top: float = inf_land_feet.y + (land_rows.position.y - art.ANCHOR.y) * art.SCALE
+	var release_bottom: float = feet.y + (release_rows.end.y - art.ANCHOR.y) * art.SCALE
+	var land_bottom: float = inf_land_feet.y + (land_rows.end.y - art.ANCHOR.y) * art.SCALE
+	log_p("let go: feet %s -> %s; land frame 0 drawn from y %.0f; release frame 15 ends at y %.0f, land frame 0 at %.0f" % [feet, inf_land_feet, land_top, release_bottom, land_bottom])
+	check(inf_land_feet.is_equal_approx(feet + Vector2(0, layout.release_drop())), "he drops %.0f px as he lets go" % layout.release_drop())
+	check(land_top >= 0.0, "so land frame 0 starts the fall on screen (y %.0f)" % land_top)
+	check(is_equal_approx(release_bottom, land_bottom), "and exactly where release frame 15 left him")
+	await wait(1)
+	var landed_box: Rect2 = inf._landing_box()
+	var in_way := []
+	for burning in burning_embers():
+		var foot: Rect2 = burning.footprint()
+		if sm._fire_in_the_way(foot, inf_land_player, landed_box) or foot.intersects(landed_box.grow(sm.inferno_landing_clearance)):
+			in_way.append(burning.global_position)
+	log_p("landing on %s with the player at %s: %d embers still burning, in the way %s" % [landed_box, inf_land_player, burning_embers().size(), in_way])
+	check(sm.PLAYER_FLOOR.grow_individual(18.0, 40.5, 18.0, 40.5).intersects(landed_box), "his landing, at the top-centre of the ring, is on floor the player can reach")
+	check(in_way.is_empty(), "as he lands, nothing burning is within %.0f px of him or in the straight way from the player to him" % sm.inferno_landing_clearance)
+	check(hazards_of("BixbyEmberScript.gd").size() == laid.size(), "and his leaving the rope freed none of them")
+	for id in inf_embers:
+		var node := instance_from_id(id)
+		inf_embers[id]["run"] = 1
+		inf_embers[id]["cleared"] = is_instance_valid(node) and node.phase >= node.Phase.BURN_OUT
+
+	check(await wait_until(func(): return sm.current_state.name == "Recover", 120), "he lands into his recharge")
+	check(is_equal_approx(hud_alpha(), 1.0), "with the HUD back at full (%.3f)" % hud_alpha())
+	var down_box: Rect2 = art.local_rect(art.RECOVER_BODY_BOX)
+	check(area_rect(boss.hurtbox).is_equal_approx(Rect2(boss.feet_position() + down_box.position, down_box.size)), "his hurtbox is his grounded body again, for the punish window")
+	var recover_from: float = defense.clock
+	log_p("recharging at %s, under the perch at x %.0f" % [boss.global_position, feet.x])
+	check(absf(boss.global_position.x - feet.x) <= 2.0, "on the mat under his perch at the top-centre (x %.1f)" % boss.global_position.x)
+	var open := [true]
+	while sm.current_state.name == "Recover":
+		open[0] = open[0] and sm.is_recovering()
+		await physics_frame
+	var recharge: float = defense.clock - recover_from
+	log_p("recharged for %.3f s, then %s" % [recharge, sm.current_state.name])
+	check(open[0], "open to punches the whole time")
+	check(absf(recharge - sm.inferno_recover_time) <= FRAME_TIME + 0.0001, "his recharge lasts %.1f s (%.3f)" % [sm.inferno_recover_time, recharge])
+
+
+func inferno_run_two() -> void:
+	if not await start_inferno_run("run 2: walking the shower off, the left upper corner, an ember in the way, the straight way to him, standing in one and dashing through one"):
+		return
+	check(await reach_phase(inf.Phase.INHALE, 900), "the shower starts")
+	await settle_player(INFERNO_CIRCLE_CENTRE + Vector2(INFERNO_CIRCLE_RADIUS, 0))
+	clear_iframes()
+	var walked := await shower_hits(walk_circle.bind(INFERNO_CIRCLE_CENTRE, INFERNO_CIRCLE_RADIUS))
+	log_p("walking a %.0f px circle round %s through the shower: %d fireball hits at %s, %.0f px walked" % [INFERNO_CIRCLE_RADIUS, INFERNO_CIRCLE_CENTRE, walked.hits.size(), walked.hits.map(func(e): return snappedf(e.t, 0.001)), walked.walked])
+	check(walked.hits.size() <= 1, "a player who keeps walking takes 0 or 1 fireball hits (%d)" % walked.hits.size())
+	var corner := safe_corner(-1.0)
+	var burnt := await breath_at(corner)
+	log_p("in the left corner at %s through the wind-up and the breath: %d inferno hits, %d health lost" % [corner, burnt.hits.size(), burnt.lost])
+	check(not hits_cone(hurtbox_at(corner)) and burnt.hits.is_empty() and burnt.lost == 0, "in the left upper corner: no hit")
+
+	var lived := []
+	var cleared := 0
+	for id in inf_embers:
+		var record: Dictionary = inf_embers[id]
+		if record.get("run", 0) != 1:
+			continue
+		if record.cleared:
+			cleared += 1
+		else:
+			lived.append(snappedf(record.out - record.burning, 0.001))
+	log_p("run 1's embers: %d burnt out by his landing, the rest burnt for %s s" % [cleared, lived])
+	check(not lived.is_empty() and lived.all(func(t): return absf(t - sm.inferno_lingering_time) <= 2.0 * FRAME_TIME), "run 1's embers the landing left burnt for %.0f s each" % sm.inferno_lingering_time)
+
+	log_p("-- standing where an ember is in the straight way to him")
+	await wait(1)
+	var landed_box: Rect2 = inf._landing_box()
+	var reach: Vector2 = sm.PLAYER_HALF_BODY + Vector2.ONE * sm.FIRE_PASSAGE_MARGIN
+	var behind: Node2D = null
+	var spot := Vector2.INF
+	for candidate in burning_embers():
+		var nearest: Vector2 = candidate.global_position.clamp(landed_box.position, landed_box.end)
+		var there: Vector2 = candidate.global_position + (candidate.global_position - nearest).normalized() * 150.0
+		var clear := burning_embers().all(func(other): return not other.footprint().grow_individual(reach.x, reach.y, reach.x, reach.y).has_point(there))
+		if sm.PLAYER_FLOOR.has_point(there) and clear:
+			behind = candidate
+			spot = there
+			break
+	check(behind != null, "an ember with room to stand behind it")
+	if behind == null:
+		return
+	await settle_player(spot)
+	check(await wait_until(func(): return sm.current_state.name == "Land", 120), "he comes down")
+	await wait(1)
+	var in_way := []
+	for burning in burning_embers():
+		if sm._fire_in_the_way(burning.footprint(), spot, landed_box):
+			in_way.append(burning.global_position)
+	log_p("standing at %s behind the ember at %s: it is now %s; burning embers left in the way %s" % [spot, behind.global_position, behind.Phase.keys()[behind.phase], in_way])
+	check(behind.phase >= behind.Phase.BURN_OUT, "the ember in the way burns out as he lands")
+	check(in_way.is_empty(), "and no burning one is left in the straight way from the player to him")
+
+	check(await wait_until(func(): return sm.current_state.name == "Recover", 120), "his punish window opens")
+	var to: Vector2 = spot.clamp(landed_box.position, landed_box.end)
+	var ember_hits := events_of("HIT", &"bixby_ember").size()
+	clear_iframes()
+	var steps := ceili(spot.distance_to(to) / 10.0)
+	for i in steps + 1:
+		player.global_position = spot.lerp(to, float(i) / steps)
+		player.velocity = Vector2.ZERO
+		await physics_frame
+	log_p("walked %s -> %s in %d steps: %d ember hits" % [spot, to, steps, events_of("HIT", &"bixby_ember").size() - ember_hits])
+	check(events_of("HIT", &"bixby_ember").size() == ember_hits, "walking that straight way to his punish window costs nothing")
+
+	log_p("-- standing in an ember")
+	var parked_in: Node2D = burning_embers()[0] if not burning_embers().is_empty() else null
+	check(parked_in != null, "an ember still burning to stand in")
+	if parked_in == null:
+		return
+	clear_iframes()
+	var health: int = player.playerHealth
+	var parked_from := events_of("HIT", &"bixby_ember").size()
+	await hold_in_ember(parked_in, 2.2)
+	var parked: Array = events_of("HIT", &"bixby_ember").slice(parked_from)
+	var gaps := []
+	for i in range(1, parked.size()):
+		gaps.append(snappedf(parked[i].t - parked[i - 1].t, 0.001))
+	log_p("2.2 s in the ember at %s: hits at %s, gaps %s, health %d -> %d" % [parked_in.global_position, parked.map(func(e): return snappedf(e.t, 0.001)), gaps, health, player.playerHealth])
+	check(parked.size() >= 1, "a player parked in an ember is hit")
+	check(parked.size() == 3 and gaps.all(func(g): return g >= 1.0 - 0.001 and g <= 1.0 + 2.0 * FRAME_TIME + 0.001), "and again every time the i-frames run out: 3 in 2.2 s, a second apart (%d, %s)" % [parked.size(), gaps])
+	check(health - player.playerHealth == parked.size() * catalogue_damage(&"bixby_ember"), "half a heart each")
+
+	log_p("-- dashing through one")
+	await settle_player(safe_corner(1.0))
+	await dash_ready()
+	var through: Node2D = null
+	var dash_key := KEY_RIGHT
+	var from := Vector2.ZERO
+	var hurt_size: Vector2 = hurtbox_rect().size
+	var hurt_offset: Vector2 = hurtbox_rect().get_center() - player.global_position
+	for candidate in burning_embers():
+		var foot: Rect2 = candidate.footprint()
+		for key in [KEY_RIGHT, KEY_LEFT]:
+			var sign := 1.0 if key == KEY_RIGHT else -1.0
+			var start_x: float = (foot.position.x - 30.0 - hurt_size.x / 2.0) if key == KEY_RIGHT else (foot.end.x + 30.0 + hurt_size.x / 2.0)
+			var start := Vector2(start_x, foot.get_center().y) - hurt_offset
+			var end := start + Vector2(sign * DASH_LENGTH, 0.0)
+			var swept := Rect2(start + hurt_offset - hurt_size / 2.0, hurt_size).merge(Rect2(end + hurt_offset - hurt_size / 2.0, hurt_size))
+			var others_clear := burning_embers().all(func(other): return other == candidate or not other.footprint().intersects(swept))
+			if sm.PLAYER_FLOOR.has_point(start) and sm.PLAYER_FLOOR.has_point(end) and others_clear:
+				through = candidate
+				dash_key = key
+				from = start
+				break
+		if through:
+			break
+	check(through != null, "an ember with room to dash across it")
+	if through == null:
+		return
+	await settle_player(from)
+	clear_iframes()
+	ember_hits = events_of("HIT", &"bixby_ember").size()
+	var dodged := dodges.size()
+	press(dash_key)
+	tap(KEY_W)
+	await wait(4)
+	release(dash_key)
+	await wait(30)
+	var past: Rect2 = hurtbox_rect()
+	var across: bool = past.position.x > through.footprint().end.x if dash_key == KEY_RIGHT else past.end.x < through.footprint().position.x
+	log_p("dashed across the ember at %s from %s: now %s, ember hits %d, perfect dodges %s" % [through.global_position, from, player.global_position, events_of("HIT", &"bixby_ember").size() - ember_hits, dodges.slice(dodged).map(func(d): return d.id)])
+	check(across and events_of("HIT", &"bixby_ember").size() == ember_hits, "a dash goes through one without a hit")
+	check(dodges.slice(dodged).is_empty(), "and pays no PERFECT DODGE: it lies still on the floor (no_perfect_dodge)")
+
+
+func inferno_run_three() -> void:
+	if not await start_inferno_run("run 3: a finisher's freeze as the HUD fades and mid-pull, a pause mid-pull, and the right upper corner"):
+		return
+	check(await reach_phase(inf.Phase.PERCH, 200), "he takes the rope")
+	await wait(5)
+	var freeze: GDScript = load("res://Scripts/FightFreeze.gd")
+	check(freeze.freeze(self, [player.get_parent()]), "the fight freezes around the player as the HUD fades")
+	var fading: float = hud_alpha()
+	await wait(20)
+	log_p("HUD mid-fade: %.3f, and %.3f after 20 frozen frames" % [fading, hud_alpha()])
+	check(fading < 1.0 and fading > sm.inferno_hud_fade_alpha and is_equal_approx(fading, hud_alpha()), "its fade holds with the fight: the tween is the bar's own")
+	freeze.unfreeze(self)
+	check(await reach_phase(inf.Phase.INHALE, 900), "the pull is on")
+	await wait(40)
+	check(freeze.freeze(self, [player.get_parent()]), "the fight freezes around the player mid-pull")
+	# The pull he added the step before the freeze is the player's to take on the first frozen one.
+	await wait(1)
+	var held := inferno_snapshot()
+	await wait(30)
+	var after := inferno_snapshot()
+	log_p("frozen: %s -> %s" % [held, after])
+	check(held == after and not held.fireballs.is_empty(), "30 frozen frames move nothing: the player, the fireballs' clocks, his phase and clock, the HUD")
+	freeze.unfreeze(self)
+	await wait(3)
+	check(player.global_position != after.player, "and the pull comes back with the fight")
+	await tap_pause()
+	check(pause_menu().is_open(), "paused mid-pull")
+	held = inferno_snapshot()
+	await wait(30)
+	after = inferno_snapshot()
+	log_p("paused: %s -> %s" % [held, after])
+	check(held == after and not held.fireballs.is_empty(), "30 paused frames move nothing either")
+	await tap_pause()
+	await wait(3)
+	check(not pause_menu().is_open() and player.global_position != after.player, "and it all carries on from there")
+	# Its resume grace is 0.15 REAL seconds, which --fixed-fps never lets pass: it would eat a later press.
+	pause_menu().grace_until_msec = 0
+	var corner := safe_corner(1.0)
+	var burnt := await breath_at(corner)
+	log_p("in the right corner at %s through the wind-up and the breath: %d inferno hits, %d health lost" % [corner, burnt.hits.size(), burnt.lost])
+	check(not hits_cone(hurtbox_at(corner)) and burnt.hits.is_empty() and burnt.lost == 0, "in the right upper corner: no hit")
+
+
+func inferno_run_four() -> void:
+	if not await start_inferno_run("run 4: standing still through the shower, then the bottom-centre of the ring, the longest way out"):
+		return
+	check(await reach_phase(inf.Phase.INHALE, 900), "the shower starts")
+	await settle_player(inf.pull_target())
+	clear_iframes()
+	var stood := await shower_hits(stand_still)
+	var gaps := []
+	for i in range(1, stood.hits.size()):
+		gaps.append(snappedf(stood.hits[i].t - stood.hits[i - 1].t, 0.001))
+	var landing_span: float = (sm.inferno_fireballs - 1) * sm.inferno_marker_interval
+	log_p("standing still where the pull ends through %.2f s of landings: %d fireball hits at %s, gaps %s, %.0f px moved" % [landing_span, stood.hits.size(), stood.hits.map(func(e): return snappedf(e.t, 0.001)), gaps, stood.walked])
+	check(stood.hits.size() >= floori(landing_span / (1.0 + 2.0 * sm.inferno_marker_interval)) and gaps.all(func(g): return g >= 1.0 - 0.001 and g <= 1.0 + 2.0 * sm.inferno_marker_interval + 2.0 * FRAME_TIME), "a player who stands still is hit about once per i-frame window (%d in %.2f s, gaps %s)" % [stood.hits.size(), landing_span, gaps])
+	var bottom := Vector2(sm.PLAYER_FLOOR.get_center().x, sm.PLAYER_FLOOR.end.y)
+	var burnt := await breath_at(bottom)
+	log_p("at the bottom-centre %s through the wind-up and the breath: %d inferno hits, %d health lost" % [bottom, burnt.hits.size(), burnt.lost])
+	check(burnt.hits.size() == 1 and burnt.lost == catalogue_damage(&"bixby_inferno"), "at the bottom-centre: exactly one hit, worth %d" % catalogue_damage(&"bixby_inferno"))
+
+
+func inferno_run_five() -> void:
+	if not await start_inferno_run("run 5: walking straight away from him through the shower, dashing out of the cone as it catches, and an ember catching under a player"):
+		return
+	check(await reach_phase(inf.Phase.INHALE, 900), "the shower starts")
+	await settle_player(inf.pull_target() + Vector2(0, 15))
+	clear_iframes()
+	var hits_before := events_of("HIT", &"bixby_fireball").size()
+	var set_off: float = defense.clock
+	var from_y: float = player.global_position.y
+	press(KEY_DOWN)
+	# Straight down the ring, away from him, until the bottom rope stops them: pinned there, the pull lifts
+	# them a step off it every frame, so they come to rest a few px short of the floor's edge.
+	await wait_until(func(): return player.global_position.y >= sm.PLAYER_FLOOR.end.y - 8.0 or inf.phase != inf.Phase.INHALE, 600)
+	var stopped: float = defense.clock
+	release(KEY_DOWN)
+	var walk_hits: Array = events_of("HIT", &"bixby_fireball").slice(hits_before)
+	var dropped_on_the_way: Array = inf_fireballs.values().filter(func(r): return r.seen > set_off and r.seen <= stopped)
+	dropped_on_the_way.sort_custom(func(a, b): return a.seen < b.seen)
+	var apart := []
+	for i in range(1, dropped_on_the_way.size()):
+		apart.append(dropped_on_the_way[i].pos.distance_to(dropped_on_the_way[i - 1].pos))
+	var behind: Array = inf_fireballs.values().filter(func(r): return r.landed > set_off and r.landed <= stopped and r.has("landed_feet")).map(func(r): return r.pos.distance_to(r.landed_feet))
+	var average := func(values: Array) -> float: return values.reduce(func(sum, v): return sum + v, 0.0) / maxi(values.size(), 1)
+	var net: float = (player.global_position.y - from_y) / (stopped - set_off)
+	log_p("walked straight away from him for %.2f s at %.0f px/s net: %d fireball hits, markers %.0f px apart on average, %d landed while walking, %.0f to %.0f px behind their feet (%.0f on average)" % [stopped - set_off, net, walk_hits.size(), average.call(apart), behind.size(), behind.min() if not behind.is_empty() else -1.0, behind.max() if not behind.is_empty() else -1.0, average.call(behind)])
+	check(walk_hits.size() <= 1, "walking straight away against the pull, 0 or 1 fireball hits (%d)" % walk_hits.size())
+	check(not behind.is_empty() and behind.min() > INFERNO_LANDING_REACH, "every one that lands while they walk lands behind them, clear of their feet (%.0f px at the least)" % (behind.min() if not behind.is_empty() else -1.0))
+	check(await reach_phase(inf.Phase.WINDUP, 900), "the wind-up")
+	# Inside the cone's right slant by INFERNO_EDGE_DEPTH, dashing right out of it.
+	var rect := hurtbox_at(Vector2(960, 300))
+	var slant: float = inf.cone_apex.x + (rect.end.y - inf.cone_apex.y) * tan(inf._half_angle())
+	var stand := Vector2(slant - INFERNO_EDGE_DEPTH + rect.size.x / 2.0, 300.0)
+	await settle_player(stand)
+	await dash_ready()
+	await settle_player(stand)
+	clear_iframes()
+	var burns_before := events_of("HIT", &"bixby_inferno").size()
+	var dodged := dodges.size()
+	await wait_until(func(): return inf.phase == inf.Phase.WINDUP and inf.elapsed >= sm.inferno_windup - 2.5 * FRAME_TIME, 120)
+	press(KEY_RIGHT)
+	tap(KEY_W)
+	await wait(4)
+	release(KEY_RIGHT)
+	check(await reach_phase(inf.Phase.SPENT, 200), "the breath goes off")
+	var inferno_dodges: Array = dodges.slice(dodged).filter(func(d): return d.id == &"bixby_inferno")
+	log_p("dashed right from %s (in the cone: %s) to %s: %d inferno hits, perfect dodges %s" % [stand, hits_cone(hurtbox_at(stand)), player.global_position, events_of("HIT", &"bixby_inferno").size() - burns_before, dodges.slice(dodged).map(func(d): return d.id)])
+	check(hits_cone(hurtbox_at(stand)) and not hits_cone(hurtbox_rect()), "the dash took them from inside the cone to outside it")
+	check(events_of("HIT", &"bixby_inferno").size() == burns_before and inferno_dodges.size() == 1, "untouched, and a PERFECT DODGE for leaving as it caught")
+
+	log_p("-- an ember catching under a player already standing in it")
+	await wait(1)
+	var fresh: Array = hazards_of("BixbyEmberScript.gd").filter(func(e): return e.phase == e.Phase.IGNITE and not e.is_hurting())
+	check(not fresh.is_empty(), "the embers are down and not burning yet")
+	if fresh.is_empty():
+		return
+	var ember: Node2D = fresh[0]
+	clear_iframes()
+	var ember_hits := events_of("HIT", &"bixby_ember").size()
+	await hold_in_ember(ember, 0.5)
+	var caught: Array = events_of("HIT", &"bixby_ember").slice(ember_hits)
+	var record: Dictionary = inf_embers.get(ember.get_instance_id(), {})
+	log_p("stood in the ember at %s as it caught (hurting from %.3f): hits at %s" % [ember.global_position, record.get("hurt", -1.0), caught.map(func(e): return snappedf(e.t, 0.001))])
+	check(caught.size() == 1 and absf(caught[0].t - record.get("hurt", -1.0)) <= FRAME_TIME + 0.0001, "hit on the frame it catches, with no entry to report it")
+
+
+# tier=death: a player at 1 health is killed by an aimed fireball mid-pull, and the outro stands him down.
+func inferno_death() -> void:
+	log_p("-- killed by a fireball mid-pull")
+	await settle_player(INFERNO_STARTS[0])
+	inf = await force_inferno()
+	if inf == null:
+		check(false, "he goes into the Inferno from his hover")
+		return
+	check(await reach_phase(inf.Phase.INHALE, 900), "the pull is on")
+	await settle_player(inf.pull_target())
+	await wait(10)
+	check(is_equal_approx(hud_alpha(), sm.inferno_hud_fade_alpha), "the HUD is faded while he hangs there (%.3f)" % hud_alpha())
+	clear_iframes()
+	player.playerHealth = 1
+	var lost := await wait_until(func(): return player.fight_over, 400)
+	var hits := events_of("HIT")
+	log_p("lost %s at %s, health %d, the blow %s" % [lost, player.global_position, player.playerHealth, hits[-1].id if not hits.is_empty() else &""])
+	check(lost and player.playerHealth == 0 and not hits.is_empty() and hits[-1].id == &"bixby_fireball", "a fireball is the killing blow")
+	await wait(3)
+	var at: Vector2 = player.global_position
+	log_p("3 frames on: hazards %s, tells %s, inhale playing %s, state %s, height %.1f, shadow %s, HUD %.3f" % [live_hazards().map(func(h): return h.name), live_tells().size(), boss.inhale_sfx_player.playing, sm.current_state.name, boss.height, boss.shadow.visible, hud_alpha()])
+	check(live_hazards().is_empty(), "no hazard of his is left")
+	check(live_tells().is_empty(), "no tell")
+	check(not boss.inhale_sfx_player.playing, "the inhale has stopped")
+	check(sm.current_state.name == "Idle" and sm.player_defeated, "he stands down in Idle")
+	check(is_equal_approx(boss.height, boss.HOVER_HEIGHT_PX) and boss.shadow.visible, "off the rope, hovering at %.0f px with his shadow back" % boss.HOVER_HEIGHT_PX)
+	check(hud_alpha() > sm.inferno_hud_fade_alpha, "the HUD is on its way back (%.3f)" % hud_alpha())
+	await wait(30)
+	check(player.global_position == at, "and nothing moves the player for 30 frames")
+	log_p("HUD %.3f with the outro %s" % [hud_alpha(), "up" if root.has_node("FightOutro") else "not up"])
+	check(root.has_node("FightOutro") and is_equal_approx(hud_alpha(), 1.0), "and through the outro the HUD is back at full")
+
+
+# tier=defeated: he is beaten while he hangs off the rope, which his fight never allows, to prove the way
+# out of the Inferno every ending takes restores the HUD.
+func inferno_defeated() -> void:
+	log_p("-- beaten on the rope")
+	await settle_player(INFERNO_STARTS[0])
+	inf = await force_inferno()
+	if inf == null:
+		check(false, "he goes into the Inferno from his hover")
+		return
+	check(await reach_phase(inf.Phase.VOLLEY, 300), "he is on the rope, spitting")
+	await wait(10)
+	check(is_equal_approx(hud_alpha(), sm.inferno_hud_fade_alpha), "the HUD is faded (%.3f)" % hud_alpha())
+	boss.boss_health = 1
+	boss._apply_damage(1)
+	check(await wait_until(func(): return sm.current_state.name == "Defeated", 30), "he is beaten")
+	await wait(3)
+	log_p("3 frames on: hazards %s, tells %s, height %.1f, shadow %s, HUD %.3f" % [live_hazards().map(func(h): return h.name), live_tells().size(), boss.height, boss.shadow.visible, hud_alpha()])
+	check(live_hazards().is_empty() and live_tells().is_empty(), "nothing of the Inferno is left")
+	check(is_equal_approx(boss.height, boss.HOVER_HEIGHT_PX) and boss.shadow.visible, "off the rope, with his shadow back")
+	await wait(roundi(boss.HUD_FADE_TIME / FRAME_TIME) + 2)
+	check(is_equal_approx(hud_alpha(), 1.0), "and the HUD back at full (%.3f)" % hud_alpha())
+	var outro := await wait_until(func(): return root.has_node("FightOutro"), 300)
+	log_p("the win's outro %s, HUD %.3f" % ["up" if outro else "not up", hud_alpha()])
+	check(outro and is_equal_approx(hud_alpha(), 1.0), "and still at full as the win's outro plays")
+
+
+# phase=2 for Liam's fight in smoke, blocks and approach: his health down to the Inferno's gate while his
+# opening takeoff is still rising, so his first cycle is the enraged one and opens on the Inferno. Nothing
+# in those modes ever takes his health, so without it the Inferno would get no run in them at all. The
+# perch and the HUD over it are watched from here to check_liam_perch().
+func enrage_liam() -> void:
+	if fight != "liam" or phase != 2:
+		return
+	boss = current_scene.get_node(LIAM_BEAST)
+	sm = boss.state_machine
+	inf = sm.states["Inferno"]
+	boss.boss_health = floori(boss.max_health * sm.inferno_health_gate)
+	boss._refresh_health_bar()
+	log_p("liam enraged: health %d of %d, still in %s" % [boss.boss_health, boss.max_health, sm.current_state.name])
+	physics_frame.connect(watch_perch)
+
+
+# He took the rope in the middle facing down, the HUD faded over him, and it came back once he let go.
+func check_liam_perch() -> void:
+	if fight != "liam" or phase != 2:
+		return
+	physics_frame.disconnect(watch_perch)
+	log_p("%d frames on the rope; off the middle or mirrored on %s; the HUD not where it should be on %s; HUD now %.3f" % [inf_perched_frames, inf_perch_wrong.slice(0, 5), inf_hud_wrong.slice(0, 5), hud_alpha()])
+	check(inf_perched_frames > 0 and inf_perch_wrong.is_empty(), "his Inferno hangs him off the middle of the rope facing down")
+	check(inf_hud_wrong.is_empty(), "the HUD fades to %.2f over him and comes back to full once he lets go" % sm.inferno_hud_fade_alpha)
+	log_p("on the rope: %d fireball frames, bursts seen in flame on %d and in scorch on %d, wrong on %s; %d ember frames, over his body on %s" % [inf_floor_frames, inf_burst_frames[0], inf_burst_frames[1], inf_floor_wrong.slice(0, 5), inf_ember_frames, inf_ember_over.slice(0, 5)])
+	check(inf_floor_wrong.is_empty() and inf_ember_over.is_empty(), "while he hangs off the rope, the shower's markers draw over him and under the player, and its scorches and the embers under him")
+
+
+# ------------------------------------------------------------------ beast Bixby's combined attack
+# BixbyBeastCombined forced from his hover, again and again on one fight, played with real arrow keys and
+# dashes: the quake rings his pounds and his spin send out, the slow spin the beams turn with, and whether
+# the two together are fair. Every number is read from BixbyCombinedArtLayout, BixbyBeastArtLayout's spin
+# loop and BixbyBeastStateMachine's knobs rather than copied.
+
+const CB_LAYOUT := "res://Scripts/BixbyCombinedArtLayout.gd"
+const CB_BEAST_LAYOUT := "res://Scripts/BixbyBeastArtLayout.gd"
+const CB_RING_SCRIPT := "BixbyQuakeRingScript.gd"
+const CB_CRACK_SCRIPT := "BixbyQuakeCrackScript.gd"
+# Where the player waits while he hovers. He strafes above them, so each puts the attack somewhere else.
+const CB_SPOTS: Array[Vector2] = [Vector2(960, 900), Vector2(600, 900), Vector2(1300, 900), Vector2(400, 700),
+	Vector2(1500, 700), Vector2(960, 640), Vector2(300, 300), Vector2(1700, 300), Vector2(960, 150)]
+const CB_DIRS: Array[Vector2] = [Vector2(1, 0), Vector2(1, 1), Vector2(0, 1), Vector2(-1, 1), Vector2(-1, 0),
+	Vector2(-1, -1), Vector2(0, -1), Vector2(1, -1)]
+# How far ahead the circling player looks, in physics frames.
+const CB_HORIZON := 60
+# Where the circling player aims to be: off the walls, where a ring can corner anyone.
+const CB_ROOM := Rect2(203, 225.5, 1514, 629)
+
+var cb: Node
+var cb_layout: GDScript
+var cb_art: GDScript
+var cb_held := {}
+# Per physics frame from the one the press is read on: whether a dash_through hit is dodged, and how far
+# the player has gone since the press (cb_check_dash).
+var cb_dash_immune: Array = []
+var cb_dash_moved: Array = []
+
+
+func test_combined() -> void:
+	await load_liam()
+	# load_liam() keeps the lines' balloon, and with it the VS card's input grace, which is counted in real
+	# time and would swallow the first dash press here.
+	await skip_vs_card()
+	# Every ring the bot dashes through is a perfect dodge, a read: a Break would end his attack mid-run.
+	hold_break_gauge(boss)
+	# His hovers last until an attack is forced from them, so no fire breath lays solid fire in the way.
+	sm.hover_time = 600.0
+	sm.hover_between_attacks = 600.0
+	cb = sm.states["Combined"]
+	cb_layout = load(CB_LAYOUT)
+	cb_art = load(CB_BEAST_LAYOUT)
+	track()
+	track_dodges()
+	cb_check_catalogue()
+	await cb_check_dash()
+	await cb_check_parked()
+	cb_check_room()
+	await cb_check_pound_dash()
+	await cb_check_circling()
+	cb_steer(Vector2.ZERO)
+
+
+func cb_check_catalogue() -> void:
+	log_p("-- the catalogue")
+	var ring: Dictionary = CATALOG.get_attack(&"bixby_quake_ring")
+	check(ring.damage == 1 and ring.dash_through and not ring.blockable and not ring.parryable and not ring.tell
+		and not ring.dodge_tell and not ring.no_perfect_dodge and not ring.bypass_invincibility,
+		"bixby_quake_ring: half a heart, dashed through and a PERFECT DODGE when it is, no guard, no parry, no badge (%s)" % [ring])
+
+
+# A dash measured the way a ring meets it: from its first frame of movement, the frame after the one its
+# press is read on (immune already, standing still), which frames a dash_through hit is dodged on, and how
+# far the player has gone by the end of each, holding the way they dashed.
+func cb_check_dash() -> void:
+	log_p("-- the dash the rings are crossed with")
+	await wait_until(func(): return sm.current_state.name == "Hover", 900)
+	await settle_player(Vector2(1300, 800))
+	await dash_ready()
+	var immunity: GDScript = load("res://Scripts/DashImmunity.gd")
+	var start := player.global_position.x
+	press(KEY_LEFT)
+	tap(KEY_W)
+	cb_dash_immune.clear()
+	cb_dash_moved.clear()
+	await wait_until(func(): return player.is_dodging, 10)
+	# The first frame it moves on is the frame the press was read on.
+	var at := start
+	for i in 30:
+		cb_dash_immune.append(immunity.is_immune(player, CATALOG.DASH_IMMUNITY_TIME, CATALOG.DASH_IMMUNITY_COOLDOWN))
+		await physics_frame
+		at = player.global_position.x
+		cb_dash_moved.append(start - at)
+	release(KEY_LEFT)
+	var immune_frames := cb_dash_immune.count(true)
+	var travel: float = cb_dash_moved[immune_frames - 1]
+	log_p("a dash is immune for %d frames and carries the player %.0f px in them: %s px by each" % [immune_frames, travel, cb_dash_moved.slice(0, immune_frames).map(func(x): return roundi(x))])
+	check(immune_frames == roundi(CATALOG.DASH_IMMUNITY_TIME * 60.0), "immune for its first %d frames of movement, as on the frame its press is read" % roundi(CATALOG.DASH_IMMUNITY_TIME * 60.0))
+	check(travel >= 250.0, "and further than the dash itself while immune, walking on after its landing beat (%.0f px)" % travel)
+
+
+# His next hover, held over `spot` long enough for him to strafe above it and for the last attack's rings
+# to roll off the floor, then the combined attack with nothing queued behind it.
+func cb_force(spot: Vector2) -> bool:
+	cb_steer(Vector2.ZERO)
+	if not await wait_until(func(): return sm.current_state.name == "Hover", 1200):
+		return false
+	var hover: Node = sm.states["Hover"]
+	for i in 1800:
+		hover.elapsed = 0.0
+		player.global_position = spot
+		player.velocity = Vector2.ZERO
+		if i >= 150 and hazards_of(CB_RING_SCRIPT).is_empty():
+			break
+		await physics_frame
+	clear_iframes()
+	defense._set_stamina(defense.max_stamina)
+	sm.attacks = []
+	sm.on_child_transition(sm.current_state, "Combined")
+	return sm.current_state == cb
+
+
+# One attack standing still where the smoke test stands: its shape frame by frame, and what it lands.
+func cb_check_parked() -> void:
+	log_p("-- one attack, standing still at %s" % SMOKE_SPOTS["liam"])
+	if not await cb_force(SMOKE_SPOTS["liam"]):
+		check(false, "the combined attack starts from his hover")
+		return
+	var start: float = defense.clock
+	var hits_before := events.size()
+	var impact: float = cb_art.time_to_step(&"pound", cb_art.POUND_IMPACT_STEP)
+	var f: float = cb_layout.FLOOR_FLATTEN
+	var rings := {}
+	var births := []
+	var cracks := 0
+	var off_ellipse := []
+	var shown_off_floor := 0
+	# The ring art's checks, frame after frame (cb_check_segments).
+	var art_checks := {"frames": 0, "off": [], "uneven": 0.0, "rows": [], "beats": [], "culled": [], "to_ropes": INF}
+	var last_phase := -1
+	var phase_at := {}
+	var spin_steps := []
+	var worst_step := 0.0
+	var off_mouths := 0.0
+	var ahead_of_drawn := []
+	var spin_az_start := INF
+	var spin_az_end := 0.0
+	var spin_t := [0.0, 0.0]
+	var last_az := []
+	var last_loop_frame := -1
+	var growth := []
+	var loop: Dictionary = cb_art.SPIN_LOOP
+	# The wind-down: the yellow ring on the spin's last frame and on the frame the beams stop, where his
+	# heads were on the last frame before the wobble, and when each wobble frame came up.
+	var tell_on_last_spin := false
+	var tell_on_stop := true
+	var last_front := 0.0
+	var wobble_at := {}
+	while sm.current_state == cb:
+		player.global_position = SMOKE_SPOTS["liam"]
+		player.velocity = Vector2.ZERO
+		await physics_frame
+		var t: float = defense.clock - start
+		if cb.phase != last_phase:
+			phase_at[cb.phase] = t
+			if cb.phase == cb.Phase.SPIN_DOWN:
+				tell_on_stop = cb_tell_up()
+			last_phase = cb.phase
+		if cb.phase == cb.Phase.SPIN:
+			tell_on_last_spin = cb_tell_up()
+		if cb.phase == cb.Phase.SPIN_DOWN:
+			if boss.current_anim == &"spin":
+				last_loop_frame = boss.drawn_frame_of(loop.sheet)
+				last_front = cb_layout.LOOP_MOUTH_ANCHORS[loop.frames[boss.anim_step]][0][0] \
+					+ loop.step_degrees * boss.anim_clock / cb_art.spin_step_time()
+			elif boss.current_anim == &"spin_down" and not wobble_at.has(boss.sprite.frame):
+				wobble_at[boss.sprite.frame] = t
+		cracks += hazards_of(CB_CRACK_SCRIPT).size()
+		for ring in hazards_of(CB_RING_SCRIPT):
+			var id: int = ring.get_instance_id()
+			if not rings.has(id):
+				rings[id] = {"born": t, "phase": cb.phase, "r": ring.radius, "at": ring.global_position,
+					"pound_elapsed": cb.elapsed, "impact_done": cb.impact_done, "ring_clock": cb.ring_clock,
+					"feet": boss.ground_position, "first_r": ring.radius, "first_t": t}
+				births.append(snappedf(t, 0.001))
+			else:
+				rings[id].r = ring.radius
+				rings[id].t = t
+			if cb_layout.USE_FINAL_RING:
+				cb_check_segments(ring, art_checks)
+				continue
+			# Every tile standing on the flattened ellipse, and drawn only inside the ropes.
+			for i in mini(ceili(TAU * ring.radius / cb_layout.RING_TILE_SPACING), ring.tiles.size()):
+				var tile: Sprite2D = ring.tiles[i]
+				var p: Vector2 = tile.position
+				var on := Vector2(p.x / ring.radius, p.y / (ring.radius * f)).length()
+				if absf(on - 1.0) > 2.0 / (ring.radius * f):
+					off_ellipse.append(snappedf(on, 0.001))
+				if tile.visible and not cb_layout.RING_VISIBLE_AREA.has_point(tile.global_position):
+					shown_off_floor += 1
+		if cb.phase == cb.Phase.SPIN and is_instance_valid(cb.sweep):
+			var az: Array = cb.sweep.was_azimuth.map(func(a): return rad_to_deg(a))
+			if not last_az.is_empty() and last_az.size() == az.size():
+				var step := 0.0
+				for i in az.size():
+					step = maxf(step, absf(wrapf(az[i] - last_az[i], -180.0, 180.0)))
+				worst_step = maxf(worst_step, step)
+				spin_steps.append(step)
+				spin_az_end += wrapf(az[0] - last_az[0], -180.0, 180.0)
+				spin_t[1] = t
+			else:
+				spin_t[0] = t
+			last_az = az
+			# The beams come out of the maws glided to between the frame drawn and the next.
+			var mouths: Array = cb_layout.loop_mouths(boss.anim_step, boss.anim_clock)
+			for beam in cb.sweep.beams:
+				var nearest := INF
+				for mouth in mouths:
+					nearest = minf(nearest, beam.position.distance_to(cb_art.local(Vector2(mouth[1], mouth[2]))))
+				off_mouths = maxf(off_mouths, nearest)
+			# The heads drawn trail the beams by less than a frame's step.
+			var drawn: Array = cb_layout.LOOP_MOUTH_ANCHORS[boss.sprite.frame]
+			var lead := INF
+			for a in az:
+				for head in drawn:
+					lead = minf(lead, fposmod(a - head[0], 360.0))
+			ahead_of_drawn.append(lead)
+			last_loop_frame = boss.drawn_frame_of(loop.sheet)
+	var t_end: float = defense.clock - start
+	var hits := events.slice(hits_before)
+	var ids := {}
+	for e in hits:
+		ids[e.id] = ids.get(e.id, 0) + 1
+	log_p("phases at %s; rings born at %s; %d crack frames" % [phase_at, births, cracks])
+
+	log_p("-- rings instead of cracks")
+	check(cracks == 0 and not ids.has(&"bixby_quake_burst"), "no crack, eruption or wave: nothing of the old pound is planted")
+	var pound_rings := rings.values().filter(func(r): return r.phase == cb.Phase.POUNDS)
+	check(pound_rings.size() == sm.combined_pounds, "every pound sends one ring out (%d of %d)" % [pound_rings.size(), sm.combined_pounds])
+	check(pound_rings.all(func(r): return r.impact_done and r.pound_elapsed - impact < 1.0 / 60.0 + 0.001),
+		"on the frame his claws land (the pound's step %d)" % cb_art.POUND_IMPACT_STEP)
+	check(rings.values().all(func(r): return r.at.distance_to(r.feet) < 1.0 and r.first_r - cb_layout.RING_START_RADIUS <= sm.quake_ring_speed / 60.0 + 0.01),
+		"each on his feet, starting at RING_START_RADIUS under his claws")
+	for r in rings.values():
+		if r.has("t") and r.t > r.first_t:
+			growth.append((r.r - r.first_r) / (r.t - r.first_t))
+	check(growth.all(func(g): return absf(g - sm.quake_ring_speed) < 0.5), "and growing at quake_ring_speed, %.0f px of floor a second (%s)" % [sm.quake_ring_speed, growth.map(func(g): return snappedf(g, 0.1))])
+	if cb_layout.USE_FINAL_RING:
+		log_p("the ring art over %d ring frames: neighbours at most %.2fx further apart than the closest pair; a drawn segment's ground came within %.0f px of the rope art" % [art_checks.frames, art_checks.uneven, art_checks.to_ropes])
+		check(art_checks.off.is_empty(), "every segment stands on the ellipse flattened by FLOOR_FLATTEN, snapped to the texel grid (%s off it)" % [art_checks.off.slice(0, 5)])
+		check(art_checks.uneven < 1.3, "spaced evenly round the screen, not bunched up the sides (%.2fx)" % art_checks.uneven)
+		check(art_checks.rows.is_empty(), "each on the row of its screen tangent, flipped on the other diagonal (%s wrong)" % [art_checks.rows.slice(0, 5)])
+		check(art_checks.beats.is_empty(), "neighbours a frame of the crest apart (%s not)" % [art_checks.beats.slice(0, 5)])
+		check(art_checks.culled.is_empty(), "drawn only while its ground is within the rope art at the sides and bottom and its crest under the top rope (%s not)" % [art_checks.culled.slice(0, 5)])
+	else:
+		check(off_ellipse.is_empty(), "every tile stands on the ellipse flattened by FLOOR_FLATTEN (%s off it)" % [off_ellipse.slice(0, 5)])
+		check(shown_off_floor == 0, "and none is drawn outside the ropes (%d)" % shown_off_floor)
+
+	log_p("-- the slow, continuous sweep")
+	var rate: float = spin_az_end / (spin_t[1] - spin_t[0])
+	log_p("beams turned %.1f deg over %.2f s: %.2f deg/s; the most any beam moved between two frames %.3f deg; beams at most %.2f px off the glided maws; drawn heads trail them by %.2f to %.2f deg" % [spin_az_end, spin_t[1] - spin_t[0], rate, worst_step, off_mouths, ahead_of_drawn.min(), ahead_of_drawn.max()])
+	check(absf(rate - cb_art.SPIN_DEGREES_PER_SECOND) < 0.5, "the beams turn at SPIN_DEGREES_PER_SECOND (%.2f)" % rate)
+	check(worst_step <= cb_art.SPIN_DEGREES_PER_SECOND / 60.0 + 0.05, "continuously: never more than a frame's turn between two physics frames (%.3f deg)" % worst_step)
+	check(off_mouths < 0.5, "coming out of his maws glided between the frame drawn and the next (%.2f px)" % off_mouths)
+	check(ahead_of_drawn.max() < loop.step_degrees + 0.01, "with his drawn heads less than a frame's step behind them")
+	var spun: float = phase_at.get(cb.Phase.SPIN_DOWN, t_end) - phase_at.get(cb.Phase.SPIN, 0.0)
+	log_p("he spun %.2f s and left the loop on frame %d" % [spun, last_loop_frame])
+	check(spun >= sm.combined_spin_time - 0.001 and spun < sm.combined_spin_time + cb_art.anim_time(&"spin"),
+		"for at least combined_spin_time and at most a loop more (%.2f s)" % spun)
+	check(loop.exit_frames.has(last_loop_frame), "handing over to the wobble from one of SPIN_LOOP.exit_frames (%d)" % last_loop_frame)
+
+	log_p("-- the wind-down")
+	var wobble: Array = cb_art.ANIMS[&"spin_down"].frames
+	var first_heads: Array = cb_layout.MOUTH_ANCHORS[wobble[0]]
+	var second_heads: Array = cb_layout.MOUTH_ANCHORS[wobble[1]]
+	var wobble_turn := INF
+	for head in second_heads:
+		wobble_turn = minf(wobble_turn, fposmod(head[0] - first_heads[0][0], 360.0))
+	var stop_at: float = phase_at.get(cb.Phase.SPIN_DOWN, t_end)
+	var first_at: float = wobble_at.get(wobble[0], t_end)
+	var second_at: float = wobble_at.get(wobble[1], t_end)
+	var dizzy_at: float = phase_at.get(cb.Phase.DIZZY, t_end)
+	var short_of_it := absf(wrapf(first_heads[0][0] - last_front, -60.0, 60.0))
+	var coast_rate: float = cb_art.SPIN_DEGREES_PER_SECOND
+	var wobble_rate: float = wobble_turn / (second_at - first_at)
+	log_p("the beams stop at %.3f s with the yellow ring up to the frame before (%s) and gone on it (%s); his heads turn on through the loop to %.3f s, %.2f deg short of the wobble's first frame on the last, which is up %.3f s, then its second, %.0f deg on, at %.3f s (%.1f deg/s), and he is dizzy at %.3f s, %.2f s after the beams stop. The whole attack: %.2f s" % [stop_at, tell_on_last_spin, not tell_on_stop, first_at, short_of_it, second_at - first_at, wobble_turn, second_at, wobble_rate, dizzy_at, dizzy_at - stop_at, t_end])
+	check(tell_on_last_spin and not tell_on_stop, "the yellow ring is up to the last frame of the spin and gone on the frame the beams stop")
+	check(short_of_it <= coast_rate / 60.0 + 0.01, "his heads turn on at the loop's rate right up to the wobble's first frame, so it follows without a jump")
+	check(absf(second_at - first_at - cb_art.ANIMS[&"spin_down"].times[0]) < 1.5 / 60.0 and wobble_rate < coast_rate,
+		"its second frame turns slower than the loop did (%.1f deg/s against %.0f)" % [wobble_rate, coast_rate])
+	check(absf(dizzy_at - second_at - cb_art.ANIMS[&"spin_down"].times[1]) < 1.5 / 60.0, "and he holds it %.2f s, stopped, before the dizzy spell" % cb_art.ANIMS[&"spin_down"].times[1])
+
+	log_p("-- the rings the spin sends")
+	var spin_start: float = phase_at.get(cb.Phase.SPIN, 0.0)
+	var spin_rings := rings.values().filter(func(r): return r.phase == cb.Phase.SPIN)
+	var beats := spin_rings.map(func(r): return snappedf(r.born - spin_start, 0.001))
+	var expect := floori(spun / sm.combined_spin_ring_interval)
+	log_p("spin rings at %s s into the spin" % [beats])
+	check(spin_rings.size() == expect and beats.all(func(b): return absf(fposmod(b + 0.001, sm.combined_spin_ring_interval) - 0.001) < 1.0 / 60.0 + 0.002),
+		"one every combined_spin_ring_interval (%.2f s) while he spins: %d" % [sm.combined_spin_ring_interval, expect])
+	check(rings.values().all(func(r): return r.phase == cb.Phase.POUNDS or r.phase == cb.Phase.SPIN), "and none once he stops")
+
+	log_p("-- standing still")
+	log_p("standing at %s took %d hits: %s" % [SMOKE_SPOTS["liam"], hits.size(), ids])
+	check(ids.has(&"bixby_quake_ring") and ids.has(&"bixby_sonic_beam"), "standing still is hit by the rings and by the beams")
+	check(hits.all(func(e): return catalogue_damage(e.id) == 1), "half a heart each")
+
+
+# The room between rings, from the knobs. The spin's are far enough apart to stand between. The pounds'
+# are not, which is why cb_check_pound_dash crosses all three in one dash.
+func cb_check_room() -> void:
+	log_p("-- room between rings")
+	var v: float = sm.quake_ring_speed
+	var band: float = cb_layout.RING_HURT_HALF_WIDTH * 2.0
+	var f: float = cb_layout.FLOOR_FLATTEN
+	var foot := Vector2(36.0, cb_layout.RING_FOOT_HEIGHT)
+	var spin_gap: float = sm.combined_spin_ring_interval * v - band
+	var pound_gap: float = sm.combined_pound_interval * v - band
+	var impact: float = cb_art.time_to_step(&"pound", cb_art.POUND_IMPACT_STEP)
+	var third: float = (sm.combined_pounds - 1) * sm.combined_pound_interval + impact
+	var first_spin: float = sm.combined_pounds * sm.combined_pound_interval + cb_art.anim_time(&"spin_up") + sm.combined_spin_ring_interval
+	var group_gap: float = (first_spin - third) * v - band
+	log_p("between the spin's rings %.0f px of floor: %.0f broadside against a %.0f px wide foot, %.0f across the screen against a %.0f px deep one" % [spin_gap, spin_gap, foot.x, spin_gap * f, foot.y])
+	log_p("between the pounds' last ring and the spin's first %.0f px of floor; between two of the pounds' %.0f" % [group_gap, pound_gap])
+	check(spin_gap > foot.x * 2.0 and spin_gap * f > foot.y * 2.0, "the spin's rings leave room to stand between them")
+	check(group_gap > foot.x * 2.0 and group_gap * f > foot.y * 2.0, "and so do the pounds' three and the spin's first")
+	check(pound_gap < foot.x, "the pounds' three do not (%.0f px), so they are one band, crossed in one dash below" % pound_gap)
+
+
+# The pounds' three rings where they are thickest on screen, broadside: the player stands at his side level
+# with his feet and dashes in across all three at once, at the middle of the frames a dash could be pressed
+# on and still carry them clear.
+func cb_check_pound_dash() -> void:
+	log_p("-- the pounds' three rings in one dash")
+	if not await cb_force(Vector2(960, 900)):
+		check(false, "the combined attack starts from his hover")
+		return
+	await wait_until(func(): return cb.phase == cb.Phase.BRACE, 60)
+	var feet: Vector2 = boss.ground_position
+	var side := 1.0 if feet.x < 960.0 else -1.0
+	var foot_line := feet.y - 36.0
+	var stand := Vector2(feet.x + side * 420.0, foot_line)
+	await wait_until(func(): return cb.pounds_done == sm.combined_pounds and cb.impact_done, 120)
+	player.global_position = stand
+	player.velocity = Vector2.ZERO
+	clear_iframes()
+	var rings := cb_rings_ahead()
+	# Every frame the press could come on from now: is the player touched before the dash is under way, or
+	# after its immunity, before they are inside all three?
+	var good := []
+	for press_in in 90:
+		var ok := true
+		for k in range(1, press_in + 45):
+			var moved := 0.0
+			var immune := false
+			var into := k - press_in - 2
+			if into >= 0:
+				moved = cb_dash_moved[mini(into, cb_dash_moved.size() - 1)]
+				immune = into < cb_dash_immune.size() and cb_dash_immune[into]
+			var at := stand + Vector2(-side * moved, 0.0)
+			if not immune and cb_ring_gap(at, rings, k / 60.0) < 0.0:
+				ok = false
+				break
+		if ok:
+			good.append(press_in)
+	log_p("broadside, %.0f px out: a press %s frames from now carries them across all three" % [absf(stand.x - feet.x), good])
+	check(good.size() >= 6, "there are %d frames (%.2f s) to press it on" % [good.size(), good.size() / 60.0])
+	if good.is_empty():
+		return
+	var mid: int = good[good.size() / 2]
+	var ring_hits := events_of("HIT", &"bixby_quake_ring").size()
+	for i in mid:
+		player.global_position = stand
+		await physics_frame
+	cb_steer(Vector2(-side, 0))
+	tap(KEY_W)
+	await wait(40)
+	cb_steer(Vector2.ZERO)
+	var hurt := events_of("HIT", &"bixby_quake_ring").size() - ring_hits
+	var d: Vector2 = player.global_position - feet
+	var rho := Vector2(absf(d.x) + 18.0, (d.y + 42.0) / cb_layout.FLOOR_FLATTEN).length()
+	var inner: float = hazards_of(CB_RING_SCRIPT).map(func(r): return r.radius).min() - cb_layout.RING_HURT_HALF_WIDTH
+	log_p("pressed %d frames in: %d ring hits, now %.0f px of floor out against the nearest ring's inner edge at %.0f" % [mid, hurt, rho, inner])
+	check(hurt == 0 and rho < inner, "one dash across all three, untouched, and inside them")
+	await wait_until(func(): return sm.current_state != cb, 900)
+
+
+# The player who circles with the beams and dashes through each ring as it reaches them, from every spot:
+# never hit, never left in a beam by a ring, never short of stamina.
+func cb_check_circling() -> void:
+	log_p("-- circling with the beams, dashing through each ring")
+	var refused := [0]
+	defense.stamina_refused.connect(func(): refused[0] += 1)
+	var total_hits := 0
+	var landings := []
+	var worst_stamina := INF
+	var through_beams := 0
+	for spot in CB_SPOTS:
+		if not await cb_force(spot):
+			check(false, "the combined attack starts from his hover over %s" % spot)
+			continue
+		var hits_before := events.size()
+		var dodged := dodges.size()
+		var dashes := 0
+		var dash_frame := -1000
+		var frames_run := 0
+		var min_stamina := INF
+		var run_landings := []
+		var closest := INF
+		while sm.current_state == cb:
+			frames_run += 1
+			var act := cb_choose()
+			cb_steer(act.dir)
+			if act.kind == "dash":
+				tap(KEY_W)
+				dashes += 1
+				dash_frame = frames_run
+			await physics_frame
+			min_stamina = minf(min_stamina, defense.stamina)
+			var beam_room := cb_beam_gap(player.global_position, cb_beams_ahead(0))
+			if not player.is_dodging:
+				closest = minf(closest, beam_room)
+			if frames_run - dash_frame == 13 and beam_room < INF:
+				run_landings.append(roundi(beam_room))
+		cb_steer(Vector2.ZERO)
+		var hits := events.slice(hits_before)
+		var beam_dodges: int = dodges.slice(dodged).filter(func(e): return e.id == &"bixby_sonic_beam").size()
+		log_p("from %s, him at %s: %d hits %s, %d dashes, stamina down to %.0f, beam clearance after each dash %s, nearest a beam outside a dash %.0f px, %d beams crossed inside a ring dash" % [spot, boss.ground_position.round(), hits.size(), hits.map(func(e): return e.id), dashes, min_stamina, run_landings, closest, beam_dodges])
+		total_hits += hits.size()
+		landings.append_array(run_landings)
+		worst_stamina = minf(worst_stamina, min_stamina)
+		through_beams += beam_dodges
+	log_p("%d runs: %d hits; beam clearance after every ring dash %s; stamina never below %.0f; %d refused dashes; %d beams crossed inside a ring dash's immunity" % [CB_SPOTS.size(), total_hits, landings, worst_stamina, refused[0], through_beams])
+	check(total_hits == 0, "circling with the beams and dashing through each ring as it comes takes no hits, from %d starts" % CB_SPOTS.size())
+	check(not landings.is_empty() and landings.min() >= 0, "a ring never leaves the player in a beam: clear of every one once each dash's immunity is over (%d px at the least)" % (landings.min() if not landings.is_empty() else -1))
+	check(refused[0] == 0 and worst_stamina >= defense.dash_stamina_cost, "and the stamina always had the next dash in it (never below %.0f)" % worst_stamina)
+
+
+# One frame of one ring's art, against the artist's rules worked out here again rather than read off the
+# layout's helpers: each segment on the flattened ellipse to within the texel snap; neighbours as far apart
+# on screen all the way round; the row its screen tangent picks, flipped on the falling diagonal; a frame of
+# the crest on from its neighbour; drawn only where its ground and crest are allowed.
+func cb_check_segments(ring: Node2D, checks: Dictionary) -> void:
+	var f: float = cb_layout.FLOOR_FLATTEN
+	var count: int = ring.segments.size()
+	if count == 0 or count % 4 != 0:
+		checks.off.append("count %d" % count)
+		return
+	checks.frames += 1
+	var centre: Vector2 = ring.global_position
+	var r: float = ring.radius
+	var bounds: Array = cb_layout.RING_ROW_TANGENTS
+	var rope: Rect2 = cb_layout.RING_ROPE_ART
+	var gaps := []
+	for i in count:
+		var tile: Sprite2D = ring.tiles[i]
+		var theta: float = ring.segments[i][0]
+		var exact := centre + Vector2(cos(theta), sin(theta) * f) * r
+		var at := tile.global_position
+		if absf(at.x - exact.x) > 1.51 or absf(at.y - exact.y) > 1.51 or fmod(at.x, 3.0) != 0.0 or fmod(at.y, 3.0) != 0.0:
+			checks.off.append(at)
+		gaps.append(at.distance_to(ring.tiles[(i + 1) % count].global_position))
+		var tangent := rad_to_deg(atan2(f * absf(cos(theta)), absf(sin(theta))))
+		var row := bounds.size()
+		for bucket in bounds.size():
+			if tangent < bounds[bucket]:
+				row = bucket
+				break
+		var flip := row >= 1 and row <= 5 and sin(theta) * cos(theta) < 0.0
+		if tile.frame / 4 != row or tile.flip_h != flip:
+			checks.rows.append([snappedf(tangent, 0.1), row, tile.frame / 4, flip, tile.flip_h])
+		if posmod(tile.frame - ring.tiles[(i + count - 1) % count].frame, 4) != 1:
+			checks.beats.append(i)
+		var ground: Array = cb_layout.RING_GROUND_BOXES[row]
+		var room := minf(minf(at.x - ground[0] - rope.position.x, rope.end.x - at.x - ground[0]), rope.end.y - at.y - ground[2])
+		var allowed: bool = room >= 0.0 and at.y + cb_layout.RING_CREST_TOPS[row] >= rope.position.y
+		if tile.visible != allowed:
+			checks.culled.append([at, row, tile.visible])
+		if tile.visible:
+			checks.to_ropes = minf(checks.to_ropes, room)
+	if r >= 300.0:
+		checks.uneven = maxf(checks.uneven, gaps.max() / gaps.min())
+
+
+# Whether his yellow ring is up: ParryTell names the one live badge a boss has after him, and renames it
+# spent as it clears.
+func cb_tell_up() -> bool:
+	return boss.get_parent().get_node_or_null("ParryTell%d" % boss.get_instance_id()) != null
+
+
+func cb_hold(code: int, on: bool) -> void:
+	if cb_held.get(code, false) == on:
+		return
+	cb_held[code] = on
+	if on:
+		press(code)
+	else:
+		release(code)
+
+
+func cb_steer(dir: Vector2) -> void:
+	cb_hold(KEY_RIGHT, dir.x > 0.0)
+	cb_hold(KEY_LEFT, dir.x < 0.0)
+	cb_hold(KEY_DOWN, dir.y > 0.0)
+	cb_hold(KEY_UP, dir.y < 0.0)
+
+
+func cb_held_dir() -> Vector2:
+	return Vector2(float(cb_held.get(KEY_RIGHT, false)) - float(cb_held.get(KEY_LEFT, false)),
+		float(cb_held.get(KEY_DOWN, false)) - float(cb_held.get(KEY_UP, false)))
+
+
+# The rings on the floor and the ones still to come, as [centre, radius, seconds from now it starts from
+# there, speed]: the pounds' on their impacts, the spin's on its beat.
+func cb_rings_ahead() -> Array:
+	var out := []
+	for ring in hazards_of(CB_RING_SCRIPT):
+		out.append([ring.global_position, ring.radius, 0.0, ring.speed])
+	var feet: Vector2 = boss.ground_position
+	var r0: float = cb_layout.RING_START_RADIUS
+	var v: float = sm.quake_ring_speed
+	var impact: float = cb_art.time_to_step(&"pound", cb_art.POUND_IMPACT_STEP)
+	match cb.phase:
+		cb.Phase.DESCENT, cb.Phase.BRACE:
+			var first: float = sm.combined_windup + impact - (cb.elapsed if cb.phase == cb.Phase.BRACE else 0.0)
+			for i in sm.combined_pounds:
+				out.append([feet, r0, first + i * sm.combined_pound_interval, v])
+		cb.Phase.POUNDS:
+			var next: float = impact - cb.elapsed + (sm.combined_pound_interval if cb.impact_done else 0.0)
+			for i in sm.combined_pounds - cb.pounds_done + (0 if cb.impact_done else 1):
+				out.append([feet, r0, next + i * sm.combined_pound_interval, v])
+		cb.Phase.SPIN_UP:
+			out.append([feet, r0, cb_art.anim_time(&"spin_up") - cb.elapsed + sm.combined_spin_ring_interval, v])
+		cb.Phase.SPIN:
+			out.append([feet, r0, sm.combined_spin_ring_interval - cb.ring_clock, v])
+	return out
+
+
+# How far the foot of the player's hurtbox at `at` is from every band `after` seconds on, as the ring tests
+# it (on the floor, in screen px across it): below 0, in one.
+func cb_ring_gap(at: Vector2, rings: Array, after: float) -> float:
+	var f: float = cb_layout.FLOOR_FLATTEN
+	var hw: float = cb_layout.RING_HURT_HALF_WIDTH
+	var foot: float = cb_layout.RING_FOOT_HEIGHT
+	var gap := INF
+	for ring in rings:
+		if after < ring[2]:
+			continue
+		var radius: float = ring[1] + ring[3] * (after - ring[2])
+		var c: Vector2 = ring[0]
+		var x0 := at.x - 18.0 - c.x
+		var x1 := at.x + 18.0 - c.x
+		var y0 := (at.y + 42.0 - foot - c.y) / f
+		var y1 := (at.y + 42.0 - c.y) / f
+		var near := Vector2(clampf(0.0, x0, x1), clampf(0.0, y0, y1)).length()
+		var far := maxf(maxf(Vector2(x0, y0).length(), Vector2(x1, y0).length()), maxf(Vector2(x0, y1).length(), Vector2(x1, y1).length()))
+		if near <= radius + hw and far >= radius - hw:
+			return -1.0
+		gap = minf(gap, (near - radius - hw) if near > radius + hw else (radius - hw - far))
+	return gap * f
+
+
+func cb_loop_ahead(step: int, into: float) -> Array:
+	var step_time: float = cb_art.spin_step_time()
+	var steps := int(into / step_time)
+	var frames: Array = cb_art.SPIN_LOOP.frames
+	return cb_layout.loop_mouths((step + steps) % frames.size(), into - steps * step_time)
+
+
+# The beams `ahead` physics frames from now as [origin, screen angle, length], glued to his maws as the
+# sweep glues them: lit on spin_up's second frame at its angles, the jump onto the loop swept, then gliding
+# on with his drawn clock.
+func cb_beams_ahead(ahead: int) -> Array:
+	var sweep = cb.sweep
+	if is_instance_valid(sweep) and sweep.fading:
+		return []
+	var t := ahead / 60.0
+	var lit_frame: int = cb_art.ANIMS[&"spin_up"].frames[-1]
+	var lit_step: float = cb_art.time_to_step(&"spin_up", cb_art.SPIN_BEAMS_STEP)
+	var lit_in := INF
+	match cb.phase:
+		cb.Phase.BRACE:
+			lit_in = sm.combined_windup - cb.elapsed + sm.combined_pounds * sm.combined_pound_interval + lit_step
+		cb.Phase.POUNDS:
+			lit_in = (sm.combined_pounds - cb.pounds_done + 1) * sm.combined_pound_interval - cb.elapsed + lit_step
+		cb.Phase.SPIN_UP:
+			lit_in = lit_step - cb.elapsed
+	var mouths := []
+	if boss.current_anim == &"spin":
+		mouths = cb_loop_ahead(boss.anim_step, boss.anim_clock + t)
+	elif cb.phase == cb.Phase.SPIN_UP or (not is_instance_valid(sweep) and lit_in < INF):
+		if t < lit_in:
+			return []
+		var looping_in: float = lit_in + cb_art.anim_time(&"spin_up") - lit_step
+		if t < looping_in:
+			mouths = cb_layout.MOUTH_ANCHORS[lit_frame]
+		elif t < looping_in + 1.0 / 60.0:
+			for head in cb_layout.MOUTH_ANCHORS[lit_frame]:
+				for turn in [0.0, 5.0, 10.0, 15.0, 20.0]:
+					mouths.append([head[0] + turn, head[1], head[2], head[3]])
+		else:
+			mouths = cb_loop_ahead(cb._widest_gap_step(), t - looping_in)
+	elif is_instance_valid(sweep):
+		mouths = cb_layout.MOUTH_ANCHORS.get(boss.drawn_frame_of(cb_art.SPIN_SHEET), [])
+	var out := []
+	var full: float = cb_layout.BEAM_REACH * cb_layout.SCALE
+	for mouth in mouths:
+		var origin: Vector2 = boss.feet_position() + cb_art.local(Vector2(mouth[1], mouth[2]))
+		var az := deg_to_rad(mouth[0])
+		var angle: float = cb_layout.beam_angle(az)
+		out.append([origin, angle, minf(full * cb_layout.beam_length(az), cb_room_to_ropes(origin, angle))])
+	return out
+
+
+func cb_room_to_ropes(from: Vector2, angle: float) -> float:
+	var arena: Rect2 = sm.ROPES
+	if not arena.has_point(from):
+		return INF
+	var along := Vector2.RIGHT.rotated(angle)
+	var room := INF
+	if absf(along.x) > 0.001:
+		room = minf(room, ((arena.end.x if along.x > 0.0 else arena.position.x) - from.x) / along.x)
+	if absf(along.y) > 0.001:
+		room = minf(room, ((arena.end.y if along.y > 0.0 else arena.position.y) - from.y) / along.y)
+	return room
+
+
+# How far the player's body, as the sweep tests it, is from every beam: below 0, in one.
+func cb_beam_gap(at: Vector2, beams: Array) -> float:
+	var radius: float = load("res://Scripts/BixbySonicSweepScript.gd").PLAYER_RADIUS
+	var across: float = cb_layout.BEAM_HIT_THICKNESS * cb_layout.SCALE / 2.0 + radius
+	var gap := INF
+	for beam in beams:
+		var along: Vector2 = (at - beam[0]).rotated(-beam[1])
+		var out_x := maxf(maxf(-radius - along.x, 0.0), along.x - (beam[2] + radius))
+		var out_y := maxf(absf(along.y) - across, 0.0)
+		if out_x == 0.0 and out_y == 0.0:
+			return -1.0
+		gap = minf(gap, Vector2(out_x, out_y).length())
+	return gap
+
+
+# The middle of the gap between the beams the player is in, a little ahead of it, on a loop round his maws:
+# 420 px out to either side, 300 below them and 170 above. Before the beams: in front of him if the floor
+# goes that far, where the pounds' rings are thinnest on screen, or out to his side.
+func cb_gap_target(at: Vector2) -> Vector2:
+	var feet: Vector2 = boss.ground_position
+	var maws: Vector2 = boss.feet_position() + cb_art.local(cb_layout.SPIN_CENTRE)
+	var beams := cb_beams_ahead(0)
+	if cb.phase != cb.Phase.SPIN or beams.is_empty():
+		var ahead := feet + Vector2(0, 300)
+		if ahead.y <= CB_ROOM.end.y:
+			return ahead
+		var side := 1.0 if at.x >= feet.x else -1.0
+		return (feet + Vector2(side * 400.0, 0)).clamp(CB_ROOM.position, CB_ROOM.end)
+	var mine := rad_to_deg(cb_layout.floor_azimuth((at - maws).angle()))
+	var front := rad_to_deg(cb_layout.floor_azimuth(beams[0][1]))
+	var azimuth := mine - fposmod(mine - front, 120.0) + 70.0
+	var dir := Vector2.from_angle(cb_layout.beam_angle(deg_to_rad(azimuth)))
+	var r := 1.0 / Vector2(dir.x / 420.0, dir.y / (300.0 if dir.y > 0.0 else 170.0)).length()
+	return (maws + dir * r).clamp(CB_ROOM.position, CB_ROOM.end)
+
+
+func cb_step(at: Vector2, dir: Vector2, px: float) -> Vector2:
+	var floor_area: Rect2 = sm.PLAYER_FLOOR
+	return (at + dir * px).clamp(floor_area.position, floor_area.end)
+
+
+# The circling player's move this frame: each of the nine walks and, when a ring is about to reach them,
+# the eight dashes, run CB_HORIZON frames ahead. Never a beam, dash or no dash; never a ring outside a
+# dash's immunity unless the next dash will be ready for it; then as near the middle of the gap as can be,
+# with room to spare and off the walls. Keys pressed now only move the player from the next frame, so this
+# frame's step (k = 1) is already the held keys'; a dash pressed now is immune from this frame, though, for
+# immune_frames of them, and moves on the next dash_frames.
+func cb_choose() -> Dictionary:
+	if player.is_dodging or defense.is_dash_recovering():
+		return {"kind": "walk", "dir": cb_held_dir()}
+	var walk: float = load("res://Scripts/PlayerScript.gd").SPEED / 60.0
+	var dash: float = load("res://Scripts/PlayerScript.gd").DODGE_SPEED / 60.0
+	var dash_frames := ceili(player.dodge_time * 60.0 - 0.001)
+	var immune_frames := roundi(CATALOG.DASH_IMMUNITY_TIME * 60.0) + 1
+	var cooldown := roundi(CATALOG.DASH_IMMUNITY_COOLDOWN * 60.0)
+	var since: int = Engine.get_physics_frames() - player.last_dodge_physics_frame
+	var at := player.global_position
+	var first := cb_step(at, cb_held_dir(), walk)
+	var target := cb_gap_target(at)
+	var rings := cb_rings_ahead()
+	var beams := []
+	for k in CB_HORIZON + 1:
+		beams.append(cb_beams_ahead(k))
+	var stamina_ok: bool = defense.stamina >= defense.dash_stamina_cost
+	var can_dash: bool = since >= cooldown and not defense.is_dash_cooling_down() and stamina_ok
+	var ring_now := false
+	for d in [Vector2.ZERO, (target - at).sign()]:
+		var q := first
+		for k in range(2, 5):
+			q = cb_step(q, d, walk)
+			if cb_ring_gap(q, rings, k / 60.0) < 0.0:
+				ring_now = true
+	var options := [{"kind": "walk", "dir": Vector2.ZERO}]
+	for d in CB_DIRS:
+		options.append({"kind": "walk", "dir": d})
+	if can_dash and ring_now:
+		for d in CB_DIRS:
+			# What they do once its landing beat is over: stand, walk back out behind the ring they crossed,
+			# which a dash side-on lands close to the next one for, or step aside.
+			for then in [Vector2.ZERO, -d, Vector2(d.y, -d.x), Vector2(-d.y, d.x)]:
+				options.append({"kind": "dash", "dir": d, "then": then})
+	var landing_beat: int = dash_frames + 1 + floori(defense.dash_recovery_time_v2 * 60.0)
+	var best := {}
+	var best_score := INF
+	var floor_area: Rect2 = sm.PLAYER_FLOOR
+	for option in options:
+		var q := first
+		var danger := 0.0
+		var clear := INF
+		var off_wall := INF
+		var next_dash: int = cooldown + 2 if option.kind == "dash" else (maxi(0, cooldown - since) + 2 if stamina_ok else CB_HORIZON + 1)
+		for k in range(2, CB_HORIZON + 1):
+			var immune := false
+			if option.kind == "walk":
+				q = cb_step(q, option.dir, walk)
+			else:
+				if k <= dash_frames + 1:
+					q = cb_step(q, option.dir.normalized(), dash)
+				elif k > landing_beat:
+					q = cb_step(q, option.then, walk)
+				immune = k <= immune_frames
+			var rg := cb_ring_gap(q, rings, k / 60.0)
+			var bg := cb_beam_gap(q, beams[k])
+			off_wall = minf(off_wall, minf(minf(q.x - floor_area.position.x, floor_area.end.x - q.x),
+				minf(q.y - floor_area.position.y, floor_area.end.y - q.y)))
+			if bg < 0.0:
+				danger += 1.0 / k
+			clear = minf(clear, bg)
+			if not immune:
+				# A ring the next dash can't be ready for, a few frames before it arrives.
+				if rg < 0.0 and k < next_dash + 3:
+					danger += 1.0 / k
+				clear = minf(clear, rg)
+		var score := danger * 100000.0 - minf(clear, 40.0) * 20.0 + q.distance_to(target) \
+			+ pow(maxf(0.0, 150.0 - off_wall), 2.0) * 0.08 + (400.0 if option.kind == "dash" else 0.0)
+		if score < best_score:
+			best_score = score
+			best = option
+	return best
+
+
+# ------------------------------------------------------------------ Josh against his redrawn sheets
+# Every final sheet of his is drawn facing right. On the ground he faces the player, and what is traced
+# off his poses mirrors with him: the box the player punches while he recovers, the daze stars over his
+# hat and where a card bomb leaves his hand. His entrance's flick at the camera starts on the pose's own
+# flick step, and a bomb only leaves his hand on the step his drop lets go of it.
+
+const JOSH_BODY := "Arena/JoshCardsScene/JoshCardsCharacterBody"
+const JOSH_ART := "res://Scripts/JoshArtLayout.gd"
+const JOSH_BOMB_SCRIPT := "res://Scripts/JoshCardBombScript.gd"
+const JOSH_SPOT := Vector2(960, 640)
+# Where the player waits out his entrance: on his left, so it is drawn mirrored.
+const JOSH_INTRO_PLAYER := Vector2(600, 900)
+const JOSH_BOMBS_WANTED := 6
+# How far to either side of the player he is put down to recover, and how far short of his landing
+# point a dive starts, riding away from the player.
+const JOSH_RECOVER_OFFSET := 260.0
+const JOSH_DIVE_SHORT := 40.0
+
+
+func test_josh_layout() -> void:
+	var art: GDScript = load(JOSH_ART)
+	var unmirrored: Array = art.FINAL_ANIMS.keys().filter(func(anim_name): return not art.FINAL_ANIMS[anim_name].get("flips", false))
+	check(unmirrored.is_empty(), "every final sheet mirrors, since all of them are drawn facing right (%s don't)" % [unmirrored])
+
+	# Kept, not cut the way load_fight() cuts an entrance: the flick is watched below.
+	await enter_fight(SCENES["josh"], true)
+	boss = current_scene.get_node(JOSH_BODY)
+	sm = boss.state_machine
+	var intro: Node = sm.states["Intro"]
+
+	log_p("-- his entrance, with the player on his left")
+	check(not boss.air.visible, "he has not appeared yet")
+	player.global_position = JOSH_INTRO_PLAYER
+	var flick := {}
+	intro.stage.child_entered_tree.connect(func(node: Node) -> void:
+		if boss.air.visible and flick.is_empty():
+			flick["card"] = node
+			flick["anim"] = boss.current_anim
+			flick["step"] = boss.anim_step
+	)
+	check(await wait_until(func(): return boss.air.visible, 120), "he appears")
+	check(boss.current_anim == &"intro" and boss.sprite.flip_h, "his entrance is drawn facing left, toward the player")
+	check(await wait_until(func(): return not flick.is_empty(), 180), "he flicks a card at the camera")
+	log_p("the flick's card came on %s step %s" % [flick.get("anim"), flick.get("step")])
+	check(flick.get("anim") == &"intro" and flick.get("step") == art.INTRO_FLICK_STEP, "on the step his entrance flicks it, %d" % art.INTRO_FLICK_STEP)
+	await wait(6)
+	var flicked: Node2D = flick.get("card")
+	var flicked_x: float = flicked.position.x if is_instance_valid(flicked) else INF
+	check(flicked_x < 0.0, "and out to the left, the side he faces (x %.0f)" % flicked_x)
+	player.global_position = JOSH_SPOT
+	log_p("his intro ended in %s" % await clear_intro("josh"))
+
+	log_p("-- his card bombs, through a real storm")
+	player.playerHealth = 1000
+	var bomb_script: Script = load(JOSH_BOMB_SCRIPT)
+	var spawned := []
+	boss.floor_layer.child_entered_tree.connect(func(node: Node) -> void:
+		if node.get_script() == bomb_script:
+			spawned.append({"bomb": node, "flip": boss.sprite.flip_h, "air": boss.air.global_position})
+	)
+	var drops := []
+	var start: float = defense.clock
+	while drops.size() < JOSH_BOMBS_WANTED and defense.clock - start < 30.0:
+		player.global_position = JOSH_SPOT
+		await physics_frame
+		# The frame each of these appeared on has been drawn by now.
+		for entry in spawned:
+			var drawn: Node2D = entry.bomb.card
+			drops.append({"anim": boss.current_anim, "step": boss.anim_step, "flip": entry.flip, "hand": drawn.global_position - entry.air})
+		spawned.clear()
+	log_p("%d bombs, mirrored %s: %s" % [drops.size(), drops.map(func(d): return d.flip), drops])
+	check(drops.size() >= 3, "he drops bombs (%d)" % drops.size())
+	var early := drops.filter(func(d): return d.anim != &"bomb" or d.step != art.BOMB_RELEASE_STEP)
+	check(early.is_empty(), "each one leaves his hand on the step his drop lets go of it, %d, never on the wind-up before it (%s)" % [art.BOMB_RELEASE_STEP, early])
+	var astray := drops.filter(func(d): return d.hand.distance_to(art.local(art.HAND_BOMB, d.flip)) > 3.0)
+	check(astray.is_empty(), "from his hand where that step draws it, mirrored with him (%s)" % [astray])
+
+	log_p("-- the rest drives his states by hand")
+	sm.set_process(false)
+	sm.set_physics_process(false)
+	for timer in boss.find_children("*", "Timer", true, false):
+		timer.stop()
+	sm.on_child_transition(sm.current_state, "Idle")
+	for hazard in live_hazards():
+		hazard.queue_free()
+	await wait(2)
+
+	for josh_right in [true, false]:
+		var side := "right" if josh_right else "left"
+		sm.on_child_transition(sm.current_state, "Idle")
+		await settle_player(JOSH_SPOT)
+		boss.ground_position = JOSH_SPOT + Vector2((sm.throw_distance - JOSH_DIVE_SHORT) * (1.0 if josh_right else -1.0), 0.0)
+		boss.height = sm.glider_height
+		boss.flying_left = not josh_right
+		boss.fly_velocity = Vector2.ZERO
+		boss.place()
+		sm.on_child_transition(sm.current_state, "Dismount")
+		sm.set_physics_process(true)
+		var landed := await wait_until(func(): return boss.current_anim == &"dismount", 180)
+		sm.set_physics_process(false)
+		log_p("landed on the player's %s at %s, mirrored %s" % [side, boss.global_position, boss.sprite.flip_h])
+		check(landed and boss.sprite.flip_h == josh_right, "landing on the player's %s while riding away from them, he steps off the card facing them" % side)
+
+	var finisher: Node = player.get_node("Finisher")
+	var stars_at := {}
+	for josh_right in [false, true]:
+		var side := "right" if josh_right else "left"
+		sm.on_child_transition(sm.current_state, "Idle")
+		boss.boss_health = boss.max_health
+		boss.ground_position = JOSH_SPOT + Vector2(JOSH_RECOVER_OFFSET * (1.0 if josh_right else -1.0), 0.0)
+		boss.place()
+		await settle_player(JOSH_SPOT)
+		sm.on_child_transition(sm.current_state, "Recover")
+		sm.recover_timer.stop()
+		await wait(5)
+		var left: bool = boss.sprite.flip_h
+		check(boss.current_anim == &"recover" and left == josh_right, "recovering on the player's %s, he faces them" % side)
+		var box: Rect2 = area_rect(boss.hurtbox)
+		var want: Rect2 = art.local_rect(art.RECOVER_BODY_BOX, left)
+		want.position += boss.global_position
+		check(box.position.distance_to(want.position) < 0.5 and box.size.distance_to(want.size) < 0.5, "his hurtbox is the recovery box, mirrored with him (%s, want %s)" % [box, want])
+		place_under(boss.get_finisher_hurtbox())
+		await wait(6)
+		check(boss.can_be_dazed(), "his punish window is open")
+		for i in 3:
+			await swing_any()
+			if i < 2:
+				await wait(6)
+		check(boss.sprite.flip_h == left, "flinching keeps his facing")
+		var dazed := await wait_until(func(): return finisher.phase == FINISHER_DAZED and is_instance_valid(finisher.stars), 120)
+		stars_at[side] = finisher.stars.global_position - boss.global_position if dazed else Vector2.INF
+		log_p("dazed on the player's %s: stars %s from his feet" % [side, stars_at[side]])
+		check(dazed and stars_at[side].distance_to(art.mirrored(art.DAZE_ANCHOR, left)) < 0.5, "the punches daze him, and the stars circle over his hat")
+		# Nobody mashes, so the daze runs out and leaves him recovering.
+		await wait_until(func(): return finisher.phase == FINISHER_OFF, 600)
+		await wait(30)
+	var mirror_of_right := Vector2(-stars_at["right"].x, stars_at["right"].y)
+	check(stars_at["left"].distance_to(mirror_of_right) < 0.5, "one side's stars are the mirror of the other's (%s, %s)" % [stars_at["left"], stars_at["right"]])
+
+
+# ------------------------------------------------------------------ no perfect dodge off a static floor hazard
+# A hazard lying still on the floor never pays a PERFECT DODGE (AttackCatalog's no_perfect_dodge, the
+# user's rule of 2026-09-23): Bixby's embers and Computah's mine pods. A dash across an ember is still
+# safe; it is just not a dodge. Anything that moves keeps paying one. Played in Computah's fight, where
+# the pods are real, with a real ember laid on his mat beside them.
+
+const STATIC_EMBER_SPOT := Vector2(700, 820)
+const STATIC_MINE_SPOT := Vector2(1250, 820)
+const STATIC_CLEAR_SPOT := Vector2(960, 700)
+const STATIC_EMBER_SCENE := "res://Scenes/Bosses/BixbyEmberScene.tscn"
+const STATIC_FIREBALL_SCENE := "res://Scenes/Bosses/BixbyFireballScene.tscn"
+
+
+# A dash that could pay a perfect dodge: past the last one's cooldown, off the dash's own, a full bar and
+# no i-frames.
+func fresh_dash_ready() -> void:
+	await wait_until(func(): return defense.clock - defense.last_perfect_dodge_time >= defense.perfect_dodge_cooldown + 0.05, 240)
+	await dash_ready()
+	clear_iframes()
+
+
+# What a perfect dodge pays, to be read before and after one that mustn't.
+func dodge_rewards() -> Dictionary:
+	return {"hype": player.get_node("Hype").hype, "stamina": defense.stamina, "gauge": boss.break_gauge.value}
+
+
+# Level with `box`, the player's near edge `gap` px short of it: where a dash that way crosses it.
+func beside(box: Rect2, side: float, gap: float) -> Vector2:
+	var hurt := hurtbox_rect()
+	var edge := box.position.x - gap - hurt.end.x if side > 0.0 else box.end.x + gap - hurt.position.x
+	return player.global_position + Vector2(edge, box.get_center().y - hurt.get_center().y)
+
+
+# The bounding box of an area's shape, whatever the shape.
+func area_rect_any(area: Area2D) -> Rect2:
+	var shape: CollisionShape2D = area.get_node("CollisionShape2D")
+	return shape.global_transform * shape.shape.get_rect()
+
+
+func test_static_dodge() -> void:
+	await load_computah_fight()
+	await park_computah()
+	boss.global_position = Vector2(960, 300)
+	track_dodges()
+	var hit_info: GDScript = load("res://Scripts/HitInfo.gd")
+
+	log_p("-- the catalogue")
+	var still := [&"bixby_ember", &"computah_mine"]
+	var moving := [&"mason_poo_contact", &"bixby_sonic_beam", &"bixby_quake_ring", &"eric_whirlwind_v2", &"bixby_fireball", &"bixby_inferno", &"josh_card_throw", &"mason_poo_blast", &"funko_blast", &"computah_beam"]
+	check(still.all(func(id): return CATALOG.get_attack(id).no_perfect_dodge), "no_perfect_dodge on the hazards lying still on the floor: %s" % [still])
+	check(moving.all(func(id): return not CATALOG.get_attack(id).no_perfect_dodge), "and on nothing that moves: %s" % [moving])
+	check(CATALOG.get_attack(&"bixby_ember").dash_through, "an ember is still dashed through")
+
+	var ember: Node2D = load(STATIC_EMBER_SCENE).instantiate()
+	ember.position = STATIC_EMBER_SPOT
+	ember.burn_time = 120.0
+	ember.player = player
+	current_scene.add_child(ember)
+	var mine: Node2D = await armed_mine_at(STATIC_MINE_SPOT)
+	check(await wait_until(func(): return ember.is_hurting(), 60) and mine.is_armed(), "a burning ember and an armed pod on the mat")
+	var ember_box: Rect2 = ember.footprint()
+	var ember_hitbox: Area2D = ember.get_node("Hitbox")
+
+	log_p("-- a clean dash across the ember")
+	await fresh_dash_ready()
+	await settle_player(beside(ember_box, 1.0, 30.0))
+	clear_iframes()
+	var before := dodge_rewards()
+	var health: int = player.playerHealth
+	var dodged := dodges.size()
+	var results := []
+	var crossing := [0]
+	press(KEY_RIGHT)
+	tap(KEY_W)
+	for i in 12:
+		await physics_frame
+		if player.hurtBox.overlaps_area(ember_hitbox):
+			crossing[0] += 1
+			if results.is_empty():
+				# The ember's own report, made again to read what it resolved to.
+				results.append(player.receive_hit(hit_info.from_area(ember_hitbox)))
+	release(KEY_RIGHT)
+	var after := dodge_rewards()
+	await wait(30)
+	var past: bool = hurtbox_rect().position.x > ember_box.end.x
+	log_p("crossed the ember on %d frames, resolved %s, now past it %s: hits %d, health %d -> %d, perfect dodges %s, stamina %.0f -> %.0f, hype %.1f -> %.1f" % [crossing[0], results.map(func(r): return hit_info.Result.keys()[r]), past, events_of("HIT", &"bixby_ember").size(), health, player.playerHealth, dodges.slice(dodged).map(func(d): return d.id), before.stamina, after.stamina, before.hype, after.hype])
+	check(crossing[0] > 0 and past, "the dash carried them across it")
+	check(results == [hit_info.Result.DODGED] and events_of("HIT", &"bixby_ember").is_empty() and player.playerHealth == health, "DODGED, and no damage")
+	check(dodges.size() == dodged, "and NO perfect dodge")
+	check(is_equal_approx(after.stamina, before.stamina - defense.dash_stamina_cost) and is_equal_approx(after.hype, before.hype), "none of what one pays: the dash's stamina stays spent, no hype")
+
+	log_p("-- the dodge ghost's own door")
+	# Called by hand: a hazard that never moves can only be under the ghost if it was under the player as
+	# the dash started, and PlayerDefense already refuses those (dash_overlaps).
+	await fresh_dash_ready()
+	await settle_player(STATIC_CLEAR_SPOT)
+	var fireball: Node2D = load(STATIC_FIREBALL_SCENE).instantiate()
+	fireball.position = Vector2(300, 300)
+	current_scene.add_child(fireball)
+	await wait(1)
+	dodged = dodges.size()
+	press(KEY_UP)
+	tap(KEY_W)
+	var ghosted := await wait_until(func(): return defense.dodge_ghost_position() != Vector2.INF, 10)
+	release(KEY_UP)
+	defense._on_ghost_entered(ember_hitbox)
+	defense._on_ghost_entered(mine.trigger)
+	player.receive_near_miss(hit_info.from_area(ember_hitbox))
+	player.receive_near_miss(hit_info.make(&"computah_mine", mine, mine.global_position, boss))
+	var off_still: Array = dodges.slice(dodged).map(func(d): return d.id)
+	defense._on_ghost_entered(fireball.get_node("Hitbox"))
+	var off_moving: Array = dodges.slice(dodged).map(func(d): return d.id)
+	log_p("ghost up %s: off the ember and the pod %s, then off a falling fireball's area %s" % [ghosted, off_still, off_moving])
+	check(ghosted and off_still.is_empty(), "the ghost's area_entered and a near miss reported outright both pay nothing off the ember or the pod")
+	check(off_moving == [&"bixby_fireball"], "while a moving attack's area through the same door, on the same ghost, pays one")
+	fireball.queue_free()
+
+	log_p("-- a clean dash past the armed pod")
+	await fresh_dash_ready()
+	var ring: Rect2 = area_rect_any(mine.trigger)
+	var under_ring := Rect2(ring.position.x, ring.end.y + 20.0 + hurtbox_rect().size.y / 2.0, ring.size.x, 0.0)
+	var below := beside(under_ring, 1.0, 60.0)
+	await settle_player(below)
+	clear_iframes()
+	before = dodge_rewards()
+	dodged = dodges.size()
+	press(KEY_RIGHT)
+	tap(KEY_W)
+	await wait(4)
+	release(KEY_RIGHT)
+	await wait(30)
+	after = dodge_rewards()
+	log_p("dashed past the ring %s from %s to %s: state %s, armed %s, perfect dodges %s, gauge %.0f -> %.0f" % [ring, below, player.global_position, sm.current_state.name, mine.is_armed(), dodges.slice(dodged).map(func(d): return d.id), before.gauge, after.gauge])
+	check(player.global_position.x > ring.end.x and sm.current_state.name != "Trapped" and mine.is_armed(), "past it, uncaught, and it is still armed")
+	check(dodges.size() == dodged and is_equal_approx(after.gauge, before.gauge), "no perfect dodge, and nothing for his gauge")
+
+	log_p("-- anything that moves still pays one")
+	for id in [&"bixby_sonic_beam", &"eric_whirlwind_v2"]:
+		await fresh_dash_ready()
+		await settle_player(STATIC_CLEAR_SPOT)
+		dodged = dodges.size()
+		press(KEY_UP)
+		tap(KEY_W)
+		await wait_until(func(): return player.is_dodging, 10)
+		release(KEY_UP)
+		var centre: Vector2 = player.hurtBox.get_node("CollisionShape2D").global_position
+		var result: int = player.receive_hit(hit_info.make(id, dummy_source(), centre + Vector2(40, 0)))
+		var paid: Array = dodges.slice(dodged).map(func(d): return d.id)
+		log_p("%s through a dash: %s, perfect dodges %s" % [id, hit_info.Result.keys()[result], paid])
+		check(result == hit_info.Result.DODGED and paid == [id], "%s: DODGED, and still a PERFECT DODGE" % id)
+
+	log_p("-- a clean dash over the armed pod")
+	await fresh_dash_ready()
+	await settle_player(beside(ring, 1.0, 60.0))
+	clear_iframes()
+	dodged = dodges.size()
+	press(KEY_RIGHT)
+	tap(KEY_W)
+	var caught := await wait_until(func(): return sm.current_state.name == "Trapped", 120)
+	release(KEY_RIGHT)
+	log_p("dashed onto it: state %s, perfect dodges %s" % [sm.current_state.name, dodges.slice(dodged).map(func(d): return d.id)])
+	check(caught and dodges.size() == dodged, "it catches them, as a pod does, and pays no perfect dodge")
+
+
+# ------------------------------------------------------------------ Matt (boss 4)
+# His first attack, the Ezreal set: a teleporting volley of bouncing bolts, four golden waves from the
+# four sides of the ring, then a punish window he may yell his way out of. The bolts and the waves are
+# parry_pass_through: a parry or a block lets them fly on through the player, whole.
+
+const MATT_BODY := "Arena/MattScene/MattCharacterBody"
+const MATT_SEED := 20260923
+const MATT_BOLT_SCENE := "res://Scenes/Bosses/MattMysticBoltScene.tscn"
+const MATT_WAVE_SCENE := "res://Scenes/Bosses/MattTrueshotScene.tscn"
+const MATT_VIEW := Rect2(0, 0, 1920, 1080)
+
+
+# His yell only goes off after a punch lands in his window, and a mode about something else must not be
+# thrown across the ring by it. Every Matt mode but his yell's own calls this.
+func park_matt_yell() -> void:
+	var body: Node = current_scene.get_node_or_null(MATT_BODY)
+	if body:
+		body.state_machine.yell_chance = 0.0
+
+
+func seed_matt() -> void:
+	current_scene.get_node(MATT_BODY).state_machine.rng.seed = MATT_SEED
+
+
+# The modes written for his Glass Row and Deafening Yell, which run them for real.
+func matt_glass_mode() -> bool:
+	return mode.begins_with("matt_glass") or mode == "matt_deafen"
+
+
+# Every other Matt mode was written for the Ezreal set: the rotation is pinned to the volley and phase
+# two is never reached, so none of them meets a Glass Row.
+func park_matt_glass() -> void:
+	var body: Node = current_scene.get_node_or_null(MATT_BODY)
+	if body:
+		var pinned: Array[String] = ["MysticVolley"]
+		body.state_machine.attack_rotation = pinned
+		body.state_machine.phase_two_ratio = -1.0
+
+
+# His fight with the lines and the card cut, seeded, and held in his intro until the mode starts it.
+func load_matt() -> void:
+	await load_fight("matt")
+	boss = current_scene.get_node(MATT_BODY)
+	sm = boss.state_machine
+	seed_matt()
+	if mode != "matt_yell":
+		park_matt_yell()
+	if not matt_glass_mode():
+		park_matt_glass()
+	sm.post_dialogue_pre_fight_timer.stop()
+
+
+func matt_centre() -> Vector2:
+	return player.hurtBox.get_node("CollisionShape2D").global_position
+
+
+func spawn_matt_bolt(at: Vector2, heading: Vector2, with_player := true) -> Node2D:
+	var bolt: Node2D = load(MATT_BOLT_SCENE).instantiate()
+	bolt.heading = heading
+	bolt.speed = sm.mystic_speed
+	bolt.bounces = sm.mystic_bounces
+	bolt.hit_radius = sm.mystic_hit_radius
+	bolt.bounds = sm.ROPES.grow(-sm.mystic_hit_radius)
+	bolt.player = player if with_player else null
+	bolt.body = boss
+	sm.add_hazard(bolt, at, boss.projectile_layer)
+	return bolt
+
+
+func spawn_matt_wave(at: Vector2, heading: Vector2) -> Node2D:
+	var wave: Node2D = load(MATT_WAVE_SCENE).instantiate()
+	wave.heading = heading
+	wave.speed = sm.trueshot_speed
+	wave.view_margin = sm.trueshot_view_margin
+	wave.player = player
+	sm.add_hazard(wave, at, boss.projectile_layer)
+	return wave
+
+
+# The first physics step, 1 to `frames` ahead, on which a live bolt or wave will touch the player's
+# hurtbox where it is now, or -1. Bolts are stepped through their own rope reflections.
+func matt_contact_in(proj: Node2D, frames: int) -> int:
+	var box: Rect2 = area_rect(player.hurtBox)
+	var pos: Vector2 = proj.global_position
+	var heading: Vector2 = proj.heading
+	var step: float = proj.speed / 60.0
+	var is_bolt: bool = "bounds" in proj
+	for k in range(1, frames + 1):
+		pos += heading * step
+		if is_bolt:
+			var bounds: Rect2 = proj.bounds
+			if pos.x < bounds.position.x or pos.x > bounds.end.x:
+				var wall_x := bounds.position.x if pos.x < bounds.position.x else bounds.end.x
+				pos.x = 2.0 * wall_x - pos.x
+				heading.x = -heading.x
+			if pos.y < bounds.position.y or pos.y > bounds.end.y:
+				var wall_y := bounds.position.y if pos.y < bounds.position.y else bounds.end.y
+				pos.y = 2.0 * wall_y - pos.y
+				heading.y = -heading.y
+			if pos.clamp(box.position, box.end).distance_to(pos) <= proj.hit_radius:
+				return k
+		else:
+			return matt_wave_contact(proj.global_position, heading, proj.speed, frames)
+	return -1
+
+
+# The first step, 0 to `frames` ahead, on which a wave at `at` flying down `heading` touches the player's
+# hurtbox where it is now, or -1: its hit polygon, turned to the heading, against the box.
+func matt_wave_contact(at: Vector2, heading: Vector2, speed: float, frames: int) -> int:
+	var box: Rect2 = area_rect(player.hurtBox)
+	var rect := PackedVector2Array([box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)])
+	var layout: GDScript = load("res://Scripts/MattArtLayout.gd")
+	var poly: PackedVector2Array = layout.scaled_poly(layout.trueshot_hit_poly(), layout.SCALE, heading.angle())
+	for k in range(0, frames + 1):
+		var moved := PackedVector2Array()
+		for point in poly:
+			moved.append(point + at + heading * speed / 60.0 * k)
+		if not Geometry2D.intersect_polygons(moved, rect).is_empty():
+			return k
+	return -1
+
+
+# Whether the player's hurtbox, where it is now, touches a polygon in world px.
+func matt_in_zone(zone: PackedVector2Array) -> bool:
+	var box: Rect2 = area_rect(player.hurtBox)
+	var rect := PackedVector2Array([box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)])
+	return not Geometry2D.intersect_polygons(zone, rect).is_empty()
+
+
+# The parry mode's player: stands still, and presses the guard a few steps before anything reaches them
+# that hasn't already been answered on this pass, holding it long enough to cover everything the one
+# press can parry.
+var matt_bot := {"held": false, "held_frames": 0, "presses": 0}
+
+
+func matt_parry_step() -> void:
+	var soonest := 99
+	for proj in sm.live_projectiles():
+		if proj.latched:
+			continue
+		var k := matt_contact_in(proj, 12)
+		if k >= 0:
+			soonest = mini(soonest, k)
+	# A latched Trueshot is read off its release, as a player reads the latch: from the station nearest
+	# them the wave is on them the moment it leaves.
+	var barrage: Node = sm.states["TrueshotBarrage"]
+	if sm.current_state == barrage and barrage.beat == barrage.Beat.CHARGE and barrage.latched:
+		var to_release := ceili((barrage.release_at - barrage.beat_clock) * 60.0)
+		var k := matt_wave_contact(barrage._spawn_point() + barrage.aim_heading * sm.trueshot_lead,
+			barrage.aim_heading, sm.trueshot_speed, 12)
+		if k >= 0:
+			soonest = mini(soonest, to_release + k)
+		# Standing in the burst - on him, beside him, behind him - it is on them as the wave leaves.
+		if matt_in_zone(barrage.burst_zone()):
+			soonest = mini(soonest, to_release)
+	if not matt_bot.held and soonest <= 5:
+		press(KEY_SHIFT)
+		matt_bot.held = true
+		matt_bot.held_frames = 0
+		matt_bot.presses += 1
+	elif matt_bot.held:
+		matt_bot.held_frames += 1
+		if matt_bot.held_frames >= 16 and soonest > 5:
+			release(KEY_SHIFT)
+			matt_bot.held = false
+
+
+# What he and the ring look like at the VS card's flash: everything a watched entrance and a skipped
+# one must agree on. Floats are rounded: a zoom tweened back to 1.0 can land a float's width off the
+# skip's exact reset.
+func matt_snapshot() -> Dictionary:
+	var gates: Node = current_scene.get_node("Arena/Gates")
+	var screen: GDScript = load("res://Scripts/ScreenView.gd")
+	var crowd: Node = get_first_node_in_group("arena_crowd")
+	return {
+		"matt": boss.global_position, "anim": boss.current_anim, "flip": boss.sprite.flip_h,
+		"modulate": boss.sprite.modulate, "rotation": snappedf(boss.sprite.rotation, 0.0001), "offset": boss.sprite.offset,
+		"hurtbox": boss.hurtbox.monitoring, "hud": boss.hud_layer.visible, "hud_alpha": snappedf(boss.health_bar.modulate.a, 0.0001),
+		"gates_open": gates.is_open(), "player": player.global_position, "talking": player.is_talking,
+		"player_sm": player.state_machine.is_processing(), "face_point": player.facing_point,
+		"zoom": snappedf(screen.zoom, 0.0001), "shake": screen.shake_offset, "time_scale": snappedf(Engine.time_scale, 0.0001),
+		"crowd_cheering": crowd != null and crowd._cheer_time_left > 0.0, "music": boss.music_player.playing,
+		"music_starts": boss.music_starts, "hazards": get_nodes_in_group(sm.HAZARD_GROUP).size(),
+		"balloon": live_balloon() != null, "doll": boss.get_node_or_null("Hong") != null,
+		"intro_fx": sm.states["Intro"].intro_fx.size(),
+		"seen": root.get_node("GameProgress").entrances_seen.has(boss.FIGHT_SCENE),
+	}
+
+
+func matt_snapshot_diff(got: Dictionary, want: Dictionary) -> Array:
+	var diffs := []
+	for k in want:
+		if got[k] != want[k]:
+			diffs.append("%s %s (watched %s)" % [k, got[k], want[k]])
+	return diffs
+
+
+# Waits for the VS card to be at or past its flash, which a watched entrance reaches on the card's own
+# clock and a skip jumps straight to.
+func matt_card_flash(max_frames := 900) -> bool:
+	var card: Node = vs_card()
+	var card_art: GDScript = load(VS_CARD_LAYOUT)
+	return await wait_until(func(): return card.is_playing() and card.clock >= card_art.HOLD_END, max_frames)
+
+
+# ---- the pass-through
+
+func test_matt_pass_through() -> void:
+	await load_matt()
+	health_ok()
+	track()
+	track_parries()
+	track_dodges()
+	var hype: Node = player.get_node("Hype")
+	var catalog: GDScript = load("res://Scripts/AttackCatalog.gd")
+
+	log_p("-- the catalogue")
+	var shot: Dictionary = catalog.get_attack(&"matt_mystic_shot")
+	var wave: Dictionary = catalog.get_attack(&"matt_trueshot")
+	var yell: Dictionary = catalog.get_attack(&"matt_yell")
+	check(shot.blockable and shot.weight == catalog.Weight.LIGHT and shot.tell and shot.parry_pass_through
+		and not shot.dash_through and not shot.parryable and not shot.dodge_tell and shot.damage == 1 and shot.hype_loss
+		and not shot.bypass_invincibility and not shot.no_perfect_dodge and not shot.from_above,
+		"matt_mystic_shot: blockable LIGHT, red, passes through, 1 damage, inside the i-frames' rules, a perfect dodge")
+	check(wave.blockable and wave.weight == catalog.Weight.HEAVY and wave.tell and wave.dash_through and wave.parry_pass_through
+		and not wave.parryable and not wave.dodge_tell and wave.damage == 1 and wave.hype_loss
+		and not wave.bypass_invincibility and not wave.no_perfect_dodge and not wave.from_above,
+		"matt_trueshot: blockable HEAVY, red, dashed through, passes through, 1 damage")
+	check(yell.dash_through and yell.dodge_tell and not yell.blockable and not yell.parryable and not yell.tell
+		and not yell.parry_pass_through and yell.damage == 1 and yell.hype_loss and not yell.bypass_invincibility
+		and not yell.no_perfect_dodge, "matt_yell: yellow, a dash or distance only, 1 damage")
+	check(catalog.DEFAULTS.has("parry_pass_through") and catalog.DEFAULTS.parry_pass_through == false, "parry_pass_through defaults off")
+	var passing: Array = catalog.ATTACKS.keys().filter(func(id): return catalog.get_attack(id).parry_pass_through)
+	check(passing.size() == 2 and passing.has(&"matt_mystic_shot") and passing.has(&"matt_trueshot"), "and only his bolts and waves carry it (%s)" % [passing])
+
+	log_p("-- a parried bolt flies on, whole")
+	var fx: Node = current_scene.get_node("Arena/MainPlayer/FinisherFx")
+	var shatter_seen := [false]
+	watch = func():
+		for child in fx.get_children():
+			if child is Sprite2D and child.texture and child.texture.resource_path.ends_with("parry_shatter.png"):
+				shatter_seen[0] = true
+	boss.global_position = Vector2(1500, 300)
+	await settle_player(Vector2(900, 700))
+	var heading := Vector2.from_angle(deg_to_rad(22.5))
+	var bolt := spawn_matt_bolt(matt_centre() - heading * 500.0, heading)
+	# The drawn sprite straight off the bolt, which is where PlayerCombatFx looks for a parried projectile's
+	# art: the pass-through branch has to leave it flashed but neither shattered nor knocked. The stand-in
+	# bolt draws with polygons, so a sprite is hung there for it.
+	var art: Sprite2D = bolt.sheet
+	if art == null:
+		art = Sprite2D.new()
+		art.texture = load("res://Assets/Characters/Matt/matt.png")
+		art.hframes = 2
+		art.scale = Vector2.ONE * 0.2
+		bolt.add_child(art)
+	var art_rest: Vector2 = art.offset
+	var health: int = player.playerHealth
+	var hype_before: float = hype.hype
+	var flashed := [false]
+	var offsets := []
+	await wait(1)
+	await wait_until(func(): return bolt.global_position.distance_to(matt_centre()) < 40.0 + bolt.speed * 0.1, 120)
+	press(KEY_SHIFT)
+	await wait_until(func(): return not parries.is_empty() or not events.is_empty() or not is_instance_valid(bolt), 30)
+	var seen_heading: Vector2 = bolt.heading if is_instance_valid(bolt) else Vector2.ZERO
+	for i in 40:
+		if is_instance_valid(art):
+			if art.self_modulate != Color.WHITE:
+				flashed[0] = true
+			offsets.append(art.offset)
+		if not is_instance_valid(bolt) or not bolt.latched:
+			break
+		await physics_frame
+	release(KEY_SHIFT)
+	await wait(6)
+	watch = Callable()
+	log_p("parries %s, events %s, heading %s -> %s, reflections %d, hype %.0f -> %.0f" % [parries.map(func(p): return p.id), events.map(func(e): return e.kind), heading, seen_heading, bolt.reflections if is_instance_valid(bolt) else -1, hype_before, hype.hype])
+	check(parries.size() == 1 and parries[0].id == &"matt_mystic_shot", "parried")
+	check(events.is_empty(), "and never HIT or BLOCKED during the overlap")
+	check(is_instance_valid(bolt) and not bolt.spent, "the bolt survives")
+	check(is_instance_valid(bolt) and bolt.heading == heading and bolt.speed == sm.mystic_speed and bolt.reflections == 0 and seen_heading == heading, "with the same heading, speed and bounce count")
+	check(not shatter_seen[0], "no shatter")
+	check(flashed[0] and offsets.all(func(o): return o == art_rest), "its art flashed and was never knocked off its hitbox")
+	check(player.playerHealth == health, "no health lost")
+	check(hype.hype > hype_before, "hype paid (%.0f -> %.0f)" % [hype_before, hype.hype])
+
+	log_p("-- and it HITs on its next pass, and is consumed")
+	await wait(int(defense.blocked_rehit_interval * 60.0) + 10)
+	clear_iframes()
+	events.clear()
+	var ahead := Vector2.INF
+	for reach in [260.0, 220.0, 180.0, 140.0]:
+		var point: Vector2 = bolt.global_position + bolt.heading * reach
+		if sm.ROPES.grow(-70.0).has_point(point):
+			ahead = point
+			break
+	check(ahead != Vector2.INF, "found a spot in its path inside the ropes")
+	if ahead != Vector2.INF:
+		await settle_player(ahead - (matt_centre() - player.global_position))
+		await wait_until(func(): return not events.is_empty() or not is_instance_valid(bolt), 60)
+		await wait(2)
+		check(events_of("HIT", &"matt_mystic_shot").size() == 1 and player.playerHealth == health - 1, "HIT for a half-heart (%s)" % [events.map(func(e): return "%s %s" % [e.kind, e.id])])
+		check(not is_instance_valid(bolt), "and the bolt is gone")
+
+	log_p("-- a held guard %s" % ("blocks it for 20, and it stays whole" if blocking() else "is no answer: it hits"))
+	events.clear()
+	parries.clear()
+	health_ok()
+	clear_iframes()
+	await settle_player(Vector2(900, 700))
+	defense._set_stamina(defense.max_stamina)
+	press(KEY_SHIFT)
+	await past_window()
+	var blocked_bolt := spawn_matt_bolt(matt_centre() - heading * 400.0, heading)
+	await wait_until(func(): return not events.is_empty() or not is_instance_valid(blocked_bolt), 90)
+	await wait(20)
+	release(KEY_SHIFT)
+	if blocking():
+		var blocks := events_of("BLOCKED", &"matt_mystic_shot")
+		var cost: float = defense.max_stamina - blocks[0].stamina if not blocks.is_empty() else 0.0
+		check(blocks.size() == 1 and events_of("HIT").is_empty() and is_equal_approx(cost, 20.0), "BLOCKED once for %.0f" % cost)
+		check(is_instance_valid(blocked_bolt) and not blocked_bolt.spent, "and it flies on")
+	else:
+		check(events_of("HIT", &"matt_mystic_shot").size() == 1 and events_of("BLOCKED").is_empty() and defense.stamina == defense.max_stamina, "HIT through the held guard, and no stamina spent")
+	if is_instance_valid(blocked_bolt):
+		blocked_bolt.queue_free()
+
+	log_p("-- facing away")
+	events.clear()
+	parries.clear()
+	await wait(40)
+	# He is straight above them, so they face up, and the bolt comes up at them from below: from behind.
+	boss.global_position = Vector2(900, 160)
+	await settle_player(Vector2(900, 560))
+	await wait(6)
+	var up: Vector2 = Vector2.from_angle(deg_to_rad(-67.5))
+	var behind := spawn_matt_bolt(matt_centre() - up * 330.0, up)
+	await wait_until(func(): return behind.global_position.distance_to(matt_centre()) < 40.0 + behind.speed * 0.1, 120)
+	var facing: int = player.facing
+	press(KEY_SHIFT)
+	await wait_until(func(): return not parries.is_empty() or not events.is_empty(), 30)
+	release(KEY_SHIFT)
+	log_p("facing %d (1 is up, toward him) with the bolt coming up from behind: %s" % [facing, parries.map(func(p): return p.id)])
+	check(facing == 1 and parries.size() == 1 and events.is_empty(), "a parry answers a bolt from behind")
+	if is_instance_valid(behind):
+		behind.queue_free()
+
+	log_p("-- a wave flies on through a parry, a block and a hit, never bounces, and goes only off screen")
+	boss.global_position = Vector2(1500, 300)
+	for answer in ["parry", "block", "hit"]:
+		events.clear()
+		parries.clear()
+		clear_iframes()
+		health_ok()
+		defense._set_stamina(defense.max_stamina)
+		await wait(40)
+		await settle_player(Vector2(960, 700))
+		if answer == "block":
+			press(KEY_SHIFT)
+			await past_window()
+		var down := Vector2.DOWN
+		var w := spawn_matt_wave(matt_centre() - down * 450.0, down)
+		var path := []
+		var last_bounds := Rect2()
+		var pressed := false
+		for i in 240:
+			if not is_instance_valid(w):
+				break
+			path.append(w.global_position)
+			last_bounds = w._bounds()
+			if answer == "parry" and not pressed and matt_contact_in(w, 8) >= 0:
+				press(KEY_SHIFT)
+				pressed = true
+			await physics_frame
+		release(KEY_SHIFT)
+		var forward := true
+		for i in range(1, path.size()):
+			if (path[i] - path[i - 1]).dot(down) <= 0.0:
+				forward = false
+		log_p("%s: %s, %d steps, last box %s, health %d" % [answer, events.map(func(e): return e.kind) + parries.map(func(p): return "PARRIED"), path.size(), last_bounds, player.playerHealth])
+		match answer:
+			"parry":
+				check(parries.size() == 1 and events.is_empty() and player.playerHealth == 100, "parried, and it flew on")
+			"block":
+				if blocking():
+					var wave_blocks := events_of("BLOCKED", &"matt_trueshot")
+					check(wave_blocks.size() == 1 and is_equal_approx(defense.max_stamina - wave_blocks[0].stamina, 35.0), "blocked for 35, and it flew on")
+				else:
+					check(events_of("HIT", &"matt_trueshot").size() == 1 and player.playerHealth == 99, "a held guard is no answer: HIT for a half-heart, and it flew on")
+			"hit":
+				check(events_of("HIT", &"matt_trueshot").size() == 1 and player.playerHealth == 99, "HIT for a half-heart, and it flew on")
+		check(forward, "%s: it only ever moved on down its heading - no bounce" % answer)
+		check(not MATT_VIEW.intersects(last_bounds), "%s: it went only once it was off the screen (%s)" % [answer, last_bounds])
+
+	log_p("-- a dash through a wave is DODGED and a perfect dodge")
+	events.clear()
+	dodges.clear()
+	clear_iframes()
+	await fresh_dash_ready()
+	await settle_player(Vector2(960, 760))
+	var dash_wave := spawn_matt_wave(matt_centre() + Vector2.UP * 520.0, Vector2.DOWN)
+	await wait_until(func(): return matt_contact_in(dash_wave, 3) >= 0, 60)
+	press(KEY_UP)
+	tap(KEY_W)
+	await wait_until(func(): return not is_instance_valid(dash_wave) or not dash_wave.results.is_empty(), 30)
+	release(KEY_UP)
+	var got: Array = dash_wave.results if is_instance_valid(dash_wave) else []
+	log_p("dash: results %s, perfect dodges %s, events %s" % [got, dodges.map(func(d): return d.id), events.map(func(e): return e.kind)])
+	check(got.size() >= 1 and got[0] == load("res://Scripts/HitInfo.gd").Result.DODGED and dodges.size() == 1 and dodges[0].id == &"matt_trueshot" and events.is_empty(), "DODGED, and a PERFECT DODGE")
+
+
+# ---- the bounces and a real volley
+
+func test_matt_bounces() -> void:
+	await load_matt()
+	health_ok()
+	var ropes: Rect2 = sm.ROPES
+	var bounds: Rect2 = ropes.grow(-sm.mystic_hit_radius)
+
+	log_p("-- one bolt in an empty ring")
+	var start_heading := Vector2.from_angle(deg_to_rad(22.5))
+	var bolt := spawn_matt_bolt(Vector2(960, 540), start_heading, false)
+	var turns: Array = bolt.turns
+	var outside := 0
+	var last := bolt.global_position
+	for i in 60 * 14:
+		if not is_instance_valid(bolt):
+			break
+		last = bolt.global_position
+		if not ropes.has_point(last):
+			outside += 1
+		await physics_frame
+	var lattice_ok := true
+	var mirror_ok := true
+	var previous := start_heading
+	for turn in turns:
+		var h: Vector2 = turn.heading
+		var degrees := fposmod(rad_to_deg(h.angle()), 360.0)
+		var steps := degrees / 22.5
+		if absf(steps - roundf(steps)) > 0.001 or int(roundf(steps)) % 4 == 0:
+			lattice_ok = false
+		if not (is_equal_approx(absf(h.x), absf(previous.x)) and is_equal_approx(absf(h.y), absf(previous.y)) and h != previous):
+			mirror_ok = false
+		previous = h
+	var edge_gap := minf(minf(absf(last.x - bounds.position.x), absf(last.x - bounds.end.x)), minf(absf(last.y - bounds.position.y), absf(last.y - bounds.end.y)))
+	log_p("reflections %d at %s; last seen %s, %.1f px from a rope; frames outside the ropes %d" % [turns.size(), turns.map(func(t): return Vector2i(t.at)), last, edge_gap, outside])
+	check(turns.size() == 5, "exactly five reflections")
+	check(lattice_ok, "every heading on the lattice, never along an axis")
+	check(mirror_ok, "each an exact mirror of the one before")
+	check(outside == 0, "inside the ropes throughout")
+	check(not is_instance_valid(bolt) and edge_gap <= sm.mystic_speed / 60.0 + 1.0, "and it bursts on the sixth rope contact")
+
+	log_p("-- a corner is one bounce")
+	var diagonal := Vector2.from_angle(deg_to_rad(45.0))
+	var per_axis: float = sm.mystic_speed / 60.0 * diagonal.x
+	var corner_bolt := spawn_matt_bolt((bounds.end - Vector2.ONE * (per_axis * 20.0 + per_axis * 0.5)).round(), diagonal, false)
+	var corner_turns: Array = corner_bolt.turns
+	await wait_until(func(): return not corner_turns.is_empty(), 60)
+	await wait(10)
+	log_p("corner: %s" % [corner_turns.map(func(t): return [Vector2i(t.at), t.heading])])
+	check(corner_turns.size() == 1 and corner_turns[0].heading.is_equal_approx(-diagonal), "both components turned on one contact, counted once")
+	if is_instance_valid(corner_bolt):
+		corner_bolt.queue_free()
+
+	log_p("-- a real volley at the top tier")
+	player.playerHealth = 1000
+	var spot: Vector2 = SMOKE_SPOTS["matt"]
+	await settle_player(spot)
+	boss.boss_health = int(boss.max_health * 0.3)
+	var volley: Node = sm.states["MysticVolley"]
+	var births := []
+	var tells := []
+	var known := {}
+	var had_tell := false
+	var max_alive := 0
+	var start: float = defense.clock
+	sm.start_cycle()
+	check(sm.cycle_casts == sm.mystic_casts_by_tier[2], "the top tier's %d casts below a third of his health (%d)" % [sm.mystic_casts_by_tier[2], sm.cycle_casts])
+	while defense.clock - start < 12.0 and sm.current_state == volley:
+		player.global_position = spot
+		var tell := tell_node()
+		var up := tell != null and not str(tell.name).ends_with("Spent")
+		if up and not had_tell:
+			tells.append(defense.clock)
+		had_tell = up
+		var alive: Array = sm.live_bolts()
+		max_alive = maxi(max_alive, alive.size())
+		for b in alive:
+			if not known.has(b.get_instance_id()):
+				known[b.get_instance_id()] = true
+				births.append(defense.clock)
+		await physics_frame
+	log_p("%d spots, %d bolts, %d badges, at most %d alive, %d skipped" % [volley.spots.size(), births.size(), tells.size(), max_alive, volley.skipped])
+	check(max_alive <= sm.mystic_max_alive, "never more than five alive (%d)" % max_alive)
+	var spots_ok := true
+	for s in volley.spots:
+		var line: Vector2 = s.player - s.mouth
+		var on_line: bool = line.normalized().is_equal_approx(s.heading)
+		log_p("  spot: range %.0f, heading %.1f, mouth %s, feet %s, on the line through the player %s" % [s.range, rad_to_deg(s.heading.angle()), Vector2i(s.mouth), Vector2i(s.feet), on_line])
+		if s.range < 450.0 - 0.01 or not on_line or absf(line.length() - s.range) > 0.5:
+			spots_ok = false
+	check(volley.spots.size() == sm.cycle_casts and spots_ok, "every spot at least 450 px out, on a lattice line through the player")
+	var leads := []
+	for b in births:
+		var lead := -1.0
+		for t in tells:
+			if t <= b:
+				lead = b - t
+		leads.append(snappedf(lead, 0.001))
+	log_p("badge to bolt: %s s" % [leads])
+	check(births.size() == sm.cycle_casts and leads.all(func(l): return absf(l - sm.mystic_windup) <= 2.0 / 60.0 + 0.001), "the badge up %.2f s before each bolt" % sm.mystic_windup)
+
+
+# ---- the Trueshot barrage
+
+func test_matt_trueshot() -> void:
+	await load_matt()
+	player.playerHealth = 1000
+	var barrage: Node = sm.states["TrueshotBarrage"]
+	var spent: Node = sm.states["Spent"]
+	var bar: Control = boss.health_bar
+	await settle_player(Vector2(760, 760))
+	var charges := {}
+	var tracking_ok := true
+	var frozen_ok := true
+	var badge_ok := true
+	var hud := {"top_min": 1.0, "left_max": 0.0}
+	var waves := {}
+	var sheets := {}
+	var station := -1
+	var t0: float = defense.clock
+	var at_recover := {}
+	sm.on_child_transition(sm.current_state, "TrueshotBarrage")
+	while defense.clock - t0 < 12.0:
+		var t: float = defense.clock - t0
+		# Sideways and back, so the aim has something to track.
+		player.global_position = Vector2(760.0 + 160.0 * sin(t * TAU / 1.4), 760)
+		player.velocity = Vector2.ZERO
+		var centre := matt_centre()
+		await physics_frame
+		if sm.current_state == barrage and barrage.beat == barrage.Beat.CHARGE:
+			if barrage.station_index != station:
+				station = barrage.station_index
+				charges[station] = {"feet": boss.global_position, "name": barrage._station().name}
+			var clock: float = barrage.beat_clock
+			var tell := tell_node()
+			if clock < barrage.release_at - 1.5 / 60.0 and (tell == null or str(tell.name).ends_with("Spent")):
+				badge_ok = false
+			if not barrage.latched:
+				if not barrage.aim_point.is_equal_approx(centre):
+					tracking_ok = false
+			elif charges[station].has("locked"):
+				if not barrage.aim_point.is_equal_approx(charges[station].locked):
+					frozen_ok = false
+			else:
+				charges[station]["locked"] = barrage.aim_point
+				charges[station]["lock_clock"] = clock
+			if station == 0:
+				hud.top_min = minf(hud.top_min, bar.modulate.a)
+			elif station == 1 and clock > 0.3:
+				hud.left_max = maxf(hud.left_max, bar.modulate.a)
+		for w in sm.live_waves():
+			var id: int = w.get_instance_id()
+			if not waves.has(id):
+				waves[id] = []
+				if w.sheet != null:
+					sheets[id] = {"heading": w.heading, "texture": w.sheet.texture.resource_path, "frame": w.sheet.frame,
+						"flip_h": w.sheet.flip_h, "flip_v": w.sheet.flip_v}
+			waves[id].append(w.global_position)
+		if sm.current_state == sm.states["Recover"] and at_recover.is_empty():
+			at_recover = {"feet": boss.global_position, "clear": sm.live_projectiles().is_empty(), "capped": spent.capped, "waited": spent.waited}
+			await wait(2)
+			at_recover["hurtbox"] = boss.hurtbox.monitoring
+			break
+
+	log_p("-- the stations")
+	var names := []
+	var feet_ok := true
+	for i in charges:
+		names.append(charges[i].name)
+		if not charges[i].feet.is_equal_approx(sm.STATIONS[i].feet):
+			feet_ok = false
+		log_p("  %s: feet %s, latched at %.3f s on %s" % [charges[i].name, charges[i].feet, charges[i].get("lock_clock", -1.0), charges[i].get("locked", Vector2.INF)])
+	check(names == [&"top", &"left", &"bottom", &"right"], "top, left, bottom, right, in that order (%s)" % [names])
+	check(feet_ok, "each on its exact feet point")
+	check(badge_ok, "the badge up for the whole of every charge")
+	check(tracking_ok, "the aim on the player every step until it latches")
+	check(frozen_ok, "and frozen from the latch on")
+	var locks_ok := true
+	for i in charges:
+		if absf(charges[i].get("lock_clock", -1.0) - (sm.trueshot_charge - sm.trueshot_lock_lead)) > 1.5 / 60.0:
+			locks_ok = false
+	check(locks_ok, "the latch %.2f s into the charge" % (sm.trueshot_charge - sm.trueshot_lock_lead))
+
+	log_p("-- the shots")
+	var heading_ok := true
+	var path_ok := true
+	for shot in barrage.shots:
+		var normal: Vector2 = sm.STATIONS[barrage.shots.find(shot)].normal
+		var degrees := rad_to_deg(shot.heading.angle())
+		var off := absf(rad_to_deg(normal.angle_to(shot.heading)))
+		var steps: float = degrees / sm.trueshot_step
+		if absf(steps - roundf(steps)) > 0.001 or off > sm.trueshot_max_turn + 0.001:
+			heading_ok = false
+		var perp: Vector2 = shot.heading.orthogonal()
+		var across: float = (shot.point - shot.mouth).dot(perp)
+		var lateral_ok := is_equal_approx(shot.lateral, clampf(across, -sm.trueshot_offset_max, sm.trueshot_offset_max))
+		var miss: float = absf((shot.point - shot.spawn).dot(perp))
+		if not lateral_ok or (absf(across) <= sm.trueshot_offset_max and miss > 0.5):
+			path_ok = false
+		log_p("  %s: heading %.1f (%.1f off the normal), %.1f across from his mouth, lateral %.1f, path misses the latched point by %.2f px" % [shot.station, degrees, off, across, shot.lateral, miss])
+	check(barrage.shots.size() == 4 and heading_ok, "every heading snapped to %.2f and within %.1f of the station's normal" % [sm.trueshot_step, sm.trueshot_max_turn])
+	check(path_ok, "every path through the latched point, sliding at most %.0f px along the chord" % sm.trueshot_offset_max)
+	var speed_ok := not waves.is_empty()
+	for id in waves:
+		var path: Array = waves[id]
+		for i in range(1, path.size()):
+			if absf(path[i].distance_to(path[i - 1]) - sm.trueshot_speed / 60.0) > 0.01:
+				speed_ok = false
+	check(speed_ok, "every wave at %.0f px/s (%d seen)" % [sm.trueshot_speed, waves.size()])
+	# The art's contract: fold the heading into the first quadrant, k = its 11.25 degree step; an even k
+	# is heading k/2 of the main sheet, an odd one (k-1)/2 of the in-between sheet, flipped by its signs.
+	var art_ok := not sheets.is_empty()
+	for id in sheets:
+		var seen: Dictionary = sheets[id]
+		var k := roundi(rad_to_deg(atan2(absf(seen.heading.y), absf(seen.heading.x))) / 11.25)
+		var want := "matt_trueshot_wave_mid.png" if k % 2 == 1 else "matt_trueshot_wave.png"
+		var index := floori(k / 2.0)
+		if not seen.texture.ends_with("/" + want) or floori(seen.frame / 4.0) != index \
+				or seen.flip_h != (seen.heading.x < 0.0) or seen.flip_v != (seen.heading.y < 0.0):
+			art_ok = false
+		log_p("  wave at %.2f: %s frame %d, flips %s/%s" % [rad_to_deg(seen.heading.angle()), seen.texture.get_file(), seen.frame, seen.flip_h, seen.flip_v])
+	check(art_ok, "each wave drawn at its own heading, the odd 11.25 steps off the in-between sheet")
+
+	log_p("-- the HUD, Spent and the window")
+	log_p("bar alpha at the top %.2f, back at the left %.2f; at the window: %s" % [hud.top_min, hud.left_max, at_recover])
+	check(is_equal_approx(hud.top_min, sm.hud_fade_alpha), "the bar fades to %.1f while he charges at the top" % sm.hud_fade_alpha)
+	check(is_equal_approx(hud.left_max, 1.0), "and is back at full once he has gone")
+	check(not at_recover.is_empty() and (at_recover.clear or at_recover.capped), "Spent waits for a clear ring before the window")
+	check(not at_recover.is_empty() and at_recover.waited >= sm.spent_min - 0.001, "and holds at least %.1f s" % sm.spent_min)
+	check(not at_recover.is_empty() and at_recover.feet.is_equal_approx(sm.HOME) and at_recover.hurtbox, "the window opens at HOME with a live hurtbox")
+
+	log_p("-- R9: nowhere on or round a station is safe from its shot")
+	var swept := await matt_station_sweep()
+	for line in swept.lines:
+		log_p(line)
+	check(swept.shots > 0 and swept.safe.is_empty(), "every spot in him, on his box's edge and 50 and 100 px off it, and the smoke spot, is hit (%d shots; safe: %s)" % [swept.shots, swept.safe])
+
+
+# The floor the player's origin can reach: slid into each wall from the middle of the ring.
+func matt_floor() -> Rect2:
+	var was: Vector2 = player.global_position
+	var ends := []
+	for push in [Vector2(-3000, 0), Vector2(3000, 0), Vector2(0, -3000), Vector2(0, 3000)]:
+		player.global_position = sm.HOME
+		player.move_and_collide(push)
+		ends.append(player.global_position)
+	player.global_position = was
+	return Rect2(Vector2(ends[0].x, ends[2].y), Vector2(ends[1].x - ends[0].x, ends[3].y - ends[2].y))
+
+
+# Real shots, one station at a time, at a player standing still inside his body box, on its edge and 50
+# and 100 px off it (eight spots a ring, those on the floor), and on the smoke spot from the bottom.
+func matt_station_sweep() -> Dictionary:
+	var barrage: Node = sm.states["TrueshotBarrage"]
+	var layout: GDScript = load("res://Scripts/MattArtLayout.gd")
+	var box: Rect2 = area_rect(player.hurtBox)
+	var half: Vector2 = box.size / 2.0
+	var reach: Vector2 = box.get_center() - player.global_position
+	var floor_rect := matt_floor()
+	var landed := []
+	var on_hit := func(hit): landed.append(hit.attack_id)
+	defense.hit_taken.connect(on_hit)
+	var result := {"shots": 0, "safe": [], "lines": []}
+	for s in sm.STATIONS.size():
+		var station: Dictionary = sm.STATIONS[s]
+		var body_box: Rect2 = layout.local_rect(layout.BODY_BOX)
+		body_box.position += station.feet
+		var spots := []
+		if station.name == &"bottom":
+			spots.append({"at": SMOKE_SPOTS["matt"], "ring": "the smoke spot"})
+		for f in [Vector2(0.5, 0.5), Vector2(0.2, 0.2), Vector2(0.8, 0.2), Vector2(0.2, 0.85), Vector2(0.8, 0.85)]:
+			spots.append({"at": body_box.position + body_box.size * f - reach, "ring": "inside"})
+		for d in [0.0, 50.0, 100.0]:
+			var ring := body_box.grow_individual(d + half.x, d + half.y, d + half.x, d + half.y)
+			for corner in [ring.position, Vector2(ring.get_center().x, ring.position.y), Vector2(ring.end.x, ring.position.y),
+					Vector2(ring.end.x, ring.get_center().y), ring.end, Vector2(ring.get_center().x, ring.end.y),
+					Vector2(ring.position.x, ring.end.y), Vector2(ring.position.x, ring.get_center().y)]:
+				var origin: Vector2 = corner - reach
+				if floor_rect.has_point(origin):
+					spots.append({"at": origin, "ring": "%d px off" % d})
+		var hit_count := 0
+		for spot in spots:
+			landed.clear()
+			player.playerHealth = 1000
+			player.is_invincible = false
+			player.invincibility_timer.stop()
+			for hazard in get_nodes_in_group(sm.HAZARD_GROUP):
+				hazard.queue_free()
+			sm.on_child_transition(sm.current_state, "Idle")
+			sm.beat_timer.stop()
+			await wait(1)
+			sm.on_child_transition(sm.current_state, "TrueshotBarrage")
+			barrage.station_index = s
+			var released := false
+			for f in 150:
+				player.global_position = spot.at
+				player.velocity = Vector2.ZERO
+				await physics_frame
+				released = released or barrage.beat == barrage.Beat.FIRE
+				if released and (barrage.beat != barrage.Beat.FIRE or barrage.beat_clock > 0.3):
+					break
+			result.shots += 1
+			if landed.has(&"matt_trueshot"):
+				hit_count += 1
+			else:
+				result.safe.append("%s %s %s" % [station.name, spot.ring, spot.at])
+		result.lines.append("  %s: %d spots, hit on %d" % [station.name, spots.size(), hit_count])
+	defense.hit_taken.disconnect(on_hit)
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	return result
+
+
+# ---- the yell
+
+func matt_window(yell_on := 0) -> Node:
+	var recover: Node = sm.states["Recover"]
+	for hazard in get_nodes_in_group(sm.HAZARD_GROUP):
+		hazard.queue_free()
+	sm.on_child_transition(sm.current_state, "Recover")
+	if yell_on > 0:
+		recover.yell_on_hit = yell_on
+	await wait(3)
+	return recover
+
+
+func test_matt_yell() -> void:
+	await load_matt()
+	health_ok()
+	track()
+	track_parries()
+	track_dodges()
+	var finisher: Node = player.get_node("Finisher")
+	finisher.min_press_interval = 0.0
+	sm.yell_chance = 1.0
+
+	log_p("-- the first window never yells")
+	var recover := await matt_window()
+	place_under(boss.get_finisher_hurtbox())
+	await wait(4)
+	check(not recover.yell_planned, "not planned in window %d" % sm.windows_opened)
+	for i in 2:
+		await swing_any()
+		await wait(6)
+	await wait(10)
+	check(boss.hits_this_window == 2 and recover.yells == 0, "two punches in and no yell (%d punches, %d yells)" % [boss.hits_this_window, recover.yells])
+
+	log_p("-- a yell that lands")
+	recover = await matt_window(1)
+	check(recover.yell_planned, "planned in window %d at yell_chance 1" % sm.windows_opened)
+	clear_iframes()
+	health_ok()
+	events.clear()
+	place_under(boss.get_finisher_hurtbox())
+	await wait(4)
+	var punched_at := -1.0
+	var tell_at := -1.0
+	var tell_look := ""
+	var dazeable := false
+	tap(KEY_Q)
+	for i in 60:
+		await physics_frame
+		if punched_at < 0.0 and boss.hits_this_window >= 1:
+			punched_at = defense.clock
+		if recover.yell == recover.Yell.TELL and tell_at < 0.0:
+			tell_at = defense.clock
+			var tell := tell_node()
+			tell_look = "yellow" if tell != null and tell.dodge else ("red" if tell != null else "none")
+		if recover.yell == recover.Yell.TELL and boss.can_be_dazed():
+			dazeable = true
+		if tell_at >= 0.0 and defense.clock - tell_at >= sm.yell_tell - 4.0 / 60.0:
+			break
+	# Guard held and a fresh press on the blast: neither answers it.
+	press(KEY_SHIFT)
+	var health: int = player.playerHealth
+	var mouth: Vector2 = boss.mouth_point(&"roar")
+	var from: Vector2 = player.global_position
+	var want: Vector2 = recover.launch_point(from)
+	var hit_at := -1.0
+	var blast_at := -1.0
+	var locked_in_air := false
+	var left_recover_at := -1.0
+	for i in 90:
+		await physics_frame
+		if blast_at < 0.0 and recover.yell == recover.Yell.BLAST:
+			blast_at = defense.clock
+		if hit_at < 0.0 and not events_of("HIT", &"matt_yell").is_empty():
+			hit_at = defense.clock
+		if hit_at >= 0.0 and left_recover_at < 0.0 and not sm.is_recovering():
+			left_recover_at = defense.clock
+		if hit_at >= 0.0 and player.is_action_locked:
+			locked_in_air = true
+		if hit_at >= 0.0 and not boss.is_launching() and not player.is_action_locked:
+			break
+	release(KEY_SHIFT)
+	log_p("punch at %.3f, tell at %.3f (%s), blast at %.3f, hit at %.3f; health %d -> %d; landed %s (want %s); left the window at %.3f" % [punched_at, tell_at, tell_look, blast_at, hit_at, health, player.playerHealth, player.global_position, want, left_recover_at])
+	check(tell_at > 0.0 and tell_at - punched_at <= 2.5 / 60.0 and tell_look == "yellow", "the yellow badge on the step after the punch")
+	check(not dazeable, "never dazeable through the tell")
+	check(tell_at > punched_at, "and not on the punch's own step")
+	check(blast_at > 0.0 and absf(blast_at - tell_at - sm.yell_tell) <= 1.5 / 60.0, "the blast %.2f s after it" % sm.yell_tell)
+	check(parries.is_empty() and events_of("BLOCKED").is_empty() and player.playerHealth == health - 1, "a held guard and a fresh press don't answer it: 1 damage")
+	var expect_x: float = sm.launch_left_x if from.x < mouth.x else sm.launch_right_x
+	check(player.global_position.is_equal_approx(want.round()) and is_equal_approx(want.x, expect_x) and want.y >= sm.launch_y_range.x and want.y <= sm.launch_y_range.y, "thrown to %s, the far side, inside the ropes" % want)
+	check(locked_in_air and not player.is_action_locked and not player.scripted_pose, "locked through the throw and given back on landing")
+	check(left_recover_at >= 0.0 and left_recover_at - hit_at <= 1.5 / 60.0, "he is out of his window on the hit")
+	var attack_at := -1.0
+	await wait_until(func(): return sm.current_state.name == "MysticVolley", 120)
+	attack_at = defense.clock
+	log_p("his next attack %.3f s after the hit" % (attack_at - hit_at))
+	check(absf(attack_at - hit_at - sm.post_yell_beat) <= 2.0 / 60.0, "and attacks again %.1f s later" % sm.post_yell_beat)
+
+	log_p("-- walked away from")
+	recover = await matt_window(1)
+	clear_iframes()
+	health_ok()
+	events.clear()
+	place_under(boss.get_finisher_hurtbox())
+	await wait(4)
+	tap(KEY_Q)
+	await wait_until(func(): return recover.yell == recover.Yell.TELL, 60)
+	var remainder: float = sm.recover_timer.time_left
+	await settle_player(boss.mouth_point(&"roar") + Vector2(0, sm.yell_radius + sm.yell_band + 120.0))
+	await wait_until(func(): return recover.yell == recover.Yell.NONE, 90)
+	var after: float = sm.recover_timer.time_left
+	log_p("walked out: %s; window %.3f s left at the tell, %.3f after" % [events.map(func(e): return e.kind), remainder, after])
+	check(events_of("HIT").is_empty(), "no hit")
+	check(absf(after - (remainder + sm.yell_whiff_bonus)) <= 1.5 / 60.0 and not sm.recover_timer.paused, "the window gets %.2f s back on top of what it had" % sm.yell_whiff_bonus)
+
+	log_p("-- dashed through")
+	recover = await matt_window(1)
+	clear_iframes()
+	health_ok()
+	events.clear()
+	dodges.clear()
+	await fresh_dash_ready()
+	place_under(boss.get_finisher_hurtbox())
+	await wait(4)
+	tap(KEY_Q)
+	await wait_until(func(): return recover.yell == recover.Yell.TELL, 60)
+	remainder = sm.recover_timer.time_left
+	var tell_frames := roundi(sm.yell_tell * 60.0)
+	await wait(tell_frames - 3)
+	# In place, with nothing held: the ring passes through them inside the dash's i-frames.
+	tap(KEY_W)
+	await wait_until(func(): return recover.yell_result != 0 or recover.yell == recover.Yell.AFTER, 30)
+	await wait_until(func(): return recover.yell == recover.Yell.NONE, 90)
+	after = sm.recover_timer.time_left
+	log_p("dashed: ring %d, events %s, perfect dodges %s; window %.3f -> %.3f, punches %d" % [recover.yell_result, events.map(func(e): return e.kind), dodges.map(func(d): return d.id), remainder, after, boss.hits_this_window])
+	check(recover.yell_result == load("res://Scripts/HitInfo.gd").Result.DODGED and dodges.size() == 1 and dodges[0].id == &"matt_yell" and events_of("HIT").is_empty(), "DODGED, and a PERFECT DODGE")
+	check(absf(after - (remainder + sm.yell_whiff_bonus)) <= 1.5 / 60.0, "the window gets %.2f s back" % sm.yell_whiff_bonus)
+	check(boss.hits_this_window == 0, "and its punches count from nothing again")
+	await dash_ready()
+	place_under(boss.get_finisher_hurtbox())
+	await wait(8)
+	for i in 3:
+		await swing_any()
+		if i < 2:
+			await wait(6)
+	check(await wait_until(func(): return finisher.phase == 2, 120), "three more punches daze him")
+	await mash_finisher()
+	await wait(30)
+
+
+# ---- the entrance
+
+func test_matt_entrance() -> void:
+	var scene: String = card_fight_scene("matt")
+	var talk: Dictionary = load("res://Scripts/MattArtLayout.gd").TALK_POSES
+
+	log_p("-- watched: the walk-in")
+	await enter_fight(scene, true)
+	boss = current_scene.get_node(MATT_BODY)
+	sm = boss.state_machine
+	var intro: Node = entrance_state()
+	check(intro != null and intro == sm.states["Intro"], "his fight opens on MattIntro")
+	check(await wait_until(func(): return intro.entered, 60), "which starts itself")
+	var gates: Node = current_scene.get_node("Arena/Gates")
+	check(gates.is_open() and not boss.hud_layer.visible, "the ring is open and his bar is down")
+	check(player.is_talking and not player.state_machine.is_processing(), "the player is held, their own state machine stopped")
+	check(boss.global_position.y < 0.0 and player.global_position.y > intro.player_home.y + 100.0, "he starts above the ring and the player below it")
+	check(await wait_until(func(): return player.global_position.is_equal_approx(intro.player_home), 300), "the player walks up onto their mark")
+	check(await wait_until(func(): return boss.global_position.is_equal_approx(intro.home) and boss.current_anim != &"walk", 400), "he walks down onto his")
+	check(await wait_until(func(): return not gates.is_open(), 120), "the gates slam behind him")
+	check(await wait_until(func(): return boss.hud_layer.visible, 120), "then his bar comes up")
+	check(await wait_until(func(): return live_balloon() != null, 120), "and his first line")
+	check(sm.post_dialogue_pre_fight_timer.is_stopped() and boss.music_starts == 0, "the fight and his theme are still waiting")
+
+	log_p("-- the lines, their tags and their beats")
+	var card: Node = vs_card()
+	var sampled := {}
+	var music_before_roar := -1
+	var music_on_roar := -1
+	var last_line = null
+	for i in 3600:
+		if card.is_playing():
+			break
+		var balloon := live_balloon()
+		if balloon != null and balloon.dialogue_line != null and balloon.dialogue_line != last_line:
+			last_line = balloon.dialogue_line
+			await wait(3)
+			var text: String = last_line.text
+			var look := {"pose": intro.pose, "frame": boss.sprite.frame, "flip": boss.sprite.flip_h, "anim": boss.current_anim}
+			if text.begins_with("Well anyways"):
+				sampled["proud"] = look
+			elif text.begins_with("Matt I think"):
+				sampled["glance"] = look
+			elif text.begins_with("NO I DID"):
+				sampled["snap"] = look
+		if music_before_roar < 0 and boss.current_anim == &"roar_inhale":
+			music_before_roar = boss.music_starts
+		if music_on_roar < 0 and boss.current_anim == &"roar":
+			await wait(1)
+			music_on_roar = boss.music_starts if boss.music_player.playing else -1
+		if i % 8 == 0:
+			tap(KEY_ENTER)
+		await physics_frame
+	log_p("sampled %s" % [sampled])
+	check(sampled.has("proud") and sampled.proud.pose == &"proud" and talk[&"proud"].has(sampled.proud.frame) and sampled.proud.anim == &"talk", "the proud line puts him in the proud pose")
+	check(sampled.has("glance") and sampled.glance.flip and sampled.glance.pose == &"irritated", "Danny's line turns him toward Danny, still irritated")
+	check(sampled.has("snap") and sampled.snap.pose == &"snap" and not sampled.snap.flip and talk[&"snap"].has(sampled.snap.frame), "the snap line snaps him back, unturned")
+	var beats: Dictionary = intro.beat_times
+	log_p("beats %s" % [beats])
+	check(beats.has(&"composes_himself") and absf(beats[&"composes_himself"] - 2.0) <= 1.0 / 60.0 + 0.001, "the compose beat is 2.00 s to a frame (%.3f)" % beats.get(&"composes_himself", -1.0))
+	check(beats.has(&"pulls_out_hong") and beats.has(&"screams_at_hong") and beats.has(&"small_pause") and beats.has(&"roars"), "the doll's three beats and the roar all played")
+	check(music_before_roar == 0 and music_on_roar == 1, "his theme starts on the roar and not before (%d then %d)" % [music_before_roar, music_on_roar])
+	check(await matt_card_flash(), "the lines hand over to the card")
+	var watched := matt_snapshot()
+	log_p("watched, at the card's flash: %s" % [watched])
+	check(watched.matt == sm.HOME and watched.anim == &"idle" and not watched.flip and watched.hud and not watched.gates_open
+		and watched.talking and watched.player_sm and watched.music and watched.music_starts == 1 and watched.hazards == 0
+		and not watched.balloon and not watched.doll and watched.intro_fx == 0 and watched.seen and watched.zoom == 1.0
+		and watched.time_scale == 1.0 and not watched.crowd_cheering, "and the ring is set the way the plan says")
+	card.skip()
+	await wait_until(func(): return not card.is_playing(), 60)
+	card.grace_until_msec = 0
+	check(await wait_until(func(): return sm.current_state != intro, 180), "and the fight starts behind it")
+
+	for where in ["walk", "line", "roar"]:
+		log_p("-- held at mid-%s" % where)
+		await enter_fight(scene, true)
+		boss = current_scene.get_node(MATT_BODY)
+		sm = boss.state_machine
+		intro = entrance_state()
+		card = vs_card()
+		await wait_until(func(): return intro.entered, 60)
+		var lines := 0
+		last_line = null
+		for i in 3600:
+			if where == "walk" and intro.home.y - boss.global_position.y > 200.0 and boss.global_position.y > -60.0:
+				break
+			var balloon := live_balloon()
+			if balloon != null and balloon.dialogue_line != null and balloon.dialogue_line != last_line:
+				last_line = balloon.dialogue_line
+				lines += 1
+				if where == "line" and lines == 3:
+					await wait(10)
+					break
+			if where == "roar" and boss.current_anim == &"roar":
+				await wait(20)
+				break
+			if where != "walk" and i % 8 == 0:
+				tap(KEY_ENTER)
+			await physics_frame
+		log_p("holding Escape: anim %s, lines %d" % [boss.current_anim, lines])
+		press(KEY_ESCAPE)
+		var reached := await matt_card_flash(120)
+		var skipped := matt_snapshot()
+		release(KEY_ESCAPE)
+		await wait(4)
+		var diffs := matt_snapshot_diff(skipped, watched)
+		check(reached and diffs.is_empty(), "mid-%s: the card's flash, with the ring exactly as a watched entrance leaves it %s" % [where, diffs])
+		check(not pause_menu().is_open() and not paused, "mid-%s: and the pause screen never opened" % where)
+
+	log_p("-- a tapped Escape pauses it")
+	await enter_fight(scene, true)
+	boss = current_scene.get_node(MATT_BODY)
+	sm = boss.state_machine
+	intro = entrance_state()
+	await wait_until(func(): return intro.entered, 60)
+	await wait(30)
+	var pause: Node = pause_menu()
+	await tap_pause()
+	check(pause.is_open() and paused, "a tap opened the pause screen rather than skipping")
+	var held_at: Vector2 = player.global_position
+	await wait(40)
+	check(player.global_position.is_equal_approx(held_at), "and the walk-in stopped dead with the fight")
+	await tap_pause()
+	await wait(20)
+	check(not paused and not player.global_position.is_equal_approx(held_at), "the resume carries it on")
+	# Skipped to its end, which is what marks it seen for the run.
+	press(KEY_ESCAPE)
+	await matt_card_flash(120)
+	release(KEY_ESCAPE)
+	card = vs_card()
+	card.skip()
+	await wait_until(func(): return not card.is_playing(), 60)
+	card.grace_until_msec = 0
+
+	log_p("-- the retry: no walk-in, the lines and their beats again, and a hold still skips them")
+	change_scene_to_file(scene)
+	while current_scene == null or current_scene.scene_file_path != scene:
+		await process_frame
+	await wait(6)
+	player = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
+	boss = current_scene.get_node(MATT_BODY)
+	sm = boss.state_machine
+	intro = entrance_state()
+	gates = current_scene.get_node("Arena/Gates")
+	card = vs_card()
+	check(intro.finished and not gates.is_open(), "the entrance is over on arrival and the ring was never opened")
+	check(await wait_until(func(): return live_balloon() != null, 120), "his lines start straight away")
+	for i in 3600:
+		if card.is_playing():
+			break
+		if i % 8 == 0:
+			tap(KEY_ENTER)
+		await physics_frame
+	check(intro.beat_times.has(&"composes_himself") and intro.beat_times.has(&"roars"), "the beats played again (%s)" % [intro.beat_times.keys()])
+	card.skip()
+	await wait_until(func(): return not card.is_playing(), 60)
+	card.grace_until_msec = 0
+	change_scene_to_file(scene)
+	while current_scene == null or current_scene.scene_file_path != scene:
+		await process_frame
+	await wait(6)
+	player = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
+	boss = current_scene.get_node(MATT_BODY)
+	sm = boss.state_machine
+	intro = entrance_state()
+	card = vs_card()
+	for i in 3600:
+		if intro.beat_running and boss.current_anim == &"talk" and boss.talk_pose == &"snap":
+			break
+		if i % 8 == 0:
+			tap(KEY_ENTER)
+		await physics_frame
+	log_p("holding Escape in the compose beat")
+	press(KEY_ESCAPE)
+	var reached := await matt_card_flash(120)
+	var retried := matt_snapshot()
+	release(KEY_ESCAPE)
+	var retry_diffs := matt_snapshot_diff(retried, watched)
+	check(reached and retry_diffs.is_empty(), "a hold in a replayed beat lands on the card's flash with the same ring %s" % [retry_diffs])
+
+
+# ---- the bots
+
+# The circle walker is a random-movement density bound, not the skill path: it never guards, dashes or
+# reads a tell, so all it measures is how thick the ring gets with everything he throws. It walks every
+# circle and seed his tuning was measured on, and the bound is on all of their cycles together. The
+# fairness guarantee is the parry bot's 0.
+const MATT_CIRCLES := [[Vector2(960, 700), 260.0], [Vector2(960, 620), 300.0], [Vector2(960, 540), 380.0]]
+const MATT_CIRCLE_SEEDS := [MATT_SEED, 1, 2]
+const MATT_CIRCLE_MEAN := 2.5
+const MATT_CIRCLE_WORST := 4
+
+
+func test_matt_bots() -> void:
+	if tier == "circle":
+		await test_matt_circle()
+		return
+	await load_matt()
+	var run := await matt_two_cycles({"spot": SMOKE_SPOTS["matt"], "parry": tier == "parry"})
+	if tier == "parry" and matt_bot.held:
+		release(KEY_SHIFT)
+	var hits: Array = run.hits
+	log_p("%s: %d hits over two cycles, %s a cycle (%s); %d parried, %d blocked, %d presses; cycles started at %s" % [tier, hits.size(), run.per_cycle, hits.map(func(e): return e.id), parries.size(), events_of("BLOCKED").size(), matt_bot.presses, run.starts])
+	check(run.ended, "two whole cycles ran")
+	match tier:
+		"still":
+			check(run.per_cycle[0] >= 6, "standing still is hit about 7 times a cycle, so it dies in the first (%d)" % run.per_cycle[0])
+		"parry":
+			check(hits.is_empty(), "a player who parries everything is never hit (%d)" % hits.size())
+
+
+func test_matt_circle() -> void:
+	var cycles := []
+	var all_ended := true
+	for circle in MATT_CIRCLES:
+		for seed_value in MATT_CIRCLE_SEEDS:
+			await load_matt()
+			sm.rng.seed = seed_value
+			var run := await matt_two_cycles({"centre": circle[0], "radius": circle[1]})
+			all_ended = all_ended and run.ended
+			cycles.append_array(run.per_cycle)
+			log_p("circle round %s r%.0f, seed %d: %s a cycle (%s)" % [circle[0], circle[1], seed_value, run.per_cycle, run.hits.map(func(e): return e.id)])
+	var total := 0
+	for c in cycles:
+		total += c
+	var mean := float(total) / maxf(cycles.size(), 1.0)
+	var worst: int = cycles.max()
+	log_p("circle: %d cycles, mean %.2f hits a cycle, worst %d" % [cycles.size(), mean, worst])
+	check(all_ended and cycles.size() == MATT_CIRCLES.size() * MATT_CIRCLE_SEEDS.size() * 2, "two whole cycles ran on every circle and seed")
+	check(mean <= MATT_CIRCLE_MEAN, "walking a circle is hit at most %.1f times a cycle on average (%.2f)" % [MATT_CIRCLE_MEAN, mean])
+	check(worst <= MATT_CIRCLE_WORST, "and no cycle more than %d times (%d)" % [MATT_CIRCLE_WORST, worst])
+
+
+# Two whole cycles below a third of his health, from the top of one, with the player put each step on
+# `walk.spot` (pressing like the parry bot if `walk.parry`) or round the circle `walk.centre`/`walk.radius`
+# at walking speed: the hits a cycle and where the cycles started. His gauge is held: a parry bot reads
+# a whole cycle, and a Break would cut the two cycles being measured.
+func matt_two_cycles(walk: Dictionary) -> Dictionary:
+	hold_break_gauge(boss)
+	player.playerHealth = 1000
+	track()
+	track_parries()
+	await settle_player(SMOKE_SPOTS["matt"])
+	boss.boss_health = int(boss.max_health * 0.3)
+	var cycle_starts := []
+	var walk_speed: float = load("res://Scripts/PlayerScript.gd").SPEED
+	var t0: float = defense.clock
+	var last_state := ""
+	var ended := false
+	sm.start_cycle()
+	cycle_starts.append(defense.clock)
+	while defense.clock - t0 < 60.0:
+		var t: float = defense.clock - t0
+		if walk.has("radius"):
+			player.global_position = walk.centre + Vector2.from_angle(t * walk_speed / walk.radius) * walk.radius
+		else:
+			player.global_position = walk.spot
+			if walk.get("parry", false):
+				matt_parry_step()
+		player.velocity = Vector2.ZERO
+		var state: String = sm.current_state.name
+		if state != last_state:
+			if state == "MysticVolley" and last_state != "":
+				cycle_starts.append(defense.clock)
+			if last_state == "Recover" and cycle_starts.size() >= 2:
+				ended = true
+			last_state = state
+		if ended:
+			break
+		await physics_frame
+	var hits := events_of("HIT")
+	var per_cycle := [0, 0]
+	for e in hits:
+		per_cycle[1 if cycle_starts.size() >= 2 and e.t >= cycle_starts[1] else 0] += 1
+	return {"ended": ended, "per_cycle": per_cycle, "hits": hits, "starts": cycle_starts.map(func(c): return snappedf(c - t0, 0.01))}
+
+
+# ---- the Glass Row (Attack 2)
+
+const ARROW_KEYS := {&"up": KEY_UP, &"down": KEY_DOWN, &"left": KEY_LEFT, &"right": KEY_RIGHT}
+
+
+# A Glass Row from wherever the fight stands: `booms` of them in `sets` (phase two's stomps between them),
+# with the Deafening Yell or not.
+func glass_row(booms: int, deafen := false, sets := 1) -> Node:
+	var glass: Node = sm.states["GlassRow"]
+	for hazard in get_nodes_in_group(sm.HAZARD_GROUP):
+		hazard.queue_free()
+	sm.cycle_booms = booms
+	sm.cycle_deafen = deafen
+	sm.cycle_sets = sets
+	sm.on_child_transition(sm.current_state, "GlassRow")
+	return glass
+
+
+# A direction other than `arrow`, for a wrong answer.
+func glass_wrong(arrow: StringName) -> StringName:
+	return &"left" if arrow != &"left" else &"up"
+
+
+# Where the player's hurtbox centre stands in row k: what a boom has to reach.
+func glass_row_centre(k: int) -> Vector2:
+	var reach: Vector2 = matt_centre() - player.global_position
+	return sm.row_body_point(k) + reach
+
+
+# What a boom's arrow-to-impact window should be with the player in row k.
+func glass_window(k: int, dizzy := false) -> float:
+	var charged: float = boss.mouth_point(&"roar").y + sm.boom_spawn_drop + sm.boom_charge_drift
+	var charge: float = sm.boom_charge_wobble if dizzy else sm.boom_charge
+	return charge + (glass_row_centre(k).y - charged) / sm.boom_speed
+
+
+# A measured window against glass_window(): the charge and the flight each end on a whole frame, so it
+# runs up to two frames over the formula, and never under it.
+func glass_window_ok(measured: float, k: int, dizzy := false) -> bool:
+	var over := measured - glass_window(k, dizzy)
+	return over >= -0.001 and over <= 2.0 / 60.0 + 0.001
+
+
+# What a Glass Row may leave behind once it is over: nothing.
+func matt_glass_leftovers() -> Array:
+	var left := []
+	if player.is_action_locked:
+		left.append("locked")
+	if player.is_posed():
+		left.append("posed")
+	if player.scripted_pose:
+		left.append("scripted pose")
+	if player.facing_point != Vector2.INF:
+		left.append("facing point")
+	var hazards := get_nodes_in_group(sm.HAZARD_GROUP).filter(func(h): return not h.is_queued_for_deletion())
+	if not hazards.is_empty():
+		left.append("hazards %s" % [hazards.map(func(h): return str(h.name))])
+	if boss.wobble_amount() > 0.0:
+		left.append("wobble %.2f" % boss.wobble_amount())
+	if not sm.states["GlassRow"].released:
+		left.append("not released")
+	return left
+
+
+func test_matt_glass_row() -> void:
+	await load_matt()
+	player.playerHealth = 1000
+	track()
+	var catalog: GDScript = load("res://Scripts/AttackCatalog.gd")
+	var hype: Node = player.get_node("Hype")
+
+	log_p("-- the catalogue and the floor plan")
+	var glass_attack: Dictionary = catalog.get_attack(&"matt_glass")
+	check(glass_attack.damage == 2 and glass_attack.bypass_invincibility and not glass_attack.blockable and not glass_attack.parryable
+		and not glass_attack.tell and not glass_attack.dodge_tell and not glass_attack.dash_through and not glass_attack.grab,
+		"matt_glass: a whole heart inside the i-frames, and nothing answers it")
+	var bodies := []
+	for k in 4:
+		bodies.append(sm.row_body_point(k))
+	check(bodies == [Vector2(960, 436), Vector2(960, 526), Vector2(960, 616), Vector2(960, 706)], "rows F to C put the player at %s" % [bodies])
+	check(sm.glass_band() == Rect2(113, 787, 1692, 180) and sm.fails_to_glass() == 4, "the glass is B and A rope to rope (%s), four fails away" % sm.glass_band())
+	var tiers := []
+	for share in [1.0, 0.5, 0.2]:
+		boss.boss_health = int(boss.max_health * share)
+		var pinned: Array[String] = ["GlassRow"]
+		sm.attack_rotation = pinned
+		sm.last_attack = ""
+		sm.start_cycle()
+		tiers.append(sm.cycle_booms)
+		sm.on_child_transition(sm.current_state, "Idle")
+		sm.beat_timer.stop()
+		await wait(2)
+	boss.boss_health = boss.max_health
+	check(tiers == Array(sm.boom_counts_by_tier), "booms by tier: %s" % [tiers])
+	var rolled: Array = sm.states["GlassRow"]._roll_arrows(3000)
+	var triples := 0
+	var counts := {}
+	for i in rolled.size():
+		counts[rolled[i]] = counts.get(rolled[i], 0) + 1
+		if i >= 2 and rolled[i] == rolled[i - 1] and rolled[i] == rolled[i - 2]:
+			triples += 1
+	check(triples == 0 and counts.size() == 4 and counts.values().all(func(c): return c > 600), "3000 arrows: never three alike in a row, all four about as often (%s)" % [counts])
+
+	log_p("-- DirectionPress")
+	var direction_press: GDScript = load("res://Scripts/DirectionPress.gd")
+	var dp = direction_press.new()
+	var keys_read := []
+	for code in [KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT]:
+		keys_read.append(dp.read(key(code, true)))
+	var echo := key(KEY_UP, true)
+	echo.echo = true
+	var pad := InputEventJoypadButton.new()
+	pad.button_index = JOY_BUTTON_DPAD_LEFT
+	pad.pressed = true
+	check(keys_read == [&"up", &"right", &"down", &"left"] and dp.read(key(KEY_UP, false)) == &"" and dp.read(echo) == &""
+		and dp.read(pad) == &"left", "the arrows and the D-pad through the move actions, never a release or an echo")
+	var stick = direction_press.new()
+	var flicks := []
+	for at in [Vector2(0.2, 0.0), Vector2(0.45, 0.1), Vector2(0.7, 0.1), Vector2(0.95, 0.2), Vector2(0.35, 0.0), Vector2(0.1, 0.1),
+			Vector2(0.6, 0.55), Vector2(0.2, 0.9), Vector2(0.0, 0.0), Vector2(-0.1, -0.8)]:
+		for axis in [JOY_AXIS_LEFT_X, JOY_AXIS_LEFT_Y]:
+			var motion := InputEventJoypadMotion.new()
+			motion.axis = axis
+			motion.axis_value = at.x if axis == JOY_AXIS_LEFT_X else at.y
+			stick.read(motion)
+		flicks.append(stick.poll())
+	check(flicks == [&"", &"", &"right", &"", &"", &"", &"", &"down", &"", &"up"],
+		"the stick: once past 0.5, not again until it is back under 0.3, and no call on a diagonal (%s)" % [flicks])
+
+	log_p("-- a Glass Row: right, wrong, none, right then wrong, a press between booms then right")
+	await settle_player(Vector2(700, 800))
+	var hype_before: float = hype.hype
+	var glass := glass_row(5)
+	var seen := {"tell_locked": false, "slam_locked": false, "drag_end": Vector2.INF, "posed": false, "facing": -1,
+		"whole": -1, "landings_inside": true, "rects": [], "winded_free": false, "recover": {}}
+	var hint_spec: Dictionary = load("res://Scripts/MattArtLayout.gd").GLASS_HINT
+	var hint_seen := {"up": false, "followed": true, "weakest": 1.0, "gone": {}}
+	var pressed := {}
+	var last_beat := -1
+	while true:
+		await physics_frame
+		if sm.current_state != glass:
+			seen.recover = {"state": sm.current_state.name, "at": boss.global_position, "timer": snappedf(sm.recover_timer.time_left, 0.01)}
+			break
+		var beat_name: String = glass.Beat.keys()[glass.beat]
+		var entered: bool = glass.beat != last_beat
+		last_beat = glass.beat
+		if is_instance_valid(glass.hint):
+			hint_seen.up = true
+			if glass.hint.global_position != (player.global_position + hint_spec.offset).round():
+				hint_seen.followed = false
+			if glass.state_clock - glass.hint_shown_at > hint_spec.fade + 0.05:
+				hint_seen.weakest = minf(hint_seen.weakest, glass.hint.modulate.a)
+		elif hint_seen.up and hint_seen.gone.is_empty():
+			hint_seen.gone = {"landed": glass.outcomes.size(), "up_for": snappedf(glass.state_clock - glass.hint_shown_at, 0.001)}
+		match beat_name:
+			"TELL":
+				seen.tell_locked = seen.tell_locked or player.is_action_locked
+			"ROOT":
+				if entered:
+					seen.slam_locked = player.is_action_locked and player.lock_seals_guard
+			"FURY":
+				if entered:
+					seen.drag_end = player.global_position
+					seen.posed = player.is_posed()
+					seen.facing = player.facing
+			"BOOMS":
+				if entered:
+					seen.whole = glass.glass_floor.revealed_count()
+					seen.rects = glass.glass_floor.segment_rects()
+					for land in glass.glass_floor.landings:
+						if not sm.glass_band().has_point(land):
+							seen.landings_inside = false
+				var i: int = glass.boom_index
+				if glass.boom != null and not pressed.has(i) and glass.state_clock - glass.birth_clock >= 0.2:
+					pressed[i] = true
+					var arrow: StringName = glass.arrows[i]
+					match i:
+						0, 4:
+							tap(ARROW_KEYS[arrow])
+						1:
+							tap(ARROW_KEYS[glass_wrong(arrow)])
+						3:
+							tap(ARROW_KEYS[arrow])
+							await physics_frame
+							tap(ARROW_KEYS[glass_wrong(arrow)])
+				if glass.boom_phase == glass.BoomPhase.GAP and i == 3 and not pressed.has("gap"):
+					pressed["gap"] = true
+					tap(ARROW_KEYS[glass_wrong(glass.arrows[4])])
+			"WINDED":
+				if entered:
+					seen.winded_free = not player.is_action_locked and not player.is_posed()
+	log_p("arrows %s, outcomes %s, windows %s, fails %d, row %d; %s" % [glass.arrows, glass.outcomes, glass.windows.map(func(w): return snappedf(w, 0.001)), glass.fails, glass.row, seen])
+	log_p("the hint: %s" % [hint_seen])
+	var gone: Dictionary = hint_seen.gone
+	var hint_on_time: bool = not gone.is_empty() and gone.landed >= hint_spec.booms and gone.up_for >= hint_spec.min_time \
+		and (gone.landed == hint_spec.booms or gone.up_for <= hint_spec.min_time + 1.0 / 60.0 + 0.001)
+	check(hint_on_time, "the fight's first hint stays up until %d booms have landed and %.1f s have passed, whichever is later (%s)" % [hint_spec.booms, hint_spec.min_time, gone])
+	check(hint_seen.followed and is_equal_approx(hint_seen.weakest, 1.0), "at full strength, and on the player as the fails knock them down")
+	check(not seen.tell_locked and seen.slam_locked, "the player is free through the tell and sealed on the slam's step")
+	check(seen.drag_end.distance_to(sm.row_body_point(0)) <= 0.5 and seen.posed and seen.facing == player.Facing.UP,
+		"dragged to row F %s, posed and facing him" % seen.drag_end)
+	var union := Rect2()
+	var widths := 0.0
+	for r in seen.rects:
+		union = r if union.size == Vector2.ZERO else union.merge(r)
+		widths += r.size.x
+	check(seen.rects.size() == sm.glass_segments and union == sm.glass_band() and is_equal_approx(widths, sm.glass_band().size.x),
+		"%d segments exactly covering the band" % seen.rects.size())
+	check(seen.landings_inside and seen.whole == sm.glass_segments, "every shard inside it, and all of it glass by the first boom")
+	check(Array(glass.outcomes) == [&"answered", &"cracked", &"missed", &"answered", &"answered"],
+		"right answers, a wrong one cracks, none misses, the first press decides and a press between booms does nothing (%s)" % [glass.outcomes])
+	var rows_at := [0, 0, 1, 2, 2]
+	var windows_ok: bool = glass.windows.size() == 5
+	for i in mini(glass.windows.size(), 5):
+		if not glass_window_ok(glass.windows[i], rows_at[i]):
+			windows_ok = false
+	check(windows_ok, "every window its row's, to the frames it ends on (F %.3f, E %.3f, D %.3f)" % [glass_window(0), glass_window(1), glass_window(2)])
+	check(seen.winded_free, "let go as he is winded")
+	check(seen.recover.get("state") == "Recover" and seen.recover.at == sm.GLASS_ROW.station and absf(seen.recover.timer - sm.recover_time) <= 2.0 / 60.0 + 0.01,
+		"the window opens where he stands, %.1f s with two fails (%s)" % [sm.recover_time, seen.recover])
+	check(is_equal_approx(hype.hype - hype_before, sm.boom_hype_each * 3.0), "hype for the three right answers and nothing else (%.1f)" % (hype.hype - hype_before))
+
+	log_p("-- a clean one")
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	await wait(2)
+	await settle_player(Vector2(1200, 700))
+	hype_before = hype.hype
+	glass = glass_row(5)
+	pressed.clear()
+	var clean := {}
+	while true:
+		await physics_frame
+		if sm.current_state != glass:
+			clean = {"state": sm.current_state.name, "timer": snappedf(sm.recover_timer.time_left, 0.01)}
+			break
+		if glass.beat == glass.Beat.BOOMS and glass.boom != null and not pressed.has(glass.boom_index):
+			pressed[glass.boom_index] = true
+			tap(ARROW_KEYS[glass.arrows[glass.boom_index]])
+	log_p("outcomes %s; %s; hype +%.1f" % [glass.outcomes, clean, hype.hype - hype_before])
+	check(glass.outcomes.all(func(o): return o == &"answered") and clean.get("state") == "Recover"
+		and absf(clean.timer - sm.recover_time - sm.glass_clean_bonus) <= 2.0 / 60.0 + 0.01, "all answered: %.1f s more in the window" % sm.glass_clean_bonus)
+	check(is_equal_approx(hype.hype - hype_before, sm.boom_hype_each * 5.0 + sm.boom_hype_clean), "and the clean run's hype on top")
+	check(glass.glass_top == int(sm.GLASS_ROW.glass_rows[0]) and glass.shoves == 0, "no stomp in phase one's row: the glass stays B and A")
+	await matt_glass_phase_two()
+
+
+# Phase two's Glass Row (G11): the sets locked at the cycle's top, then a row of fifteen, every boom
+# answered, with a stomp after the fifth and the tenth each laying one more row of glass, its shards'
+# shadows first.
+func matt_glass_phase_two() -> void:
+	log_p("-- phase two: five booms, a stomp and one more row of glass, twice, then five")
+	var pinned: Array[String] = ["GlassRow"]
+	sm.attack_rotation = pinned
+	var locked := []
+	for share in [1.0, 0.45]:
+		boss.boss_health = int(boss.max_health * share)
+		sm.last_attack = ""
+		sm.start_cycle()
+		locked.append(sm.cycle_sets)
+		sm.on_child_transition(sm.current_state, "Idle")
+		sm.beat_timer.stop()
+		await wait(2)
+	boss.boss_health = boss.max_health
+	check(locked == [1, sm.phase_two_boom_sets], "locked at the cycle's top: one set above half his health, %d below (%s)" % [sm.phase_two_boom_sets, locked])
+	await settle_player(Vector2(700, 800))
+	var row := glass_row(15, false, sm.phase_two_boom_sets)
+	var pressed := {}
+	var stomps := []
+	var stomp := {}
+	var boom_in_stomp := false
+	while sm.current_state == row:
+		await physics_frame
+		if row.beat != row.Beat.BOOMS:
+			continue
+		if row.boom != null and not pressed.has(row.boom_index):
+			pressed[row.boom_index] = true
+			tap(ARROW_KEYS[row.arrows[row.boom_index]])
+		var ground: Node = row.glass_floor
+		if row.boom_phase == row.BoomPhase.STOMP:
+			if stomp.is_empty():
+				stomp = {"after": row.outcomes.size(), "start": row.state_clock, "top_before": row.glass_top, "slam": -1.0,
+					"landings": ground.landings.size(), "first_land": -1.0}
+			if row.stomp_slammed and stomp.slam < 0.0:
+				stomp.slam = row.state_clock
+				stomp["top_after"] = row.glass_top
+			if stomp.slam >= 0.0 and stomp.first_land < 0.0 and ground.landings.size() > stomp.landings:
+				stomp.first_land = row.state_clock
+			boom_in_stomp = boom_in_stomp or row.boom != null
+		elif not stomp.is_empty():
+			var band: Rect2 = sm.row_band(stomp.top_after)
+			stomp["took"] = snappedf(row.state_clock - stomp.start, 0.001)
+			stomp["shadows_for"] = snappedf(stomp.first_land - stomp.slam, 0.001)
+			stomp["landed"] = ground.landings.slice(stomp.landings).filter(func(p): return band.has_point(p)).size()
+			stomp["whole"] = ground.revealed_count() == ground.segment_rects().size()
+			stomps.append(stomp)
+			stomp = {}
+	log_p("outcomes %s, glass from row %d, shoves %d; stomps %s" % [row.outcomes, row.glass_top, row.shoves, stomps])
+	var per_row: int = sm.glass_segments * sm.glass_spread_shards_per_segment
+	check(row.outcomes.size() == 15 and row.outcomes.all(func(o): return o == &"answered") and not boom_in_stomp,
+		"fifteen booms, every one answered, and none of them live through a stomp")
+	check(stomps.map(func(s): return s.after) == [5, 10], "a stomp after the fifth and after the tenth")
+	check(stomps.size() == 2 and stomps.map(func(s): return [s.top_before, s.top_after]) == [[4, 3], [3, 2]] and row.glass_top == 2,
+		"each lays one more row toward the player: B-A, then C-A, then D-A")
+	check(stomps.size() == 2 and stomps.all(func(s): return s.took >= 0.8 and s.took <= 1.0), "each about %.2f s long" % (sm.glass_spread_tell + sm.glass_spread_time))
+	check(stomps.size() == 2 and stomps.all(func(s): return s.landed == per_row and s.shadows_for >= sm.glass_shard_fall - 1.0 / 60.0 and s.whole),
+		"its %d shards land on the new row after %.2f s of their shadows, and the row is whole before the next boom" % [per_row, sm.glass_shard_fall])
+	check(row.shoves == 0 and row.row == 0, "a player on row F is never in the way")
+
+
+func test_matt_glass_damage() -> void:
+	await load_matt()
+	track()
+	var glass: Node = sm.states["GlassRow"]
+
+	log_p("-- no presses at 6 health")
+	player.playerHealth = 6
+	player.healthUI.update_health(6)
+	await settle_player(Vector2(700, 800))
+	glass_row(5)
+	var gaps := []
+	var at_winded := {}
+	var last_phase := -1
+	while sm.current_state == glass:
+		await physics_frame
+		if glass.beat == glass.Beat.BOOMS and glass.boom_phase != last_phase:
+			last_phase = glass.boom_phase
+			if glass.boom_phase == glass.BoomPhase.GAP:
+				gaps.append(player.global_position)
+		if glass.beat == glass.Beat.WINDED and at_winded.is_empty():
+			at_winded = {"at": player.global_position, "locked": player.is_action_locked, "posed": player.is_posed()}
+	var glass_hits := events_of("HIT", &"matt_glass")
+	log_p("outcomes %s, windows %d, player at each gap %s, at winded %s, glass hits %s, health %d" % [glass.outcomes, glass.windows.size(), gaps, at_winded, glass_hits.map(func(e): return e.health), player.playerHealth])
+	check(Array(glass.outcomes) == [&"missed", &"missed", &"missed", &"missed"] and glass.windows.size() == 4, "four booms missed, and no fifth")
+	check(gaps == [sm.row_body_point(1), sm.row_body_point(2), sm.row_body_point(3)], "knocked to rows E, D and C, a row a fail")
+	check(glass.glass_hit and glass_hits.size() == 1 and player.playerHealth == 4, "then into the glass: one hit, a whole heart")
+	check(at_winded.get("at") == sm.row_body_point(3), "bounced back to row C (%s)" % at_winded.get("at"))
+	check(at_winded.get("locked") == false and at_winded.get("posed") == false, "and let go as he is winded")
+	await wait(40)
+	check(matt_glass_leftovers().is_empty(), "nothing left behind %s" % [matt_glass_leftovers()])
+
+	log_p("-- inside the i-frames")
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	player.playerHealth = 6
+	player.healthUI.update_health(6)
+	await settle_player(Vector2(700, 800))
+	glass_row(5)
+	var made_invincible := false
+	while sm.current_state == glass:
+		await physics_frame
+		if not made_invincible and glass.beat == glass.Beat.BOOMS and glass.boom_phase == glass.BoomPhase.KNOCK and glass.fails == sm.fails_to_glass():
+			made_invincible = true
+			player.is_invincible = true
+			player.invincibility_timer.start()
+	check(made_invincible and player.playerHealth == 4, "the glass lands inside the i-frames too (health %d)" % player.playerHealth)
+
+	log_p("-- phase two: the glass grows a row a stomp, and never under the player")
+	var sets: int = sm.phase_two_boom_sets
+	var answer_from := func(first: int) -> Callable:
+		return func(i: int, arrow: StringName) -> Dictionary: return {} if i < first else {"at": 0.05, "key": ARROW_KEYS[arrow]}
+	var answer_until := func(last: int) -> Callable:
+		return func(i: int, arrow: StringName) -> Dictionary: return {"at": 0.05, "key": ARROW_KEYS[arrow]} if i < last else {}
+	await glass_bot_reset()
+	var glass_hits_before := events_of("HIT", &"matt_glass").size()
+	var shoved := await glass_bot_row(15, false, answer_from.call(3), sets)
+	log_p("three missed, then every one answered: %s" % [shoved])
+	check(shoved.fails == 3 and shoved.shoves == 2 and shoved.row == 1 and not shoved.glass and shoved.damage == 0
+		and events_of("HIT", &"matt_glass").size() == glass_hits_before, "three missed leave them on row C, which the first stomp turns to glass: shoved to D, then to E by the second, unhurt")
+	await glass_bot_reset()
+	var third := await glass_bot_row(15, false, answer_until.call(5), sets)
+	log_p("the first set answered, then none: %s" % [third])
+	check(third.glass and third.fails == 3 and third.booms == 8 and third.damage == 2 and third.row == 2,
+		"after one stomp the third miss from row F is the glass: a whole heart, back to D, and the barrage ends")
+	await glass_bot_reset()
+	var second := await glass_bot_row(15, false, answer_until.call(10), sets)
+	log_p("two sets answered, then none: %s" % [second])
+	check(second.glass and second.fails == 2 and second.booms == 12 and second.damage == 2 and second.row == 1,
+		"after two the second is: a whole heart, back to E")
+
+	log_p("-- lethal at 2 health")
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	player.is_invincible = false
+	player.invincibility_timer.stop()
+	player.playerHealth = 2
+	player.healthUI.update_health(2)
+	await settle_player(Vector2(700, 800))
+	glass_row(5)
+	var ended := await wait_until(func(): return sm.player_defeated, 60 * 20)
+	await wait(10)
+	var left := matt_glass_leftovers()
+	log_p("fight over %s, state %s, health %d, left %s" % [ended, sm.current_state.name, player.playerHealth, left])
+	check(ended and player.playerHealth == 0 and sm.current_state.name == "Victory", "the glass can end the fight")
+	check(left.is_empty() and glass.stopped, "and leaves nothing held or live %s" % [left])
+
+
+func test_matt_glass_release() -> void:
+	await load_matt()
+	player.playerHealth = 1000
+	var glass: Node = sm.states["GlassRow"]
+	var ends := [
+		["the tell", func(): return glass.beat == glass.Beat.TELL and glass.beat_clock > 0.2],
+		["just after the slam", func(): return glass.beat == glass.Beat.ROOT],
+		["mid-drag", func(): return glass.beat == glass.Beat.DRAG and glass.beat_clock > 0.12],
+		["mid-fury", func(): return glass.beat == glass.Beat.FURY and glass.beat_clock > 0.7],
+		["mid-charge", func(): return glass.beat == glass.Beat.BOOMS and glass.boom_phase == glass.BoomPhase.CHARGE and glass.boom_clock > 0.3],
+		["mid-knock", func(): return glass.beat == glass.Beat.BOOMS and glass.boom_phase == glass.BoomPhase.KNOCK],
+	]
+	log_p("-- ended early, anywhere")
+	for end in ends:
+		await settle_player(Vector2(700, 800))
+		glass_row(5)
+		var reached := await wait_until(end[1], 60 * 12)
+		sm.on_child_transition(glass, "Idle")
+		sm.beat_timer.stop()
+		await wait(2)
+		var left := matt_glass_leftovers()
+		check(reached and left.is_empty(), "ended at %s: all of it let go %s" % [end[0], left])
+
+	log_p("-- paused mid-charge")
+	await settle_player(Vector2(700, 800))
+	glass_row(5)
+	await wait_until(func(): return glass.beat == glass.Beat.BOOMS and glass.boom_phase == glass.BoomPhase.CHARGE and glass.boom_clock > 0.2, 60 * 12)
+	var held := {"clock": glass.boom_clock, "at": glass.boom.global_position}
+	paused = true
+	await wait(45)
+	var during := {"clock": glass.boom_clock, "at": glass.boom.global_position}
+	paused = false
+	var finished := await wait_until(func(): return sm.current_state != glass, 60 * 20)
+	check(held == during and finished, "a pause holds the boom where it is, and the row still ends (%s, %s)" % [held, during])
+
+	log_p("-- the scene changed mid-booms")
+	await settle_player(Vector2(700, 800))
+	glass_row(5)
+	await wait_until(func(): return glass.beat == glass.Beat.BOOMS and glass.boom != null, 60 * 12)
+	await load_matt()
+	player.playerHealth = 1000
+	await wait(5)
+	var fresh := []
+	if player.is_action_locked:
+		fresh.append("locked")
+	if player.is_posed():
+		fresh.append("posed")
+	check(fresh.is_empty() and get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), "the next fight starts clean %s" % [fresh])
+
+
+# ---- the Deafening Yell (Attack 3: phase two's Glass Row)
+
+# A phase-two Glass Row, in phase two's sets, mashed at `rate` presses a second (0 for none), every boom
+# answered right 0.3 s after its birth, inside even the plain pace's shortest window, to its end: what the
+# yell, the booms and the stomps did.
+func deafen_row(rate: float) -> Dictionary:
+	var glass := glass_row(sm.boom_counts_by_tier[sm.tier()], true, sm.phase_two_boom_sets)
+	var seen := {"pair": [], "prompt_up": false, "word": "", "meter": -1.0, "passed": false, "dizzy": false,
+		"stars": false, "wobble_first_boom": -1.0, "prompt_gone": false, "windows": [], "outcomes": [], "wobble_after": -1.0,
+		"stars_after": true, "mashed": 0, "stomps": 0, "wobble_in_stomps": 1.0}
+	var next_press := 0.0
+	var mashed := 0
+	var answered := {}
+	while sm.current_state == glass:
+		await physics_frame
+		match glass.Beat.keys()[glass.beat]:
+			"DEAFEN":
+				if seen.pair.is_empty():
+					seen.pair = glass.pair.duplicate()
+				if is_instance_valid(glass.prompt) and glass.prompt.visible:
+					seen.prompt_up = true
+					var word_label: Label = glass.prompt.word_label if glass.prompt.word_label else glass.prompt.text_label
+					if word_label.visible:
+						seen.word = word_label.text
+				if rate > 0.0 and glass.beat_clock >= next_press:
+					next_press = glass.beat_clock + 1.0 / rate
+					tap(MASH_KEYS[glass.pair[mashed % 2]])
+					mashed += 1
+			"BOOMS":
+				if seen.wobble_first_boom < 0.0:
+					seen.meter = glass.meter
+					seen.passed = glass.deafen_passed
+					seen.dizzy = glass.dizzy
+					seen.stars = is_instance_valid(glass.stars)
+					seen.wobble_first_boom = boss.wobble_amount()
+					seen.prompt_gone = not (is_instance_valid(glass.prompt) and glass.prompt.visible)
+				if glass.boom != null and not answered.has(glass.boom_index) and glass.state_clock - glass.birth_clock >= 0.3:
+					answered[glass.boom_index] = true
+					tap(ARROW_KEYS[glass.arrows[glass.boom_index]])
+				if glass.boom_phase == glass.BoomPhase.STOMP:
+					seen.wobble_in_stomps = minf(seen.wobble_in_stomps, boss.wobble_amount())
+	seen.windows = glass.windows.map(func(w): return snappedf(w, 0.001))
+	seen.outcomes = Array(glass.outcomes)
+	seen.stomps = int(sm.GLASS_ROW.glass_rows[0]) - glass.glass_top
+	await wait(roundi((sm.wobble_out + 0.2) * 60.0))
+	seen.wobble_after = boss.wobble_amount()
+	seen.stars_after = is_instance_valid(glass.stars)
+	seen.mashed = mashed
+	return seen
+
+
+func test_matt_deafen() -> void:
+	await load_matt()
+	player.playerHealth = 1000
+	var glass: Node = sm.states["GlassRow"]
+	var rotation: Array[String] = ["MysticVolley", "GlassRow"]
+	sm.attack_rotation = rotation
+	var half := int(boss.max_health * sm.phase_two_ratio)
+
+	log_p("-- when it comes")
+	var cases := [
+		[boss.max_health, 1, false, "MysticVolley", "GlassRow", false, "phase one: a plain Glass Row"],
+		[half - 2, 0, false, "MysticVolley", "GlassRow", false, "phase two, but the fight's first Glass Row: no yell"],
+		[half - 2, 1, false, "GlassRow", "GlassRow", true, "phase two's opener, forced even straight after a Glass Row"],
+		[half - 2, 2, true, "GlassRow", "MysticVolley", false, "then the rotation"],
+		[half - 2, 2, true, "MysticVolley", "GlassRow", true, "and every phase-two Glass Row yells"],
+		[half + 1, 1, false, "MysticVolley", "GlassRow", false, "just over half: no yell"],
+	]
+	for c in cases:
+		boss.boss_health = c[0]
+		sm.glass_rows_done = c[1]
+		sm.deafen_opened = c[2]
+		sm.last_attack = c[3]
+		var plan: Dictionary = sm.plan_next()
+		check(plan.attack == c[4] and plan.deafen == c[5], "%s (%s)" % [c[6], plan])
+	boss.boss_health = half - 2
+	sm.glass_rows_done = 1
+	sm.deafen_opened = false
+	sm.last_attack = "MysticVolley"
+	sm.start_cycle()
+	check(sm.current_state == glass and sm.cycle_deafen and sm.deafen_opened, "starting the opener marks it played")
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	await wait(3)
+
+	log_p("-- the mash")
+	await settle_player(Vector2(700, 800))
+	var pair: Array = player.finisher.mash_actions()
+	var row := glass_row(6, true)
+	await wait_until(func(): return row.beat == row.Beat.DEAFEN and row.beat_clock > 0.1, 60 * 10)
+	var before: float = row.meter
+	tap(MASH_KEYS[pair[0]])
+	tap(MASH_KEYS[pair[1]])
+	await wait(2)
+	var once: float = row.meter - before
+	var one_gain: float = load("res://Scripts/MashCurve.gd").gain(sm.deafen_gain, before)
+	log_p("pair %s; both keys in one flush moved the meter %.4f (one press %.4f)" % [pair, once, one_gain])
+	check(Array(row.pair) == pair, "it mashes on the finisher's own pair")
+	check(once > 0.0 and absf(once - one_gain) <= 0.01, "and both keys at once count once")
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	await wait(3)
+
+	log_p("-- 8 presses a second")
+	await settle_player(Vector2(700, 800))
+	var fast := await deafen_row(8.0)
+	log_p("%s" % [fast])
+	check(fast.prompt_up and fast.word == "RESIST!", "the RESIST! prompt is up through the yell (%s)" % fast.word)
+	check(fast.passed and is_equal_approx(fast.meter, 1.0) and not fast.dizzy and not fast.stars and is_zero_approx(fast.wobble_first_boom),
+		"8 a second mashes through it: no dizzy, no stars, no wobble")
+	check(fast.prompt_gone, "and the prompt is gone by the first boom")
+	var plain_ok: bool = not fast.windows.is_empty() and glass_window_ok(fast.windows[0], 0)
+	check(plain_ok, "its booms charge the usual %.2f s (window %s)" % [sm.boom_charge, fast.windows])
+	check(fast.stomps == sm.phase_two_boom_sets - 1 and fast.outcomes.size() == 15 and fast.outcomes.all(func(o): return o == &"answered"),
+		"in phase two's sets: %d stomps, and all 15 booms answered (%d)" % [sm.phase_two_boom_sets - 1, fast.stomps])
+
+	for rate in [4.0, 0.0]:
+		log_p("-- %d presses a second" % int(rate))
+		sm.on_child_transition(sm.current_state, "Idle")
+		sm.beat_timer.stop()
+		await wait(3)
+		await settle_player(Vector2(700, 800))
+		var slow := await deafen_row(rate)
+		log_p("%s" % [slow])
+		check(not slow.passed and slow.dizzy and slow.stars, "%d a second fails: dizzy, with stars" % int(rate))
+		check(slow.wobble_first_boom >= 0.999, "the wobble at full before the first boom (%.3f)" % slow.wobble_first_boom)
+		var dizzy_ok: bool = not slow.windows.is_empty() and glass_window_ok(slow.windows[0], 0, true)
+		check(dizzy_ok, "every charge %.2f s while dizzy (window %s)" % [sm.boom_charge_wobble, slow.windows])
+		check(slow.stomps == sm.phase_two_boom_sets - 1 and slow.wobble_in_stomps >= 0.999 and slow.outcomes.size() == 15
+			and slow.outcomes.all(func(o): return o == &"answered"), "the wobble full through both stomps, and every boom still answered (%d stomps, %.3f)" % [slow.stomps, slow.wobble_in_stomps])
+		check(is_zero_approx(slow.wobble_after) and not slow.stars_after, "and all of it clears after the barrage (wobble %.3f)" % slow.wobble_after)
+
+	log_p("-- the layers")
+	var layers := {}
+	for layer in root.find_children("*", "CanvasLayer", true, false):
+		layers[str(current_scene.get_path_to(layer))] = layer.layer
+	var wobble: Node2D = boss.wobble
+	log_p("layers %s; the wobble at z %d, relative %s, on %s" % [layers, wobble.z_index, wobble.z_as_relative, wobble.get_canvas_layer_node()])
+	check(wobble.get_canvas_layer_node() == null and wobble.z_index == RenderingServer.CANVAS_ITEM_Z_MAX and not wobble.z_as_relative,
+		"the wobble is the arena's own last draw, over the arena and the booms")
+	check(layers.values().all(func(l): return l >= 1), "so every CanvasLayer draws over it sharp: the fight HUD and the prompt, the VS card, the pause menu")
+
+	log_p("-- the fight ends mid-mash")
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	await wait(3)
+	await settle_player(Vector2(700, 800))
+	row = glass_row(6, true)
+	await wait_until(func(): return row.beat == row.Beat.DEAFEN and row.beat_clock > 0.5, 60 * 10)
+	tap(MASH_KEYS[pair[0]])
+	await wait(2)
+	sm.enter_defeated()
+	await wait(3)
+	var left := matt_glass_leftovers()
+	var prompt_up: bool = is_instance_valid(row.prompt) and row.prompt.visible
+	check(left.is_empty() and not prompt_up and not is_instance_valid(row.stars), "everything let go, the prompt too %s" % [left])
+
+
+# ---- the Glass Row's bots (seeded, the plan's targets)
+
+# A Glass Row run to its end with a bot answering: `plan` is handed each live boom's index and arrow and
+# returns {at, key} - a key pressed `at` seconds after the birth - or {} for none. What it came to.
+func glass_bot_row(booms: int, deafen: bool, plan: Callable, sets := 1) -> Dictionary:
+	var glass := glass_row(booms, deafen, sets)
+	var health_before: int = player.playerHealth
+	var planned := {}
+	var taps := []
+	var wobble_at_taps := []
+	while sm.current_state == glass:
+		await physics_frame
+		if glass.beat != glass.Beat.BOOMS or glass.boom == null:
+			continue
+		var i: int = glass.boom_index
+		if not planned.has(i):
+			planned[i] = plan.call(i, glass.arrows[i])
+		var want: Dictionary = planned[i]
+		if want.is_empty() or want.get("done", false):
+			continue
+		if glass.state_clock - glass.birth_clock >= want.at:
+			want["done"] = true
+			tap(want.key)
+			taps.append(want.key == ARROW_KEYS[glass.arrows[i]])
+			wobble_at_taps.append(boss.wobble_amount())
+	var timer: float = sm.recover_timer.time_left if sm.current_state == sm.states["Recover"] else -1.0
+	return {"outcomes": Array(glass.outcomes), "fails": glass.fails, "glass": glass.glass_hit, "booms": glass.windows.size(),
+		"damage": health_before - player.playerHealth, "timer": snappedf(timer, 0.01), "taps": taps, "wobble_at_taps": wobble_at_taps,
+		"stomps": int(sm.GLASS_ROW.glass_rows[0]) - glass.glass_top, "shoves": glass.shoves, "row": glass.row}
+
+
+func glass_bot_reset() -> void:
+	sm.on_child_transition(sm.current_state, "Idle")
+	sm.beat_timer.stop()
+	sm.recover_timer.stop()
+	player.playerHealth = 6
+	player.healthUI.update_health(6)
+	player.is_invincible = false
+	player.invincibility_timer.stop()
+	await wait(3)
+	await settle_player(Vector2(700, 800))
+
+
+# A person answering the booms: each reaction drawn round MATT_GLASS_REACTION, now and then a slow one, on
+# the fight's seed. Through the phase-two wobble - the waves and the sway - the arrow takes
+# MATT_GLASS_WOBBLE_READ longer to read, an assumption, not a measurement.
+const MATT_GLASS_REACTION := 0.375
+const MATT_GLASS_REACTION_SPREAD := 0.05
+const MATT_GLASS_WOBBLE_READ := 0.10
+const MATT_GLASS_HUMAN_RUNS := 5
+# The pace is meant to be demanding: a run may miss this many and still be a person keeping up.
+const MATT_GLASS_HUMAN_MISSES := 2
+
+
+func test_matt_glass_bots() -> void:
+	await load_matt()
+	await glass_bot_reset()
+	# Each count the tiers use, once.
+	var counts := []
+	for count in sm.boom_counts_by_tier:
+		if not counts.has(count):
+			counts.append(count)
+	var top: int = sm.boom_counts_by_tier[-1]
+	var true_at := func(at: float) -> Callable:
+		return func(_i: int, arrow: StringName) -> Dictionary: return {"at": at, "key": ARROW_KEYS[arrow]}
+	var skip_three := func(at: float) -> Callable:
+		return func(i: int, arrow: StringName) -> Dictionary: return {} if i < 3 else {"at": at, "key": ARROW_KEYS[arrow]}
+	var person := func(bot: RandomNumberGenerator, slower: float) -> Callable:
+		return func(_i: int, arrow: StringName) -> Dictionary:
+			return {"at": maxf(bot.randfn(MATT_GLASS_REACTION, MATT_GLASS_REACTION_SPREAD), 0.25) + slower, "key": ARROW_KEYS[arrow]}
+	match tier:
+		"perfect":
+			for booms in counts:
+				var run := await glass_bot_row(booms, false, true_at.call(1.0 / 60.0))
+				log_p("perfect, %d booms: %s" % [booms, run])
+				check(run.fails == 0 and run.damage == 0 and absf(run.timer - sm.recover_time - sm.glass_clean_bonus) <= 0.05,
+					"%d booms: nothing missed, nothing lost, and the clean run's longer window" % booms)
+				await glass_bot_reset()
+		"human":
+			var bot := RandomNumberGenerator.new()
+			bot.seed = MATT_SEED
+			var misses := []
+			var glassed := 0
+			for n in MATT_GLASS_HUMAN_RUNS:
+				var run := await glass_bot_row(top, false, person.call(bot, 0.0))
+				log_p("human %d, %d booms: %d missed; %s" % [n, top, run.fails, run])
+				misses.append(run.fails)
+				glassed += 1 if run.glass else 0
+				await glass_bot_reset()
+			log_p("human: missed per run %s" % [misses])
+			check(glassed == 0 and misses.all(func(m): return m <= MATT_GLASS_HUMAN_MISSES),
+				"a person reacting in about %.2f s keeps up with %d booms: missed per run %s, never the glass" % [MATT_GLASS_REACTION, top, misses])
+			var from_c := await glass_bot_row(top, false, skip_three.call(MATT_GLASS_REACTION + MATT_GLASS_REACTION_SPREAD))
+			log_p("human from row C: %s" % [from_c])
+			check(from_c.fails == 3 and not from_c.glass, "three missed on purpose, then from row C every one answered: no glass")
+		"random":
+			var bot := RandomNumberGenerator.new()
+			bot.seed = MATT_SEED
+			var glassed := 0
+			var right := 0
+			var pressed := 0
+			for n in 5:
+				var run := await glass_bot_row(top, false, func(_i: int, _arrow: StringName) -> Dictionary:
+					return {"at": 0.30, "key": ARROW_KEYS.values()[bot.randi_range(0, 3)]})
+				log_p("random %d: %s" % [n, run])
+				glassed += 1 if run.glass else 0
+				right += run.taps.count(true)
+				pressed += run.taps.size()
+				await glass_bot_reset()
+			var accuracy := float(right) / maxf(pressed, 1.0)
+			log_p("random: glass in %d of 5, %d of %d right" % [glassed, right, pressed])
+			check(glassed >= 4 and accuracy <= 0.40, "a random press a boom: the glass in %d of 5 top-tier barrages, %.0f%% right" % [glassed, accuracy * 100.0])
+		"none":
+			for booms in counts:
+				var run := await glass_bot_row(booms, false, func(_i: int, _arrow: StringName) -> Dictionary: return {})
+				log_p("none, %d booms: %s" % [booms, run])
+				check(run.glass and run.booms == 4 and run.damage == 2, "%d booms, no presses: the glass on the fourth, one heart, no fifth boom" % booms)
+				await glass_bot_reset()
+		"wobble":
+			# Phase two with the mash failed: the view at full wobble through three sets and their two stomps.
+			# The true arrow a frame after each birth, then a person reading slower through it.
+			var sets: int = sm.phase_two_boom_sets
+			var perfect := await glass_bot_row(top, true, true_at.call(1.0 / 60.0), sets)
+			log_p("wobble, perfect: %s" % [perfect])
+			check(perfect.fails == 0 and perfect.stomps == sets - 1 and not perfect.taps.is_empty() and perfect.wobble_at_taps.all(func(w): return w >= 0.999),
+				"the mash failed, the screen at full wobble: the true arrow a frame after each birth misses none of %d booms through %d stomps" % [top, sets - 1])
+			await glass_bot_reset()
+			var bot := RandomNumberGenerator.new()
+			bot.seed = MATT_SEED
+			var misses := []
+			var glassed := 0
+			for n in MATT_GLASS_HUMAN_RUNS:
+				var run := await glass_bot_row(top, true, person.call(bot, MATT_GLASS_WOBBLE_READ), sets)
+				log_p("wobble, person %d: %d missed, %d shoved, glass %s; %s" % [n, run.fails, run.shoves, run.glass, run])
+				misses.append(run.fails)
+				glassed += 1 if run.glass else 0
+				await glass_bot_reset()
+			log_p("wobble, person: missed per run %s, the glass in %d of %d" % [misses, glassed, MATT_GLASS_HUMAN_RUNS])
+			check(glassed == 0, "a person %.2f s slower to read through it stays out of the glass: missed per run %s" % [MATT_GLASS_WOBBLE_READ, misses])
+			var from_c := await glass_bot_row(top, true, skip_three.call(MATT_GLASS_REACTION + MATT_GLASS_REACTION_SPREAD + MATT_GLASS_WOBBLE_READ), sets)
+			log_p("wobble from row C: %s" % [from_c])
+			check(from_c.fails == 3 and from_c.shoves == 2 and not from_c.glass, "and from row C, shoved clear by both stomps, still no glass")
+
+
+# ---- Captain Burak: his powder kegs
+# On his fight through load_burak_attacks and burak_park, the pistol pair's and the cutlass's own: his order
+# pinned to the kegs, the Laugh already had, and parked between attacks. A keg breaks to one punch, and the
+# five are spread across the ring afresh each volley off his seeded rng.
+#   burak_barrels  the spread's rules over seeds, health and the player's spot, and a new layout each
+#                  volley; the markers, a keg landing on the player, the facing, the one-punch break, the lock
+#                  on the fifth pip, the armed kegs, the clean run
+#   burak_volley   N kegs left gives N HITs, the gauge's drain, the first volley's mercy, the chain stopping
+#   burak_ramp     the dials off his health and the round, locked as the attack starts, and the deadline
+#   burak_bots     tier=walk_full|walk_full_human|walk_cap|walk_cap_human|dash_cap|dash1_cap|dash1_human|
+#                  nopunch|partial, walk_full without one
+
+const BurakArtLayout := preload("res://Scripts/BurakBossArtLayout.gd")
+const BurakFinisherLayout := preload("res://Scripts/FinisherArtLayout.gd")
+# Appendix R: a bot stands the live keg hurtbox's half-width plus this far out from the keg.
+const BURAK_STAND_MARGIN := 30.0
+# A dash on a hop pays when what it leaves to walk, plus the walking its own frames would have covered, is
+# less than the hop: the press's frame, three moving and the five-frame landing.
+const BURAK_DASH_FRAMES := 9
+# A human-paced bot's reaction: before each hop, from the attack's start and from the end of each punch,
+# and before punching a keg that lands in front of it.
+const BURAK_REACTION := 0.22
+# Where each tier plays: the fight's rng seeded afresh, and the player's feet as the attack starts - below
+# him, beside him, and out to each side.
+const BURAK_BOT_SEEDS := [11, 22, 33]
+const BURAK_BOT_STARTS := [Vector2(960, 860), Vector2(1120, 620), Vector2(420, 700), Vector2(1500, 780)]
+# dash1_human's health sweep, as p: its rule holds at every p.
+const BURAK_SWEEP_P := [0.0, 0.25, 0.5, 0.75, 1.0]
+const BURAK_DASH_KEYS := {Vector2i(1, 0): [KEY_RIGHT], Vector2i(-1, 0): [KEY_LEFT], Vector2i(0, 1): [KEY_DOWN],
+	Vector2i(0, -1): [KEY_UP], Vector2i(1, 1): [KEY_RIGHT, KEY_DOWN], Vector2i(1, -1): [KEY_RIGHT, KEY_UP],
+	Vector2i(-1, 1): [KEY_LEFT, KEY_DOWN], Vector2i(-1, -1): [KEY_LEFT, KEY_UP]}
+
+
+# His health at `ratio` of its maximum: the keg attack reads its ramp off it as it starts.
+func burak_health(ratio: float) -> void:
+	boss.boss_health = roundi(boss.max_health * ratio)
+
+
+# His health for ramp `p`, BurakBossStateMachine.ramp_p() the other way round.
+func burak_health_for(p: float) -> void:
+	burak_health(1.0 - p * (1.0 - sm.CAP_RATIO))
+
+
+# His keg attack, now, with the player's feet at `feet` as it starts, and his rng seeded with `seed_value`
+# first unless it is negative: the spread keeps clear of the feet and is thrown nearest them first.
+func start_burak_barrels(feet: Vector2, seed_value := -1) -> Node:
+	await settle_player(feet - BurakFinisherLayout.PLAYER_FEET)
+	if seed_value >= 0:
+		sm.rng.seed = seed_value
+	sm.on_child_transition(sm.current_state, "Barrels")
+	return sm.states["Barrels"]
+
+
+# Out of the attack and parked (burak_park), with what is left of its kegs faded out.
+func burak_clear_kegs() -> void:
+	burak_park()
+	await wait(25)
+
+
+# How far out from a keg's centre line the player stands to punch it: the live hurtbox's half-width plus
+# BURAK_STAND_MARGIN.
+func burak_stand_reach() -> float:
+	return BurakArtLayout.keg_rect(BurakArtLayout.KEG.hurtbox).size.x / 2.0 + BURAK_STAND_MARGIN
+
+
+# The player's position to punch the keg on `spot` from `side` (-1 its left, 1 its right), feet on its floor line.
+func burak_keg_stand(spot: Vector2, side: float) -> Vector2:
+	return spot + Vector2(side * burak_stand_reach(), 0.0) - BurakFinisherLayout.PLAYER_FEET
+
+
+# Walking on both axes at once, near is the larger of the two distances.
+func burak_walk(from: Vector2, to: Vector2) -> float:
+	return maxf(absf(to.x - from.x), absf(to.y - from.y))
+
+
+# Which side of the keg on `spot` a player at `from` stands to punch it: the nearer, the left on a tie.
+func burak_near_side(spot: Vector2, from: Vector2) -> float:
+	return 1.0 if burak_walk(from, burak_keg_stand(spot, 1.0)) < burak_walk(from, burak_keg_stand(spot, -1.0)) else -1.0
+
+
+# The round the bots walk of `spots` from `feet`: to the nearer side of each keg in turn, and of that the
+# four legs from the first keg to the last, in walking px.
+func burak_round(spots: Array, feet: Vector2) -> float:
+	var at := feet - BurakFinisherLayout.PLAYER_FEET
+	var length := 0.0
+	for k in spots.size():
+		var stand := burak_keg_stand(spots[k], burak_near_side(spots[k], at))
+		if k > 0:
+			length += burak_walk(at, stand)
+		at = stand
+	return length
+
+
+# Punch pressed on every frame the player can take it until `reports` punches have reached `keg` (a tonk
+# included) or it breaks. How many reached it.
+func punch_burak_keg(keg: Node2D, reports := 1) -> int:
+	var got := 0
+	var last: float = keg.last_punch_time
+	for i in 400:
+		if got >= reports or keg.phase == keg.Phase.BROKEN:
+			break
+		if player.state_machine.current_state.name != "Punching":
+			tap(KEY_Q)
+		await physics_frame
+		if keg.last_punch_time != last:
+			last = keg.last_punch_time
+			got += 1
+	await wait_until(func(): return player.state_machine.current_state.name != "Punching", 60)
+	return got
+
+
+# Beside `keg`, on its left and turned to it, and punches until it breaks.
+func break_burak_keg(keg: Node2D) -> void:
+	await settle_player(burak_keg_stand(keg.global_position, -1.0))
+	await wait_until(func(): return player.facing == player.Facing.RIGHT, 30)
+	await punch_burak_keg(keg, keg.hits_to_break)
+
+
+func burak_sfx_playing(key: StringName) -> bool:
+	for sfx in boss.sfx_players.get(key, []):
+		if sfx.playing:
+			return true
+	return false
+
+
+# What breaks the spread's rules in `spots` for a player whose feet were at `feet`, checked from the rules'
+# own numbers rather than through the state's code: every spot in keg_area, clear of HOME and out of his
+# shade, nearer than him from either side, clear of the player's feet, all `gap` apart; the ring's thirds
+# and halves covered; thrown nearest-first from the feet, the first within first_reach of them; and the
+# round within tour_slack of the tour at `p`. Empty when they hold.
+func burak_spread_faults(barrels: Node, spots: Array, feet: Vector2, gap: float, p: float) -> Array:
+	var faults := []
+	var home: Vector2 = sm.HOME
+	var shade := Rect2(barrels.shade.position + home, barrels.shade.size)
+	var area: Rect2 = barrels.keg_area
+	if spots.size() != barrels.kegs_per_attack:
+		faults.append("%d spots" % spots.size())
+	for i in spots.size():
+		var v: Vector2 = spots[i]
+		if not Rect2(area.position, area.size + Vector2.ONE).has_point(v):
+			faults.append("%s outside the area" % v)
+		if v.distance_to(home) < barrels.home_clearance:
+			faults.append("%s %.0f px from him" % [v, v.distance_to(home)])
+		if shade.has_point(v):
+			faults.append("%s in his shade" % v)
+		if v.distance_to(feet) < barrels.player_clearance:
+			faults.append("%s %.0f px from the player" % [v, v.distance_to(feet)])
+		for j in range(i + 1, spots.size()):
+			if v.distance_to(spots[j]) < gap - 0.5:
+				faults.append("%s and %s %.0f px apart" % [v, spots[j], v.distance_to(spots[j])])
+	var third: float = area.size.x / 3.0
+	var middle: float = area.get_center().y
+	if not (spots.any(func(v): return v.x < area.position.x + third) and spots.any(func(v): return v.x > area.end.x - third)
+			and spots.any(func(v): return v.y < middle) and spots.any(func(v): return v.y > middle)):
+		faults.append("the thirds and halves not all covered")
+	var at := feet
+	var left := spots.duplicate()
+	for v in spots:
+		var nearest: float = left.map(func(o): return burak_walk(at, o)).min()
+		if burak_walk(at, v) > nearest + 0.5:
+			faults.append("%s thrown out of nearest-first order" % v)
+			break
+		left.erase(v)
+		at = v
+	# From beside each keg, either side, it has to be nearer than his hurtbox by more than the facing's switch
+	# margin, with the stand margin to spare.
+	var his_box: CollisionShape2D = boss.hurtbox.get_node("CollisionShape2D")
+	var him := Rect2(home + his_box.position - his_box.shape.size / 2.0, his_box.shape.size)
+	for v in spots:
+		var keg := BurakArtLayout.keg_rect(BurakArtLayout.KEG.hurtbox)
+		keg.position += v
+		for side in [-1.0, 1.0]:
+			var stand := burak_keg_stand(v, side)
+			var lead := stand.distance_to(stand.clamp(him.position, him.end)) - stand.distance_to(stand.clamp(keg.position, keg.end))
+			if lead <= player.TARGET_SWITCH_MARGIN + BURAK_STAND_MARGIN:
+				faults.append("%s from its %s: only %.0f px nearer than him" % [v, "right" if side > 0.0 else "left", lead])
+	if not spots.is_empty() and burak_walk(feet, spots[0]) > barrels.first_reach + 0.5:
+		faults.append("the first %.0f px from the player" % burak_walk(feet, spots[0]))
+	var round_px := burak_round(spots, feet)
+	var tour: float = lerpf(barrels.tour.x, barrels.tour.y, p)
+	if absf(round_px - tour) > barrels.tour_slack + 0.5:
+		faults.append("a round of %.0f px against %.0f +- %.0f" % [round_px, tour, barrels.tour_slack])
+	return faults
+
+
+# His bullet for this volley, from the knobs and the round the suite measures: the ramp's bullet at p, plus
+# a fifth of the time the round's walk runs past the tour.
+func burak_bullet_want(barrels: Node, p: float, spots: Array, feet: Vector2) -> float:
+	var ramp: float = lerpf(barrels.bullet.x, barrels.bullet_mid, p * 2.0) if p <= 0.5 \
+		else lerpf(barrels.bullet_mid, barrels.bullet.y, (p - 0.5) * 2.0)
+	var tour: float = lerpf(barrels.tour.x, barrels.tour.y, p)
+	return ramp + (burak_round(spots, feet) - tour) / (barrels.kegs_per_attack * player.SPEED)
+
+
+# §4.7, as retuned: p 0, 0.5, 1 and 1 at 100%, 60%, 20% and 10% of his health; the cadence, the gap and the
+# bullet off it and off the round, locked as the attack starts; the throw played in time with the cadence;
+# and the deadline each gives, marker to lock.
+func test_burak_ramp() -> void:
+	await load_burak_attacks(["Barrels"])
+	health_ok()
+	var barrels: Node = sm.states["Barrels"]
+	var art_throw: float = BurakArtLayout.loop_length(BurakArtLayout.anim(&"throw"))
+	var feet := Vector2(960, 860)
+	log_p("cadence %s, spread %s, tour %s +- %.0f, bullet %.3f / %.3f / %.3f" % [barrels.cadence, barrels.spread, barrels.tour,
+		barrels.tour_slack, barrels.bullet.x, barrels.bullet_mid, barrels.bullet.y])
+	for row in [[1.0, 0.0], [0.6, 0.5], [0.2, 1.0], [0.1, 1.0]]:
+		burak_health(row[0])
+		var p: float = row[1]
+		var tag := "at %d%% health" % roundi(row[0] * 100.0)
+		check(is_equal_approx(sm.ramp_p(), p), "%s p is %.1f (%.3f)" % [tag, p, sm.ramp_p()])
+		await start_burak_barrels(feet)
+		var cadence_want: float = lerpf(barrels.cadence.x, barrels.cadence.y, p)
+		var gap_want: float = lerpf(barrels.spread.x, barrels.spread.y, p)
+		var bullet_want := burak_bullet_want(barrels, p, barrels.spots, feet)
+		var throw_want: float = minf(art_throw, cadence_want)
+		var dials := [barrels.p, barrels.c, barrels.gap, barrels.b, barrels.throw_time, barrels.release_at]
+		var d_want: float = barrels.marker_lead + 4.0 * cadence_want + 5.0 * bullet_want
+		log_p("%s: cadence %.3f, gap %.0f, round %.0f, bullet %.3f, throw %.3f (release %.3f), D %.3f" % [tag, dials[1], dials[2],
+			burak_round(barrels.spots, feet), dials[3], dials[4], dials[5], d_want])
+		check(is_equal_approx(dials[0], p) and is_equal_approx(dials[1], cadence_want) and is_equal_approx(dials[2], gap_want)
+			and absf(dials[3] - bullet_want) <= 0.0005, "%s the dials: cadence %.3f, gap %.0f, bullet %.3f for this round" % [tag, cadence_want, gap_want, bullet_want])
+		check(is_equal_approx(dials[4], throw_want) and is_equal_approx(dials[5], barrels.throw_release * throw_want / art_throw),
+			"%s the throw takes %.3f s, no longer than the cadence, releasing at %.3f s" % [tag, throw_want, barrels.throw_release * throw_want / art_throw])
+		burak_health(1.1 - row[0])
+		await wait(5)
+		check([barrels.p, barrels.c, barrels.gap, barrels.b, barrels.throw_time, barrels.release_at] == dials,
+			"%s the dials stay locked when his health moves mid-attack" % tag)
+		await wait_until(func(): return barrels.locked_at >= 0.0, 60 * 20)
+		# The load starts on the first step past the fifth landing and locks on the first past the fifth bullet:
+		# each rounds up to a step.
+		var late: float = barrels.locked_at - barrels.marker_times[0] - d_want
+		check(late >= -0.5 / 60.0 and late <= 2.0 / 60.0, "%s the lock falls %.3f s after the first marker (D %.3f)" % [tag, d_want + late, d_want])
+		await burak_clear_kegs()
+
+
+# §4.2-4.6 on the real attack: the spread's rules over seeds, health and the player's spot, and a new layout
+# each volley; the markers' lead; a keg landing on the player; walking through one; the facing; the
+# one-punch break; the lock on the fifth pip's step; the armed kegs; and the clean run.
+func test_burak_barrels() -> void:
+	await load_burak_attacks(["Barrels"])
+	health_ok()
+	track()
+	var barrels: Node = sm.states["Barrels"]
+
+	# THE SPREAD, at three healths from every start, three volleys in a row off one seed.
+	sm.rng.seed = 7
+	var layouts := 0
+	var repeats := 0
+	for ratio in [1.0, 0.6, 0.2]:
+		burak_health(ratio)
+		for start in BURAK_BOT_STARTS:
+			var last: Array = []
+			for volley in 3:
+				await start_burak_barrels(start)
+				var spots: Array = barrels.spots
+				var faults := burak_spread_faults(barrels, spots, start, barrels.gap, barrels.p)
+				check(faults.is_empty(), "p %.1f from %s, volley %d: %s, round %.0f %s" % [barrels.p, start, volley + 1, spots,
+					burak_round(spots, start), faults])
+				if spots == last:
+					repeats += 1
+				last = spots
+				layouts += 1
+				await burak_clear_kegs()
+	check(repeats == 0, "each of %d volleys spread its kegs afresh (%d repeats)" % [layouts, repeats])
+
+	# ONE ATTACK AT p 0. The player stands on keg 2's spot as it comes down.
+	burak_health(1.0)
+	await start_burak_barrels(Vector2(960, 860))
+	var spots: Array = barrels.spots
+	await wait_until(func(): return barrels.kegs.size() >= 1, 5)
+	var first: Node2D = barrels.kegs[0]
+	check(is_instance_valid(first.marker) and first.marker.global_position == spots[0] and not first.is_breakable(),
+		"a keg's marker is on its spot from the throw, and until it lands it can't be punched")
+	await settle_player(spots[1] - BurakFinisherLayout.PLAYER_FEET)
+	var stood := player.global_position
+	await wait_until(func(): return barrels.landed >= 2, 60 * 5)
+	check(events_of("HIT").is_empty() and player.global_position == stood,
+		"a keg landing on the player does nothing: no hit, and they are where they stood")
+	for k in 2:
+		var lead: float = barrels.land_times[k] - barrels.marker_times[k]
+		check(absf(lead - barrels.marker_lead) <= 1.5 / 60.0 and not is_instance_valid(barrels.kegs[k].marker),
+			"keg %d lands %.3f s after its marker, and the marker goes as it does" % [k + 1, lead])
+
+	# The facing: beside keg 4's spot before it lands, between it and him, so it faces him until it lands.
+	var fourth_spot: Vector2 = spots[3]
+	var side := 1.0 if sm.HOME.x >= fourth_spot.x else -1.0
+	await settle_player(burak_keg_stand(fourth_spot, side))
+	await wait(2)
+	var fourth: Node2D = barrels.kegs[3] if barrels.kegs.size() > 3 else null
+	var threat_before: bool = fourth != null and fourth.hurtbox.is_in_group("facing_threat")
+	var facing_before: int = player.facing
+	await wait_until(func(): return barrels.landed >= 4, 60 * 5)
+	fourth = barrels.kegs[3]
+	var toward: int = player.Facing.LEFT if side > 0.0 else player.Facing.RIGHT
+	await wait_until(func(): return player.facing == toward, 30)
+	check(not threat_before and fourth.hurtbox.is_in_group("facing_threat") and player.facing == toward,
+		"the facing turns to a keg as it lands in reach (facing %d, then %d)" % [facing_before, player.facing])
+	var frame_before: int = fourth.body_sprite.frame
+	var got := await punch_burak_keg(fourth, 1)
+	check(got == 1 and frame_before == 0 and fourth.phase == fourth.Phase.BROKEN and not fourth.visual.visible
+		and not fourth.hurtbox.is_in_group("facing_threat"), "one punch breaks a keg straight from f0 into the burst")
+
+	# Walking through a landed keg: keg 2, from its side toward the middle of the ring outward.
+	var outward := -1.0 if spots[1].x < 960.0 else 1.0
+	var through_key := KEY_LEFT if outward < 0.0 else KEY_RIGHT
+	await settle_player(spots[1] - Vector2(outward * 110.0, 0.0) - BurakFinisherLayout.PLAYER_FEET)
+	press(through_key)
+	await wait(24)
+	release(through_key)
+	await wait(2)
+	check(outward * (player.global_position.x - spots[1].x) > 100.0, "the player walks through a landed keg (x %.0f past %.0f)" % [player.global_position.x, spots[1].x])
+
+	# The lock falls on the step the fifth pip shows loaded, and arms the kegs left. The pip settles in idle
+	# time and the lock in physics time, so either can show a step before the other.
+	var loaded: int = BurakArtLayout.fx(&"pips").loaded
+	var pip_frame := -1
+	for i in 60 * 20:
+		var pips: Array = boss.pips.pips
+		if pip_frame < 0 and pips.size() == 5 and pips[4].frame == loaded:
+			pip_frame = Engine.get_physics_frames()
+		if barrels.locked_frame >= 0 and (pip_frame >= 0 or Engine.get_physics_frames() > barrels.locked_frame + 3):
+			break
+		await physics_frame
+	log_p("fifth pip loaded on frame %d, the lock on frame %d" % [pip_frame, barrels.locked_frame])
+	check(absi(barrels.locked_frame - pip_frame) <= 1, "the lock falls on the step the fifth pip shows loaded (pip f%d, lock f%d)" % [pip_frame, barrels.locked_frame])
+	check(barrels.armed.size() == 4 and barrels.kegs_left == 4 and barrels.armed.all(func(k): return k.is_armed() and not k.hurtbox.is_in_group("facing_threat")),
+		"the four kegs left are armed and out of the facing (%d)" % barrels.armed.size())
+
+	# An armed keg only tonks. It no longer turns the player, so the fight's own face_point() aims the punch.
+	var last_armed: Node2D = barrels.armed[-1]
+	await settle_player(burak_keg_stand(last_armed.global_position, -1.0))
+	player.face_point(last_armed.global_position + BurakArtLayout.keg_rect(BurakArtLayout.KEG.hurtbox).get_center())
+	await wait(2)
+	got = await punch_burak_keg(last_armed, 1)
+	player.clear_face_point()
+	check(got == 1 and last_armed.hits == 0 and last_armed.body_sprite.frame == 0 and last_armed.is_armed() and burak_sfx_playing(&"barrel_tonk"),
+		"a punch reaches an armed keg and only tonks (%d reached, hits %d)" % [got, last_armed.hits])
+	await wait_until(func(): return sm.current_state.name == "Taunt", 60 * 10)
+	check(barrels.volley_results.size() == 4, "and the four are shot (%d)" % barrels.volley_results.size())
+	await burak_clear_kegs()
+
+	# THE CLEAN RUN: every keg broken as it lands.
+	var hype: Node = player.get_node("Hype")
+	await start_burak_barrels(Vector2(960, 860))
+	for k in 5:
+		await wait_until(func(): return barrels.kegs.size() > k and barrels.kegs[k].is_breakable(), 60 * 5)
+		await break_burak_keg(barrels.kegs[k])
+	await wait_until(func(): return barrels.clean_run, 30)
+	var frozen: Array = boss.pips.pips.map(func(pip): return pip.frame)
+	check(barrels.clean_run and barrels.locked_at < 0.0 and barrels.beat == barrels.Beat.MISFIRE,
+		"no keg left after the fifth landing: the load aborts into the misfire, no lock")
+	await wait_until(func(): return barrels.misfire_step >= 1, 60)
+	check(boss.current_anim == &"talk" and boss.talk_pose == &"shrug" and burak_sfx_playing(&"misfire"),
+		"a dry click and a shrug")
+	var hype_before: float = hype.hype
+	await wait_until(func(): return barrels.misfire_step >= 2, 60)
+	check(hype.hype >= hype_before + barrels.clean_hype - 0.01, "the crowd and %d hype for the clean run (%.1f -> %.1f)" % [barrels.clean_hype, hype_before, hype.hype])
+	check(boss.pips.pips.map(func(pip): return pip.frame) == frozen, "the pips froze where they were (%s)" % [frozen])
+	await wait_until(func(): return sm.current_state.name == "Taunt", 60 * 3)
+	await wait(1)
+	check(absf(sm.taunt_timer.time_left - (sm.taunt_time + sm.clean_run_bonus)) <= 2.5 / 60.0,
+		"then a %.1f s Taunt (%.2f left)" % [sm.taunt_time + sm.clean_run_bonus, sm.taunt_timer.time_left])
+
+
+# §4.5: N kegs left (5, 3, 1, 0) gives N blasts, each one HIT on its detonation step, through the i-frames, a
+# guard and a dash; each drains the gauge 20, clamped at 0; the first volley's mercy floors the player at one
+# half-heart and its HITs still count; a later volley kills, and the chain stops there.
+func test_burak_volley() -> void:
+	await load_burak_attacks(["Barrels"])
+	var barrels: Node = sm.states["Barrels"]
+	var blasts: Array = []
+	defense.hit_taken.connect(func(hit):
+		if hit.attack_id == &"burak_barrel_blast":
+			blasts.append({"frame": Engine.get_physics_frames(), "damage": hit.damage, "dodging": player.is_dodging,
+				"guarding": defense.is_guarding(), "invincible": player.is_invincible}))
+	var gauge: Node = boss.break_gauge
+	var aside := Vector2(1700, 950)
+
+	# The fight's first volley, all five: the mercy, the i-frames, a guard and a dash.
+	player.playerHealth = 2
+	gauge.value = 40.0
+	await start_burak_barrels(aside)
+	var shot := func(n: int) -> bool: return barrels.beat == barrels.Beat.VOLLEY and barrels.shot_index == n
+	await wait_until(func(): return shot.call(2), 60 * 20)
+	# Six steps before the third blast, inside the parry window: without blocking that is as long as a guard
+	# stays up.
+	await wait_until(func(): return shot.call(2) and barrels.shot_beat == barrels.Shot.FLIGHT and barrels.shot_clock + 6.0 / 60.0 >= barrels.aim_time + barrels.ball_time, 60 * 2)
+	press(KEY_SHIFT)
+	await wait_until(func(): return shot.call(3), 60 * 2)
+	release(KEY_SHIFT)
+	# Two steps before the fourth blast, so it goes off inside the dash.
+	var dash_now := func() -> bool:
+		return barrels.shot_beat == barrels.Shot.FLIGHT and barrels.shot_clock + 2.0 / 60.0 >= barrels.aim_time + barrels.ball_time
+	await wait_until(dash_now, 60 * 2)
+	press(KEY_LEFT)
+	tap(KEY_W)
+	await wait(1)
+	release(KEY_LEFT)
+	await wait_until(func(): return sm.current_state.name == "Taunt", 60 * 5)
+	log_p("first volley: %s, frames %s, health %d, gauge %.1f" % [blasts, barrels.blast_frames, player.playerHealth, gauge.value])
+	check(barrels.blast_hits == 5 and blasts.size() == 5, "five kegs left: five blasts, five HITs (%d)" % blasts.size())
+	check(blasts.size() == 5 and blasts.map(func(e): return e.frame) == barrels.blast_frames, "each HIT on its own blast's step")
+	check(player.playerHealth == 1 and blasts.map(func(e): return e.damage) == [1, 0, 0, 0, 0],
+		"the first volley's mercy: one half-heart left, and the HITs past it still count (%s)" % [blasts.map(func(e): return e.damage)])
+	check(blasts.size() == 5 and blasts[1].invincible and blasts[2].guarding and blasts[3].dodging,
+		"they land inside the i-frames, through a held guard and mid-dash")
+	check(is_zero_approx(gauge.value), "five blasts drain the gauge from 40 to 0, clamped (%.1f)" % gauge.value)
+	check(not sm.laugh_owed, "with the Laugh spent it is not owed")
+	await burak_clear_kegs()
+
+	# Later volleys: three, one and no kegs left.
+	for n in [3, 1, 0]:
+		blasts.clear()
+		player.playerHealth = 6
+		clear_iframes()
+		gauge.value = 40.0
+		await start_burak_barrels(aside)
+		for k in 5 - n:
+			await wait_until(func(): return barrels.kegs.size() > k and barrels.kegs[k].is_breakable(), 60 * 5)
+			await break_burak_keg(barrels.kegs[k])
+		await settle_player(aside - BurakFinisherLayout.PLAYER_FEET)
+		await wait_until(func(): return sm.current_state.name == "Taunt", 60 * 20)
+		log_p("%d left: %d blasts, health %d, gauge %.1f" % [n, blasts.size(), player.playerHealth, gauge.value])
+		check(blasts.size() == n and barrels.blast_hits == n and player.playerHealth == 6 - n,
+			"%d kegs left: %d HITs, %d half-hearts" % [n, blasts.size(), 6 - player.playerHealth])
+		check(blasts.map(func(e): return e.frame) == barrels.blast_frames, "each on its own blast's step")
+		check(is_equal_approx(gauge.value, maxf(40.0 - 20.0 * n, 0.0)), "%d blasts drain the gauge 40 -> %.0f (%.1f)" % [n, maxf(40.0 - 20.0 * n, 0.0), gauge.value])
+		if n == 0:
+			check(barrels.clean_run, "no keg left: the misfire")
+		await burak_clear_kegs()
+
+	# A later volley kills: no mercy, and nothing goes off after the blast that does it.
+	blasts.clear()
+	player.playerHealth = 2
+	clear_iframes()
+	await start_burak_barrels(aside)
+	await wait_until(func(): return player.playerHealth <= 0, 60 * 20)
+	var fired: int = barrels.volley_results.size()
+	await wait(60 * 3)
+	log_p("the kill: %s, results %s" % [blasts, barrels.volley_results])
+	check(player.playerHealth == 0 and fired == 2 and barrels.volley_results.size() == 2 and blasts.size() == 2,
+		"a later volley kills on its second blast, and the chain stops there (%d fired)" % barrels.volley_results.size())
+	check(not sm.laugh_owed and sm.current_state.name != "Laugh", "and there is no Laugh")
+
+
+# §4.8 on the spread: bots taking the real attack's kegs in his throwing order, each tier on every seed in
+# BURAK_BOT_SEEDS from every start in BURAK_BOT_STARTS. The deadline is tuned for a human: a perfect walker
+# only reports, and the human-paced tiers are the ones that have to fail or clear.
+#   walk_full        a perfect walker at full health (p 0): clears every layout.
+#   walk_full_human  a walker reacting in BURAK_REACTION at full health: clears every layout.
+#   walk_cap         a perfect walker at the cap (p 1): its margins, reported.
+#   walk_cap_human   a walker reacting in BURAK_REACTION at the cap: misses at least one keg on every layout.
+#   dash_cap         a perfect bot dashing up to twice a hop at the cap: clears every layout.
+#   dash1_cap        a perfect bot dashing once a hop at the cap: clears every layout.
+#   dash1_human      dashing once a hop, reacting in BURAK_REACTION, at p 0, 0.25, 0.5, 0.75 and 1: clears
+#                    every layout with at least 0.2 s to spare.
+#   nopunch          standing still at full health: all five, five HITs.
+#   partial          breaking the first two it reaches at full health: three HITs.
+func test_burak_bots() -> void:
+	await load_burak_attacks(["Barrels"])
+	health_ok()
+	var sweep: Array = BURAK_SWEEP_P if tier == "dash1_human" else ([1.0] if tier.contains("_cap") else [0.0])
+	var dashes: int = {"dash_cap": 2, "dash1_cap": 1, "dash1_human": 1}.get(tier, 0)
+	var breaks: int = {"nopunch": 0, "partial": 2}.get(tier, 5)
+	var reaction: float = BURAK_REACTION if tier.ends_with("_human") else 0.0
+	var runs := []
+	var least_at := []
+	for p in sweep:
+		var at_p := []
+		for seed_value in BURAK_BOT_SEEDS:
+			for start in BURAK_BOT_STARTS:
+				burak_health_for(p)
+				var run := await burak_keg_bot(start, seed_value, dashes, breaks, reaction)
+				runs.append(run)
+				at_p.append(run.spare)
+				log_p("burak_bots %s p %.2f seed %d from %s: %d HITs, spare %.3f s, round %.0f px, bullet %.3f, D %.3f, breaks at %s, spots %s" % [tier,
+					run.p, seed_value, start, run.hits, run.spare, run.round_px, run.b, run.deadline, run.breaks, run.spots])
+				await burak_reset_bot()
+		least_at.append(at_p.min())
+		log_p("burak_bots %s p %.2f: least spare %.3f s, most %.3f s" % [tier, p, at_p.min(), at_p.max()])
+	var spares: Array = runs.map(func(r): return r.spare)
+	var hits: Array = runs.map(func(r): return r.hits)
+	log_p("burak_bots %s: %d runs, least spare %.3f s, HITs %s" % [tier, runs.size(), spares.min(), hits])
+	match tier:
+		"walk_full", "walk_full_human":
+			check(hits.max() == 0, "%s at full health clears every layout (least spare %.3f s)" % [tier, spares.min()])
+		"walk_cap":
+			check(runs.size() == BURAK_BOT_SEEDS.size() * BURAK_BOT_STARTS.size(), "a perfect walker at the cap, reported: least spare %.3f s, HITs %s" % [spares.min(), hits])
+		"walk_cap_human":
+			check(hits.min() >= 1, "a human-paced walker at the cap misses at least one keg on every layout (%s)" % [hits])
+		"dash_cap", "dash1_cap":
+			check(hits.max() == 0, "%s at the cap clears every layout (least spare %.3f s)" % [tier, spares.min()])
+		"dash1_human":
+			check(hits.max() == 0 and spares.min() >= 0.2,
+				"human-paced, one dash a hop clears every layout at every p with at least 0.2 s to spare (least by p: %s)" % [least_at.map(func(s): return snappedf(s, 0.001))])
+		"nopunch":
+			check(hits.min() == 5, "no punches at full health: all five blasts land every time (%s)" % [hits])
+		"partial":
+			check(hits.min() == 3 and hits.max() == 3, "two kegs broken: three blasts land every time (%s)" % [hits])
+
+
+# Between two bot runs: parked, fresh and back to full stamina with no keys held.
+func burak_reset_bot() -> void:
+	await burak_clear_kegs()
+	for code in [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN, KEY_Q, KEY_W]:
+		release(code)
+	clear_iframes()
+	player.playerHealth = 100
+	defense._set_stamina(defense.max_stamina)
+	await wait(40)
+
+
+# The one of the eight dashes that leaves least to walk of `to`, and how much that is.
+func burak_dash_pick(to: Vector2) -> Array:
+	var reach: float = player.DODGE_SPEED * player.dodge_time
+	var pick := Vector2i.ZERO
+	var least := INF
+	for dir in BURAK_DASH_KEYS:
+		var left := burak_walk(Vector2(dir).normalized() * reach, to)
+		if left < least:
+			least = left
+			pick = dir
+	return [pick, least]
+
+
+# One keg attack, his rng seeded with `seed_value`, played from `start` by a bot that goes for the first
+# `breaks` kegs in his throwing order: each at whichever side is nearer as it sets off, walking at the
+# player's speed or dashing up to `dashes` times a hop where a dash pays (burak_dash_pick), and punching the
+# moment it stands there turned to a keg that is down. With a `reaction` it plays at a human's pace: that
+# long before each hop, from the attack's start and from the moment it is free to move after a punch, and
+# before the punch on a keg that lands in front of it. Runs until the Taunt.
+# `spare` is the deadline less the last break, or less when the bot would have broken a keg it reached too
+# late: armed, a keg no longer turns the player, so its break is estimated as a press after arriving.
+# Negative means it missed one; -INF, that the attack ended before it reached them all.
+func burak_keg_bot(start: Vector2, seed_value: int, dashes: int, breaks: int, reaction := 0.0) -> Dictionary:
+	var barrels: Node = await start_burak_barrels(start, seed_value)
+	var broken_at := {}
+	# A dictionary, so the handler's count is the one read back: a lambda holds its own copy of a plain local.
+	var counted := {"hits": 0}
+	var hit_counter := func(hit):
+		if hit.attack_id == &"burak_barrel_blast":
+			counted.hits += 1
+	defense.hit_taken.connect(hit_counter)
+	var walk: float = player.SPEED / Engine.physics_ticks_per_second
+	var target := -1
+	var side := -1.0
+	var hop_dashes := 0
+	var held: Array = []
+	# Nothing before this fight_clock; a hop waiting on its reaction; the keg the bot stood at before it
+	# landed; and when it got to its target.
+	var act_at := -INF
+	var hop_pending := reaction > 0.0
+	var waited_for := -1
+	var arrived_at := -INF
+	while sm.current_state.name == "Barrels":
+		for code in held:
+			release(code)
+		held = []
+		for i in barrels.kegs.size():
+			# Untyped: a keg that has gone up is a freed instance, which a typed variable can't hold.
+			var keg = barrels.kegs[i]
+			if not broken_at.has(i) and is_instance_valid(keg) and keg.phase == keg.Phase.BROKEN:
+				broken_at[i] = boss.fight_clock
+		if target >= 0 and broken_at.has(target):
+			target = -1
+			hop_pending = reaction > 0.0
+		var busy: bool = player.state_machine.current_state.name == "Punching" or player.is_dodging or defense.is_dash_recovering()
+		if hop_pending and not busy:
+			hop_pending = false
+			act_at = boss.fight_clock + reaction
+		if target < 0 and broken_at.size() < breaks:
+			target = broken_at.size()
+			side = burak_near_side(barrels.spots[target], player.global_position)
+			hop_dashes = 0
+			arrived_at = -INF
+		if target >= 0 and not busy and boss.fight_clock >= act_at:
+			var stand := burak_keg_stand(barrels.spots[target], side)
+			var to: Vector2 = stand - player.global_position
+			var keg = barrels.kegs[target] if target < barrels.kegs.size() else null
+			var landed: bool = target < barrels.landed
+			var standing: bool = is_instance_valid(keg) and keg.is_breakable()
+			if reaction > 0.0 and to.length() <= 0.5 and not landed:
+				waited_for = target
+			var pick := burak_dash_pick(to)
+			var dash_ready: bool = not defense.is_dash_cooling_down() and defense.stamina >= defense.dash_stamina_cost
+			if hop_dashes < dashes and dash_ready and pick[1] + BURAK_DASH_FRAMES * walk < burak_walk(Vector2.ZERO, to):
+				held = BURAK_DASH_KEYS[pick[0]]
+				for code in held:
+					press(code)
+				tap(KEY_W)
+				hop_dashes += 1
+			elif to.length() > 0.5:
+				player.global_position += Vector2(clampf(to.x, -walk, walk), clampf(to.y, -walk, walk))
+				player.velocity = Vector2.ZERO
+				to = stand - player.global_position
+			if to.length() <= 0.5:
+				if arrived_at == -INF:
+					arrived_at = boss.fight_clock
+				# Only turned to it: a swing thrown at the facing it had on the way would whiff.
+				var facing_keg: int = player.Facing.LEFT if side > 0.0 else player.Facing.RIGHT
+				if standing and player.facing == facing_keg:
+					if waited_for == target:
+						waited_for = -1
+						act_at = boss.fight_clock + reaction
+					else:
+						tap(KEY_Q)
+				elif landed and not standing:
+					broken_at[target] = -(arrived_at + 2.0 / Engine.physics_ticks_per_second)
+					target = -1
+					hop_pending = reaction > 0.0
+		await physics_frame
+	defense.hit_taken.disconnect(hit_counter)
+	var deadline_at: float = barrels.load_started_at + barrels.kegs_per_attack * barrels.b
+	var first: float = barrels.marker_times[0]
+	var times: Array = broken_at.values().map(func(t): return absf(t))
+	var spare: float = deadline_at - times.max() if not times.is_empty() else 0.0
+	if broken_at.size() < breaks:
+		spare = -INF
+	return {"p": barrels.p, "b": barrels.b, "spots": barrels.spots.duplicate(), "round_px": burak_round(barrels.spots, start), "hits": counted.hits, "spare": spare,
+		"breaks": times.map(func(t): return snappedf(t - first, 0.001)), "deadline": deadline_at - first}
+
+
+# ------------------------------------------------------------------ Captain Burak: his entrance and his laugh cut
+# Real time (--max-fps 60), as matt_entrance: the VS card's input grace is real seconds.
+#   burak_entrance  watched, held at mid-walk, mid-line and mid-shot, a tapped Escape, and the retry
+#   burak_laugh     the cut his fight's first volley owes: watched, once a fight, held, paused, and the fight
+#                   ending under it
+
+func burak_card_flash(max_frames := 900) -> bool:
+	var card: Node = vs_card()
+	var card_art: GDScript = load(VS_CARD_LAYOUT)
+	return await wait_until(func(): return card.is_playing() and card.clock >= card_art.HOLD_END, max_frames)
+
+
+# What he and the ring look like at the VS card's flash: everything a watched entrance and a held one must
+# agree on. Floats are rounded, as matt_snapshot's are.
+func burak_snapshot() -> Dictionary:
+	var gates: Node = current_scene.get_node("Arena/Gates")
+	var screen: GDScript = load("res://Scripts/ScreenView.gd")
+	var crowd: Node = get_first_node_in_group("arena_crowd")
+	return {
+		"burak": boss.global_position, "anim": boss.current_anim, "flip": boss.sprite.flip_h,
+		"modulate": boss.sprite.modulate, "rotation": snappedf(boss.sprite.rotation, 0.0001), "offset": boss.sprite.offset,
+		"hurtbox": boss.hurtbox.monitoring, "hud": boss.hud_layer.visible, "hud_alpha": snappedf(boss.health_bar.modulate.a, 0.0001),
+		"gates_open": gates.is_open(), "player": player.global_position, "talking": player.is_talking,
+		"player_sm": player.state_machine.is_processing(), "face_point": player.facing_point,
+		"zoom": snappedf(screen.zoom, 0.0001), "shake": screen.shake_offset, "time_scale": snappedf(Engine.time_scale, 0.0001),
+		"crowd_cheering": crowd != null and crowd._cheer_time_left > 0.0, "music": boss.music_player.playing,
+		"music_starts": boss.music_starts, "hazards": get_nodes_in_group(sm.HAZARD_GROUP).size(),
+		"balloon": live_balloon() != null, "intro_fx": sm.states["Intro"].intro_fx.size(),
+		"seen": root.get_node("GameProgress").entrances_seen.has(boss.FIGHT_SCENE),
+	}
+
+
+func burak_snapshot_diff(got: Dictionary, want: Dictionary) -> Array:
+	var diffs := []
+	for k in want:
+		if got[k] != want[k]:
+			diffs.append("%s %s (watched %s)" % [k, got[k], want[k]])
+	return diffs
+
+
+func burak_enter(fresh := true) -> void:
+	if fresh:
+		await enter_fight(SCENES["burak"], true)
+	else:
+		change_scene_to_file(SCENES["burak"])
+		while current_scene == null or current_scene.scene_file_path != SCENES["burak"]:
+			await process_frame
+		await wait(6)
+		player = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
+		defense = player.get_node("Defense")
+	boss = current_scene.get_node(BURAK_BODY)
+	sm = boss.state_machine
+
+
+func test_burak_entrance() -> void:
+	var talk: Dictionary = load("res://Scripts/BurakBossArtLayout.gd").TALK_POSES
+
+	log_p("-- watched: the walk-in")
+	await burak_enter()
+	var intro: Node = entrance_state()
+	check(intro != null and intro == sm.states["Intro"], "his fight opens on BurakBossIntro")
+	check(await wait_until(func(): return intro.entered, 60), "which starts itself")
+	var gates: Node = current_scene.get_node("Arena/Gates")
+	check(gates.is_open() and not boss.hud_layer.visible, "the ring is open and his bar is down")
+	check(player.is_talking and not player.state_machine.is_processing(), "the player is held, their own state machine stopped")
+	check(boss.global_position.y < 0.0 and player.global_position.y > intro.player_home.y + 100.0, "he starts above the ring and the player below it")
+	check(await wait_until(func(): return player.global_position.is_equal_approx(intro.player_home), 300), "the player walks up onto their mark")
+	check(await wait_until(func(): return boss.global_position.is_equal_approx(intro.home) and boss.current_anim != &"walk", 400), "he swaggers down onto his")
+	check(await wait_until(func(): return not gates.is_open(), 120), "the gates slam behind him")
+	check(await wait_until(func(): return boss.hud_layer.visible, 120), "then his bar comes up")
+	check(await wait_until(func(): return live_balloon() != null, 120), "and his first line")
+	check(sm.post_dialogue_pre_fight_timer.is_stopped() and boss.music_starts == 0, "the fight and his theme are still waiting")
+
+	log_p("-- the lines, their tags and the warning shot")
+	var card: Node = vs_card()
+	var sampled := {}
+	var music_before_fire := -1
+	var music_on_fire := -1
+	var ball_seen := false
+	var ball_harmless := true
+	var dust_seen := false
+	var last_line = null
+	for i in 3600:
+		if card.is_playing():
+			break
+		var balloon := live_balloon()
+		if balloon != null and balloon.dialogue_line != null and balloon.dialogue_line != last_line:
+			last_line = balloon.dialogue_line
+			await wait(3)
+			var text: String = last_line.text
+			var look := {"pose": intro.pose, "frame": boss.sprite.frame, "flip": boss.sprite.flip_h, "anim": boss.current_anim}
+			if text.begins_with("Ahoy"):
+				sampled["smug"] = look
+			elif text.begins_with("Captain Burak. Best"):
+				sampled["point"] = look
+			elif text.begins_with("And every server"):
+				sampled["shrug"] = look
+		if music_before_fire < 0 and boss.current_anim == &"fire_aim":
+			music_before_fire = boss.music_starts
+		if music_on_fire < 0 and boss.current_anim == &"fire":
+			await wait(1)
+			music_on_fire = boss.music_starts if boss.music_player.playing else -1
+		for node in intro.intro_fx:
+			if is_instance_valid(node) and node.has_method("aim"):
+				ball_seen = true
+				ball_harmless = ball_harmless and node.harmless and not node.is_in_group(sm.HAZARD_GROUP)
+			elif is_instance_valid(node) and node.get_parent() == boss.floor_layer:
+				dust_seen = true
+		if i % 8 == 0 and not intro.beat_running:
+			tap(KEY_ENTER)
+		await physics_frame
+	log_p("sampled %s" % [sampled])
+	for pose in ["smug", "point", "shrug"]:
+		var look: Dictionary = sampled.get(pose, {})
+		check(not look.is_empty() and look.pose == StringName(pose) and talk[StringName(pose)].has(look.frame) and look.anim == &"talk"
+			and not look.flip, "the %s line puts him in the %s pose" % [pose, pose])
+	var beats: Dictionary = intro.beat_times
+	log_p("beats %s" % [beats])
+	check(beats.has(&"warning_shot") and absf(beats[&"warning_shot"] - 1.35) <= 1.0 / 30.0, "the warning shot takes 1.35 s (%.3f)" % beats.get(&"warning_shot", -1.0))
+	check(music_before_fire == 0 and music_on_fire == 1, "his theme starts on the shot and not before (%d then %d)" % [music_before_fire, music_on_fire])
+	check(ball_seen and ball_harmless, "the shot's ball flew, harmless and out of the hazard group")
+	check(dust_seen, "and it kicked up dust where it landed")
+	check(await burak_card_flash(), "the lines hand over to the card")
+	var watched := burak_snapshot()
+	log_p("watched, at the card's flash: %s" % [watched])
+	check(watched.burak == sm.HOME and watched.anim == &"idle" and not watched.flip and watched.modulate == Color.WHITE
+		and not watched.hurtbox and watched.hud and not watched.gates_open and watched.talking and watched.player_sm
+		and watched.music and watched.music_starts == 1 and watched.hazards == 0 and not watched.balloon
+		and watched.intro_fx == 0 and watched.seen and watched.zoom == 1.0 and watched.time_scale == 1.0
+		and not watched.crowd_cheering, "and the ring is set the way the plan says")
+	card.skip()
+	await wait_until(func(): return not card.is_playing(), 60)
+	card.grace_until_msec = 0
+	check(await wait_until(func(): return sm.current_state != intro, 180), "and the fight starts behind it")
+
+	for where in ["walk", "line", "shot"]:
+		log_p("-- held at mid-%s" % where)
+		await burak_enter()
+		intro = entrance_state()
+		card = vs_card()
+		await wait_until(func(): return intro.entered, 60)
+		var lines := 0
+		last_line = null
+		for i in 3600:
+			if where == "walk" and intro.home.y - boss.global_position.y > 200.0 and boss.global_position.y > -60.0:
+				break
+			var balloon := live_balloon()
+			if balloon != null and balloon.dialogue_line != null and balloon.dialogue_line != last_line:
+				last_line = balloon.dialogue_line
+				lines += 1
+				if where == "line" and lines == 3:
+					await wait(10)
+					break
+			if where == "shot" and boss.current_anim == &"fire":
+				await wait(6)
+				break
+			if where != "walk" and i % 8 == 0 and not intro.beat_running:
+				tap(KEY_ENTER)
+			await physics_frame
+		log_p("holding Escape: anim %s, lines %d, music_starts %d" % [boss.current_anim, lines, boss.music_starts])
+		press(KEY_ESCAPE)
+		var reached := await burak_card_flash(120)
+		var skipped := burak_snapshot()
+		release(KEY_ESCAPE)
+		await wait(4)
+		var diffs := burak_snapshot_diff(skipped, watched)
+		check(reached and diffs.is_empty(), "mid-%s: the card's flash, with the ring exactly as a watched entrance leaves it %s" % [where, diffs])
+		check(not pause_menu().is_open() and not paused, "mid-%s: and the pause screen never opened" % where)
+
+	log_p("-- a tapped Escape pauses it")
+	await burak_enter()
+	intro = entrance_state()
+	await wait_until(func(): return intro.entered, 60)
+	await wait(30)
+	var pause: Node = pause_menu()
+	await tap_pause()
+	check(pause.is_open() and paused, "a tap opened the pause screen rather than skipping")
+	var held_at: Vector2 = player.global_position
+	await wait(40)
+	check(player.global_position.is_equal_approx(held_at), "and the walk-in stopped dead with the fight")
+	await tap_pause()
+	await wait(20)
+	check(not paused and not player.global_position.is_equal_approx(held_at), "the resume carries it on")
+	# Skipped to its end, which is what marks it seen for the run.
+	press(KEY_ESCAPE)
+	await burak_card_flash(120)
+	release(KEY_ESCAPE)
+	card = vs_card()
+	card.skip()
+	await wait_until(func(): return not card.is_playing(), 60)
+	card.grace_until_msec = 0
+
+	log_p("-- the retry: no walk-in, the lines and the shot again, and a hold still skips them")
+	await burak_enter(false)
+	intro = entrance_state()
+	gates = current_scene.get_node("Arena/Gates")
+	card = vs_card()
+	check(intro.finished and not gates.is_open(), "the entrance is over on arrival and the ring was never opened")
+	check(await wait_until(func(): return live_balloon() != null, 120), "his lines start straight away")
+	for i in 3600:
+		if card.is_playing():
+			break
+		if i % 8 == 0 and not intro.beat_running:
+			tap(KEY_ENTER)
+		await physics_frame
+	check(intro.beat_times.has(&"warning_shot"), "the warning shot played again (%s)" % [intro.beat_times.keys()])
+	card.skip()
+	await wait_until(func(): return not card.is_playing(), 60)
+	card.grace_until_msec = 0
+	await burak_enter(false)
+	intro = entrance_state()
+	card = vs_card()
+	for i in 3600:
+		if intro.beat_running and boss.current_anim == &"fire_aim":
+			break
+		if i % 8 == 0 and not intro.beat_running:
+			tap(KEY_ENTER)
+		await physics_frame
+	log_p("holding Escape in the aim")
+	press(KEY_ESCAPE)
+	var reached := await burak_card_flash(120)
+	var retried := burak_snapshot()
+	release(KEY_ESCAPE)
+	var retry_diffs := burak_snapshot_diff(retried, watched)
+	check(reached and retry_diffs.is_empty(), "a hold in the replayed shot lands on the card's flash with the same ring %s" % [retry_diffs])
+
+
+# His fight with the entrance held through and the card skipped, parked in Idle, the laugh not yet had.
+func load_burak_laugh() -> void:
+	await burak_enter()
+	var intro: Node = sm.states["Intro"]
+	await wait_until(func(): return intro.entered, 60)
+	intro.skip_to_fight()
+	var card: Node = vs_card()
+	if card.is_playing():
+		card.skip()
+	await wait_until(func(): return not card.is_playing(), 60)
+	card.grace_until_msec = 0
+	await wait_until(func(): return str(sm.current_state.name) == "Idle", 120)
+	stop_boss_timers()
+	player.playerHealth = 1000
+
+
+# A volley ending, owing the laugh or not: into the kegs and straight out through attack_done, which is the
+# routing under test. The volley itself, and when it owes the laugh, is Barrels' own (burak_volley).
+func burak_end_volley(owed: bool) -> void:
+	var barrels: Node = sm.states["Barrels"]
+	sm.on_child_transition(sm.current_state, "Barrels")
+	await wait(2)
+	sm.laugh_owed = owed
+	sm.attack_done(barrels)
+	await wait(1)
+
+
+func burak_ear_ringing() -> bool:
+	for sfx in boss.sfx_players[&"ear_ring"]:
+		if sfx.playing:
+			return true
+	return false
+
+
+# Where the cut leaves the ring, however it ended.
+func burak_laugh_snapshot(laugh: Node) -> Dictionary:
+	var screen: GDScript = load("res://Scripts/ScreenView.gd")
+	return {
+		"state": str(sm.current_state.name), "talking": player.is_talking, "player_sm": player.state_machine.is_processing(),
+		"balloon": live_balloon() != null, "hint": laugh.get_node_or_null("LaughCut") != null,
+		"music_db": snappedf(boss.music_player.volume_db, 0.01), "ear_ring": burak_ear_ringing(), "laugh_played": sm.laugh_played,
+		"zoom": snappedf(screen.zoom, 0.0001), "shake": screen.shake_offset, "time_scale": snappedf(Engine.time_scale, 0.0001),
+		"hurtbox": boss.hurtbox.monitoring, "jitter": laugh.jitter != null, "finished": laugh.finished,
+		"burak": boss.global_position, "hazards": get_nodes_in_group(sm.HAZARD_GROUP).size(),
+	}
+
+
+func test_burak_laugh() -> void:
+	var layout: GDScript = load("res://Scripts/BurakBossArtLayout.gd")
+	var theme_db: float = layout.THEME_DB
+	var talk: Dictionary = layout.TALK_POSES
+	var screen: GDScript = load("res://Scripts/ScreenView.gd")
+
+	log_p("-- watched")
+	await load_burak_laugh()
+	await burak_end_volley(true)
+	var laugh: Node = sm.states["Laugh"]
+	check(sm.current_state == laugh, "an owed laugh plays straight after the kegs (%s)" % sm.current_state.name)
+	check(not laugh.has_method("finish_entrance") and entrance_state() == sm.states["Intro"], "and it is not an entrance: skip_entrance() still finds the intro")
+	check(player.is_talking and not player.state_machine.is_processing(), "the player is held")
+	check(not boss.hurtbox.monitoring, "his hurtbox is off")
+	check(await wait_until(func(): return boss.current_anim == &"laugh", 60), "he bursts out laughing")
+	var slaps := 0
+	var shake_seen := false
+	var last_step := -1
+	var looks := {}
+	var deaf := {"seen": false, "ring": false, "duck": 1000.0, "jitter": 0.0}
+	var after_deaf := {}
+	var last_line = null
+	var deaf_line = null
+	for i in 3600:
+		if sm.current_state != laugh:
+			break
+		if boss.current_anim == &"laugh" and boss.anim_step != last_step:
+			last_step = boss.anim_step
+			if last_step in [1, 3]:
+				slaps += 1
+		if screen.shake_offset != Vector2.ZERO:
+			shake_seen = true
+		var balloon := live_balloon()
+		if balloon != null and balloon.dialogue_line != null:
+			var line = balloon.dialogue_line
+			if line != last_line:
+				if deaf_line != null and last_line == deaf_line:
+					await wait(20)
+					after_deaf = {"ring": burak_ear_ringing(), "db": boss.music_player.volume_db, "rot": balloon.portrait_frame.rotation}
+				last_line = line
+				await wait(4)
+				var text: String = line.text
+				if text.begins_with("...pfffft"):
+					looks["laugh"] = {"pose": laugh.pose, "flip": boss.sprite.flip_h, "frame": boss.sprite.frame}
+				elif text.begins_with("...."):
+					deaf_line = line
+					deaf.seen = true
+				elif text.begins_with("Let's get back"):
+					looks["point"] = {"pose": laugh.pose, "flip": boss.sprite.flip_h, "frame": boss.sprite.frame}
+			if line == deaf_line:
+				deaf.ring = deaf.ring or burak_ear_ringing()
+				deaf.duck = minf(deaf.duck, boss.music_player.volume_db)
+				deaf.jitter = maxf(deaf.jitter, absf(balloon.portrait_frame.rotation))
+		if i % 10 == 0 and not laugh.beat_running:
+			tap(KEY_ENTER)
+		await physics_frame
+	log_p("fit %s, slaps %d, looks %s, deaf %s, after %s" % [laugh.beat_times, slaps, looks, deaf, after_deaf])
+	check(laugh.beat_times.has(&"bursts_out_laughing") and absf(laugh.beat_times[&"bursts_out_laughing"] - 1.40) <= 1.0 / 30.0,
+		"the fit takes 1.40 s (%.3f)" % laugh.beat_times.get(&"bursts_out_laughing", -1.0))
+	check(slaps >= 2 and shake_seen, "the view thumps on his knee slaps (%d)" % slaps)
+	check(looks.has("laugh") and looks.laugh.pose == &"laugh" and looks.laugh.flip and talk[&"laugh"].has(looks.laugh.frame), "his first line laughs, turned toward Danny")
+	check(looks.has("point") and looks.point.pose == &"point" and not looks.point.flip and talk[&"point"].has(looks.point.frame), "his last points, turned back")
+	check(deaf.seen and deaf.ring and absf(deaf.duck - (theme_db - 8.0)) < 0.05 and deaf.jitter > deg_to_rad(1.9),
+		"Danny's line rings, ducks the music 8 dB and twitches his portrait (%s)" % [deaf])
+	check(not after_deaf.is_empty() and not after_deaf.ring and absf(after_deaf.db - theme_db) < 0.05 and after_deaf.rot == 0.0,
+		"and all of it goes with the line (%s)" % [after_deaf])
+	check(str(sm.current_state.name) == "Taunt", "the lines' end opens the Taunt")
+	await wait(30)
+	var watched := burak_laugh_snapshot(laugh)
+	log_p("watched: %s" % [watched])
+	check(watched.state == "Taunt" and not watched.talking and watched.player_sm and not watched.balloon and not watched.hint
+		and absf(watched.music_db - theme_db) < 0.05 and not watched.ear_ring and watched.laugh_played and watched.zoom == 1.0
+		and watched.time_scale == 1.0 and watched.hurtbox and not watched.jitter and watched.finished and watched.hazards == 0,
+		"and the ring is back: the Taunt open, the player free, no balloon or hint, the music level")
+
+	log_p("-- once a fight, and only when owed")
+	await burak_end_volley(true)
+	check(str(sm.current_state.name) == "Taunt", "a second owed laugh goes straight to the Taunt (%s)" % sm.current_state.name)
+	await load_burak_laugh()
+	await burak_end_volley(false)
+	check(str(sm.current_state.name) == "Taunt" and not sm.laugh_played, "a volley that owes nothing opens the Taunt (%s)" % sm.current_state.name)
+
+	for where in ["fit", "line", "deaf"]:
+		log_p("-- held mid-%s" % where)
+		await load_burak_laugh()
+		await burak_end_volley(true)
+		laugh = sm.states["Laugh"]
+		last_line = null
+		var lines := 0
+		for i in 3600:
+			if where == "fit" and boss.current_anim == &"laugh" and laugh.beat_running:
+				await wait(40)
+				break
+			var balloon := live_balloon()
+			if balloon != null and balloon.dialogue_line != null and balloon.dialogue_line != last_line:
+				last_line = balloon.dialogue_line
+				lines += 1
+				if where == "line" and lines == 1:
+					await wait(10)
+					break
+				if where == "deaf" and last_line.text.begins_with("...."):
+					await wait(10)
+					break
+			if where != "fit" and i % 10 == 0 and not laugh.beat_running:
+				tap(KEY_ENTER)
+			await physics_frame
+		log_p("holding Escape: anim %s, lines %d, ear ring %s, music %.2f" % [boss.current_anim, lines, burak_ear_ringing(), boss.music_player.volume_db])
+		press(KEY_ESCAPE)
+		var reached := await wait_until(func(): return str(sm.current_state.name) == "Taunt", 120)
+		release(KEY_ESCAPE)
+		await wait(30)
+		var diffs := burak_snapshot_diff(burak_laugh_snapshot(laugh), watched)
+		check(reached and diffs.is_empty(), "mid-%s: the hold lands where the lines' end does %s" % [where, diffs])
+		check(not paused, "mid-%s: and nothing paused" % where)
+
+	log_p("-- paused mid-fit, then mid-line")
+	await load_burak_laugh()
+	await burak_end_volley(true)
+	laugh = sm.states["Laugh"]
+	await wait_until(func(): return boss.current_anim == &"laugh" and laugh.beat_running, 60)
+	await wait(20)
+	var pause: Node = pause_menu()
+	await tap_pause()
+	check(pause.is_open() and paused and sm.current_state == laugh, "a tapped Escape mid-fit pauses rather than skipping")
+	var frame_at: int = boss.sprite.frame
+	await wait(120)
+	check(laugh.beat_running and not laugh.beat_times.has(&"bursts_out_laughing") and boss.sprite.frame == frame_at, "and the fit holds where it is")
+	await tap_pause()
+	check(await wait_until(func(): return laugh.beat_times.has(&"bursts_out_laughing"), 120), "the resume carries it on")
+	await wait_until(func(): return live_balloon() != null and live_balloon().dialogue_line != null, 120)
+	await wait(10)
+	await tap_pause()
+	var line_at = live_balloon().dialogue_line if live_balloon() != null else null
+	check(pause.is_open() and paused and sm.current_state == laugh, "a tapped Escape mid-line pauses too")
+	await wait(60)
+	check(live_balloon() != null and live_balloon().dialogue_line == line_at and sm.current_state == laugh, "and the line stays up under it")
+	await tap_pause()
+	await wait(10)
+	check(not paused and sm.current_state == laugh and not laugh.finished, "the resume hands the line back")
+
+	log_p("-- the fight ends under it")
+	await load_burak_laugh()
+	await burak_end_volley(true)
+	laugh = sm.states["Laugh"]
+	for i in 3600:
+		var balloon := live_balloon()
+		if balloon != null and balloon.dialogue_line != null and balloon.dialogue_line.text.begins_with("...."):
+			await wait(10)
+			break
+		if i % 10 == 0 and not laugh.beat_running:
+			tap(KEY_ENTER)
+		await physics_frame
+	check(burak_ear_ringing() and laugh.jitter != null, "mid Danny's line")
+	sm.enter_player_defeated()
+	await wait(30)
+	var ended := burak_laugh_snapshot(laugh)
+	log_p("ended: %s" % [ended])
+	check(ended.state == "Victory" and ended.finished and not ended.talking and not ended.ear_ring and not ended.jitter
+		and not ended.hint and not ended.balloon and absf(ended.music_db - theme_db) < 0.05,
+		"the cut lets go of everything, its lines included, and he laughs in Victory")

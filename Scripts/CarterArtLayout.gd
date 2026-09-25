@@ -17,12 +17,30 @@ const ANCHOR := Vector2(48, 95)
 const AKUMA_SHEET := "res://Assets/Characters/Carter/carter_akuma.png"
 
 # What the player can punch while he is down recovering: the mass of carter_spent, the pose he holds
-# through the punish window. He kneels, so the box sits well below the standing one - and he was
-# re-rasterised 16% smaller inside the same frame, which took another eleven rows off the top of it.
-const RECOVER_BODY_BOX := Rect2(18, 39, 53, 56)
+# through the punish window. He kneels, so the box sits well below the standing one. The polished
+# redraw spans x 19-72 from row 36 or 37 down, so it was widened to take in his head and his right
+# hand.
+const RECOVER_BODY_BOX := Rect2(18, 37, 55, 58)
 # Where the finisher's daze stars circle, in px from the floor point he stands on: a little over the
 # badge anchor of that same kneeling pose, which sits at texel (48, 31).
 const DAZE_ANCHOR := Vector2(0, -226)
+
+#THE HUD
+# Where his health bar block and the player's own HUD are drawn, measured off the live fight: the
+# defence suite's carter_hud mode walks the real HUD and fails if these stop covering it. Nothing the
+# player has to read - a clone's light, a badge - may sit under one of them, or off the view (VIEW_RECT).
+const HUD_KEEP_OUT: Array[Rect2] = [
+	# His name plate, bar, crest and Break gauge.
+	Rect2(720, 33, 480, 148),
+	# The player's combo count, hearts and stamina, bottom left.
+	Rect2(10, 842, 406, 229),
+	# The player's parry streak and hype meter, bottom right.
+	Rect2(1371, 946, 537, 126),
+]
+# How far clear of them, and of the edge of the view, what is read has to stay.
+const HUD_CLEARANCE := 12.0
+# A ParryTell badge, red or yellow, around the anchor its bottom tip stands on: a 32x24 frame at 3x.
+const TELL_BADGE := Rect2(-48, -72, 96, 72)
 
 #ANIMATIONS
 # name: sheet, frames in order, seconds on each (the last value repeats) and whether it loops.
@@ -47,6 +65,9 @@ const USE_FINAL_ANIMS := {
 	&"look_back_ready": true,
 	&"look_back": true,
 	&"look_back_hold": true,
+	&"lights_out": false,
+	&"messatsu_charge": true,
+	&"messatsu_fire": true,
 }
 
 const PLACEHOLDER_ANIMS := {
@@ -77,6 +98,16 @@ const PLACEHOLDER_ANIMS := {
 		frames = [4, 5, 6], times = [0.11, 0.13, 0.13], loop = false},
 	&"look_back_hold": {sheet = "res://Assets/Characters/Carter/carter_victory.png",
 		frames = [4, 5, 6], times = [0.11, 0.13, 0.13], loop = true},
+	# The Messatsu's stand-ins, off sheets that already exist: the lights die on the eye flash run
+	# through, he charges holding its hard downward glare, and he fires on the rush's committed frame.
+	# The charge and the fire have their own sheets now. carter_lights_out was never drawn, so the eye
+	# flash is still what plays, lit, before the lights go.
+	&"lights_out": {sheet = "res://Assets/Characters/Carter/carter_eye_flash.png",
+		frames = [0, 1, 2, 3], times = [0.10, 0.08, 0.08, 0.14], loop = false},
+	&"messatsu_charge": {sheet = "res://Assets/Characters/Carter/carter_eye_flash.png",
+		frames = [3], times = [0.12], loop = true},
+	&"messatsu_fire": {sheet = "res://Assets/Characters/Carter/carter_rush.png",
+		frames = [3], times = [0.10], loop = false},
 }
 
 const FINAL_ANIMS := {
@@ -150,6 +181,15 @@ const FINAL_ANIMS := {
 		frames = [0, 1, 2], times = [0.12, 0.11, 0.10], loop = false},
 	&"look_back_hold": {sheet = "res://Assets/Characters/Carter/carter_look_back.png",
 		frames = [3, 4, 5], times = [0.2], loop = true},
+	# The Gou Hadou stance, palms cupped at his hip. It plays unseen through the dark and is what the
+	# lights come up on: every frame keeps the palm cup on MESSATSU_MUZZLE and his eye slits under
+	# MESSATSU_EYES, which is what the ball and the glow in the dark sit on.
+	&"messatsu_charge": {sheet = "res://Assets/Characters/Carter/carter_messatsu_charge.png",
+		frames = [0, 1, 2, 3], times = [0.12], loop = true},
+	# The thrust, the recoil, then the bracing hold, which stays up for the rest of the string. The
+	# recoil slides him back inside the frame to keep his palms on MESSATSU_MUZZLE (MESSATSU_RECOIL).
+	&"messatsu_fire": {sheet = "res://Assets/Characters/Carter/carter_messatsu_fire.png",
+		frames = [0, 1, 2], times = [0.05, 0.05, 0.1], loop = false},
 }
 
 # The clones are half his height by the user's own call, so Demon/demon_clone.png is his lunge
@@ -182,8 +222,8 @@ const FINAL_MARK_GLOW := {
 	"offset": Vector2(16, 32),
 	"frame_time": 0.09,
 	"scale": 3.0,
-	# The brightest frame of the cycle, by a factor of six over the dimmest: 709 lit texels against
-	# 250. The KO starts the cycle here so the ignition IS the peak, on the same frame as the bell,
+	# The brightest frame of the cycle, by a factor of seven over the dimmest: 747 lit texels against
+	# 247 (the 天 mark, 2026-09-23). The KO starts the cycle here so the ignition IS the peak, on the same frame as the bell,
 	# instead of snapping on at its faintest and brightening a third of a second later.
 	"peak_frame": 3,
 	# Once his body is lit, only these. The peaks (3 and 4) spread a dithered wash over his whole upper
@@ -325,11 +365,12 @@ const FINAL_CLONE_GHOST := {
 }
 
 #THE LIGHT OVER A CLONE
-# Red means parry it, yellow means a feint that punishes a parry. The two are timed identically, so
-# the only thing separating them is what they look like: red is the same diamond-and-exclamation as
-# the game's existing parry tell, yellow a wide hollow ring with a bar through it. They differ in
-# silhouette, aspect, solid against hollow and light-on-dark against dark-on-light, so the read
-# survives colourblindness. A redraw has to keep all of that, not just the hue.
+# Red means parry it; the fake's mark means don't press, because a parry is punished. The two are timed
+# identically, so the only thing separating them is what they look like: red is the same
+# diamond-and-exclamation as the game's existing parry tell, the fake a bold pale steel X of its own
+# (FINAL_FEINT_TELL), with the yellow ring - the game's dodge tell - standing in until its sheet is
+# imported. They differ in silhouette, colour and outline, so the read survives colourblindness. A
+# redraw has to keep all of that, not just the hue.
 # THE HOLD FRAME IS HELD STEADY FOR THE WHOLE REACTION WINDOW. It must never pulse or loop: a tell
 # that flickers gets re-read instead of acted on.
 # It sits this far over the clone's head, so its height follows the clone's frame rather than being
@@ -375,6 +416,18 @@ const FINAL_CLONE_LIGHT := {
 	"ignite_time": 0.05,
 	"peak_time": 0.04,
 	"fade_time": 0.08,
+}
+# The fake's own mark, on the lights' own contract and FINAL_CLONE_LIGHT's timings, never tinted. It is
+# loaded at run time and only once the editor has imported it (feint_tell), so a checkout without its
+# import still runs, on the yellow ring.
+const USE_FINAL_FEINT_TELL := true
+const FINAL_FEINT_TELL := {
+	"texture": "res://Assets/Characters/Carter/Demon/demon_feint.png",
+	"hframes": 4,
+	"frame_size": Vector2(24, 24),
+	"pivot": Vector2(12, 12),
+	"scale": 3.0,
+	"steps": {"ignite": 0, "peak": 1, "hold": 2, "fade": 3},
 }
 
 #WHAT A CLONE LEAVES BEHIND
@@ -437,91 +490,310 @@ const FINAL_FINISH := {
 }
 
 #THE BEAM RUSH
-# His second attack (CarterBeamRush): four clones hold a curtain of light each across the ring while
-# he teleports in beside the player and strikes, over and over, until a parry has filled his Break
-# gauge seven times over.
-# THE CURTAINS ARE STATIC, VERTICAL AND UNCHANGING FOR THE WHOLE ATTACK, and that is load-bearing
-# rather than a simplification. PlayerDefense.block_move_speed_ratio is 0.0, so a player holding the
-# guard for the parry is ROOTED: a sweeping or pulsing beam would ask them to move out of something
-# they physically cannot move away from while doing the thing the attack is about. They divide the
-# ring into lanes to be stood in, and they are never a dodge.
-# Their x comes from the inside of the ropes (CarterStateMachine.ROPES) and nowhere else: four evenly
-# spaced curtains leave five lanes of 280.8 px against a 36 px player, about 104 px from a lane's
-# centre to the nearest edge that hurts.
+# His second attack (CarterBeamRush): four clones across the top of the ring charge beams, lock them
+# onto the player and fire them, volley after volley, while he waits for his moment to teleport in and
+# strike. Their beams are drawn with the Messatsu's sheets and sizes below, all but its surges.
+# Their x comes from the inside of the ropes (CarterStateMachine.ROPES) and nowhere else: evenly
+# spaced, a fifth of the ring apart.
 const BEAM_COUNT := 4
 const BEAM_X := [451.0, 790.0, 1128.0, 1467.0]
-# Drawn 32 texels across at SCALE, of which 24 texels hurt: 12 px of forgiveness down each side, so
-# what a player grazes is light and not damage.
-const BEAM_DRAW_WIDTH := 96.0
-const BEAM_HIT_WIDTH := 72.0
-# From the top of the view to the bottom rope. It runs past the top of the ropes on purpose: a strip
-# of floor up there with no curtain in it would be a free lane change, which is the one thing the
-# curtains exist to prevent. The 960 px between them is exactly 320 texels at SCALE, which is what
-# lets one drawn frame be the whole curtain instead of a stack of tiles.
-const BEAM_TOP_Y := 7.0
-const BEAM_BOTTOM_Y := 967.0
-# Where the four stand, high in the ring: far enough down that a whole 288 px figure is on screen,
-# and each is drawn over its own curtain so it reads as the thing holding it up.
+# Where the four stand, high in the ring: far enough down that a whole 288 px figure is on screen.
 const BEAM_CLONE_Y := 300.0
-# Relative to the clone layer, which both are added to: the curtains as light over the fighters, and
-# the figure holding one over its own curtain.
-const BEAM_Z := 0
+# Relative to the clone layer: each figure over its own aim line, and the ball over the figure's palms.
 const BEAM_CLONE_Z := 2
-
-# THESE FOUR ARE NOT THE BARRAGE'S CLONES AND MUST NEVER BE MISTAKEN FOR THEM. They are full size,
-# not the 48x48 halflings; they carry no light over the head, no hurtbox and no strike of their own,
-# and nothing the player does answers them. This fight already teaches one clone read - red parry,
-# yellow feint - and a second, contradictory clone vocabulary would poison the first.
-const USE_FINAL_BEAM_CLONE := false
-# Until they have a sheet of their own: his own standing frame at full size under BEAM_CLONE_TINT.
-const PLACEHOLDER_BEAM_CLONE := {sheet = AKUMA_SHEET, frames = [0], times = [1.0], loop = true}
-const FINAL_BEAM_CLONE := {sheet = "res://Assets/Characters/Carter/carter_beam_clone.png",
-	frames = [0, 1, 2, 3], times = [0.12], loop = true}
-# Dark and violet, the barrage wraith's own colour, so they read as apparitions rather than as four
-# more Carters. The placeholder only: the final sheet will be authored with it.
+const BEAM_BALL_Z := 3
+# They hold his own messatsu_charge and messatsu_fire frames. THEY ARE NOT THE BARRAGE'S CLONES AND
+# MUST NEVER BE MISTAKEN FOR THEM: full size, not the 48x48 halflings, and dark and violet, the barrage
+# wraith's own colour, so they read as apparitions rather than as four more Carters.
 const BEAM_CLONE_TINT := Color(0.42, 0.26, 0.56, 0.88)
 
-# The curtain itself, drawn as light.
-const USE_FINAL_BEAM := false
-# A wide translucent body with a hot core down the middle of it, both stretched to the full height.
-const PLACEHOLDER_BEAM := {
-	"color": Color(0.86, 0.22, 0.32, 0.45),
-	"core_color": Color(1.0, 0.88, 0.82, 0.7),
-	"core_width": 24.0,
+
+#THE MESSATSU
+# His third attack (CarterMessatsu): the lights go out, he reappears across the ring charging a beam
+# locked onto the player, and he fires it as they come back on - one hit as it lands and one per surge
+# after it, six in all, every one of them its own parry.
+# THE WIDTH IS THE DODGE. To be clear of the first hit the player's hurtbox has to be 180 + h px off
+# the beam's axis, where h = 18|sin| + 40.5|cos| of its angle: 198 to 224 px. In the 0.10 s the head
+# takes to arrive, walking covers at most 85 px, a dash started before the fire at most 167 px after
+# the aim latches, and a dash whose three frames all fall inside those six frames always clears (231 px
+# against 224 at the worst angle, 22.5 degrees). So there is a dodge, about four frames long, and it
+# has to be timed before the beam is seen. Above about 373 px it is literally impossible at some
+# angles. TO TUNE THE DODGE, CHANGE messatsu_travel, NOT THE WIDTH.
+const MESSATSU_HIT_WIDTH := 360.0
+# 136 texels at SCALE, of which 120 hurt: 24 px of glow down each side that is light and not damage.
+const MESSATSU_DRAW_WIDTH := 408.0
+# From his palms to past the far corner of the view, wherever in the ring he fires from.
+const MESSATSU_LENGTH := 2240.0
+# Closer than this to his palms the aim holds its last angle instead of spinning on the spot.
+const MESSATSU_MIN_AIM := 40.0
+# The band starts this far BEHIND his palms, so standing on top of him is not a safe spot.
+const MESSATSU_BACK := 60.0
+# He only turns round during the charge, and only once the player is this far past his centre line,
+# so walking across in front of him can't flicker him.
+const MESSATSU_FACE_HYSTERESIS := 60.0
+const MESSATSU_DARKEN := 0.10
+# The flash rect popped over the lights coming back on.
+const MESSATSU_FLASH_PEAK := 0.22
+const MESSATSU_FLASH_TIME := 0.12
+# The Demon's duck: the same room going dark.
+const MESSATSU_DUCK_DB := -10.0
+const MESSATSU_DUCK_TIME := 0.2
+const MESSATSU_MUSIC_BACK := 0.25
+const MESSATSU_CHEER := 1.0
+# Measured off carter_messatsu_charge and _fire, on frames facing right, and mirrored with him.
+# The badge's point is in px from his feet, as the Beam Rush's is: over the centre line of his head,
+# which sits right of his feet in the charge pose (x 61, crown on row 29, the aura's tongues up to about
+# -261 px).
+const MESSATSU_TELL_ANCHOR := Vector2(39, -300)
+# The palm cup's gap on all four charge frames and the heels of his palms on fire frames 1 and 2. The
+# thrust, fire frame 0, has its palms out at (84, 61), inside the flare.
+const MESSATSU_MUZZLE := Vector2(54, 64)
+# The corner between his two eye slits, x 52-57 and 64-69 on rows 44-45 of all four charge frames, and
+# the gap between them. The glow in the dark is laid on those slits to the texel: at lights-on it hands
+# over to them.
+const MESSATSU_EYES := Vector2(61, 45)
+const MESSATSU_EYE_GAP := 6.0
+# The same for the last frame of the lights going out, carter_eye_flash frame 3 until carter_lights_out
+# is drawn, where the glow starts: his eyes are flared white across x 34-44 and 51-62 of row 36, with
+# pink and red rims above and below and streaks out to the frame's edge. That is about twice as wide as
+# the glow's slits, so its halves sit centred on them, their hottest row on the white.
+const MESSATSU_LIGHTS_OUT_EYES := Vector2(48, 36)
+const MESSATSU_LIGHTS_OUT_EYE_GAP := 12.0
+# When he turns in the charge, his eyes slide across in this long, the way a head turns, instead of
+# hopping the 78 px from one side of his feet to the other.
+const MESSATSU_EYES_TURN := 0.1
+# The dark's two middle beats are his eyes': they fade out where he stood, then back in where he has
+# gone. Nothing else of him shows until the lights come back.
+const MESSATSU_EYES_OUT := 0.28
+const MESSATSU_EYES_IN := 0.30
+# The fire frames slide him back as he recoils, so his palms stay on MESSATSU_MUZZLE: on the held last
+# frame the mass of him is this many texels further back than on carter_spent (x 38 against 49). He is
+# handed over to the spent pose moved back by it, rather than popping forward.
+const MESSATSU_RECOIL := 11.0
+const MESSATSU_FIRE_SHAKE := 12.0
+const MESSATSU_FIRE_SHAKE_STEPS := 6
+const MESSATSU_FIRE_SHAKE_STEP_TIME := 0.03
+const MESSATSU_HIT_SHAKE := 3.0
+const MESSATSU_HIT_SHAKE_STEPS := 2
+const MESSATSU_HIT_SHAKE_STEP_TIME := 0.03
+# Where his feet may land: inside the ropes, and low enough that the badge 300 px over them stays on
+# screen. Only where that badge is clear of the HUD, too (CarterMessatsu._tell_clear_at).
+const MESSATSU_SPOT_AREA := Rect2(233, 430, 1452, 470)
+
+# The ball gathering in his palms, the eyes that are all that shows of him in the dark, the aim line
+# and the lock on the player, the beam, the flare at his palms, its head and the surges that carry hits
+# 2 to 6. Each has its sheet below and a flag that brings its placeholder back; the aim line has no
+# sheet and is drawn in code.
+# THE AIM LINE AND THE LOCK ARE VIOLET, NEVER RED OR YELLOW. Those two colours are this fight's answer
+# key, and the only red anywhere in this attack is the badge and the surges' rim.
+const USE_FINAL_MESSATSU_BALL := true
+const USE_FINAL_MESSATSU_EYES := true
+const USE_FINAL_MESSATSU_LOCK := true
+const USE_FINAL_MESSATSU_BEAM := true
+const USE_FINAL_MESSATSU_FLARE := true
+const USE_FINAL_MESSATSU_HEAD := true
+const USE_FINAL_MESSATSU_PULSE := true
+# Drawn as light, and scaled up from `from_scale` to full over the charge.
+const PLACEHOLDER_MESSATSU_BALL := {
+	"radius": 42.0,
+	"points": 24,
+	"color": Color(0.82, 0.55, 1.0),
+	"from_scale": 0.3,
 }
-# One frame is the whole curtain, top to bottom: 32 x 320 texels at SCALE is exactly
-# BEAM_DRAW_WIDTH x (BEAM_BOTTOM_Y - BEAM_TOP_Y), so nothing is stretched or tiled.
-const FINAL_BEAM := {
-	"texture": "res://Assets/Characters/Carter/Demon/demon_beam.png",
-	"frame_size": Vector2(32, 320),
-	"hframes": 4,
-	"frame_time": 0.07,
+# Two slits, centred on MESSATSU_EYES and `spacing` px apart.
+const PLACEHOLDER_MESSATSU_EYES := {
+	"size": Vector2(14, 4),
+	"spacing": 20.0,
+	"color": Color(1.0, 0.12, 0.12),
+}
+# Dim and flickering in the dark, solid once the lights are back.
+const PLACEHOLDER_MESSATSU_LINE := {
+	"width": 6.0,
+	"color": Color(0.72, 0.4, 1.0, 0.55),
+	"flicker_alpha": 0.3,
+	"flicker_time": 0.05,
+	"lit_color": Color(0.9, 0.7, 1.0, 0.9),
+}
+# Contracting on the player over the charge.
+const PLACEHOLDER_MESSATSU_RING := {
+	"from": 72.0,
+	"to": 40.0,
+	"width": 4.0,
+	"points": 28,
+	"color": Color(0.72, 0.4, 1.0, 0.85),
+}
+# MESSATSU_DRAW_WIDTH across with a hot core down the middle, both drawn as light.
+const PLACEHOLDER_MESSATSU_BEAM := {
+	"color": Color(0.55, 0.25, 0.9, 0.45),
+	"core_color": Color(1.0, 0.92, 1.0, 0.75),
+	"core_width": 136.0,
+}
+const PLACEHOLDER_MESSATSU_FLARE := {
+	"radii": Vector2(150, 204),
+	"points": 24,
+	"color": Color(0.9, 0.7, 1.0, 0.6),
+}
+const PLACEHOLDER_MESSATSU_HEAD := {
+	"radii": Vector2(36, 204),
+	"points": 20,
+	"color": Color(1.0, 0.92, 1.0, 0.75),
+}
+const PLACEHOLDER_MESSATSU_PULSE := {
+	"size": Vector2(48, 408),
+	"color": Color(1.0, 0.35, 0.4, 0.8),
+	"core_size": Vector2(20, 136),
+	"core_color": Color(1.0, 1.0, 1.0, 0.9),
+}
+# The sheets, all drawn at SCALE, with `pivot` the texel that sits on the node's origin.
+# THE BALL, THE EYES AND THE LOCK ARE LIGHT; THE BEAM, THE FLARE, THE HEAD AND THE SURGES ARE PAINT.
+# The first three only ever show in the dark, where light lands as drawn. The other four show over the
+# lit green mat, and violet is green's complement: added to it as light it washes to grey and buries
+# the parry burst, which read at 4-23% through the core as light against 77-84% as paint.
+const FINAL_MESSATSU_BALL := {
+	"texture": "res://Assets/Characters/Carter/Messatsu/messatsu_ball.png",
+	"hframes": 6,
+	"frame_size": Vector2(32, 32),
+	"pivot": Vector2(16, 16),
 	"scale": 3.0,
+	"additive": true,
+	"frame_time": 0.06,
+	"from_scale": 0.3,
+}
+# The pivot is the point between the slits, and it mirrors with him: the glint is on one eye. Its slits
+# are `gap` texels apart where his are MESSATSU_EYE_GAP, so it is split at column `split` and each half
+# laid on its own eye.
+const FINAL_MESSATSU_EYES := {
+	"texture": "res://Assets/Characters/Carter/Messatsu/messatsu_eyes.png",
+	"hframes": 2,
+	"frame_size": Vector2(16, 8),
+	"pivot": Vector2(8, 4),
+	"split": 8,
+	"gap": 2.0,
+	"scale": 3.0,
+	"additive": true,
+	"frame_times": [0.36, 0.06],
+}
+# Its frames are the lock's progress over the charge, not a loop, and it is drawn at the size it ends
+# at: the squeeze down from `from_scale` is on top of them.
+const FINAL_MESSATSU_LOCK := {
+	"texture": "res://Assets/Characters/Carter/Messatsu/messatsu_lock.png",
+	"hframes": 6,
+	"frame_size": Vector2(32, 32),
+	"pivot": Vector2(16, 16),
+	"scale": 3.0,
+	"additive": true,
+	"from_scale": 1.8,
+}
+# MESSATSU_DRAW_WIDTH across: rows 8 to 127 are the hurting band, with its edge rows the brightest,
+# and 8 rows of glow either side. Each frame tiles along the beam on its own and frame k+1 is frame k
+# moved 8 texels down it. Region repeat tiles a whole texture, so the frames are cut apart and
+# swapped, not stepped.
+const FINAL_MESSATSU_BEAM := {
+	"texture": "res://Assets/Characters/Carter/Messatsu/messatsu_beam.png",
+	"hframes": 4,
+	"frame_size": Vector2(32, 136),
+	"pivot": Vector2(0, 68),
+	"scale": 3.0,
+	"additive": false,
+	"frame_time": 0.05,
+}
+# The beam's body starts this far past his palms, under the flare's full-width stretch, so its flat end
+# never shows. Its texture's columns count from his palms, so its flow carries straight on out of the
+# flare's.
+const MESSATSU_BEAM_START := 96.0
+# The beam's tapered start, out of his palms and pointing down it. It is on the beam's clock: frame k
+# of it is frame k of the beam.
+const FINAL_MESSATSU_FLARE := {
+	"texture": "res://Assets/Characters/Carter/Messatsu/messatsu_flare.png",
+	"hframes": 4,
+	"frame_size": Vector2(64, 144),
+	"pivot": Vector2(6, 72),
+	"scale": 3.0,
+	"additive": false,
+	"frame_time": 0.05,
+}
+# On the beam's front end while it crosses: all three frames show in the 0.10 s it takes.
+const FINAL_MESSATSU_HEAD := {
+	"texture": "res://Assets/Characters/Carter/Messatsu/messatsu_head.png",
+	"hframes": 3,
+	"frame_size": Vector2(24, 144),
+	"pivot": Vector2(5, 72),
+	"scale": 3.0,
+	"additive": false,
+	"frame_time": 0.034,
+}
+const FINAL_MESSATSU_PULSE := {
+	"texture": "res://Assets/Characters/Carter/Messatsu/messatsu_pulse.png",
+	"hframes": 3,
+	"frame_size": Vector2(20, 136),
+	"pivot": Vector2(10, 68),
+	"scale": 3.0,
+	"additive": false,
+	"frame_time": 0.05,
 }
 
+# Each take is used the moment its own file exists; until then the fallback stands in for it.
+const MESSATSU_SFX := {
+	&"charge": {"final": "res://Assets/Audio/SFX/carter_messatsu_charge.wav",
+		"fallback": "res://Assets/Audio/SFX/laser_charge.ogg"},
+	&"lights_on": {"final": "res://Assets/Audio/SFX/carter_lights_on.wav",
+		"fallback": "res://Assets/Audio/SFX/carter_dark.wav"},
+	&"fire": {"final": "res://Assets/Audio/SFX/carter_messatsu_fire.wav",
+		"fallback": "res://Assets/Audio/SFX/rocket_launch.ogg"},
+	&"pulse_1": {"final": "res://Assets/Audio/SFX/carter_messatsu_pulse_1.wav",
+		"fallback": "res://Assets/Audio/SFX/carter_rush_1.wav"},
+	&"pulse_2": {"final": "res://Assets/Audio/SFX/carter_messatsu_pulse_2.wav",
+		"fallback": "res://Assets/Audio/SFX/carter_rush_2.wav"},
+	&"pulse_3": {"final": "res://Assets/Audio/SFX/carter_messatsu_pulse_3.wav",
+		"fallback": "res://Assets/Audio/SFX/carter_rush_3.wav"},
+}
+# His rushes standing in for the surges are pitched down under the beam.
+const MESSATSU_PULSE_FALLBACK_PITCH := 0.85
 
-static func beam() -> Dictionary:
-	return FINAL_BEAM if USE_FINAL_BEAM else PLACEHOLDER_BEAM
+
+static func messatsu_sfx(key: StringName) -> String:
+	var sound: Dictionary = MESSATSU_SFX[key]
+	if ResourceLoader.exists(sound.final):
+		return sound.final
+	return sound.fallback
 
 
-static func beam_clone() -> Dictionary:
-	return FINAL_BEAM_CLONE if USE_FINAL_BEAM_CLONE else PLACEHOLDER_BEAM_CLONE
+static func messatsu_ball() -> Dictionary:
+	return FINAL_MESSATSU_BALL if USE_FINAL_MESSATSU_BALL else PLACEHOLDER_MESSATSU_BALL
 
 
-# A curtain `width` px across, centred on `x`: BEAM_DRAW_WIDTH for what is drawn, BEAM_HIT_WIDTH for
-# what hurts. Nothing may build either rect by hand.
-static func beam_rect(x: float, width: float) -> Rect2:
-	return Rect2(x - width / 2.0, BEAM_TOP_Y, width, BEAM_BOTTOM_Y - BEAM_TOP_Y)
+static func messatsu_eyes() -> Dictionary:
+	return FINAL_MESSATSU_EYES if USE_FINAL_MESSATSU_EYES else PLACEHOLDER_MESSATSU_EYES
+
+
+static func messatsu_lock() -> Dictionary:
+	return FINAL_MESSATSU_LOCK if USE_FINAL_MESSATSU_LOCK else PLACEHOLDER_MESSATSU_RING
+
+
+static func messatsu_beam() -> Dictionary:
+	return FINAL_MESSATSU_BEAM if USE_FINAL_MESSATSU_BEAM else PLACEHOLDER_MESSATSU_BEAM
+
+
+static func messatsu_flare() -> Dictionary:
+	return FINAL_MESSATSU_FLARE if USE_FINAL_MESSATSU_FLARE else PLACEHOLDER_MESSATSU_FLARE
+
+
+static func messatsu_head() -> Dictionary:
+	return FINAL_MESSATSU_HEAD if USE_FINAL_MESSATSU_HEAD else PLACEHOLDER_MESSATSU_HEAD
+
+
+static func messatsu_pulse() -> Dictionary:
+	return FINAL_MESSATSU_PULSE if USE_FINAL_MESSATSU_PULSE else PLACEHOLDER_MESSATSU_PULSE
 
 
 #HIS BREAK GAUGE (BreakGaugeUI, BossBreakGauge)
-# The daze meter the Beam Rush fills and nothing else does, hung under his health bar. The art is the
-# game's shared Break gauge chrome in Assets/UI, the same pieces Eric's gauge draws with - it is one
-# instrument, not a per-boss redraw - so a redraw of those files is a redraw of both gauges.
+# His fight-long Break gauge, hung under his health bar and filled by every parry of all three attacks.
+# The art is the game's shared Break gauge chrome in Assets/UI, the same pieces Eric's gauge draws with
+# - it is one instrument, not a per-boss redraw - so a redraw of those files is a redraw of both gauges.
 # `position` is only a fallback: CarterAkumaScript places it from health_bar.break_gauge_anchor(),
 # which is the same point.
-# From this share of full it pulses, and this many real seconds for the fill to catch up. At 15 a
-# parry, 0.8 puts the pulse on the seventh strike read well, which is the one that ends the attack.
+# From this share of full it pulses, and this many real seconds for the fill to catch up. At 12.5 a
+# parry, 0.8 puts the pulse on the seventh read in a row: one more breaks him.
 const USE_FINAL_BREAK_GAUGE := true
 const PLACEHOLDER_BREAK_GAUGE := {
 	"position": Vector2(770, 96),
@@ -575,6 +847,45 @@ const FINAL_BREAK_GAUGE := {
 
 static func break_gauge() -> Dictionary:
 	return FINAL_BREAK_GAUGE if USE_FINAL_BREAK_GAUGE else PLACEHOLDER_BREAK_GAUGE
+
+
+# The shared Break sting (BossBroken's), played as his gauge breaks, whenever in an attack that lands.
+const BREAK_STING_SFX := {"stream": "res://Assets/Audio/SFX/break_sting.wav", "pitch": 1.0, "volume_db": 0.0}
+
+
+#HIS JUGGLE (BossJuggled)
+# The tiered finisher after a Break: carter_juggle.png, twelve 192x144 frames drawn facing right at 3x.
+# Its frame is bigger than his and its origin is not his feet, so it carries its own offset, feet and
+# top row, and the juggle owns the sprite's texture, frames and offset for as long as it runs. Top row 48
+# is the highest any frame draws (tumble frame 5); the lying frames rest on row 143, the launch frames
+# stand a texel higher on 142. The paths are strings, loaded when the juggle runs.
+const USE_FINAL_JUGGLE := true
+const FINAL_JUGGLE := {
+	"texture": "res://Assets/Characters/Carter/carter_juggle.png",
+	"hframes": 12,
+	"frame_size": Vector2(192, 144),
+	"offset": Vector2(0, -71),
+	"feet": Vector2(96, 143),
+	"tumble_centre": Vector2(96, 94),
+	"top_row": 48,
+	"clips": {
+		&"launch": {"frames": [0, 1], "times": [0.06, 0.08], "loop": false},
+		&"tumble": {"frames": [2, 3, 4, 5, 6], "times": [0.16, 0.07, 0.07, 0.07, 0.07], "loop": true},
+		&"crash": {"frames": [7, 8, 9], "times": [0.06, 0.08, 0.12], "loop": false},
+		&"down": {"frames": [10, 11], "times": [0.4, 0.4], "loop": true},
+	},
+	"shadow": {
+		"texture": "res://Assets/Characters/Carter/carter_leap_shadow.png",
+		"hframes": 3, "scale": 3.0, "alpha": 0.35, "step": 100.0, "offset": Vector2.ZERO,
+	},
+	"lying_time": 0.3,
+	"outro_delay": 1.8,
+	"crash_sfx": {"stream": "res://Assets/Audio/SFX/hit_impact.ogg", "pitch": 0.7, "volume_db": 0.0},
+}
+
+
+static func juggle() -> Dictionary:
+	return FINAL_JUGGLE
 
 
 #HIS VICTORY POSE
@@ -791,6 +1102,39 @@ static func clone_shape() -> PackedVector2Array:
 
 static func clone_light() -> Dictionary:
 	return FINAL_CLONE_LIGHT if USE_FINAL_CLONE_LIGHT else PLACEHOLDER_CLONE_LIGHT
+
+
+# The fake's mark once its sheet has been imported; an empty spec until then, for the yellow ring.
+static func feint_tell() -> Dictionary:
+	if USE_FINAL_FEINT_TELL and ResourceLoader.exists(FINAL_FEINT_TELL.texture):
+		return FINAL_FEINT_TELL
+	return {}
+
+
+# A clone and the light over its head, around its feet: the light at the punish clone's size, the
+# bigger of the two.
+static func clone_drawn_rect() -> Rect2:
+	var body := Rect2(-CLONE_ANCHOR * CLONE_SCALE, CLONE_FRAME_SIZE * CLONE_SCALE)
+	var reach := Vector2.ONE * CLONE_LIGHT_REACH
+	return body.merge(Rect2(clone_light_anchor() - reach, reach * 2.0))
+
+
+# Whether something drawn at `rect` is wholly in view and clear of every HUD block.
+static func clear_of_hud(rect: Rect2) -> bool:
+	if not VIEW_RECT.grow(-HUD_CLEARANCE).encloses(rect):
+		return false
+	for keep_out in HUD_KEEP_OUT:
+		if keep_out.grow(HUD_CLEARANCE).intersects(rect):
+			return false
+	return true
+
+
+# The first of `anchors` whose badge would be clear of the HUD; the first of them if none would be.
+static func clear_tell_anchor(anchors: Array) -> Vector2:
+	for anchor: Vector2 in anchors:
+		if clear_of_hud(Rect2(anchor + TELL_BADGE.position, TELL_BADGE.size)):
+			return anchor
+	return anchors[0]
 
 
 static func clone_shatter() -> Dictionary:

@@ -11,6 +11,9 @@ const FIGHT_PANEL_OFFSET_RIGHT: float = -24.0
 
 const DialogueVoices := preload("res://Scripts/DialogueVoices.gd")
 
+## Speakers whose portrait lives in a folder not named after them.
+const PORTRAIT_FOLDERS := {"Captain Burak": "BurakBoss"}
+
 ## The dialogue resource
 @export var dialogue_resource: DialogueResource
 
@@ -184,7 +187,7 @@ func apply_dialogue_line() -> void:
 
 	character_label.visible = not dialogue_line.character.is_empty()
 	character_label.text = tr(dialogue_line.character, "dialogue")
-	var portriat_path: String = "res://Assets/Characters/%s/portrait.png" % dialogue_line.character
+	var portriat_path: String = "res://Assets/Characters/%s/portrait.png" % PORTRAIT_FOLDERS.get(dialogue_line.character, dialogue_line.character)
 	print("Portrait path: ", portriat_path)
 	if is_instance_valid(portrait):
 		if ResourceLoader.exists(portriat_path):
@@ -302,6 +305,9 @@ func _on_dialogue_label_spoke(letter: String, letter_index: int, speed: float) -
 	# Skip blipping on whitespace/punctuation-only "letters" so it doesn't
 	# stutter oddly on spaces - classic Undertale-style talk sound.
 	if _voiced_letter.search(letter) == null:
+		return
+	# A line whose voice is a sound of its own, which the fight plays (Greyson's "COMPUTAH NOOO"), types in silence.
+	if dialogue_line.get_tag_value("blips") == "off":
 		return
 	# The label types about 60 letters a second, sometimes two in one frame, so without a minimum gap in real time a
 	# voice that blips every letter or two would blur into a buzz.

@@ -29,6 +29,7 @@ func Enter() -> void:
 	body.play_anim(&"fly")
 	_start(Phase.APPROACH)
 	trail_started = false
+	body.breath_read = false
 
 
 func Exit() -> void:
@@ -121,7 +122,7 @@ func _hit() -> RefCounted:
 	return HitInfo.make(&"bixby_fire_breath", body.fire_hitbox, body.feet_position(), body)
 
 
-# Where the stream is aimed, not where he is: he winds up hovering with his horns most of a screen
+# Where the stream is aimed, not where he is: he winds up hovering with his crests most of a screen
 # above the floor, so a badge over his head would be nowhere near the fire the player has to answer.
 # breath_aim puts a player breath_aim_depth below his feet, so that row is where one standing in the
 # stream is, and the badge hangs a body's height above it - over their head, as every other tell in

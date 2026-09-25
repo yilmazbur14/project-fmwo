@@ -42,13 +42,14 @@ var bosses_cleared := 0
 # here because this is an autoload: a retry after a loss reloads the fight scene, and nobody wants to
 # watch the same walk-in twice in a row.
 var entrances_seen := {}
-# A playtest shortcut asking a fight to open in its second phase rather than at its start
-# (MainMenuScript's boss select). The fight scene's own path, cleared by the fight when it takes it,
-# so it can never leak into the next one. Empty for a normal jump into a fight.
-var start_in_phase_two := ""
-# A playtest toggle from the same panel: the player takes no health damage, so a whole fight can be
-# watched end to end. Deliberately NOT cleared by reset_progress() - it is a setting the user leaves
-# on while they look at a boss, not run state, so starting a new run must not silently turn it off.
+# A playtest shortcut from MainMenuScript's boss select: FIGHT 03 opens on Greyson's takeover, Computah already
+# down, rather than at its start. Cleared by the fight when it takes it (ComputahStateMachine), so a retry and the
+# ladder never see it.
+var start_at_greyson := false
+# A playtest toggle from MainMenuScript's boss select: the player takes no health damage, so a whole
+# fight can be watched end to end. Deliberately NOT cleared by reset_progress() - it is a setting the
+# user leaves on while they look at a boss, not run state, so starting a new run must not silently turn
+# it off.
 var playtest_invincible := false
 
 
@@ -62,7 +63,7 @@ func reset_progress() -> void:
 	fight_index = -1
 	bosses_cleared = 0
 	entrances_seen.clear()
-	start_in_phase_two = ""
+	start_at_greyson = false
 
 
 # Returns how many bosses the Victory screen's ladder should show as beaten.
@@ -83,6 +84,16 @@ func next_fight_after(fight_scene: String) -> String:
 		return ""
 	for i in range(index + 1, BOSSES.size()):
 		var scene: String = BOSSES[i]["scene"]
+		if ResourceLoader.exists(scene):
+			return scene
+	return ""
+
+
+# The first fight of the order that is built: where the controls room and the training room send a new
+# run. A fight still being built is skipped, as next_fight_after() skips it.
+func first_fight() -> String:
+	for boss in BOSSES:
+		var scene: String = boss["scene"]
 		if ResourceLoader.exists(scene):
 			return scene
 	return ""

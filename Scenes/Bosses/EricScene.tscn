@@ -14,9 +14,6 @@
 [ext_resource type="Script" path="res://Scripts/States/Eric/EricBroken.gd" id="11_broken"]
 [ext_resource type="Script" path="res://Scripts/States/Eric/EricJuggled.gd" id="12_juggled"]
 [ext_resource type="Script" path="res://Scripts/States/Eric/EricIntro.gd" id="13_intro"]
-[ext_resource type="Script" path="res://Scripts/States/Eric/EricPhaseTwo.gd" id="14_phase_two"]
-[ext_resource type="Script" path="res://Scripts/States/Eric/EricP2Mixup.gd" id="15_p2_mixup"]
-[ext_resource type="Script" path="res://Scripts/States/Eric/EricBarbaricLeap.gd" id="16_barbaric_leap"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_whhg3"]
 size = Vector2(58, 72)
@@ -877,10 +874,9 @@ script = ExtResource("6_yo8tt")
 animation_player = NodePath("../../AnimationPlayer")
 hurtbox = NodePath("../../Hurtbox")
 
-[node name="Idle" type="Node" parent="CharacterBody2D/StateManager" unique_id=658631749 node_paths=PackedStringArray("animation_player", "character_body", "hurtbox")]
+[node name="Idle" type="Node" parent="CharacterBody2D/StateManager" unique_id=658631749 node_paths=PackedStringArray("animation_player", "hurtbox")]
 script = ExtResource("6_difkq")
 animation_player = NodePath("../../AnimationPlayer")
-character_body = NodePath("../..")
 hurtbox = NodePath("../../Hurtbox")
 
 [node name="Intro" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox")]
@@ -932,31 +928,6 @@ eric_state_machine = NodePath("..")
 
 [node name="Juggled" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox", "boss_collision_shape", "eric_state_machine")]
 script = ExtResource("12_juggled")
-animation_player = NodePath("../../AnimationPlayer")
-character_body = NodePath("../..")
-hurtbox = NodePath("../../Hurtbox")
-boss_collision_shape = NodePath("../../CollisionShape2D")
-eric_state_machine = NodePath("..")
-
-[node name="PhaseTwo" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox", "boss_collision_shape", "eric_state_machine")]
-script = ExtResource("14_phase_two")
-animation_player = NodePath("../../AnimationPlayer")
-character_body = NodePath("../..")
-hurtbox = NodePath("../../Hurtbox")
-boss_collision_shape = NodePath("../../CollisionShape2D")
-eric_state_machine = NodePath("..")
-
-[node name="P2Mixup" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox", "grab_area", "boss_collision_shape", "eric_state_machine")]
-script = ExtResource("15_p2_mixup")
-animation_player = NodePath("../../AnimationPlayer")
-character_body = NodePath("../..")
-hurtbox = NodePath("../../Hurtbox")
-grab_area = NodePath("../../GrabArea2D")
-boss_collision_shape = NodePath("../../CollisionShape2D")
-eric_state_machine = NodePath("..")
-
-[node name="BarbaricLeap" type="Node" parent="CharacterBody2D/StateManager" node_paths=PackedStringArray("animation_player", "character_body", "hurtbox", "boss_collision_shape", "eric_state_machine")]
-script = ExtResource("16_barbaric_leap")
 animation_player = NodePath("../../AnimationPlayer")
 character_body = NodePath("../..")
 hurtbox = NodePath("../../Hurtbox")

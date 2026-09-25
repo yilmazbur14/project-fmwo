@@ -8,6 +8,8 @@ const FightOutro := preload("res://Scripts/FightOutro.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
 const JoshArtLayout := preload("res://Scripts/JoshArtLayout.gd")
 const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
+const BossBreakGauge := preload("res://Scripts/BossBreakGauge.gd")
+const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
 # What he says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/JoshOutro.dialogue"
 const FIGHT_SCENE := "res://Scenes/Bosses/JoshBossFightScene.tscn"
@@ -17,6 +19,8 @@ const FIGHT_SCENE := "res://Scenes/Bosses/JoshBossFightScene.tscn"
 var boss_health := max_health
 const PHASE_TWO_RATIO := 0.5
 const MAX_HITS_PER_WINDOW := 3
+# Each opening takes the damage of a clean chain of MAX_HITS_PER_WINDOW punches (PunchAllowance).
+const PunchAllowance := preload("res://Scripts/PunchAllowance.gd")
 const PHANTOM_HIT_WINDOW := 0.5
 const VIEW_SIZE := Vector2(1920, 1080)
 # He eases into and out of every move, the way beast Bixby does: his speed never changes faster than
@@ -29,9 +33,32 @@ const FLY_TURN_SPEED := 60.0
 const AIR_Z := 3
 const GROUND_Z := 0
 
+#BREAK GAUGE (BossBreakGauge)
+# Eight clean reads from empty are a guaranteed Break: a parry or perfect dodge of his is a read, a hit
+# costs one and a guard break two, and a landed punch is a quarter of one (charged, a half), so a 3-punch
+# combo is one read. Nothing decays. BREAK_READ is BossBreakGauge's max_value of 100 over N, given as it
+# is (BREAK_EPSILON). Nothing of his staggers him on a parry or comes back at him, so there is no strong
+# parry or reflect here, and the gauge takes none (_add_break_gauge).
+const BREAK_READS := 8
+const BREAK_READ := 100.0 / BREAK_READS
+const BREAK := {
+	"parry_gain": BREAK_READ,
+	"perfect_dodge_gain": BREAK_READ,
+	"punch_gain": BREAK_READ / 4.0,
+	"charged_punch_gain": BREAK_READ / 2.0,
+	"hit_loss": BREAK_READ,
+	"guard_break_loss": 2.0 * BREAK_READ,
+	"unlock_delay": 3.0,
+	"broken_time": 3.0,
+}
+# What fills it: his thrown cards and his falling ones read right. Every one of his attacks drains it,
+# the bombs too, but they don't fill it: he scatters too many of them for each to be a read.
+const BREAK_EARNS: Array[StringName] = [&"josh_card_throw", &"josh_card_fall"]
+
 #UI (BossHealthBarUI builds it at runtime)
 var hud_layer: CanvasLayer
 var health_bar: Control
+var break_gauge: Node
 
 # Kept under a node that y-sorts at the top edge of the arena floor, so it is drawn under every
 # character wherever it goes.
@@ -43,6 +70,7 @@ var health_bar: Control
 @onready var glider: Node2D = $Air/Glider
 @onready var sprite: Sprite2D = $Air/Sprite2D
 @onready var hurtbox: Area2D = $Air/Hurtbox
+@onready var hurtbox_shape: CollisionShape2D = $Air/Hurtbox/CollisionShape2D
 @onready var state_machine = $StateManager
 
 #AUDIO
@@ -64,7 +92,8 @@ const THEME_DB := -7.0
 var phase_two := false
 var defeated := false
 var hits_this_window := 0
-# One finisher daze per recovery; Recover clears it.
+var punches := PunchAllowance.new()
+# One finisher daze per window; his recovery and his Break each clear it.
 var daze_used := false
 
 var fight_clock := 0.0
@@ -77,11 +106,17 @@ var sprite_base_position: Vector2
 var ground_position := Vector2.ZERO
 var height := 0.0
 var fly_velocity := Vector2.ZERO
+# Which way he faces: the way he rides in the air, and toward the player on the ground (face_player).
 var flying_left := false
+# A finisher's shove still sliding his floor point, which a Break stops where it is.
+var knock_tween: Tween
 
 var shadow_sprite: Sprite2D
 var glider_sprite: Sprite2D
 var glider_clock := 0.0
+# His card growing under him or shrinking away: hiding it stops this too, or it would go on scaling the
+# hidden card up and the next mount would show it whole at once.
+var glider_tween: Tween
 
 var current_anim := &""
 var anim: Dictionary = {}
@@ -100,6 +135,9 @@ func _ready() -> void:
 	sprite_base_position = sprite.position
 	ground_position = global_position
 	_apply_art_layout()
+	var player := get_tree().current_scene.get_node_or_null(FightOutro.PLAYER_PATH)
+	if player:
+		_add_break_gauge(player)
 	_build_hud()
 	place()
 
@@ -124,6 +162,31 @@ func _ready() -> void:
 	card_sfx_player.stream = load("res://Assets/Audio/SFX/hit_impact.ogg")
 
 
+func _add_break_gauge(player: Node) -> void:
+	break_gauge = BossBreakGauge.new()
+	break_gauge.name = "BreakGauge"
+	break_gauge.boss = self
+	break_gauge.player = player
+	break_gauge.owns_attack = func(id: StringName) -> bool: return str(id).begins_with("josh_")
+	break_gauge.earns_from = func(hit: RefCounted) -> bool: return BREAK_EARNS.has(hit.attack_id)
+	break_gauge.parry_gain = BREAK.parry_gain
+	break_gauge.perfect_dodge_gain = BREAK.perfect_dodge_gain
+	break_gauge.punch_gain = BREAK.punch_gain
+	break_gauge.charged_punch_gain = BREAK.charged_punch_gain
+	break_gauge.hit_loss = BREAK.hit_loss
+	break_gauge.guard_break_loss = BREAK.guard_break_loss
+	break_gauge.unlock_delay = BREAK.unlock_delay
+	break_gauge.grab_parry_gain = 0.0
+	break_gauge.reflect_gain = 0.0
+	add_child(break_gauge)
+	break_gauge.broke.connect(_on_break)
+
+
+# The gauge fills inside physics flushes and his own physics steps, where his states can't switch.
+func _on_break() -> void:
+	state_machine.enter_broken.call_deferred()
+
+
 func start_music() -> void:
 	if music_player and not music_player.playing:
 		music_player.play()
@@ -143,10 +206,13 @@ func _apply_art_layout() -> void:
 	glider.scale = Vector2.ZERO
 	glider.hide()
 
-	var box := JoshArtLayout.local_rect(JoshArtLayout.RECOVER_BODY_BOX)
-	var hurtbox_shape: CollisionShape2D = hurtbox.get_node("CollisionShape2D")
-	hurtbox_shape.position = box.get_center()
-	(hurtbox_shape.shape as RectangleShape2D).size = box.size
+	(hurtbox_shape.shape as RectangleShape2D).size = JoshArtLayout.local_rect(JoshArtLayout.RECOVER_BODY_BOX).size
+	_place_hurtbox()
+
+
+# The box is traced off the recovery pose, so it mirrors with his frames.
+func _place_hurtbox() -> void:
+	hurtbox_shape.position = JoshArtLayout.local_rect(JoshArtLayout.RECOVER_BODY_BOX, sprite.flip_h).get_center()
 
 
 func _build_shadow() -> void:
@@ -257,7 +323,10 @@ func _frame_time() -> float:
 func _show_anim_frame() -> void:
 	sprite.frame = anim.frames[anim_step]
 	# The symmetry axis is the anchor's column, so mirroring keeps his feet in place.
-	sprite.flip_h = anim.get("flips", false) and flying_left
+	var mirrored: bool = anim.get("flips", false) and flying_left
+	if sprite.flip_h != mirrored:
+		sprite.flip_h = mirrored
+		_place_hurtbox()
 
 
 #FLIGHT
@@ -271,11 +340,35 @@ func feet_position() -> Vector2:
 func knock_back(push: Vector2, time: float) -> void:
 	var bounds := ground_bounds(height)
 	var target := (ground_position + push).clamp(bounds.position, bounds.end)
-	var slide := create_tween()
-	slide.tween_method(func(to: Vector2) -> void:
+	if knock_tween:
+		knock_tween.kill()
+	knock_tween = create_tween()
+	knock_tween.tween_method(func(to: Vector2) -> void:
 		ground_position = to
 		place()
 	, ground_position, target, time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+# Where his floor point can be for the whole of his juggle frames, twice his width, to be drawn inside the
+# ropes, facing the way he does: x from .x to .y. His Break slides him in to it, and the last uppercut's
+# shove stops at its edge.
+func juggle_x_range() -> Vector2:
+	var drawn := JoshArtLayout.JUGGLE_DRAWN
+	var middle: float = JoshArtLayout.juggle().frame_size.x / 2.0
+	var reach := Vector2(drawn.position.x - middle, drawn.end.x - middle) * JoshArtLayout.SCALE
+	if sprite.flip_h:
+		reach = Vector2(-reach.y, -reach.x)
+	var ropes: Rect2 = state_machine.ROPES
+	return Vector2(ropes.position.x - reach.x, ropes.end.x - reach.y)
+
+
+# The juggle's last uppercut shoves him along his ground line (PlayerFinisher), no further than
+# juggle_x_range(). One who is already past its edge stays where he is rather than being pulled back
+# toward the player.
+func juggle_knock_back(push: Vector2, time: float) -> void:
+	var inside := juggle_x_range()
+	var x := clampf(ground_position.x + push.x, minf(ground_position.x, inside.x), maxf(ground_position.x, inside.y))
+	knock_back(Vector2(x - ground_position.x, 0.0), time)
 
 
 func place() -> void:
@@ -311,6 +404,14 @@ func fly_toward(target: Vector2, max_speed: float, delta: float) -> float:
 	return ground_position.distance_to(target)
 
 
+# On the ground he turns to the player. Set before the pose that uses it, so the pose is drawn toward
+# the player from its first frame.
+func face_player() -> void:
+	var player: Node2D = state_machine.get_player()
+	if is_instance_valid(player):
+		flying_left = player.global_position.x < global_position.x
+
+
 # The floor points he can be over with his feet `at_height` px up: his shadow inside the ropes and his
 # whole sprite on screen. Only for landing points and knock_back: a pass over the arena aims at an
 # unclamped point off the side of the screen.
@@ -337,17 +438,23 @@ func grow_glider(seconds: float) -> void:
 	glider_clock = 0.0
 	_place_glider()
 	glider.show()
-	var grow := glider.create_tween()
-	grow.tween_property(glider, "scale", Vector2.ONE, seconds).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if glider_tween:
+		glider_tween.kill()
+	glider_tween = glider.create_tween()
+	glider_tween.tween_property(glider, "scale", Vector2.ONE, seconds).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func shrink_glider(seconds: float) -> void:
-	var shrink := glider.create_tween()
-	shrink.tween_property(glider, "scale", Vector2.ZERO, seconds).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	shrink.tween_callback(glider.hide)
+	if glider_tween:
+		glider_tween.kill()
+	glider_tween = glider.create_tween()
+	glider_tween.tween_property(glider, "scale", Vector2.ZERO, seconds).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	glider_tween.tween_callback(glider.hide)
 
 
 func hide_glider() -> void:
+	if glider_tween:
+		glider_tween.kill()
 	glider.scale = Vector2.ZERO
 	glider.hide()
 
@@ -395,8 +502,9 @@ func show_banner(text: String) -> void:
 
 #COMBAT
 
-# Punches only reach him while he is down recovering. The hurtbox keeps its facing groups the whole
-# fight, so the player still faces him while he rides and his thrown cards land inside the guarded arc.
+# Punches only reach him while he is down, recovering or Broken. The hurtbox keeps its facing groups the
+# whole fight, so the player still faces him while he rides and his thrown cards land inside the guarded
+# arc.
 func set_hurtbox_active(active: bool) -> void:
 	# Deferred: monitoring can't change inside a physics flush.
 	hurtbox.set_deferred("monitoring", active)
@@ -415,13 +523,35 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 		last_contact_hit_time = fight_clock
 
 
-# Punches only land while he recovers on the ground.
+func is_broken() -> bool:
+	return state_machine.current_state == state_machine.states.get("Broken")
+
+
+func is_juggled() -> bool:
+	return state_machine.current_state == state_machine.states.get("Juggled")
+
+
+# Down from a Break or a juggle, until he is back on his feet: the Break gauge waits for this.
+func is_down() -> bool:
+	return is_broken() or is_juggled()
+
+
+# His two punish windows, both down on the ground: his recovery, and his Break.
+func _in_window() -> bool:
+	return state_machine.is_recovering() or is_broken()
+
+
+# Punches only land while he is down in one of his windows.
 func take_punch(amount: int) -> int:
-	if hits_this_window >= MAX_HITS_PER_WINDOW or not state_machine.is_recovering():
+	if not _in_window():
 		return 0
-	var dealt := _apply_damage(amount)
+	var allowed := punches.allow(amount, hits_this_window, MAX_HITS_PER_WINDOW)
+	if allowed <= 0:
+		return 0
+	var dealt := _apply_damage(allowed)
 	if dealt > 0:
 		hits_this_window += 1
+		punches.spend(dealt)
 	return dealt
 
 
@@ -432,15 +562,25 @@ func _lowest_health() -> int:
 	return 0
 
 
-# A hit that would carry past the threshold is cut down to reach it exactly.
-func _apply_damage(amount: int) -> int:
-	var dealt := mini(amount, boss_health - _lowest_health())
+# A juggle's uppercuts go on past the threshold once it has been crossed. The cycle's phase only
+# catches up at the next start_cycle(), so on the phase floor every uppercut after the one that reached
+# it would deal a literal zero. Mason's rule, and the juggle's alone: punches and the single-bar finisher
+# keep the phase floor.
+func _juggle_floor() -> int:
+	return 0 if phase_two else _lowest_health()
+
+
+# A hit that would carry past the floor is cut down to reach it exactly: the phase floor, unless the hit
+# brings its own (take_juggle_hit).
+func _apply_damage(amount: int, pitch := 1.0, lowest := -1) -> int:
+	var dealt := mini(amount, boss_health - (_lowest_health() if lowest < 0 else lowest))
 	if dealt <= 0:
 		return 0
 
 	boss_health -= dealt
 	_refresh_health_bar()
 	_hit_feedback()
+	hit_sfx_player.pitch_scale = pitch
 	hit_sfx_player.play()
 
 	if not phase_two and get_health_ratio() <= PHASE_TWO_RATIO:
@@ -455,22 +595,45 @@ func _apply_damage(amount: int) -> int:
 	return dealt
 
 
-# The player's finisher (PlayerFinisher). Only his grounded recovery can be dazed, once per window,
-# and only while the finisher can still take health past the phase floor.
+# The player's finisher (PlayerFinisher). His windows can be dazed, once each, and only while the
+# finisher can still take health past the floor it would meet: the phase floor in his recovery, and in
+# his Break, which pays out in the juggle, the juggle's own.
 func can_be_dazed() -> bool:
-	return not defeated and boss_health > _lowest_health() and not daze_used and state_machine.is_recovering()
+	if defeated or daze_used or not _in_window():
+		return false
+	return boss_health > (_juggle_floor() if is_broken() else _lowest_health())
 
 
+# The three-bar mash and the juggle are the Break's payout alone; his recovery pays the single-bar
+# finisher. Arithmetic, not taste: the juggle takes 40% of his health, so with it on every window the
+# fight would be over in two.
+func can_be_juggled() -> bool:
+	return not defeated and boss_health > 0 and is_broken()
+
+
+# The finisher draws its own daze stars over Broken's.
 func enter_daze() -> void:
 	daze_used = true
+	if is_broken():
+		state_machine.current_state.show_stars(false)
 
 
-func exit_daze(_finisher_landed: bool) -> void:
-	pass
+func exit_daze(finisher_landed: bool) -> void:
+	if is_broken() and not finisher_landed:
+		state_machine.current_state.show_stars(true)
 
 
 func end_recovery(stagger_time: float) -> bool:
-	if defeated or boss_health <= 0 or not state_machine.is_recovering():
+	if defeated or boss_health <= 0:
+		return false
+	# Crashed from a juggle, he lies a beat before he gets up.
+	if is_juggled():
+		state_machine.current_state.recover(stagger_time)
+		return true
+	if is_broken():
+		state_machine.end_break(stagger_time)
+		return true
+	if not state_machine.is_recovering():
 		return false
 	state_machine.stagger_then_start_cycle(stagger_time)
 	return true
@@ -478,7 +641,7 @@ func end_recovery(stagger_time: float) -> bool:
 
 # Past the hit cap, which the combo that led to it has used up, but not past the phase floor.
 func take_finisher(amount: int) -> int:
-	if not state_machine.is_recovering():
+	if not _in_window():
 		return 0
 	return _apply_damage(amount)
 
@@ -487,13 +650,50 @@ func get_max_health() -> int:
 	return max_health
 
 
+# The tiered finisher's juggle (PlayerFinisher).
+func begin_juggle() -> void:
+	state_machine.enter_juggled()
+
+
+func juggle_lift(px: float) -> void:
+	if is_juggled():
+		state_machine.current_state.lift(px)
+
+
+func juggle_pose(pose: StringName, crater := false) -> void:
+	if is_juggled():
+		state_machine.current_state.pose(pose, crater)
+
+
+func juggle_headroom() -> float:
+	return state_machine.states["Juggled"].headroom()
+
+
+# Past the hit cap, as take_finisher, on the juggle's own floor, with his hit sound pitched up a step
+# each uppercut.
+func take_juggle_hit(amount: int, pitch: float) -> int:
+	return _apply_damage(amount, pitch, _juggle_floor())
+
+
+func get_juggle_point() -> Vector2:
+	return state_machine.states["Juggled"].air_point()
+
+
+# A juggle that kills him ends with him still in the air: the outro's first line would otherwise open
+# over him mid-fall.
+func outro_line_delay(_player_won: bool) -> float:
+	return JoshArtLayout.juggle().outro_delay if is_juggled() else 0.0
+
+
+# Over his hat as he is drawn, so a Break taken mid-ride has its zoom and its stars on him as he drops,
+# not on the floor under him. On the ground the two are the same point.
 func get_daze_anchor() -> Vector2:
-	return global_position + JoshArtLayout.DAZE_ANCHOR
+	return air.global_position + JoshArtLayout.mirrored(JoshArtLayout.DAZE_ANCHOR, sprite.flip_h)
 
 
 # Where a parry tell stands while he winds up a throw: over his head at whatever height he is.
 func tell_anchor() -> Vector2:
-	return air.global_position + JoshArtLayout.TELL_ANCHOR
+	return air.global_position + JoshArtLayout.mirrored(JoshArtLayout.TELL_ANCHOR, sprite.flip_h)
 
 
 func get_finisher_hurtbox() -> Area2D:
@@ -558,6 +758,12 @@ func _build_hud() -> void:
 		"text": "JOSH",
 	})
 	hud_layer.add_child(health_bar)
+
+	if break_gauge:
+		var gauge_bar := BreakGaugeUI.new()
+		gauge_bar.gauge = break_gauge
+		hud_layer.add_child(gauge_bar)
+		gauge_bar.position = health_bar.break_gauge_anchor()
 
 
 func _hit_feedback() -> void:

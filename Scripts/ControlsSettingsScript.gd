@@ -18,7 +18,7 @@ const ACTION_NAMES := {
 	&"move_right": "MOVE RIGHT",
 	&"punch": "ATTACK",
 	&"dodge": "DASH",
-	&"block": "BLOCK / PARRY",
+	&"block": "PARRY",
 }
 const HEADERS := ["ACTION", "KEYBOARD", "GAMEPAD"]
 # Movement's gamepad side is the stick and the d-pad together, and isn't rebindable.

@@ -15,31 +15,37 @@ const ANCHOR := Vector2(40, 79)
 # below is one of those two.
 const CARDS_SHEET := "res://Assets/Characters/Josh/josh_cards.png"
 
-# What is drawn on any of his frames, for keeping his whole sprite on screen. Traced off the sheets:
-# the widest run of drawn texels, so a stray sparkle can't inflate it. His duster reaches the frame
-# edge on the riding frames and the blazing card reaches it on the throw's release frame.
-const BODY_DRAWN := Rect2(0, 4, 80, 76)
-# The riding frames alone reach this far above the anchor row in px, which is what decides how high a
-# pass row can be before the top of the screen cuts his hat off: a row has to be at least
-# glider_height + this.
-const RIDE_HEADROOM := 219.0
-# What the player can punch while he is down recovering: the mass of the hunched pose, traced off
-# josh_recovery. It leans to his right, and the pose never mirrors, so the box leans with it.
-const RECOVER_BODY_BOX := Rect2(18, 24, 55, 56)
-# Where the finisher's daze stars circle, in px from the floor point he stands on: just over the hat
-# of the hunched recovery pose, whose crown sits at texel (44, 15).
-const DAZE_ANCHOR := Vector2(12, -207)
-# Where a parry tell stands, in px above whatever height his feet are at: over the hat of the
-# standing throw pose, whose crown sits at texel row 7.
-const TELL_ANCHOR := Vector2(0, -228)
+# What is drawn on any of his frames, for keeping his whole sprite on screen, traced off the sheets.
+# His coat tails reach the left edge on the riding frames and a sparkle off the throw's
+# follow-through reaches the right one. Only his hat reaches row 1, knocked off on hit frame 0 and
+# flying on defeat frame 1.
+const BODY_DRAWN := Rect2(0, 1, 80, 79)
+# The riding frames alone reach this far above the anchor row in px (their hats top out on row 8),
+# which is what decides how high a pass row can be before the top of the screen cuts his hat off: a
+# row has to be at least glider_height + this.
+const RIDE_HEADROOM := 213.0
+# What the player can punch while he is down recovering: the mass of the hunched pose, head to soles
+# and elbow to elbow, traced off josh_recovery. His hat is left out, as the old pose's loose card was:
+# it would add ten rows over his head, up to row 13. Drawn facing right, so it mirrors with him.
+const RECOVER_BODY_BOX := Rect2(19, 23, 47, 57)
+# Where the finisher's daze stars circle, in px from the floor point he stands on, facing right: five
+# rows over the hat of the hunched recovery pose, whose crown sits at texel (48, 14) and breathes
+# between rows 13 and 15. Facing left it mirrors.
+const DAZE_ANCHOR := Vector2(24, -210)
+# Where a parry tell stands, in px above whatever height his feet are at, facing right: four rows over
+# the hat of the standing throw pose, whose crown sits at texel row 5, centred on column 40. Facing
+# left it mirrors.
+const TELL_ANCHOR := Vector2(0, -234)
 
 #ANIMATIONS
 # name: sheet, frames in order, seconds on each (the last value repeats) and whether it loops.
-# Optional: flips for poses drawn facing right that mirror while he moves left, and turn, the degrees
-# the sprite is rotated (the defeat placeholder is his standing pose keeled over).
+# Optional: flips for poses drawn facing right that mirror while he faces left, which in the air is
+# the way he is riding and on the ground is toward the player; and turn, the degrees the sprite is
+# rotated (the defeat placeholder is his standing pose keeled over).
 # The final sheets are 80x80 strips drawn facing right, so one flip rule covers the set. Ground poses
 # put his soles on row 79, the anchor; the riding poses put them on row 75, which is what stands him
-# on the card he rides without any code knowing about it.
+# on the card he rides without any code knowing about it. lay, bomb, show and show_hold are riding
+# poses, and mount and dismount step between the two.
 const USE_FINAL_ANIMS := {
 	&"idle": true,
 	&"intro": true,
@@ -75,16 +81,17 @@ const PLACEHOLDER_ANIMS := {
 
 const FINAL_ANIMS := {
 	&"idle": {sheet = "res://Assets/Characters/Josh/josh_idle.png",
-		frames = [0, 1, 2, 3], times = [0.15], loop = true},
+		frames = [0, 1, 2, 3], times = [0.15], loop = true, flips = true},
 	# His entrance, ending with the card he flicks buried in the floor.
 	&"intro": {sheet = "res://Assets/Characters/Josh/josh_intro.png",
-		frames = [0, 1, 2, 3, 4, 5], times = [0.11, 0.15, 0.11, 0.26, 0.16, 0.42], loop = false},
+		frames = [0, 1, 2, 3, 4, 5], times = [0.11, 0.15, 0.11, 0.26, 0.16, 0.42], loop = false,
+		flips = true},
 	&"glide": {sheet = "res://Assets/Characters/Josh/josh_glide.png",
 		frames = [0, 1, 2, 3], times = [0.11], loop = true, flips = true},
 	&"mount": {sheet = "res://Assets/Characters/Josh/josh_mount.png",
-		frames = [0, 1, 2], times = [0.16, 0.13, 0.2], loop = false},
+		frames = [0, 1, 2], times = [0.16, 0.13, 0.2], loop = false, flips = true},
 	&"dismount": {sheet = "res://Assets/Characters/Josh/josh_dismount.png",
-		frames = [0, 1, 2], times = [0.12, 0.16, 0.24], loop = false},
+		frames = [0, 1, 2], times = [0.12, 0.16, 0.24], loop = false, flips = true},
 	&"lay": {sheet = "res://Assets/Characters/Josh/josh_lay_card.png",
 		frames = [0, 1, 2], times = [0.14, 0.22, 0.3], loop = false, flips = true},
 	&"bomb": {sheet = "res://Assets/Characters/Josh/josh_drop_bomb.png",
@@ -100,18 +107,24 @@ const FINAL_ANIMS := {
 	&"show_hold": {sheet = "res://Assets/Characters/Josh/josh_show_card.png",
 		frames = [1, 2], times = [0.2], loop = true, flips = true},
 	&"recover": {sheet = "res://Assets/Characters/Josh/josh_recovery.png",
-		frames = [0, 1, 2, 3], times = [0.19], loop = true},
+		frames = [0, 1, 2, 3], times = [0.19], loop = true, flips = true},
 	&"hit": {sheet = "res://Assets/Characters/Josh/josh_hit.png",
-		frames = [0, 1], times = [0.07, 0.12], loop = false},
+		frames = [0, 1], times = [0.07, 0.12], loop = false, flips = true},
 	&"defeat": {sheet = "res://Assets/Characters/Josh/josh_defeat.png",
-		frames = [0, 1, 2, 3, 4, 5], times = [0.13, 0.11, 0.11, 0.13, 0.18, 1.0], loop = false},
+		frames = [0, 1, 2, 3, 4, 5], times = [0.13, 0.11, 0.11, 0.13, 0.18, 1.0], loop = false,
+		flips = true},
 }
+# The step of `intro` that flicks the card into the floor, which the flick at the camera starts on.
+const INTRO_FLICK_STEP := 5
 
 #WHERE CARDS LEAVE HIS HAND (texels on the frame that draws the hand-off)
 # josh_throw frame 1, travelling right and slightly up.
 const HAND_THROW := Vector2(72, 45)
-# josh_drop_bomb frame 1, falling down-left.
-const HAND_BOMB := Vector2(16, 70)
+# josh_drop_bomb frame 1, falling down-left: the card's centre.
+const HAND_BOMB := Vector2(15, 65)
+# The step of `bomb` that draws that hand-off. The bomb only leaves his hand there: the wind-up before
+# it still holds the card up.
+const BOMB_RELEASE_STEP := 1
 
 #HIS SHADOW
 # Four frames of 80x24, and the frame index is his altitude rather than a step in an animation: 0 on
@@ -136,6 +149,39 @@ const SHADOW_ALPHA := 0.38
 # The shadow shrinks and pales toward this as he climbs to his riding height.
 const SHADOW_AIR_SCALE := 0.62
 const SHADOW_AIR_ALPHA := 0.55
+
+#THE JUGGLE (the Break's tiered uppercut; BossJuggled reads exactly this shape)
+# A sheet of its own: 160x120 frames against his 80x80, hung so its row 119 stands on the same ground
+# line as ANCHOR, so its texels go through BossJuggled.texel_point(), never local(). top_row is the
+# highest row drawn on an air frame (1-6). There is no leap shadow of his own: his flight shadow above
+# already draws his height as its frame index, and it is drawn here as he draws it, opaque and 3 texels
+# over his feet (FINAL_SHADOW.offset), so nothing under him changes when his own comes back at the crash.
+const USE_FINAL_JUGGLE := true
+const FINAL_JUGGLE := {
+	"texture": "res://Assets/Characters/Josh/josh_juggle.png",
+	"hframes": 12,
+	"frame_size": Vector2(160, 120),
+	"offset": Vector2(0, -59),
+	"feet": Vector2(80, 119),
+	"tumble_centre": Vector2(80, 62),
+	"top_row": 27,
+	"clips": {
+		&"launch": {"frames": [0, 1], "times": [0.06, 0.08], "loop": false},
+		&"tumble": {"frames": [2, 3, 4, 5, 6], "times": [0.2, 0.07, 0.06, 0.06, 0.07], "loop": true},
+		&"crash": {"frames": [7, 8, 9], "times": [0.06, 0.08, 0.12], "loop": false},
+		&"down": {"frames": [10, 11], "times": [0.4, 0.4], "loop": true},
+	},
+	"shadow": {
+		"texture": "res://Assets/Characters/Josh/Cards/josh_shadow.png",
+		"hframes": 4, "scale": 3.0, "alpha": 1.0, "step": 80.0, "offset": Vector2(0, -3),
+	},
+	"lying_time": 0.3,
+	"outro_delay": 1.8,
+	"crash_sfx": {"stream": "res://Assets/Audio/SFX/hit_impact.ogg", "pitch": 0.7, "volume_db": 0.0},
+}
+# What is drawn on any of the twelve juggle frames, traced off josh_juggle.png: 231 px left of his feet
+# to 228 right, twice his width, which is what the last uppercut's shove keeps inside the ropes.
+const JUGGLE_DRAWN := Rect2(3, 6, 153, 114)
 
 #THE CARD HE RIDES
 # One continuous bank cycle, drawn behind him on its own node: it hangs 18 rows below his frame, so
@@ -367,6 +413,10 @@ static func anim(anim_name: StringName) -> Dictionary:
 	return PLACEHOLDER_ANIMS[anim_name]
 
 
+static func juggle() -> Dictionary:
+	return FINAL_JUGGLE
+
+
 # Seconds from the start of an animation to the start of its frame at `step`.
 static func time_to_step(anim_name: StringName, step: int) -> float:
 	var times: Array = anim(anim_name).times
@@ -388,8 +438,16 @@ static func local(point: Vector2, flipped := false) -> Vector2:
 	return (Vector2(column, point.y) - ANCHOR) * SCALE
 
 
-static func local_rect(rect: Rect2) -> Rect2:
-	return Rect2(local(rect.position), rect.size * SCALE)
+# The same for a box of texels. Mirrored, its left edge is the mirror of its right-hand column.
+static func local_rect(rect: Rect2, flipped := false) -> Rect2:
+	var corner := Vector2(rect.end.x - 1.0 if flipped else rect.position.x, rect.position.y)
+	return Rect2(local(corner, flipped), rect.size * SCALE)
+
+
+# A px offset from his feet, measured with him facing right, for the way he is facing. The sprite
+# mirrors about his anchor, so the offset mirrors about x = 0.
+static func mirrored(offset: Vector2, flipped: bool) -> Vector2:
+	return Vector2(-offset.x, offset.y) if flipped else offset
 
 
 # A filled ellipse, points on its rim, centred on the origin.

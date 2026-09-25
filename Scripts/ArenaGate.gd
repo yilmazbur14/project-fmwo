@@ -59,6 +59,9 @@ const CHEER := 1.4
 @onready var clang_sfx: AudioStreamPlayer = $ClangSfxPlayer
 
 var open_now := false
+# The leaves are mid-swing. shut_now() clears it: a skip that lands in the swing has already left
+# them shut, and the clang, the shake and the roar belong to a slam nobody saw.
+var swinging := false
 
 
 func _ready() -> void:
@@ -94,11 +97,15 @@ func close() -> void:
 	if not open_now:
 		return
 	open_now = false
+	swinging = true
 	show()
 	_set_pose(Pose.SWINGING)
 	var swing := create_tween()
 	swing.tween_interval(SWING_TIME)
 	await swing.finished
+	if not swinging:
+		return
+	swinging = false
 	_set_pose(Pose.SHUT)
 	if clang_sfx.stream != null:
 		clang_sfx.play()
@@ -112,6 +119,7 @@ func close() -> void:
 # Shut with no swing, no clang and no shake: where a skipped entrance leaves the ring.
 func shut_now() -> void:
 	open_now = false
+	swinging = false
 	_set_pose(Pose.SHUT)
 	show()
 

@@ -20,6 +20,13 @@ def strip(shades_up=True):
 
 
 if __name__ == '__main__':
+    # SUPERSEDED 2026-09-23: josh_cards.png is now built by art_source/josh_redesign/export.py. Run
+    # bare, this script used to write the OLD design over the shipped sprite, so it now needs an
+    # explicit output folder and refuses the shipped one.
+    if len(sys.argv) < 2 or os.path.normcase(os.path.abspath(sys.argv[1])).rstrip('\\/') \
+            == os.path.normcase(os.path.abspath(ASSET)).rstrip('\\/'):
+        sys.exit('superseded rig: pass an output folder other than Assets/Characters/Josh '
+                 '(josh_cards.png comes from art_source/josh_redesign/export.py)')
     # The user picked shades-up; that is the only sprite we ship.  The shades-down look still
     # exists behind head.build(shades_up=False) if it is ever wanted again.
     out = sys.argv[1] if len(sys.argv) > 1 else ASSET

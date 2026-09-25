@@ -1,6 +1,19 @@
 """Write the approved GOTHIC boss bar + daze meter set to Assets/UI.
 
-  python export_gothic.py [out_dir] [--ase]
+  python export_gothic.py <scratch_dir> [--only KEY[,KEY]] [--ase]      build, never ships
+  python export_gothic.py --ship --only KEY[,KEY] [--replace] [--ase]   ship bosses to Assets/UI
+
+SHIPPING IS GUARDED (2026-09-23).  This used to write the WHOLE set straight into
+Assets/UI when run bare, and a re-run is not harmless: stamina() and daze_fx()
+read the SHIPPED PNGs and remap them, and STAMINA_FILL_MAP is not idempotent -
+its gold -> white glint rule would turn the already-gold stamina fill white on a
+second pass.  So now:
+  - a folder under Assets is refused unless --ship is given;
+  - --ship needs --only, which writes just those bosses' own pieces (fill, hot
+    fill, emblem, name plate) and nothing shared;
+  - --ship refuses to overwrite an existing file unless --replace is given, and
+    checks every target before writing any, so a refusal leaves nothing behind.
+A full run into a scratch folder still works exactly as before.
 
 Same names, same sizes, same frame counts as the brass set it replaces, so no
 code edits are needed - a coder flips USE_FINAL_BOSS_BAR and it is live.
@@ -106,11 +119,19 @@ def _mix(a, b, t):
 
 
 # ---- per-boss fills, rebuilt in the reference's shape ---------------------
-def gothic_fill(ramp, mark=None, accent=None):
-    r = BB.bar_ramp(ramp, mark)                 # the boss's own hue, unchanged
+def gothic_fill(ramp, mark=None, accent=None, as_is=False, trim=None):
+    # as_is: a bosses.py row with fill_as_is=True already carries a fill ramp, measured
+    # off its sprite, and bar_ramp()'s boost would push it somewhere the boss is not
+    # (Matt's lavender lands on Jordan's royal blue).  Every other row takes the boost.
+    # trim: a bosses.py fill_trim colour replaces the lit top line on the fill AND the
+    # hot fill - the edging of a costume (Captain Burak's gold-trimmed coat).  Trim is
+    # metal, so it does not heat; the hot fill still gets its bone lip beneath it.
+    r = list(ramp) if as_is else BB.bar_ramp(ramp, mark)   # the boss's own hue, unchanged
     im = canvas(WIN_W, WIN_H)
     body = r[2] if accent is None else _mix(r[2], accent, 0.45)
     lit = r[3] if accent is None else _mix(r[3], accent, 0.55)
+    if trim is not None:
+        lit = trim
     seat = _mix(r[0], G.PLUM_DK, 0.5)
     rect(im, 0, 0, WIN_W - 1, WIN_H - 1, body)
     hline(im, 0, WIN_W - 1, 0, lit)
@@ -170,6 +191,42 @@ def stamina(out):
         put(out, n, im)
 
 
+def boss_pieces(k):
+    """One boss's own pieces, as (name, image) in write order: fill, hot fill,
+    emblem, then the baked name plate (one line, or a pair's two lines plus the
+    stacked pair).  Nothing here is shared with another boss, which is what lets
+    --only ship a single boss without touching anyone else's files."""
+    b = bosses.by_key(k)
+    as_is, trim = b.get("fill_as_is", False), b.get("fill_trim")
+    out = [("boss_hp_fill_%s" % k, gothic_fill(b["ramp"], b["mark"][1], as_is=as_is, trim=trim)),
+           ("boss_hp_fill_hot_%s" % k,
+            gothic_fill(b["ramp"], b["mark"][1], accent=b["accent"][1], as_is=as_is, trim=trim)),
+           ("boss_hp_emblem_%s" % k, PL.emblem(k))]
+    lines = PL.plate_lines(k)
+    if len(lines) == 1:
+        out.append(("boss_plate_name_%s" % k,
+                    GF.render(lines[0], fill=rgba(G.BONE_HI), ink=rgba(G.INK))))
+    else:
+        baked = [GF.render(ln, fill=rgba(G.BONE_HI), ink=rgba(G.INK)) for ln in lines]
+        for i, im in enumerate(baked):
+            out.append(("boss_plate_name_%s_%s" % (k, "ab"[i]), im))
+        # BossBarArtLayout.gd loads "boss_plate_name_<key>_pair_3x.png" for
+        # the two pair fights, and NOTHING has ever written that name - the
+        # old exporter wrote _a / _b only, so flipping USE_FINAL_BOSS_BAR
+        # would have failed two texture loads.  Emit the stacked pair here,
+        # which the condensed face makes trivial: both lines are one size.
+        lead = 1
+        pw = max(im.width for im in baked)
+        ph = sum(im.height for im in baked) + lead * (len(baked) - 1)
+        pair = canvas(pw, ph)
+        y = 0
+        for im in baked:
+            pair.alpha_composite(im, ((pw - im.width) // 2, y))
+            y += im.height + lead
+        out.append(("boss_plate_name_%s_pair" % k, pair))
+    return out
+
+
 def run(out, do_stamina=True):
     os.makedirs(out, exist_ok=True)
     keys = [b["key"] for b in bosses.BOSSES]
@@ -185,33 +242,8 @@ def run(out, do_stamina=True):
 
     # ---- per-boss fills, emblems, names -----------------------------------
     for k in keys:
-        b = bosses.by_key(k)
-        put(out, "boss_hp_fill_%s" % k, gothic_fill(b["ramp"], b["mark"][1]))
-        put(out, "boss_hp_fill_hot_%s" % k,
-            gothic_fill(b["ramp"], b["mark"][1], accent=b["accent"][1]))
-        put(out, "boss_hp_emblem_%s" % k, PL.emblem(k))
-        lines = PL.plate_lines(k)
-        if len(lines) == 1:
-            put(out, "boss_plate_name_%s" % k,
-                GF.render(lines[0], fill=rgba(G.BONE_HI), ink=rgba(G.INK)))
-        else:
-            baked = [GF.render(ln, fill=rgba(G.BONE_HI), ink=rgba(G.INK)) for ln in lines]
-            for i, im in enumerate(baked):
-                put(out, "boss_plate_name_%s_%s" % (k, "ab"[i]), im)
-            # BossBarArtLayout.gd loads "boss_plate_name_<key>_pair_3x.png" for
-            # the two pair fights, and NOTHING has ever written that name - the
-            # old exporter wrote _a / _b only, so flipping USE_FINAL_BOSS_BAR
-            # would have failed two texture loads.  Emit the stacked pair here,
-            # which the condensed face makes trivial: both lines are one size.
-            lead = 1
-            pw = max(im.width for im in baked)
-            ph = sum(im.height for im in baked) + lead * (len(baked) - 1)
-            pair = canvas(pw, ph)
-            y = 0
-            for im in baked:
-                pair.alpha_composite(im, ((pw - im.width) // 2, y))
-                y += im.height + lead
-            put(out, "boss_plate_name_%s_pair" % k, pair)
+        for name, im in boss_pieces(k):
+            put(out, name, im)
 
     # ---- FX: existing shapes, gothic tones --------------------------------
     put(out, "boss_hp_chip", remap(BB.chip()))
@@ -281,12 +313,67 @@ def roundtrip(out):
             bad += 1
             print("   %-34s %s" % (n, why))
     print("round-trip: %d files, %d mismatches" % (len(names), bad))
+    return bad
+
+
+ASSETS = os.path.dirname(OUT_DEFAULT)       # the project's Assets/, which only --ship may write
+
+
+def _under(path, root):
+    # realpath, not abspath: 8.3 short names are on for this drive, and an abspath test let
+    # "...\DOCUME~1\NEW-GA~1\Assets\UI" through as a scratch folder (proven 2026-09-24 under
+    # an audit-hook write net, which stopped it at its first mkdir).
+    p = os.path.normcase(os.path.realpath(path))
+    r = os.path.normcase(os.path.realpath(root))
+    return p == r or p.startswith(r + os.sep)
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    out = args[0] if args else OUT_DEFAULT
-    run(out, do_stamina="--no-stamina" not in sys.argv)
-    if "--ase" in sys.argv:
-        roundtrip(out)
+    import argparse
+    ap = argparse.ArgumentParser(description="Gothic boss bar set (see the module docstring).")
+    ap.add_argument("out", nargs="?", help="scratch folder to build into (never under Assets)")
+    ap.add_argument("--only", help="comma-separated boss keys: only their fill, hot fill, emblem, name")
+    ap.add_argument("--ship", action="store_true", help="write into Assets/UI; needs --only")
+    ap.add_argument("--replace", action="store_true", help="with --ship, allow overwriting files")
+    ap.add_argument("--ase", action="store_true", help="write + round-trip a .aseprite beside each PNG")
+    ap.add_argument("--no-stamina", action="store_true")
+    a = ap.parse_args()
+    only = [k.strip() for k in a.only.split(",") if k.strip()] if a.only else None
+    if only:
+        known = [b["key"] for b in bosses.BOSSES]
+        unknown = [k for k in only if k not in known]
+        if unknown:
+            raise SystemExit("unknown boss key(s) %s - bosses.py has %s" % (unknown, known))
+    if a.ship:
+        if a.out:
+            raise SystemExit("--ship always writes %s; drop the folder argument" % OUT_DEFAULT)
+        if not only:
+            raise SystemExit("--ship needs --only KEY: a full re-run over Assets/UI is not idempotent "
+                             "(stamina() re-remaps the shipped fill and would turn its gold white)")
+        out = OUT_DEFAULT
+    else:
+        if not a.out:
+            raise SystemExit("give a scratch folder to build into, or --ship --only KEY to ship")
+        if _under(a.out, ASSETS):
+            raise SystemExit("refusing to write under %s without --ship" % ASSETS)
+        out = a.out
+    if only:
+        jobs = [(n, im) for k in only for n, im in boss_pieces(k)]
+        if a.ship:
+            # Every target is checked before any is written, so a refusal leaves nothing behind.
+            stems = [s for n, _ in jobs for s in (n, n + "_3x")]
+            targets = [s + ".png" for s in stems] + ([s + ".aseprite" for s in stems] if a.ase else [])
+            clash = [t for t in targets if os.path.exists(os.path.join(out, t))]
+            if clash and not a.replace:
+                raise SystemExit("refusing to overwrite %d existing file(s) without --replace: %s"
+                                 % (len(clash), ", ".join(clash)))
+        os.makedirs(out, exist_ok=True)
+        for n, im in jobs:
+            put(out, n, im)
+    else:
+        run(out, do_stamina=not a.no_stamina)
+    bad = roundtrip(out) if a.ase else 0
     print("%d assets (x2 with _3x = %d PNGs) -> %s" % (len(WRITTEN), len(WRITTEN) * 2, out))
+    for name, size in WRITTEN:
+        print("   %-30s %dx%d" % (name, size[0], size[1]))
+    sys.exit(1 if bad else 0)

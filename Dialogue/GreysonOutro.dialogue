@@ -1,0 +1,13 @@
+# Greyson's outro lines, approved by the user as written (2026-09-24, "approve everything so far").
+# Said before the fade to the Victory or Defeat screen. player_won: the player beat Greyson (the final brawl's end).
+# player_lost: Greyson beat the player, on hearts or with the spirit bomb.
+
+~ player_won
+Greyson: No... my cannon... my GAINS...
+Greyson: Fine. You win, pal. Computah would've been proud. Probably.
+=> END
+
+~ player_lost
+Greyson: Told you, pal. Nobody out-hypes me.
+Greyson: Computah, buddy... we did it.
+=> END

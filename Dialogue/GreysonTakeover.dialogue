@@ -1,0 +1,18 @@
+# The takeover: Computah is down, and Greyson storms the ring and takes his cannon arm. The user's own lines,
+# verbatim, approved by the user; the first is "COMPUTAH NOOO" exactly as the user wrote it. Each "do" line plays a
+# beat in GreysonTakeover.gd, and the dialogue waits for it before the next line.
+# The tags: `shout` plays his shout on the first line and `blips` turns its talk blips off, the shout being its
+# voice; `greyson` poses him - upset (grief, fond and fury, a sentence at a time), then the cannon's smug show and
+# stance. Never [wait=N] or "do wait(N)" in here: both run on a SceneTree timer, which ticks through the pause screen
+# and which the hold-to-skip can't run out.
+
+~ start
+Greyson: COMPUTAH NOOO [#shout, #blips=off]
+do greyson_enters()
+Greyson: That was my gym partner. I hit my first 225 on bench with this little guy. That was a long time ago. Now you've really messed up. [#greyson=upset]
+do take_the_cannon()
+Greyson: What Computah didn't know was that this cannon is fueled by the crowd's energy... but I know how to get them going. [#greyson=show]
+do roar()
+Greyson: Pal, you won't like what comes next. [#greyson=stance]
+do swap_the_bar()
+=> END

@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/BixbyInfernoFloodScript.gd" id="1_flood"]
+
+[node name="BixbyInfernoFlood" type="Node2D" groups=["bixby_beast_hazard"]]
+position = Vector2(0, 101)
+script = ExtResource("1_flood")

@@ -140,6 +140,17 @@ def sigil_bbox(pad=0):
     return (min(xs) - pad, min(ys) - pad, max(xs) + pad, max(ys) + pad)
 
 
+# True paints each stroke's own edge pixels dark (the contour colour below), as
+# every sheet did until 2026-09-23.  That was right for the trident's 5 px
+# strokes and wrong for the 天's 3-4 px ones - it burned the left sweep down to
+# a dark line with nothing lit inside it, alone in the dark in the KO - so the
+# edge now keeps the ramp's edge colour, and what cuts the emblem out of its glow
+# is the ring of pixels just OUTSIDE it, which neither sigil_bloom nor glow_halo
+# ever paints.  The colour ladder is unchanged.  Only restamp_mark turns this on,
+# to prove the rig still reproduces the trident sheets that shipped.
+DARK_EDGE = False
+
+
 def sigil_paint(cv, sg, level):
     """repaint the mark. level 0 = the approved dim ember, 1 = white-hot.
 
@@ -160,7 +171,9 @@ def sigil_paint(cv, sg, level):
     # Past half flare the contour goes DARK instead of climbing the ramp with
     # the fill.  A hot contour dissolves into the bloom and the emblem turns
     # into a white blob at exactly the beat the player is meant to read it;
-    # a near-black edge keeps the silhouette cut out of the glow.
+    # a near-black edge keeps the silhouette cut out of the glow.  (With
+    # DARK_EDGE off, that dark edge is the unpainted ring just outside the
+    # emblem - see DARK_EDGE above - and cout is only used when it is on.)
     if level >= 0.55:
         cout = PALC['9'] if level >= 0.80 else PALC['z']
     cv.paint(sg, cedge)
@@ -169,7 +182,8 @@ def sigil_paint(cv, sg, level):
         # keep the hottest white off the emblem's own edge so the stroke
         # shapes stay distinct rather than fusing into one mass
         cv.paint(erode(sg, 2), PALC['M'])
-    cv.outline(sg, cout)
+    if DARK_EDGE:
+        cv.outline(sg, cout)
     return core, edge
 
 

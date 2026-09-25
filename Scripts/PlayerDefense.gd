@@ -10,20 +10,26 @@ extends Node
 # within parry_mash_lockout of an earlier press that didn't parry gets no parry credit, so mashing
 # block can't parry; a parry re-arms the next press at once. A `parryable` attack, like Eric's grab,
 # can only be answered this way: a held guard doesn't stop it.
+# Pass-through attacks (AttackCatalog's parry_pass_through, Matt's bolts and waves) fly on through the
+# player after a parry or a block, and rely on the per-source absorbed_until that _parry and _block
+# already set to keep that same pass from landing a moment later.
 # Parries in a row build a streak, which pays more hype, louder feedback and a longer stagger window.
 # A hit, a guard break or parry_streak_timeout without a parry ends it.
 # Dash parry: with the player's dash_parry (PlayerScript.dash_parry, Eric's fight for now) a block
 # press ends a dash where it is and raises the guard in its place, so a dash can be turned into a
 # guard at any point in it and a dash into an attack can parry it. Nothing here changes for the parry
 # itself - it is the ordinary guarded one, on the ordinary window, mash lockout and guarded side - so
-# a press that is late or mashed buys a block at full stamina instead. What the cancel gives up is
-# everything the dash had not yet paid out: its i-frames (DashImmunity reads player.dash_cancelled)
-# and its dodge ghost. What it keeps is dash_ready_at, the wait for the next dash.
+# a press that is late or mashed buys a block at full stamina instead, or nothing with blocking off
+# (BLOCKING_ENABLED). What the cancel gives up is everything the dash had not yet paid out: its
+# i-frames (DashImmunity reads player.dash_cancelled) and its dodge ghost. What it keeps is
+# dash_ready_at, the wait for the next dash.
 # Guard break: the block that empties the bar is still absorbed, then the player is stunned and every
 # hit lands; the first one ends the stun, so it isn't punished twice. Only blocks break the guard.
 # Perfect dodge: either a dash-through attack touches the player during dash immunity, or another
 # attack reaches the spot the dash started from, inside perfect_dodge_window, without reaching the
 # player. The second case uses the DodgeGhost, a copy of the hurtbox left where the dash started.
+# A hazard lying still on the floor (AttackCatalog's no_perfect_dodge) never pays one either way: a dash
+# across it is still safe, but nothing was dodged.
 # NEW ATTACK CODE must compare overlaps against player.hurtBox and ignore the ghost, then report a
 # ghost-only overlap with player.receive_near_miss(); the ghost is monitorable on the player's layer,
 # so every attack area that watches the player can see it.
@@ -34,6 +40,10 @@ extends Node
 # Status drain: a status effect (PlayerStatus) can empty the bar over time through drain_stamina(),
 # which keeps the refill off and breaks the guard of a player who holds block through it.
 # Stamina keeps refilling through a finisher's freeze, since the player's branch keeps processing.
+# BLOCKING_ENABLED is the one switch for blocking, and the game ships with it off. Off, the guard is
+# only the parry's stance: it drops once the press's parry window has run out, whatever is still
+# held, and while it is up it absorbs nothing, costs nothing and pauses no refill, so it can't break
+# on a block either. The parry is untouched. Everything blocking was is still here, behind it.
 
 signal stamina_changed(stamina: float, max_stamina: float)
 # A dash was pressed without the stamina for it.
@@ -57,6 +67,9 @@ const DefenseHypeArtLayout := preload("res://Scripts/DefenseHypeArtLayout.gd")
 
 # Prints each resolved hit: attack id, result, then health, stamina and hype after it.
 static var LOG_HITS := false
+# The user asked for blocking out of the game (2026-09-24). A static var rather than a const so the
+# defence suite can pin it on for the modes that test the blocking it keeps.
+static var BLOCKING_ENABLED := false
 
 @export var max_stamina := 100.0
 @export var stamina_regen_per_second := 35.0
@@ -195,7 +208,8 @@ func resolve_hit(hit: RefCounted) -> int:
 	if player.is_invincible and not hit.bypass_invincibility:
 		return HitInfo.Result.IGNORED
 	if hit.dash_through and DashImmunity.is_immune(player, AttackCatalog.DASH_IMMUNITY_TIME, AttackCatalog.DASH_IMMUNITY_COOLDOWN):
-		_try_award_perfect_dodge(hit)
+		if not hit.no_perfect_dodge:
+			_try_award_perfect_dodge(hit)
 		return HitInfo.Result.DODGED
 	if hit.grab:
 		# A held guard never stops a grab; only a parry does.
@@ -208,14 +222,14 @@ func resolve_hit(hit: RefCounted) -> int:
 		return HitInfo.Result.IGNORED
 	if _can_parry(hit):
 		return _parry(hit, record)
-	if hit.blockable and is_guarding() and _from_guarded_side(hit):
+	if BLOCKING_ENABLED and hit.blockable and is_guarding() and _from_guarded_side(hit):
 		return _block(hit, record)
 	return _take_hit(hit)
 
 
 # This frame the attack touches the ghost but not the player.
 func resolve_near_miss(hit: RefCounted) -> void:
-	if not ghost_active:
+	if not ghost_active or hit.no_perfect_dodge:
 		return
 	if player.fight_over or player.is_finishing or player.is_grabbed or is_guard_broken:
 		return
@@ -259,11 +273,17 @@ func drain_stamina(amount: float) -> void:
 
 
 func is_regen_paused() -> bool:
-	return guard_up and block_hold_regen_multiplier <= 0.0 and stamina < max_stamina
+	return BLOCKING_ENABLED and guard_up and block_hold_regen_multiplier <= 0.0 and stamina < max_stamina
 
 
 func is_guarding() -> bool:
 	return guard_up and not is_guard_broken
+
+
+# Whether a guard may be up now: always with blocking, and without it only inside the last press's
+# parry window, which is all the stance is for.
+func guard_holds() -> bool:
+	return BLOCKING_ENABLED or clock - last_press_time <= parry_window
 
 
 func can_raise_guard() -> bool:
@@ -381,7 +401,14 @@ func _block(hit: RefCounted, record: Dictionary) -> int:
 func _can_parry(hit: RefCounted) -> bool:
 	if not hit.blockable and not hit.parryable:
 		return false
-	return is_guarding() and _from_guarded_side(hit) and _parry_ready()
+	return (is_guarding() or _posed_guard()) and _from_guarded_side(hit) and _parry_ready()
+
+
+# A fight holding the player in its own poses, unsealed (Greyson's brawl), draws the guard itself, since
+# a posed player never reaches Blocking: a credited press parries inside its window exactly as on foot.
+# It only ever parries - _block() reads is_guarding() alone - and a sealed lock has no guard at all.
+func _posed_guard() -> bool:
+	return player.is_posed() and player.is_action_locked and not player.lock_seals_guard
 
 
 func _parry_ready() -> bool:
@@ -531,7 +558,7 @@ func _prune_sources() -> void:
 func _regen(delta: float) -> void:
 	if stamina >= max_stamina or is_guard_broken or clock - last_spend_time < stamina_regen_delay:
 		return
-	var rate := stamina_regen_per_second * (block_hold_regen_multiplier if guard_up else 1.0)
+	var rate := stamina_regen_per_second * (block_hold_regen_multiplier if guard_up and BLOCKING_ENABLED else 1.0)
 	if rate > 0.0:
 		_set_stamina(minf(stamina + rate * delta, max_stamina))
 

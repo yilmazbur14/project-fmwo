@@ -66,7 +66,9 @@ const FLASH_COLOR := Color(1, 250 / 255.0, 214 / 255.0)
 # bixby_transform.png: 26 frames of 320x256 in a 13x2 grid, read left to right, with Bixby's feet at texel
 # (160, 251) in every one. bixby_transform_aura.png (4 frames) and bixby_transform_shockwave.png (5 frames
 # of 320x96, centred on the feet) are drawn on the same point. The beats, by frame: 0-2 he freezes,
-# 3-6 the cracks ignite, 7-9 he tears off the floor, 10-14 he swells and grows horns, 15-17 the wings tear
+# 3-6 the cracks ignite, 7-9 he tears off the floor, 10-14 he swells and his heads light one at a time
+# (middle ears 11, left head 12, right head and tail tip 13, the back splitting 14; the redesign has no
+# horns), 15-17 the wings tear
 # out and snap open, 18-19 it implodes and holds, 20 detonates, 21-22 the cold beast stands in the smoke,
 # 23-24 his eyes light, 25 holds. The frames draw him lifting off the floor themselves, from 7 up to the
 # beast's hover height by 15, so they are all drawn on the same point: the last one is the beast's hover

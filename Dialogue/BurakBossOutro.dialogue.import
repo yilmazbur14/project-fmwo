@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://di32jkh1i61i1"
+path="res://.godot/imported/BurakBossOutro.dialogue-939e3226b215c91bcdd7a40167fe6203.tres"
+
+[deps]
+
+source_file="res://Dialogue/BurakBossOutro.dialogue"
+dest_files=["res://.godot/imported/BurakBossOutro.dialogue-939e3226b215c91bcdd7a40167fe6203.tres"]
+
+[params]
+
+defaults=true

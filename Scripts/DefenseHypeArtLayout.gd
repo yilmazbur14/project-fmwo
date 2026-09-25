@@ -531,6 +531,9 @@ const PLACEHOLDER_POPUPS := {
 	# The status effects (PlayerStatus), as they land.
 	&"drained": {"text": "DRAINED!", "font_size": 44, "outline": 8, "colors": [Color(1.0, 0.72, 0.1), Color(0.8, 0.35, 0.1)], "frame_time": 0.1},
 	&"reversed": {"text": "REVERSED!", "font_size": 44, "outline": 8, "colors": [Color(0.85, 0.6, 1.0), Color(0.5, 0.3, 0.9)], "frame_time": 0.1},
+	# Held by Danny's worms in his slam string, where the root takes the parry too (DannyBossSlams): his worms'
+	# pinks.
+	&"stuck": {"text": "STUCK!", "font_size": 44, "outline": 8, "colors": [Color(1.0, 0.84, 0.82), Color(0.86, 0.48, 0.5)], "frame_time": 0.1},
 }
 # Frame 0 rests and frame 1 pops; the word fills the top 48 px of each frame.
 const FINAL_POPUPS := {
@@ -546,6 +549,9 @@ const FINAL_POPUPS := {
 #SOUNDS
 # Placeholders from the existing sounds until final ones arrive.
 const BLOCK_SFX := {"stream": "res://Assets/Audio/SFX/hit_impact.ogg", "pitch": 1.6, "volume_db": -8.0}
+# A punch that reached a boss and dealt nothing (PlayerCombo.punch_refused): the same sample, dropped
+# low and quiet, a thud rather than a hit.
+const DEFLECT_SFX := {"stream": "res://Assets/Audio/SFX/hit_impact.ogg", "pitch": 0.55, "volume_db": -10.0}
 # The parry's one sound. Every parry plays it at the same level, first of the fight or fifth of a
 # chain: the streak escalates in the art, never in the ears. The user's own file is kept out of the
 # repo, so anyone without it gets the synthesised hit instead and still has a parry cue.
@@ -573,6 +579,18 @@ static func hype() -> Dictionary:
 
 static func block_spark() -> Dictionary:
 	return FINAL_BLOCK_SPARK if USE_FINAL_BLOCK_SPARK else PLACEHOLDER_BLOCK_SPARK
+
+
+# The dull deflect on a refused punch: the block spark, already grey and white, at two thirds its size.
+static func deflect_spark() -> Dictionary:
+	var spec: Dictionary = block_spark().duplicate()
+	if spec.has("texture"):
+		spec.scale = 2.0
+	else:
+		spec.color = Color(0.8, 0.8, 0.8)
+		spec.outer_radius = spec.outer_radius * 2.0 / 3.0
+		spec.inner_radius = spec.inner_radius * 2.0 / 3.0
+	return spec
 
 
 # The strong sheet from the third parry in a row.

@@ -44,6 +44,7 @@ const HitStop := preload("res://Scripts/HitStop.gd")
 const HitInfo := preload("res://Scripts/HitInfo.gd")
 const Layout := preload("res://Scripts/ComputahArtLayout.gd")
 const MashInput := preload("res://Scripts/MashInput.gd")
+const MashCurve := preload("res://Scripts/MashCurve.gd")
 const FinisherPromptUI := preload("res://Scripts/FinisherPromptUI.gd")
 
 const UPPERCUT_ID := &"computah_uppercut"
@@ -193,7 +194,7 @@ func Physics_Update(delta: float) -> void:
 			release()
 		else:
 			_hold_player()
-			meter = maxf(meter - state_machine.escape_drain * delta, 0.0)
+			meter = maxf(meter - MashCurve.drain(state_machine.escape_drain, meter) * delta, 0.0)
 	match phase:
 		Phase.CLOSE:
 			if clock >= CLOSE_TIME:
@@ -354,7 +355,7 @@ func _press(action: StringName) -> void:
 		return
 	last_action = action
 	last_press_usec = now
-	meter = minf(meter + state_machine.escape_gain, 1.0)
+	meter = minf(meter + MashCurve.gain(state_machine.escape_gain, meter), 1.0)
 	var pair := mash_actions()
 	meter_changed.emit(meter, pair[1] if action == pair[0] else pair[0])
 	get_tree().call_group("arena_crowd", "cheer", 0.4)

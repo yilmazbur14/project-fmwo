@@ -15,8 +15,11 @@ const VsCard := preload("res://Scripts/VsCard.gd")
 const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
 const FIRE_PATCH_SCENE := preload("res://Scenes/Bosses/BixbyFirePatchScene.tscn")
 const FirePatch := preload("res://Scripts/BixbyFirePatchScript.gd")
-const QUAKE_CRACK_SCENE := preload("res://Scenes/Bosses/BixbyQuakeCrackScene.tscn")
-const QuakeCrack := preload("res://Scripts/BixbyQuakeCrackScript.gd")
+const QUAKE_RING_SCENE := preload("res://Scenes/Bosses/BixbyQuakeRingScene.tscn")
+const Ember := preload("res://Scripts/BixbyEmberScript.gd")
+const ParryTell := preload("res://Scripts/ParryTell.gd")
+const BixbyBeastBroken := preload("res://Scripts/States/BixbyBeast/BixbyBeastBroken.gd")
+const BixbyBeastJuggled := preload("res://Scripts/States/BixbyBeast/BixbyBeastJuggled.gd")
 
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/LiamPreFight.dialogue"
 const HAZARD_GROUP := "bixby_beast_hazard"
@@ -31,9 +34,6 @@ const PLAYER_HALF_BODY := Vector2(18, 40.5)
 const FIRE_PASSAGE_MARGIN := 6.0
 # The grid the floor is checked on for places the fire would wall off.
 const FLOOR_CELL := 16.0
-# A quake wave runs along the line between him and the crack it comes out of. Off a crack planted against a
-# rope, that way is a few steps of floor, so it runs the other way along the same line instead.
-const QUAKE_MIN_TRAVEL := 500.0
 
 # The fight's loop: hover and strafe, run the cycle's attacks with a short hover between them, land for
 # the punishable recovery, take off, repeat. Cycles take turns through this list: fire breath, the combined
@@ -41,6 +41,10 @@ const QUAKE_MIN_TRAVEL := 500.0
 # when it's done, listed here. The combined attack ends on a punish window of its own and takes off from
 # it, so it is always the last attack of its cycle and that cycle has no landing recovery.
 const ATTACK_CYCLES := [["FireBreath"], ["Combined"], ["FireBreath", "FireBreath"], ["Combined"]]
+# From the first cycle he starts at or under inferno_health_gate, he is enraged: the Inferno comes at once,
+# then these take turns from the top. It hands its own clearance and recharge to the landing straight after
+# it, so it always has a cycle to itself.
+const ENRAGED_CYCLES := [["Inferno"], ["FireBreath"], ["Combined"], ["FireBreath", "FireBreath"]]
 
 #TUNING (seconds, px and px/s)
 @export var hover_time := 1.8
@@ -70,25 +74,21 @@ const ATTACK_CYCLES := [["FireBreath"], ["Combined"], ["FireBreath", "FireBreath
 @export var recover_time := 3.5
 # How long he takes to rise to hover height, from the takeoff's rising frame.
 @export var takeoff_rise_time := 0.3
-# The combined attack: he lands and braces this long, then pounds this many cracks into the floor this far
-# apart, one under the player each time.
+# The combined attack: he lands and braces this long, then pounds this many times this far apart.
 @export var combined_windup := 0.5
 @export var combined_pounds := 3
 @export var combined_pound_interval := 0.35
-# How long the first pound's crack glows before it erupts, and how fast its wave then travels out. The
-# eruption comes up out of the floor with no travel at all, so the throbbing crack is the whole of the
-# warning anyone standing on one gets: it has to stay well clear of PlayerDefense.parry_window, and the
-# defence suite's approach mode holds it to that.
-@export var quake_warning := 1.2
-@export var quake_speed := 700.0
-# Every crack after it burns this much longer than the one before, so the three go off further apart than
-# the player's invincibility lasts: together they were one hit, spread out they are three to keep clear of.
-@export var quake_stagger := 0.85
-# The scream: one full turn of the drawn spin, which is a third of a turn every 0.3s. Kept to whole turns,
-# since the wobble he stops on is drawn to follow the last frame of the loop. He wobbles dizzy for this
-# long afterwards.
-@export var combined_spin_time := 1.2
+# The scream: at least this long, then on until his heads come round to a frame the wobble he stops on is
+# drawn to follow, which is at most one more loop (BixbyBeastArtLayout.SPIN_LOOP, a third of a turn). He
+# wobbles dizzy for this long afterwards.
+@export var combined_spin_time := 6.0
 @export var combined_dizzy_time := 2.0
+# Every pound sends a quake ring rolling out from under him (BixbyQuakeRingScript), its radius growing this
+# fast, and while he spins another follows every interval. Slow enough that the pounds' rings are still
+# rolling out while he spins, and far enough apart on the floor to stand between. The three a pound sends
+# come 0.35 s apart, too close to stand between, so this is also what keeps them one dash thick.
+@export var quake_ring_speed := 200.0
+@export var combined_spin_ring_interval := 2.0
 # The fire trail the full stream leaves on the floor: patches that block the player but don't hurt. How
 # long each burns between catching and burning out, whose timing is drawn.
 @export var fire_trail_time := 6.0
@@ -97,14 +97,71 @@ const ATTACK_CYCLES := [["FireBreath"], ["Combined"], ["FireBreath", "FireBreath
 @export var max_trail_patches := 6
 # When he lands, fire this close to where he'll be punched burns out.
 @export var fire_landing_clearance := 220.0
+# THE INFERNO (BixbyBeastInferno). The first cycle he starts at or under this share of his health runs it,
+# and his enraged rotation after that. 1.0 has it from the start.
+@export var inferno_health_gate := 0.6
+# He flies to the top rope this fast, perching when he gets there or after this long at most.
+@export var inferno_perch_speed := 1300.0
+@export var inferno_perch_time := 1.8
+# The volley: this many fireballs spat up over this long, rising this fast, each up to this many degrees
+# off straight up. Then a beat with the sky empty.
+@export var inferno_fireballs := 24
+@export var inferno_volley_time := 1.2
+@export var inferno_rise_speed := 1600.0
+@export var inferno_rise_spread_degrees := 15.0
+@export var inferno_sky_beat := 0.35
+# The shower tracks the player: the first marker this long into the inhale and one more every interval,
+# each on the player's feet as it appears, up to the scatter off them at random, and lit for the warning
+# before its fireball lands there. Markers may overlap: a player who stops can't sit in a gap between them.
+@export var inferno_first_marker := 0.3
+@export var inferno_marker_interval := 0.14
+@export var inferno_fireball_warning := 1.0
+@export var inferno_track_scatter := 40.0
+# The pull, from the inhale until the last fireball lands: this many px/s toward the floor under him,
+# reached over the ramp, and fading out inside the dead zone so nobody jitters at rest.
+@export var inferno_pull_speed := 330.0
+@export var inferno_pull_ramp := 0.4
+@export var inferno_pull_dead_zone := 90.0
+# The breath is one cone straight down from his mouth, this many degrees either side of straight down: 65
+# covers about 72% of the ring with the cone's tip 45 px under the rope, leaving the two upper corners
+# beside him. The widest it can go is capped by the wind-up: the longest run out of it has to fit in that.
+@export var inferno_cone_half_angle := 65.0
+# While he hangs off the middle of the rope, the boss bar and its plate over him fade to this.
+@export var inferno_hud_fade_alpha := 0.3
+# The wind-up has no pull and is sized to the longest run to safety, from the bottom-centre of the ring.
+# The breath hurts for less than the player's invincibility, so it lands once at most. Then his spent pose
+# before he lets go.
+@export var inferno_windup := 1.4
+@export var inferno_breath_time := 0.9
+@export var inferno_spent_time := 0.35
+# The embers it leaves burning: up to this many, this far apart, each burning this long.
+@export var inferno_lingering_patches := 8
+@export var inferno_lingering_time := 10.0
+@export var inferno_lingering_spacing := 180.0
+# Its landing only burns out fire this close to him or in the player's way, so most embers outlive it, and
+# his recharge is this long.
+@export var inferno_landing_clearance := 60.0
+@export var inferno_recover_time := 4.5
 
 var player_defeated := false
+var enraged := false
 var cycles_started := 0
 var attacks: Array = []
 var attacks_done := 0
+# The Inferno puts him down in a window of its own: the next landing's clearance and the next recovery's
+# length. Below 0 is the usual; Land and Recover take them.
+var landing_clearance_override := -1.0
+var recover_time_override := -1.0
+# The pre-fight lines' balloon, which a held skip takes down, and whether those lines have handed
+# over to the VS card yet.
+var pre_fight_balloon: Node
+var pre_fight_over := false
 
 
 func _ready() -> void:
+	# His Break and his juggle are built here rather than in his scene.
+	_add_state(BixbyBeastBroken.new(), "Broken")
+	_add_state(BixbyBeastJuggled.new(), "Juggled")
 	for child in get_children():
 		if child is State:
 			states[child.name] = child
@@ -113,6 +170,15 @@ func _ready() -> void:
 		current_state = initial_state
 		# Deferred until the body is ready, since the intro moves and draws him.
 		current_state.Enter.call_deferred()
+
+
+# The body is this node's parent, so it isn't ready yet: its hurtbox is looked up, not read off it.
+func _add_state(state, state_name: String) -> void:
+	state.name = state_name
+	state.body = BixbyBeastCharacterBody
+	state.hurtbox = BixbyBeastCharacterBody.get_node("Air/Hurtbox")
+	state.state_machine = self
+	add_child(state)
 
 
 func _process(delta: float) -> void:
@@ -148,10 +214,25 @@ func on_child_transition(state, new_state_name):
 func show_pre_fight_dialogue(intro: State) -> void:
 	# One-shot: the outro's lines end a dialogue too, and must not start the fight again.
 	DialogueManager.dialogue_ended.connect(_on_dialogue_ended, CONNECT_ONE_SHOT)
-	DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start", [intro])
+	pre_fight_balloon = DialogueManager.show_dialogue_balloon(load(PRE_FIGHT_DIALOGUE), "start", [intro])
+
+
+# A held skip's way past the lines (BossEntrance), whether they were ever put up or not: the hand-over
+# their own end makes, made from here instead. pre_fight_over keeps it to once - the lines can end on
+# their own inside the skip, on the transformation it ran out.
+func end_pre_fight_dialogue() -> void:
+	if pre_fight_over:
+		return
+	if DialogueManager.dialogue_ended.is_connected(_on_dialogue_ended):
+		DialogueManager.dialogue_ended.disconnect(_on_dialogue_ended)
+	_on_dialogue_ended(null)
 
 
 func _on_dialogue_ended(_dialogue: Object) -> void:
+	pre_fight_over = true
+	var intro = states.get("Intro")
+	if intro:
+		intro.lines_over()
 	VsCard.play_intro(self, "liam", post_dialogue_pre_fight_timer.start)
 
 
@@ -162,7 +243,11 @@ func _on_post_dialogue_pre_fight_timer_timeout() -> void:
 
 
 func start_cycle() -> void:
-	attacks = ATTACK_CYCLES[cycles_started % ATTACK_CYCLES.size()].duplicate()
+	if not enraged and BixbyBeastCharacterBody.get_health_ratio() <= inferno_health_gate:
+		enraged = true
+		cycles_started = 0
+	var cycles: Array = ENRAGED_CYCLES if enraged else ATTACK_CYCLES
+	attacks = cycles[cycles_started % cycles.size()].duplicate()
 	attacks_done = 0
 	cycles_started += 1
 	on_child_transition(current_state, "Hover")
@@ -186,9 +271,21 @@ func attack_finished(state: State) -> void:
 	on_child_transition(state, "Land" if attacks.is_empty() else "Hover")
 
 
-# His punish windows: the recovery he lands in, and the dizzy spell the combined attack ends on.
+func take_landing_clearance() -> float:
+	var clearance := landing_clearance_override if landing_clearance_override >= 0.0 else fire_landing_clearance
+	landing_clearance_override = -1.0
+	return clearance
+
+
+func take_recover_time() -> float:
+	var time := recover_time_override if recover_time_override >= 0.0 else recover_time
+	recover_time_override = -1.0
+	return time
+
+
+# His punish windows: the recovery he lands in, the dizzy spell the combined attack ends on, and a Break.
 func is_recovering() -> bool:
-	if current_state == states.get("Recover"):
+	if current_state == states.get("Recover") or current_state == states.get("Broken"):
 		return true
 	return current_state == states.get("Combined") and current_state.is_dizzy()
 
@@ -296,17 +393,24 @@ func _floor_stays_connected(footprints: Array) -> bool:
 	return queue.size() == open_cells
 
 
-# The punish window has to be reachable: as he comes down, fire near where he'll land, or in the way
-# between the player and there, burns out.
-func clear_fire_for_landing(landing_point: Vector2) -> void:
+# The punish window has to be reachable: as he comes down, fire within `clearance` of where he'll land (below
+# 0, fire_landing_clearance), or in the way between the player and there, burns out. The Inferno's embers
+# don't block, but they hurt, so the straight way to him has to be clear of them too.
+func clear_fire_for_landing(landing_point: Vector2, clearance := -1.0) -> void:
 	var body_box := BixbyBeastArtLayout.local_rect(BixbyBeastArtLayout.RECOVER_BODY_BOX)
 	var landed := Rect2(landing_point + body_box.position, body_box.size)
-	var near := landed.grow(fire_landing_clearance)
+	var near := landed.grow(clearance if clearance >= 0.0 else fire_landing_clearance)
 	var player := get_player()
-	for patch in fire_patches(false):
-		var footprint: Rect2 = patch.footprint()
+	for fire in fire_patches(false) + embers():
+		var footprint: Rect2 = fire.footprint()
 		if footprint.intersects(near) or (player and _fire_in_the_way(footprint, player.global_position, landed)):
-			patch.burn_out()
+			fire.burn_out()
+
+
+# The Inferno's embers that are burning, or about to.
+func embers() -> Array:
+	return get_tree().get_nodes_in_group(HAZARD_GROUP).filter(func(hazard: Node) -> bool:
+		return hazard is Ember and hazard.is_active())
 
 
 # Whether fire stands anywhere on the straight way from `from` to the nearest point of `target`, for the
@@ -324,31 +428,64 @@ func _fire_in_the_way(footprint: Rect2, from: Vector2, target: Rect2) -> bool:
 
 #COMBINED ATTACK
 
-# Sets a crack glowing where a pound landed, pointing the way its wave travels when it erupts. Kept inside
-# the ropes, so a pound aimed at a player against one still cracks floor. `order` is which pound planted
-# it, which is what holds its eruption back behind the one before.
-func plant_quake_crack(at: Vector2, from: Vector2, order := 0) -> void:
-	var point := at.clamp(ROPES.position, ROPES.end)
-	var direction := Vector2.DOWN if point.is_equal_approx(from) else (point - from).normalized()
-	if _wave_room(point, direction) < QUAKE_MIN_TRAVEL:
-		direction = -direction
-	var crack := QUAKE_CRACK_SCENE.instantiate()
-	crack.position = point.round()
-	crack.warning_time = quake_warning + order * quake_stagger
-	crack.speed = quake_speed
-	crack.direction = direction
-	get_tree().current_scene.add_child(crack)
+# A quake ring out from under his feet at `feet`, across the floor to the ropes.
+func send_quake_ring(feet: Vector2) -> void:
+	var ring := QUAKE_RING_SCENE.instantiate()
+	ring.position = feet.round()
+	ring.speed = quake_ring_speed
+	ring.player = get_player()
+	get_tree().current_scene.add_child(ring)
 
 
-# How far a wave out of `point` runs that way before it is off the floor.
-func _wave_room(point: Vector2, direction: Vector2) -> float:
-	var floor_area: Rect2 = QuakeCrack.WAVE_AREA
-	var room := INF
-	if absf(direction.x) > 0.001:
-		room = minf(room, ((floor_area.end.x if direction.x > 0.0 else floor_area.position.x) - point.x) / direction.x)
-	if absf(direction.y) > 0.001:
-		room = minf(room, ((floor_area.end.y if direction.y > 0.0 else floor_area.position.y) - point.y) / direction.y)
-	return room
+#BREAK AND JUGGLE
+
+# His Break gauge filled (BixbyBeastScript._on_break): whatever he was doing stops, everything he sent out
+# goes, and he comes down Broken. There is no flag for the fight being on, so the states it isn't on in
+# are refused by name.
+func enter_broken() -> void:
+	if BixbyBeastCharacterBody.defeated or BixbyBeastCharacterBody.boss_health <= 0 or player_defeated:
+		return
+	if current_state in [states.get("Intro"), states.get("Defeated"), states.get("Broken"), states.get("Juggled")]:
+		return
+	for timer in [post_dialogue_pre_fight_timer, recover_timer, finisher_stagger_timer]:
+		timer.stop()
+	ParryTell.clear(BixbyBeastCharacterBody)
+	BixbyBeastCharacterBody.clear_hazards()
+	# An Inferno cut short leaves its long landing window booked for whichever landing comes next.
+	landing_clearance_override = -1.0
+	recover_time_override = -1.0
+	on_child_transition(current_state, "Broken")
+
+
+# The tiered finisher's first uppercut (BixbyBeastScript.begin_juggle).
+func enter_juggled() -> void:
+	if BixbyBeastCharacterBody.defeated or current_state == states.get("Juggled"):
+		return
+	on_child_transition(current_state, "Juggled")
+
+
+# Down after a juggle, he lies slumped where he crashed and takes off into his next cycle `delay` after
+# this, as after the finisher out of any other window.
+func after_juggle(delay: float) -> void:
+	on_child_transition(current_state, "Idle")
+	BixbyBeastCharacterBody.play_anim(&"recover")
+	finisher_stagger_timer.start(maxf(delay, 0.01))
+
+
+# The one switch past the fight being decided: killed in the air, he lands into his defeat rather than
+# snapping to its first frame mid-flight.
+func land_juggled(final_state_name: String) -> void:
+	var final_state = states.get(final_state_name)
+	if final_state == states.get("Defeated"):
+		final_state.lying = true
+	current_state.Exit()
+	final_state.Enter()
+	current_state = final_state
+
+
+# Where the leap shadow lies: his own shadow's layer, under everyone standing on the floor.
+func ground_layer() -> Node2D:
+	return BixbyBeastCharacterBody.shadow.get_parent()
 
 
 func enter_defeated() -> void:
@@ -364,4 +501,9 @@ func enter_player_defeated() -> void:
 func _end_fight(final_state_name: String) -> void:
 	for timer in [post_dialogue_pre_fight_timer, recover_timer, finisher_stagger_timer]:
 		timer.stop()
+	var juggled = states.get("Juggled")
+	# In the air, he finishes his fall and his crash first (land_juggled).
+	if current_state == juggled:
+		juggled.final_state = final_state_name
+		return
 	on_child_transition(current_state, final_state_name)

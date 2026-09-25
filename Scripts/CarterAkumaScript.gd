@@ -1,11 +1,17 @@
 extends CharacterBody2D
 
-# Carter, boss 5. He has two moves. The Raging Demon: he flashes his eyes, drags the player to the
+# Carter, boss 5. He has three moves. The Raging Demon: he flashes his eyes, drags the player to the
 # middle of the ring, puts the lights out and sends fifteen clones through them one at a time, then
-# stands there open while the lights come back. The Beam Rush: four clones hold a curtain of light
-# each across the ring while he teleports in beside the player and strikes, until a parry has filled
-# the Break gauge below. Each sequence lives in its own state - CarterRagingDemon, CarterBeamRush -
-# and this node is his body, his health, his art and the darkness the barrage borrows.
+# stands there open while the lights come back. The Beam Rush: four clones at the top of the ring
+# charge beams, lock them onto the player and fire them, three volleys to be escaped rather than
+# parried, and once in it he teleports in beside the player and strikes. The Messatsu: he puts the lights out, reappears across the ring
+# charging a beam locked onto the player, and fires it as the lights come back on - six hits, each its
+# own parry.
+# Every parry of all three fills his fight-long Break gauge, and eight clean ones from empty break him.
+# A Break's window is his Recover cashed from it, and it pays the tiered finisher's juggle
+# (CarterJuggled). The Beam Rush ends on its Break; the other two bank it and play on to their end.
+# Each sequence lives in its own state - CarterRagingDemon, CarterBeamRush, CarterMessatsu - and this
+# node is his body, his health, his art and the darkness the sequences borrow.
 # Not to be confused with Scripts/CarterScript.gd, the wrestler Mason calls in - a different
 # character with his own art and script.
 
@@ -24,15 +30,19 @@ const OUTRO_DIALOGUE := "res://Dialogue/CarterOutro.dialogue"
 const FIGHT_SCENE := "res://Scenes/Bosses/CarterBossFightScene.tscn"
 
 #CONSTANTS
-# Josh is 14 and Mason 10; Carter is fight 5 of 7, and he has two attacks rather than one.
-# A perfect Raging Demon takes 24 of these: seven banked for the parries, three punches on the beat
-# in the window it earns (1 + 1 + 2) and a 13-point finisher. A Beam Rush ended by a Break takes 17 -
-# the rush banks nothing, so all of it is the five-second window - and a Beam Rush simply sat through
-# earns a 1.5 s window and almost nothing. The finisher alone is 13, supercharged 20.
-# So a good player needs three attacks read well, which is what the alternation gives them.
+# Josh is 14 and Mason 10; Carter is fight 5 of 7, and he has three attacks rather than one.
+# A window he earns pays three punches on the beat (1 + 1 + 2) and a 13-point finisher, supercharged
+# 20; a Break's window pays the tiered juggle instead, 8 + 5 + 8 = 21 for all three bars. So a perfect
+# Raging Demon - whose eighth red breaks him - takes 32: seven banked for the parries, the punches and
+# the juggle. A Beam Rush ended by a Break takes 25 - it banks nothing - and one simply sat through
+# earns a 1.5 s window and almost nothing. A perfect Messatsu from an empty gauge takes 21: four
+# banked for its six parries, the punches and the plain finisher.
+# So a good player needs three attacks read well, which is what the rotation gives them: one of each.
 @export var max_health := 50
 var boss_health := max_health
 const MAX_HITS_PER_WINDOW := 3
+# Each opening takes the damage of a clean chain of MAX_HITS_PER_WINDOW punches (PunchAllowance).
+const PunchAllowance := preload("res://Scripts/PunchAllowance.gd")
 const PHANTOM_HIT_WINDOW := 0.5
 const VIEW_SIZE := Vector2(1920, 1080)
 # Fading in decibels sounds even all the way down; by this level nothing can be heard.
@@ -46,11 +56,34 @@ const RUSH_SFX := [
 	"res://Assets/Audio/SFX/carter_rush_3.wav",
 ]
 
+# His Break gauge, on the rule every fight's is on: this many clean reads from empty is a Break. The
+# number is the user's: "if the player can parry 8 in a row, that should be enough to break carter".
+# Every parry is one read - a red clone, his strike, a hit of his Messatsu - a hit taken costs one back
+# and a guard break two. 100 is BossBreakGauge.max_value, and 100 / 8 is exact in floating point, so
+# eight parries land on it. His is a parry fight: a perfect dodge earns nothing (the Messatsu's skips its
+# whole string, and the Beam Rush's beams can only be dodged) and neither does a punch. No grabs and nothing of his to fling back, so no
+# grab or reflect gain.
+const BREAK_READS := 8
+const BREAK_READ := 100.0 / BREAK_READS
+const BREAK := {
+	"parry_gain": BREAK_READ,
+	"perfect_dodge_gain": 0.0,
+	"punch_gain": 0.0,
+	"charged_punch_gain": 0.0,
+	"hit_loss": BREAK_READ,
+	"guard_break_loss": 2.0 * BREAK_READ,
+	# His Break IS his punish window, so the wait is only the breath after it.
+	"unlock_delay": 0.5,
+	# The shortest his Break window may be. He has no Broken state: a Break is his Recover, for the
+	# longer of this and what the attack earned.
+	"broken_time": 5.0,
+}
+
 #UI (BossHealthBarUI and BreakGaugeUI build it at runtime)
 var hud_layer: CanvasLayer
 var health_bar: Control
-# His daze meter (BossBreakGauge), and the gauge that draws it. Built once and hidden: it is a
-# PER-ATTACK meter that only the Beam Rush ever shows, not a fight-long one.
+# His Break gauge (BossBreakGauge), fight-long and always on screen, and the bar that draws it. The
+# bar is on the HUD layer, so its BREAK! reads over the dark.
 var break_gauge: Node
 var break_gauge_bar: Control
 
@@ -92,9 +125,14 @@ var ko_light: Node2D
 @onready var recover_sfx_player: AudioStreamPlayer = $RecoverSfxPlayer
 @onready var land_sfx_player: AudioStreamPlayer = $LandSfxPlayer
 @onready var ko_sfx_player: AudioStreamPlayer = $KoSfxPlayer
+@onready var charge_sfx_player: AudioStreamPlayer = $ChargeSfxPlayer
+@onready var fire_sfx_player: AudioStreamPlayer = $FireSfxPlayer
+@onready var lights_sfx_player: AudioStreamPlayer = $LightsSfxPlayer
+var break_sting_player: AudioStreamPlayer
 
 var defeated := false
 var hits_this_window := 0
+var punches := PunchAllowance.new()
 # One finisher daze per recovery; Recover clears it.
 var daze_used := false
 
@@ -105,6 +143,9 @@ var sprite_base_position: Vector2
 var music_base_db := 0.0
 var music_start := 0.0
 var music_duck: Tween
+# The dark coming in or going out. Kept so the next ramp, or a snap, can stop it: a ramp left running
+# under a snap would carry on and bring the dark back after the lights were put on.
+var curtain_fade: Tween
 
 var aura_clock := 0.0
 var mark_clock := 0.0
@@ -170,52 +211,64 @@ func _ready() -> void:
 	var ko := CarterArtLayout.ko_ding()
 	ko_sfx_player.stream = load(ko.stream)
 	ko_sfx_player.volume_db = ko.volume_db
+	charge_sfx_player.stream = load(CarterArtLayout.messatsu_sfx(&"charge"))
+	fire_sfx_player.stream = load(CarterArtLayout.messatsu_sfx(&"fire"))
+	lights_sfx_player.stream = load(CarterArtLayout.messatsu_sfx(&"lights_on"))
+	# Built here, not in the scene: nothing here edits his scene.
+	var sting := CarterArtLayout.BREAK_STING_SFX
+	break_sting_player = AudioStreamPlayer.new()
+	break_sting_player.stream = load(sting.stream)
+	break_sting_player.pitch_scale = sting.pitch
+	break_sting_player.volume_db = sting.volume_db
+	add_child(break_sting_player)
 
 
 #HIS BREAK GAUGE
-# The Beam Rush's exit condition and nothing else: it is the only attack whose parries feed it, and
-# filling it is the only thing that ends that attack. The gains are his own and every one of them is
-# a consequence of that.
+# Fight-long, on BREAK: every parry of his three attacks earns a read, and every hit of his costs one -
+# the feint's punish clone and the Beam Rush's beams included, though neither can be parried, so the
+# Beam Rush's one read is his strike. It never resets between attacks, so what one attack leaves in it
+# the next starts from.
+const BREAK_EARNS: Array[StringName] = [&"carter_clone_rush", &"carter_teleport_strike", &"carter_messatsu_beam"]
+const BREAK_DRAINS: Array[StringName] = [&"carter_clone_rush", &"carter_teleport_strike", &"carter_messatsu_beam",
+	&"carter_clone_punish", &"carter_rush_beam"]
+
+
 func _add_break_gauge(player: Node) -> void:
 	break_gauge = BossBreakGauge.new()
 	break_gauge.name = "BreakGauge"
 	break_gauge.boss = self
 	break_gauge.player = player
-	# ONLY the teleport strike. The barrage's fifteen clones at 15 apiece would be 225 and would Break
-	# him in the middle of a sequence that has no Break in it.
-	break_gauge.owns_attack = func(id: StringName) -> bool: return id == &"carter_teleport_strike"
-	# Seven parries fills it, which is a 58% read rate over the twelve strikes he gets.
-	break_gauge.parry_gain = 15.0
-	# One hit costs exactly one parry. Eric's 20 would put the Break out of reach at this cadence.
-	break_gauge.hit_loss = 15.0
-	# Nothing in the Beam Rush is dodgeable, and punches only land in the window AFTER it - where a
-	# gain would leak straight into the next rush's meter.
-	break_gauge.perfect_dodge_gain = 0.0
-	break_gauge.punch_gain = 0.0
-	break_gauge.charged_punch_gain = 0.0
-	# Eric's 3.0 measures from him getting up. Carter's Break IS his punish window, so the wait is
-	# only the breath after it.
-	break_gauge.unlock_delay = 0.5
+	break_gauge.owns_attack = func(id: StringName) -> bool: return BREAK_DRAINS.has(id)
+	break_gauge.earns_from = func(hit: RefCounted) -> bool: return BREAK_EARNS.has(hit.attack_id)
+	break_gauge.parry_gain = BREAK.parry_gain
+	break_gauge.perfect_dodge_gain = BREAK.perfect_dodge_gain
+	break_gauge.punch_gain = BREAK.punch_gain
+	break_gauge.charged_punch_gain = BREAK.charged_punch_gain
+	break_gauge.hit_loss = BREAK.hit_loss
+	break_gauge.guard_break_loss = BREAK.guard_break_loss
+	break_gauge.unlock_delay = BREAK.unlock_delay
 	add_child(break_gauge)
 	break_gauge.broke.connect(_on_break)
 
 
 # The gauge fills inside a physics flush, where states can't switch.
 func _on_break() -> void:
-	state_machine.break_beam_rush.call_deferred()
+	state_machine.on_break.call_deferred()
 
 
-# BossBreakGauge._physics_process asks this every step. Down, for him, is the punish window: that is
-# what a Break buys, and the wait before the gauge takes anything again starts when it ends.
+# BossBreakGauge._physics_process asks this every step. Down, for him, is the punish window and the
+# juggle that can follow it, and a Break owed before them: that is what a Break buys, and the wait
+# before the gauge takes anything again starts when they end.
 func is_down() -> bool:
-	return state_machine.is_recovering()
+	return state_machine.is_recovering() or is_juggled() or state_machine.break_owed
 
 
-# Only the Beam Rush calls this. A meter on screen through the barrage, which can never move it,
-# would read as an instrument that is broken.
-func show_break_gauge(on: bool) -> void:
-	if break_gauge_bar:
-		break_gauge_bar.visible = on
+func is_juggled() -> bool:
+	return state_machine.current_state == state_machine.states.get("Juggled")
+
+
+func play_break_sting() -> void:
+	break_sting_player.play()
 
 
 func start_music() -> void:
@@ -504,8 +557,10 @@ func _build_curtain() -> void:
 
 func darken(seconds: float) -> void:
 	dark_stage.show()
-	var fade := curtain.create_tween()
-	fade.tween_property(curtain, "modulate:a", 1.0, seconds)
+	if curtain_fade:
+		curtain_fade.kill()
+	curtain_fade = curtain.create_tween()
+	curtain_fade.tween_property(curtain, "modulate:a", 1.0, seconds)
 
 
 func open_pool(seconds: float) -> void:
@@ -515,10 +570,12 @@ func open_pool(seconds: float) -> void:
 
 
 func clear_dark(seconds: float) -> void:
-	var fade := curtain.create_tween().set_parallel()
-	fade.tween_property(curtain, "modulate:a", 0.0, seconds)
-	fade.tween_property(pool, "modulate:a", 0.0, seconds)
-	fade.chain().tween_callback(dark_stage.hide)
+	if curtain_fade:
+		curtain_fade.kill()
+	curtain_fade = curtain.create_tween().set_parallel()
+	curtain_fade.tween_property(curtain, "modulate:a", 0.0, seconds)
+	curtain_fade.tween_property(pool, "modulate:a", 0.0, seconds)
+	curtain_fade.chain().tween_callback(dark_stage.hide)
 
 
 # A parried clone: the dark lifts for a moment so the hit landing reads through it.
@@ -533,6 +590,9 @@ func lift_curtain() -> void:
 # However the sequence ended, the dark must not survive it: a fight left dark is unplayable and one
 # that reached FightOutro would cover the outro's lines.
 func snap_dark_clear() -> void:
+	if curtain_fade:
+		curtain_fade.kill()
+		curtain_fade = null
 	curtain.modulate.a = 0.0
 	pool.modulate.a = 0.0
 	pool.scale = Vector2.ONE * CarterArtLayout.POOL_OPEN_FROM
@@ -638,6 +698,53 @@ func finish_bloom() -> void:
 	play.tween_callback(bloom.queue_free)
 
 
+# The flash rect popped to `peak` and let fall over `seconds`, for the Messatsu's lights slamming back
+# on. Node-bound, so a freeze holds it.
+func pop_flash(peak: float, seconds: float) -> void:
+	flash.color.a = peak
+	var fade := flash.create_tween()
+	fade.tween_property(flash, "color:a", 0.0, seconds)
+
+
+# CarterCloneScript._burst, for the hits that have no clone to leave it: the parry break for a hit
+# that was stopped, the strike for one that landed, drawn as light over everything on the clone layer.
+# Its first frame is drawn the moment it is added, which is the frame the hit resolved on.
+func spawn_burst(stopped: bool, at: Vector2) -> void:
+	var spec: Dictionary = CarterArtLayout.clone_shatter() if stopped else CarterArtLayout.clone_hit()
+	if spec.has("texture"):
+		var sheet := Sprite2D.new()
+		sheet.texture = load(spec.texture)
+		sheet.hframes = spec.hframes
+		sheet.scale = Vector2.ONE * spec.scale
+		sheet.offset = spec.frame_size / 2.0 - spec.pivot
+		sheet.z_index = CarterArtLayout.BURST_Z
+		if spec.get("additive", false):
+			sheet.material = CarterArtLayout.additive()
+		state_machine.add_hazard(sheet, at, clone_layer)
+		var times: Array = spec.frame_times
+		var play := sheet.create_tween()
+		for i in range(1, spec.hframes):
+			play.tween_interval(times[i - 1])
+			play.tween_callback(func() -> void: sheet.frame = i)
+		play.tween_interval(times[times.size() - 1])
+		play.tween_callback(sheet.queue_free)
+		return
+
+	var burst := Polygon2D.new()
+	if stopped:
+		burst.polygon = CarterArtLayout.star(spec.points, spec.radius, spec.inner_ratio)
+	else:
+		burst.polygon = CarterArtLayout.ellipse(spec.radii, spec.points)
+	burst.color = spec.color
+	burst.scale = Vector2.ONE * spec.from_scale
+	burst.z_index = CarterArtLayout.BURST_Z
+	state_machine.add_hazard(burst, at, clone_layer)
+	var play := burst.create_tween()
+	play.tween_property(burst, "scale", Vector2.ONE * spec.to_scale, spec.time)
+	play.parallel().tween_property(burst, "modulate:a", 0.0, spec.time)
+	play.tween_callback(burst.queue_free)
+
+
 #THE FEINT PUNISH
 
 # Its own word over his health bar. The PlayerDefense popup set belongs to the defence coder, and a
@@ -715,16 +822,21 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 
 # Punches only land while he stands there getting his breath back.
 func take_punch(amount: int) -> int:
-	if hits_this_window >= MAX_HITS_PER_WINDOW or not state_machine.is_recovering():
+	if not state_machine.is_recovering():
 		return 0
-	var dealt := _apply_damage(amount)
+	var allowed := punches.allow(amount, hits_this_window, MAX_HITS_PER_WINDOW)
+	if allowed <= 0:
+		return 0
+	var dealt := _apply_damage(allowed)
 	if dealt > 0:
 		hits_this_window += 1
+		punches.spend(dealt)
 	return dealt
 
 
-# No phase floor: he has one move and no transformation, so nothing may hold his health up.
-func _apply_damage(amount: int) -> int:
+# No phase floor: he has one move and no transformation, so nothing may hold his health up. `pitch` is
+# the juggle's, a step up each uppercut.
+func _apply_damage(amount: int, pitch := 1.0) -> int:
 	var dealt := mini(amount, boss_health)
 	if dealt <= 0:
 		return 0
@@ -732,6 +844,7 @@ func _apply_damage(amount: int) -> int:
 	boss_health -= dealt
 	_refresh_health_bar()
 	_hit_feedback()
+	hit_sfx_player.pitch_scale = pitch
 	hit_sfx_player.play()
 
 	if boss_health > 0:
@@ -748,6 +861,13 @@ func can_be_dazed() -> bool:
 	return not defeated and boss_health > 0 and not daze_used and state_machine.is_recovering()
 
 
+# The three-bar mash and the juggle are a Break's payout alone: a window cashed from one. Every other
+# window pays the plain single-bar finisher - the juggle's shares are of his max health, and on every
+# window they would end the fight in two cycles.
+func can_be_juggled() -> bool:
+	return not defeated and boss_health > 0 and state_machine.is_recovering() and state_machine.current_state.from_break
+
+
 func enter_daze() -> void:
 	daze_used = true
 
@@ -757,7 +877,13 @@ func exit_daze(_finisher_landed: bool) -> void:
 
 
 func end_recovery(stagger_time: float) -> bool:
-	if defeated or boss_health <= 0 or not state_machine.is_recovering():
+	if defeated or boss_health <= 0:
+		return false
+	# Crashed from a juggle, he lies a beat before he gets up.
+	if is_juggled():
+		state_machine.current_state.recover(stagger_time)
+		return true
+	if not state_machine.is_recovering():
 		return false
 	state_machine.stagger_then_start_cycle(stagger_time)
 	return true
@@ -780,6 +906,45 @@ func get_daze_anchor() -> Vector2:
 
 func get_finisher_hurtbox() -> Area2D:
 	return hurtbox
+
+
+# The tiered finisher's juggle (PlayerFinisher, CarterJuggled).
+func begin_juggle() -> void:
+	state_machine.enter_juggled()
+
+
+func juggle_lift(px: float) -> void:
+	if is_juggled():
+		state_machine.current_state.lift(px)
+
+
+func juggle_pose(pose: StringName, crater := false) -> void:
+	if is_juggled():
+		state_machine.current_state.pose(pose, crater)
+
+
+func juggle_headroom() -> float:
+	return state_machine.states["Juggled"].headroom()
+
+
+# Past the hit cap, as take_finisher, with his hit sound pitched up a step each uppercut.
+func take_juggle_hit(amount: int, pitch: float) -> int:
+	return _apply_damage(amount, pitch)
+
+
+func get_juggle_point() -> Vector2:
+	return state_machine.states["Juggled"].air_point()
+
+
+# The last uppercut's shove. His feet really move - the classic finisher's rock is on sprite.offset,
+# the offset the juggle's lift rewrites - and stay inside the ropes, and never back onto the player.
+func juggle_knock_back(push: Vector2, time: float) -> void:
+	var bounds: Rect2 = state_machine.ROPES.grow(-state_machine.BREAK_ROPE_MARGIN)
+	var target := (global_position + push).clamp(bounds.position, bounds.end)
+	var player := get_tree().current_scene.get_node_or_null(FightOutro.PLAYER_PATH)
+	if player and target.distance_to(player.global_position) < global_position.distance_to(player.global_position):
+		return
+	create_tween().tween_property(self, "global_position", target, time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 func _on_defeated() -> void:
@@ -813,10 +978,11 @@ func on_player_defeated() -> void:
 # Asked by FightOutro before his line, after on_player_defeated() has started his pose. When he has
 # won, the line waits for the whole of it - the burn, the light coming back, the look over his
 # shoulder - so it lands after the pose like a win quote instead of the fade eating the head turn.
-# When he has lost there is no pose, so it asks for nothing and the line comes at the usual time.
+# When he has lost there is no pose, so it asks for nothing and the line comes at the usual time -
+# unless a juggle killed him, when the line waits for him to finish falling.
 func outro_line_delay(player_won: bool) -> float:
 	if player_won:
-		return 0.0
+		return CarterArtLayout.juggle().outro_delay if is_juggled() else 0.0
 	return state_machine.states["Victory"].pose_length()
 
 
@@ -858,7 +1024,6 @@ func _build_hud() -> void:
 		break_gauge_bar.spec = CarterArtLayout.break_gauge()
 		hud_layer.add_child(break_gauge_bar)
 		break_gauge_bar.position = health_bar.break_gauge_anchor()
-		break_gauge_bar.hide()
 
 
 func _hit_feedback() -> void:

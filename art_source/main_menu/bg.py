@@ -378,18 +378,32 @@ MASKS = load_masks(os.path.join(HERE, 'masks_clean.txt'))
 # apron above. Neighbouring tiers therefore never share a column: the solo bosses step left,
 # centre and right in turn, and the two duo tiers leave the carpet clear for the tier above.
 PLACE = [  # name, tier, x of anchor column, anchor column
-    ('burak', 1, CX - 40, 8),
+    # Tier 1's Burak is the boss, Captain Burak (burak_boss.png frame 0, see
+    # art_source/derived_0923/menu_burak.py); the newcomer at the foot is the player layer.
+    # Anchor 14 holds sprite x46.5-49.25, where his feet centre, on the old figure's centre line.
+    ('burak', 1, CX - 40, 14),
     ('eric', 2, CX, 23),
-    ('computah', 3, CX - 46, 7),
-    ('greyson', 3, CX + 46, 11),
-    ('matt', 4, CX, 7),
+    # Tier 3 is Computah alone: Greyson left the fight on 2026-09-22. His mask is the redesigned
+    # robot (computah_idle.png frame 0, see art_source/derived_0923/menu_computah.py), standing
+    # where Greyson stood; anchor 13 holds sprite x46.75-49.5, where his feet centre.
+    ('computah', 3, CX + 46, 13),
+    # Matt's mask is his approved matt.png frame 0 (see art_source/derived_0923/menu.py). Anchor
+    # 13 holds sprite x46.75-49.5, where his feet centre, which keeps him on CX, the carpet's
+    # centre line, where the stand-in figure stood.
+    ('matt', 4, CX, 13),
     ('mason', 5, CX + 44, 14),
-    ('josh', 6, CX, 12),
+    # Josh's mask is the approved 2026-09-23 redesign (josh_cards.png frame 0, see masks_josh.py).
+    # Anchor 14 is the column beside the gap between his boots, which keeps his centre line on
+    # CX + 1, where the previous design stood.
+    ('josh', 6, CX, 14),
     ('danny', 7, CX - 44, 15),
     ('carter', 8, CX, 12),
     ('liam', 9, CX - 38, 14),
     ('bixby', 9, CX + 38, 14),
-    ('jordan', 10, CX, 8),
+    # Jordan's mask is the approved 2026-09-23 redesign (jordan_redesign.png frame 0, see
+    # art_source/jordan_derived/menu.py). Anchor 10 holds sprite x47-48, where the redesign's
+    # body centres, which keeps his centre line on CX, where the previous design stood.
+    ('jordan', 10, CX, 10),
 ]
 
 

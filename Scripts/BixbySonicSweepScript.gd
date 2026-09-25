@@ -1,15 +1,16 @@
 extends Node2D
 
 # The sonic scream beast Bixby spins with: one beam out of each of his three maws, sweeping the floor as he
-# turns. The beams are glued to the mouths of the frame he is drawing, so his spin is what aims them: they
-# come out where the art says, at the screen angle and the foreshortened length a beam fired that way along
-# the floor reads at. Dashing through one is the dodge, so like the other sweeping beams it reports its own
-# hits instead of joining "enemy projectile".
+# turns. The beams are glued to his mouths, so his spin is what aims them: through the spin loop they glide
+# between the maws of the frame he is on and the next at his spin rate, and on the lead-in and the wobble
+# they sit on the frame's own. They come out where the art says, at the screen angle and the foreshortened
+# length a beam fired that way along the floor reads at. Dashing through one is the dodge, so like the other
+# sweeping beams it reports its own hits instead of joining "enemy projectile".
 #
-# Placing them follows his drawn frame, so it runs in _process; how long they take to grow, to die away and
+# Placing them follows his drawn clock, so it runs in _process; how long they take to grow, to die away and
 # what they hurt runs in _physics_process, so a freeze holds it. Their hitboxes are kept on what is drawn,
 # but the hit itself is a swept test against the arc each beam covered since the last physics frame, which
-# an overlap test is too coarse for at the speed he turns.
+# an overlap test is too coarse for where his heads jump: onto the loop off the lead-in's frame.
 
 const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
 const CombinedLayout := preload("res://Scripts/BixbyCombinedArtLayout.gd")
@@ -75,9 +76,18 @@ func _process(_delta: float) -> void:
 	if not is_instance_valid(body):
 		return
 	global_position = body.feet_position()
-	var frame: int = body.drawn_frame_of(BixbyBeastArtLayout.SPIN_SHEET)
-	if CombinedLayout.MOUTH_ANCHORS.has(frame):
-		_aim(CombinedLayout.MOUTH_ANCHORS[frame])
+	var mouths := _mouths()
+	if not mouths.is_empty():
+		_aim(mouths)
+
+
+# His maws as he draws them: through the spin loop they glide from frame to frame with his drawn clock,
+# so the beams turn at his spin rate instead of a frame's worth at a time; on the lead-in and the wobble,
+# where the frame he is on.
+func _mouths() -> Array:
+	if body.current_anim == &"spin":
+		return CombinedLayout.loop_mouths(body.anim_step, body.anim_clock)
+	return CombinedLayout.MOUTH_ANCHORS.get(body.drawn_frame_of(BixbyBeastArtLayout.SPIN_SHEET), [])
 
 
 func _physics_process(delta: float) -> void:

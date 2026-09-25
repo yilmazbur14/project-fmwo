@@ -6,7 +6,7 @@ extends SceneTree
 func _initialize() -> void:
 	var names := ["DISABLED", "FORWARD", "PINGPONG", "BACKWARD"]
 	var bad := 0
-	for n in ["eric", "greyson", "jordan", "carter", "josh", "mason", "danny", "liam"]:
+	for n in ["eric", "greyson", "jordan", "carter", "josh", "mason", "danny", "liam", "matt", "burak", "danny_sumo"]:
 		var s = load("res://Assets/Audio/Music/%s_theme.wav" % n)
 		if s == null:
 			print("%-8s MISSING" % n); bad += 1; continue

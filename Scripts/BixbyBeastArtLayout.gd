@@ -18,6 +18,8 @@ const DEFEAT_SHEET := "res://Assets/Characters/Bixby/bixby_beast_defeat.png"
 const POUND_SHEET := "res://Assets/Characters/Bixby/bixby_pound.png"
 const SPIN_SHEET := "res://Assets/Characters/Bixby/bixby_spin.png"
 const DIZZY_SHEET := "res://Assets/Characters/Bixby/bixby_dizzy.png"
+# The Inferno, hanging off the top rope: 16 frames, never mirrored.
+const PERCH_SHEET := "res://Assets/Characters/Bixby/bixby_perch.png"
 const FRAME_SIZE := Vector2(192, 160)
 # His feet: where he stands on the ground and what he hovers from.
 const ANCHOR := Vector2(96, 151)
@@ -25,7 +27,7 @@ const ANCHOR := Vector2(96, 151)
 const HOVER_HEIGHT := 40.0
 # What's drawn on any beast frame, and on the fire-breath frames with the stream at its longest.
 const BODY_DRAWN := Rect2(2, 2, 188, 156)
-const FIRE_DRAWN := Rect2(4, 3, 184, 250)
+const FIRE_DRAWN := Rect2(2, 2, 188, 251)
 
 #SHADOWS (4 frames of 192x48 each, black, centred on the floor point)
 # bixby_beast_shadow.png is cast from the air, one frame per hover frame. bixby_beast_shadow_ground.png
@@ -38,7 +40,7 @@ enum Shadow { AIR, GROUND }
 const SHADOW_FRAME_SIZE := Vector2(192, 48)
 const SHADOW_CENTRE := Vector2(96, 25)
 # The air shadow's drawn extent, the wider of the two.
-const SHADOW_DRAWN := Rect2(10, 5, 172, 33)
+const SHADOW_DRAWN := Rect2(8, 9, 177, 32)
 const SHADOW_ALPHA := 0.38
 
 #FIRE BREATH (bixby_beast_firebreath.png, 3 frames of 192x256: wind-up, burst, full stream)
@@ -93,19 +95,73 @@ const FIRE_OUTLINES := {
 const FIRE_GROUND_CONTACT := Rect2(53, 240, 90, 12)
 
 #COMBINED ATTACK
-# The step of the "pound" animation his claws land on, at frame texels (34, 151) and (158, 151).
+# The step of the "pound" animation his claws land on, at frame texels (33, 151) and (158, 151).
 const POUND_IMPACT_STEP := 1
 # The step of "spin_up" his maws light up on, which is where the sonic beams come out.
 const SPIN_BEAMS_STEP := 1
+# How fast his heads turn while he spins, in degrees of the floor a second: slow enough that a player
+# walking round him at mid range keeps ahead of a beam. Walking up or down the screen 300-400 px out to
+# his side turns a player 58-66 degrees a second about the axis his maws orbit, and this is 55-62% of it.
+const SPIN_DEGREES_PER_SECOND := 36.0
+# The loop he spins on, between spin_up and spin_down: its frames, the degrees his heads turn from one to
+# the next (every frame has them a third of a turn apart, and the last runs on into the first), the steps
+# it may start on out of spin_up's last frame and the frames it may hand over to spin_down's first on,
+# without his heads jumping backwards. USE_FINAL_SPIN picks bixby_spin_slow.png's 24 frames, or else the
+# four bixby_spin.png draws it in; the lead-in and the wobble stay on bixby_spin.png either way.
+const USE_FINAL_SPIN := true
+const SPIN_SLOW_SHEET := "res://Assets/Characters/Bixby/bixby_spin_slow.png"
+const SPIN_LOOP_FINAL := {sheet = SPIN_SLOW_SHEET,
+	frames = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+	step_degrees = 5.0, entry_steps = [22, 0], exit_frames = [1, 2]}
+const SPIN_LOOP_PLACEHOLDER := {sheet = SPIN_SHEET, frames = [2, 3, 4, 5], step_degrees = 30.0,
+	entry_steps = [0, 1, 2, 3], exit_frames = [5]}
+const SPIN_LOOP := SPIN_LOOP_FINAL if USE_FINAL_SPIN else SPIN_LOOP_PLACEHOLDER
 
 #RECOVERY
-# What the player can punch while he's down: his grounded body on the recover frames, side heads and
-# draped wings included, below the horns.
-const RECOVER_BODY_BOX := Rect2(8, 64, 178, 94)
-# Where the finisher's daze stars circle, between his horns.
-const DAZE_ANCHOR := Vector2(96, 30)
+# What the player can punch while he's down: his grounded body on the recover frames from the headband
+# down, side heads and draped wings included.
+const RECOVER_BODY_BOX := Rect2(3, 56, 186, 99)
+# What he is while he hangs off the rope in the Inferno: the spent pose's drawn body (perch frame 13), from
+# the talons on the rope to his hanging feet. Nothing can punch him up there; the player faces it.
+const PERCH_BODY_BOX := Rect2(5, 20, 182, 140)
+# Where the finisher's daze stars circle: the top of his headband plate as he slumps on the recover
+# frames. A daze only ever starts in a punish window, so that is the pose they circle; on the hover
+# frames the same point is (96, 12).
+const DAZE_ANCHOR := Vector2(96, 56)
 # The defeat frame on which the coughed-up Liam lands.
 const DEFEAT_LIAM_LANDS_FRAME := 8
+# The defeat frame that is a cloud of smoke: a juggle that kills him cuts into his defeat on it.
+const DEFEAT_SMOKE_FRAME := 3
+
+#JUGGLED (the tiered finisher's juggle, drawn by BossJuggled from this table)
+# bixby_juggle.png's frames are 256x256 against his 192x160, so the sheet hangs on its own offset: (0, -72)
+# is what puts its feet texel on his node, the ground line every other sheet of his stands him on.
+const USE_FINAL_JUGGLE := true
+const FINAL_JUGGLE := {
+	"texture": "res://Assets/Characters/Bixby/bixby_juggle.png",
+	"hframes": 12,
+	"frame_size": Vector2(256, 256),
+	"offset": Vector2(0, -72),
+	"feet": Vector2(128, 200),
+	"tumble_centre": Vector2(128, 136),
+	"top_row": 18,
+	"clips": {
+		&"launch": {"frames": [0, 1], "times": [0.06, 0.08], "loop": false},
+		&"tumble": {"frames": [2, 3, 4, 5, 6], "times": [0.14, 0.08, 0.08, 0.08, 0.08], "loop": true},
+		&"crash": {"frames": [7, 8, 9], "times": [0.07, 0.09, 0.14], "loop": false},
+		&"down": {"frames": [10, 11], "times": [0.4, 0.4], "loop": true},
+	},
+	"shadow": {
+		"texture": "res://Assets/Characters/Bixby/bixby_leap_shadow.png",
+		"hframes": 3, "scale": 3.0, "alpha": 0.38, "step": 70.0, "offset": Vector2(0, -1),
+	},
+	"lying_time": 0.3,
+	"outro_delay": 1.8,
+	"crash_sfx": {"stream": "res://Assets/Audio/SFX/earthquake_slam.ogg", "pitch": 1.0, "volume_db": 0.0},
+}
+# The middle of Liam's headband plate on the lying frames (10-11), upside down under the middle head.
+# Recorded for later: nothing puts stars over him lying yet.
+const JUGGLE_DOWN_PLATE := Vector2(128, 188)
 
 #ANIMATIONS
 # name: sheet, frames in order, seconds on each (the last value repeats), whether it loops, and the shadow
@@ -126,6 +182,10 @@ const ANIMS := {
 	# 0 wings flared while he comes down (the air shadow stays for his feet to land on), 1 the impact, 2 the heavy crouch.
 	&"land": {sheet = LAND_SHEET, frames = [0, 1, 2], times = [0.2, 0.14, 0.35], loop = false,
 		shadows = [[Shadow.AIR, 2], [Shadow.GROUND, 0]]},
+	# A Break catching him on the ground bounces him down to the floor a juggle needs (BixbyBeastBroken) on
+	# the landing's flared frame, held for the hop; he comes down onto the rest of the landing.
+	&"hop": {sheet = LAND_SHEET, frames = [0], times = [1.0], loop = true,
+		shadows = [[Shadow.AIR, 2]]},
 	&"recover": {sheet = RECOVER_SHEET, frames = [0, 1, 2, 3], times = [0.18, 0.14, 0.18, 0.16], loop = true,
 		shadows = [[Shadow.GROUND, 1]]},
 	&"hit": {sheet = HIT_SHEET, frames = [0, 1], times = [0.08, 0.14], loop = false,
@@ -142,18 +202,18 @@ const ANIMS := {
 		shadows = [[Shadow.GROUND, 0]]},
 	&"pound": {sheet = POUND_SHEET, frames = [2, 3, 4, 5], times = [0.07, 0.08, 0.08, 0.12], loop = true,
 		shadows = [[Shadow.GROUND, 0]]},
-	# The spin sheet holds all three beats: the lead-in his maws light up on, the seamless loop (a third
-	# of a turn each time round) and the wobble he stops on. He spins on the floor, not in the air.
+	# The spin: bixby_spin.png's lead-in his maws light up on, the seamless loop (a third of a turn each
+	# time round, SPIN_LOOP) and bixby_spin.png's wobble he stops on. He spins on the floor, not in the air.
 	&"spin_up": {sheet = SPIN_SHEET, frames = [0, 1], times = [0.11, 0.09], loop = false,
 		shadows = [[Shadow.GROUND, 0]]},
-	# Held twice as long as the 50ms it was drawn at, which turns him once every 1.2s. At the drawn cadence
-	# a beam crossed any spot on the floor every 0.2s, faster than a dash can answer, so dodging one was
-	# worth nothing.
-	&"spin": {sheet = SPIN_SHEET, frames = [2, 3, 4, 5], times = [0.1], loop = true,
+	# Each frame held for as long as his heads take to turn its step at SPIN_DEGREES_PER_SECOND.
+	&"spin": {sheet = SPIN_LOOP.sheet, frames = SPIN_LOOP.frames,
+		times = [SPIN_LOOP.step_degrees / SPIN_DEGREES_PER_SECOND], loop = true,
 		shadows = [[Shadow.GROUND, 0]]},
-	# Held to the same doubled beat, so the wobble slows out of the loop instead of whipping round faster
-	# than it: its two frames are drawn 42 and 40 degrees on from the last frame of the loop.
-	&"spin_down": {sheet = SPIN_SHEET, frames = [6, 7], times = [0.2, 0.3], loop = false,
+	# The wobble he stops on. He turns on into its first frame at the loop's rate (BixbyBeastCombined runs the
+	# loop on until his heads reach it), and its second is drawn 40 degrees on from the first: held 1.33 s,
+	# that turn reads at 30 degrees a second, slowing from the loop's 36, before he stops.
+	&"spin_down": {sheet = SPIN_SHEET, frames = [6, 7], times = [1.33, 0.3], loop = false,
 		shadows = [[Shadow.GROUND, 0]]},
 	&"dizzy": {sheet = DIZZY_SHEET, frames = [0, 1, 2, 3], times = [0.13], loop = true,
 		shadows = [[Shadow.GROUND, 0]]},
@@ -162,6 +222,27 @@ const ANIMS := {
 	&"defeat": {sheet = DEFEAT_SHEET, frames = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], times = [0.1, 0.3, 0.16, 0.14, 0.6, 0.34, 0.12, 0.12, 0.4, 1.0], loop = false,
 		shadows = [[Shadow.GROUND, 0], [Shadow.GROUND, 1], [Shadow.GROUND, 1], [Shadow.GROUND, 1], [Shadow.GROUND, 2],
 			[Shadow.GROUND, 2], [Shadow.GROUND, 2], [Shadow.GROUND, 2], [Shadow.GROUND, 3]]},
+	# THE INFERNO, on the middle of the top rope (BixbyBeastInferno, BixbyInfernoArtLayout): the grab, the
+	# hang, the volley (the middle, left and right head spitting, one frame each, which the attack shows per
+	# spit), the inhale, the rear back, the breath, spent, and letting go, ending on land frame 0's pose.
+	# Drawn facing down the screen, never mirrored. His shadow is hidden while he is on the rope, so the ones
+	# listed are never seen.
+	&"perch_land": {sheet = PERCH_SHEET, frames = [0, 1], times = [0.2, 0.25], loop = false,
+		shadows = [[Shadow.AIR, 0]]},
+	&"perch": {sheet = PERCH_SHEET, frames = [2, 3], times = [0.25], loop = true,
+		shadows = [[Shadow.AIR, 0]]},
+	&"volley": {sheet = PERCH_SHEET, frames = [4, 5, 6], times = [1.0], loop = true,
+		shadows = [[Shadow.AIR, 0]]},
+	&"inhale": {sheet = PERCH_SHEET, frames = [7, 8, 9], times = [0.13], loop = true,
+		shadows = [[Shadow.AIR, 0]]},
+	&"rear_back": {sheet = PERCH_SHEET, frames = [10], times = [1.0], loop = true,
+		shadows = [[Shadow.AIR, 0]]},
+	&"perch_breath": {sheet = PERCH_SHEET, frames = [11, 12], times = [0.07], loop = true,
+		shadows = [[Shadow.AIR, 0]]},
+	&"spent": {sheet = PERCH_SHEET, frames = [13], times = [1.0], loop = true,
+		shadows = [[Shadow.AIR, 0]]},
+	&"release": {sheet = PERCH_SHEET, frames = [14, 15], times = [0.1], loop = false,
+		shadows = [[Shadow.AIR, 0]]},
 }
 
 
@@ -177,6 +258,15 @@ static func time_to_step(anim_name: StringName, step: int) -> float:
 # How long a whole animation lasts, once.
 static func anim_time(anim_name: StringName) -> float:
 	return time_to_step(anim_name, ANIMS[anim_name].frames.size())
+
+
+# Seconds each frame of the spin loop is held.
+static func spin_step_time() -> float:
+	return ANIMS[&"spin"].times[0]
+
+
+static func juggle() -> Dictionary:
+	return FINAL_JUGGLE
 
 
 # Sprite offset, in texels, that puts ANCHOR on the sprite's origin for a sheet of this frame size.

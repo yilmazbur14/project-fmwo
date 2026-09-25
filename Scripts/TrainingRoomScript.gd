@@ -17,7 +17,6 @@ extends Node2D
 const TrainingDummyArtLayout := preload("res://Scripts/TrainingDummyArtLayout.gd")
 const ControlsArtLayout := preload("res://Scripts/ControlsArtLayout.gd")
 const UI_THEME := "res://Assets/UI/ui_theme.tres"
-const ERIC_FIGHT := "res://Scenes/Bosses/EricBossFightScene.tscn"
 
 # What a pad confirms with. Y is the only face button free in both layouts: A is punch and
 # ui_accept, B is dodge and ui_cancel, X is punch in the old layout, LB is block and mash_left, RB
@@ -78,7 +77,7 @@ const BARK_FADE := 0.4
 const CALLOUTS := {
 	parried = "it's staggered - punch it",
 	blocked = "that cost stamina",
-	hit = "too slow - press block as it lands",
+	hit = "too slow - press parry as it lands",
 	early = "too early",
 	guard_broken = "wait it out",
 	dodged = "the dash went straight through it",
@@ -251,6 +250,10 @@ func _on_dialogue_ended(_resource: Object) -> void:
 # Enter and Space, which nothing in the room uses, so the approved screen keeps its focus and its
 # bare button exactly as they were.
 func _sync_exit() -> void:
+	# The call deferred from dialogue_ended can land after a scene change has taken the room out of the
+	# tree but before it is freed, when there is no focus left to give or take.
+	if not is_inside_tree():
+		return
 	var pad := InputSettings.device == InputSettings.Device.GAMEPAD
 	ready_button.icon = ControlsArtLayout.pad_glyph_frame(InputSettings.PAD_BUTTON_FRAMES[CONFIRM_PAD_BUTTON]) if pad else null
 	ready_button.add_theme_constant_override("icon_max_width", CONFIRM_GLYPH_WIDTH)
@@ -270,7 +273,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventJoypadButton and event.button_index == CONFIRM_PAD_BUTTON:
 		leaving = true
-		get_tree().change_scene_to_file(ERIC_FIGHT)
+		get_tree().change_scene_to_file(GameProgress.first_fight())
 
 
 #THE MODE POST
@@ -307,7 +310,7 @@ func _step_door(delta: float) -> void:
 		return
 	leaving = true
 	door_prompt.visible = false
-	get_tree().change_scene_to_file(ERIC_FIGHT)
+	get_tree().change_scene_to_file(GameProgress.first_fight())
 
 
 #WHAT THE ROOM SAYS

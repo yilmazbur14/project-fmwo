@@ -8,6 +8,10 @@ extends State
 
 # feel_v2: the arm has reached full extension this swing, so the punch lands on whatever it reaches.
 var extended := false
+# A boss outside his windows that the fist is on this swing, and the physics frame it first was
+# (_refuse_if_closed).
+var closed_target: Node = null
+var closed_since := -1
 
 func Enter() -> void:
 	# This fight's box for the locked facing, before the hitbox goes live (PlayerScript.feel_v2).
@@ -15,6 +19,7 @@ func Enter() -> void:
 	hitBox.monitoring = true
 	hitBox.monitorable = true
 	extended = false
+	closed_target = null
 	player.combo.start_swing()
 	animation_player.speed_scale = 2.0  # Speed up only the punch animation
 	animation_player.play(punching_animation)
@@ -25,6 +30,9 @@ func Enter() -> void:
 func Exit() -> void:
 	hitBox.monitoring = false  # Disable hitbox when exiting punch state
 	hitBox.monitorable = false
+	# A swing that ends on a closed boss before its refusal came due, or that he slid out from under.
+	if closed_target != null:
+		player.combo.refuse_punch(closed_target)
 	player.combo.end_swing()
 	animation_player.speed_scale = 1.0  # Reset back to normal for other animations
 
@@ -63,6 +71,39 @@ func _land_on_contact() -> void:
 		if target != null:
 			player.combo.resolve_punch(target)
 			return
+	_refuse_if_closed()
+
+
+# A boss outside his windows has his hurtbox switched off, so the fist would pass through him in
+# silence: the punch is refused instead (PlayerCombo.refuse_punch), with its dull deflect. Not on first
+# contact, though: an opening that starts under the fist takes PlayerCombo.REPORT_FRAMES to show among
+# the overlaps above, and it must land.
+func _refuse_if_closed() -> void:
+	var target := _closed_boss_reached()
+	if target == null:
+		return
+	if target != closed_target:
+		closed_target = target
+		closed_since = Engine.get_physics_frames()
+	if Engine.get_physics_frames() - closed_since >= player.combo.REPORT_FRAMES:
+		player.combo.refuse_punch(target)
+
+
+# The boss whose switched-off hurtbox the fist is on, if he can be seen: one teleported out or hidden
+# for a beat leaves his hurtbox where he was.
+func _closed_boss_reached() -> Node:
+	var fist: CollisionShape2D = hitBox.get_node("CollisionShape2D")
+	var reach: Rect2 = fist.global_transform * fist.shape.get_rect()
+	for area in get_tree().get_nodes_in_group(player.BOSS_TARGET_GROUP):
+		if area.monitorable:
+			continue
+		var shape: CollisionShape2D = area.get_node("CollisionShape2D")
+		if not reach.intersects(shape.global_transform * shape.shape.get_rect()):
+			continue
+		var target := _boss_of(area)
+		if target != null and target.sprite.is_visible_in_tree():
+			return target
+	return null
 
 
 # The body that owns a hurtbox, which is not always its parent: Josh and Bixby both hang theirs off

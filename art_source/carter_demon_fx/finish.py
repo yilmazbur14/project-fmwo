@@ -15,6 +15,11 @@ relies on sym() to force the result symmetric.  Scaled by 3 the shape's axis
 lands on 142.5 while the canvas centre is 144.0, and sym() would fatten the
 emblem by a pixel and a half on one side.  Adding 0.5*scale to every x puts the
 two axes back on top of each other.
+
+Since 2026-09-23 the emblem is the 天 (intro_sigil.sigil_ten), which is not
+symmetric and never goes through sym(): for it the offset is only a 1.5 px shift,
+and the mask is re-centred on its own bounding box below anyway.  Its outlines
+were fitted with this 3x re-rasterisation in mind.
 """
 import math
 import os
@@ -44,7 +49,7 @@ def sigil_mask(scale=3):
     intro_sigil.poly = lambda pts: keep_poly(
         [(x * scale + off, y * scale) for x, y in pts])
     try:
-        raw = intro_sigil.sigil()                   # the trident that shipped
+        raw = intro_sigil.sigil()                   # the emblem that ships
     finally:
         CLIB.W, CLIB.H, intro_sigil.poly = keep_w, keep_h, keep_poly
 

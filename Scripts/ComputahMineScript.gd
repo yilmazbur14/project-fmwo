@@ -17,7 +17,8 @@ extends Node2D
 #
 # IT STAYS IN HAZARD_GROUP, unlike Eric's dropped sword, which opts out because it is harmless
 # scenery. A live minefield surviving a Break or the end of the fight would trap the player during
-# something they cannot answer.
+# something they cannot answer. Once it starts breaking up it leaves the group: its trigger goes dark
+# on the same step, so from then on it is an effect playing out, not a hazard.
 #
 # FREEZE SAFETY: the phase clock is a Physics_Update accumulator and the lob is a node-bound tween,
 # both of which a finisher's FightFreeze stops. A hit-stop must hold a laid mine.
@@ -157,6 +158,8 @@ func _set_phase(new_phase: Phase) -> void:
 	phase = new_phase
 	clock = 0.0
 	trigger.set_deferred("monitoring", new_phase == Phase.ARMED)
+	if new_phase == Phase.FADING:
+		remove_from_group(state_machine.HAZARD_GROUP)
 
 
 func _show_phase() -> void:

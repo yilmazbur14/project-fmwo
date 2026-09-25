@@ -46,6 +46,7 @@ func _ready() -> void:
 	player.actions_unlocked.connect(_on_actions_unlocked)
 	defense.guard_recovered.connect(_on_guard_recovered)
 	player.get_node("Hype").hype_full_changed.connect(_on_hype_full_changed)
+	player.get_node("Combo").punch_refused.connect(_on_punch_refused)
 
 
 func _process(delta: float) -> void:
@@ -60,6 +61,16 @@ func _process(delta: float) -> void:
 	var pose := DefenseHypeArtLayout.guard_break_pose()
 	if not pose.flicker.is_empty():
 		player.sprite.self_modulate = pose.flicker[int(stun_clock / pose.flicker_time) % pose.flicker.size()]
+
+
+# A punch that reached a boss and dealt nothing: a dull deflect where it met him (a landed punch's star
+# spot), so it is never silent.
+func _on_punch_refused(target: Node) -> void:
+	var at: Vector2 = player.hitBox.get_node("CollisionShape2D").global_position
+	if player.punch_fx and player.punch_fx.is_enabled():
+		at = player.punch_fx.contact_point(target)
+	_spawn_burst(DefenseHypeArtLayout.deflect_spark(), at)
+	_play(DefenseHypeArtLayout.DEFLECT_SFX)
 
 
 func _on_blocked(hit: RefCounted, point: Vector2) -> void:
@@ -158,6 +169,10 @@ func _flick_attack(hit: RefCounted, away: Vector2) -> void:
 		return
 	art.self_modulate = DefenseHypeArtLayout.PARRY_ATTACK_FLASH
 	art.create_tween().tween_property(art, "self_modulate", Color.WHITE, DefenseHypeArtLayout.PARRY_KNOCKBACK_TIME)
+	# It flies on, whole, through the player (AttackCatalog's parry_pass_through): a shatter would say it
+	# broke, and a knock would drag its art off the hitbox that carries on.
+	if hit.parry_pass_through:
+		return
 	if not (art is Sprite2D) or (is_instance_valid(hit.boss) and art == hit.boss.get("sprite")):
 		return
 	# The projectile breaks up where it was parried, at its own scale.

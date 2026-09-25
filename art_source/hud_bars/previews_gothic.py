@@ -62,7 +62,8 @@ def boss_block(img, key, ratio, y, low=False, daze=None, show_plate=True):
     p3 = up3(G.plate_named(key, lines, em, low)) if show_plate else None
     # the boss's SHIPPED fill, not the reference crimson, so the preview is
     # what the coder gets when the flag flips
-    fill = EG.gothic_fill(b["ramp"], b["mark"][1])
+    fill = EG.gothic_fill(b["ramp"], b["mark"][1], as_is=b.get("fill_as_is", False),
+                          trim=b.get("fill_trim"))
     bar = G.compose(ratio, low, fill=fill, with_crest=True)
     b3 = up3(bar)
     # the bar's own top rail sits CREST_OVER texels down inside `bar`

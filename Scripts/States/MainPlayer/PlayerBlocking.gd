@@ -1,6 +1,8 @@
 extends State
 
-# The guard. PlayerScript still moves the player while it's up, at block_move_speed_ratio.
+# The guard. PlayerScript still moves the player while it's up, at block_move_speed_ratio. With
+# blocking switched off (PlayerDefense.BLOCKING_ENABLED) it is only the parry's stance, and drops once
+# the press's parry window is over even with the key still held.
 
 @export var blocking_animation : String = "blocking"
 @export var animation_player : AnimationPlayer
@@ -22,6 +24,6 @@ func Exit() -> void:
 
 func Update(delta: float) -> void:
 	# Exit block when button is released
-	if !Input.is_action_pressed("block") or not defense.can_raise_guard():
+	if !Input.is_action_pressed("block") or not defense.can_raise_guard() or not defense.guard_holds():
 		get_parent().on_child_transition(self, "Idle")
 		return

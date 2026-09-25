@@ -6,6 +6,7 @@ const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 const BossBreakGauge := preload("res://Scripts/BossBreakGauge.gd")
 const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
 const MasonArtLayout := preload("res://Scripts/MasonArtLayout.gd")
+const HitInfo := preload("res://Scripts/HitInfo.gd")
 # What he says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/MasonOutro.dialogue"
 # This fight's place in the order; GameProgress decides what follows it.
@@ -19,6 +20,8 @@ const FIGHT_SCENE := "res://Scenes/Bosses/MasonBossFightScene.tscn"
 var boss_health := max_health
 const PHASE_TWO_RATIO := 0.5
 const MAX_HITS_PER_WINDOW := 3
+# Each opening takes the damage of a clean chain of MAX_HITS_PER_WINDOW punches (PunchAllowance).
+const PunchAllowance := preload("res://Scripts/PunchAllowance.gd")
 const PHANTOM_HIT_WINDOW := 0.5
 # The finisher's daze stars circle here, from his origin: about 34 px over his hat.
 const DAZE_ANCHOR_OFFSET := Vector2(0, -124)
@@ -42,7 +45,7 @@ const BREAK := {
 }
 # The attacks this fight owns, for the gauge. Deliberately a list rather than a prefix test: Carter's
 # elbow drop is Mason's attack and carries no mason_ prefix.
-const ATTACK_IDS: Array[StringName] = [&"mason_poo_blast", &"mason_nugget", &"carter_elbow_drop"]
+const ATTACK_IDS: Array[StringName] = [&"mason_poo_blast", &"mason_poo_contact", &"mason_nugget", &"carter_elbow_drop"]
 
 #UI (BossHealthBarUI builds it at runtime)
 var health_bar: Control
@@ -53,6 +56,9 @@ var break_sting_players: Array[AudioStreamPlayer] = []
 @onready var sprite = $Sprite2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var hurtbox: Area2D = $Hurtbox
+# His body while he lays a poo line (set_contact_live). Its own area rather than the Hurtbox, which is
+# only on in his punish windows and is what the player's punches look for.
+@onready var contact_hitbox: Area2D = $ContactHitbox
 @onready var state_machine = $StateManager
 
 #MUSIC
@@ -93,6 +99,7 @@ const MUSIC_LOCAL_LENGTH := 106.43
 var phase_two := false
 var defeated := false
 var hits_this_window := 0
+var punches := PunchAllowance.new()
 # One finisher daze per eat window; Eat clears it.
 var daze_used := false
 # Runs the stagger after a landed finisher, straight into the next cycle.
@@ -107,6 +114,7 @@ var sprite_base_position: Vector2
 func _ready() -> void:
 	add_to_group(FightOutro.BOSS_GROUP)
 	hurtbox.area_entered.connect(_on_hurtbox_entered)
+	contact_hitbox.set_meta(HitInfo.META_ATTACK, &"mason_poo_contact")
 
 	finisher_stagger_timer = Timer.new()
 	finisher_stagger_timer.name = "FinisherStaggerTimer"
@@ -224,6 +232,26 @@ func get_health_ratio() -> float:
 
 func _physics_process(delta: float) -> void:
 	fight_clock += delta
+	_touch_player()
+
+
+# MasonPooSquat and MasonWaddle switch it on as they start and off as they end, so whatever ends a line
+# - its last step, a Break, either side winning - leaves through one of their Exit()s and ends it too.
+func set_contact_live(live: bool) -> void:
+	if live:
+		contact_hitbox.add_to_group("enemy projectile")
+	else:
+		contact_hitbox.remove_from_group("enemy projectile")
+
+
+# The group only reports a player walking into him. One already in him as a line starts, or still in
+# him as the last hit's i-frames run out, has to be looked for, and the i-frames space those hits out.
+func _touch_player() -> void:
+	if not contact_hitbox.is_in_group("enemy projectile"):
+		return
+	var player: Node2D = state_machine.get_player()
+	if player and player.hurtBox.overlaps_area(contact_hitbox):
+		player.receive_hit(HitInfo.from_area(contact_hitbox))
 
 
 func _on_hurtbox_entered(area: Area2D) -> void:
@@ -241,11 +269,13 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 
 
 func take_punch(amount: int) -> int:
-	if hits_this_window >= MAX_HITS_PER_WINDOW:
+	var allowed := punches.allow(amount, hits_this_window, MAX_HITS_PER_WINDOW)
+	if allowed <= 0:
 		return 0
-	var dealt := _apply_damage(amount)
+	var dealt := _apply_damage(allowed)
 	if dealt > 0:
 		hits_this_window += 1
+		punches.spend(dealt)
 	return dealt
 
 

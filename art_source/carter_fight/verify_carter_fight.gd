@@ -18,6 +18,7 @@ extends SceneTree
 # its entrance is waiting on, so no balloon is ever shown.
 
 const CarterArtLayout := preload("res://Scripts/CarterArtLayout.gd")
+const PlayerDefense := preload("res://Scripts/PlayerDefense.gd")
 const FIGHT := "res://Scenes/Bosses/CarterBossFightScene.tscn"
 const PLAYER_PATH := "Arena/MainPlayer/CharacterBody2D"
 const BOSS_PATH := "Arena/CarterAkumaScene/CarterAkumaCharacterBody"
@@ -38,6 +39,9 @@ var player: Node
 
 var scenario := 0
 var settle_left := 0
+# PlayerDefense.BLOCKING_ENABLED as the game ships it, which every scenario plays on but the one that
+# tests the held guard it keeps behind that switch, and which is put back at the end.
+var shipped_blocking := false
 var after_settle := Callable()
 var cycles_seen := 0
 var last_beat := -1
@@ -52,15 +56,19 @@ var mash_clock := 0.0
 var parry_pressed := false
 var parried := false
 
-# What a barrage costs four kinds of player from full health, which is the whole point of the retune:
+# What a barrage costs five kinds of player from full health, which is the whole point of the retune:
 # no i-frames between clones means being hit no longer hands you the ones behind it.
 # `yellows` forces the tier each profile is worst at: the hardest one for anybody who presses block,
-# the all-red teach barrage for the player who never does.
+# the all-red teach barrage for the player who never does. `blocking` is PlayerDefense.BLOCKING_ENABLED
+# for the run: the game ships with it off, so a held guard absorbs nothing and a turtle takes every red
+# like the player who never presses, and the first turtle switches it on to keep the held guard it
+# guards tested.
 const PROFILES := {
 	8: {"name": "parries every red", "parry": 1.0, "bite": 0.0, "turtle": false, "yellows": 6, "cap": 0},
 	9: {"name": "parries about half, bites some feints", "parry": 0.55, "bite": 0.3, "turtle": false, "yellows": 6, "cap": 4},
-	10: {"name": "turtles behind the guard", "parry": 0.0, "bite": 0.0, "turtle": true, "yellows": 6, "cap": 5},
+	10: {"name": "turtles behind the guard, blocking on", "parry": 0.0, "bite": 0.0, "turtle": true, "yellows": 6, "cap": 5, "blocking": true},
 	11: {"name": "never touches the block button", "parry": 0.0, "bite": 0.0, "turtle": false, "yellows": 0, "cap": -1},
+	12: {"name": "turtles behind the guard, as the game ships", "parry": 0.0, "bite": 0.0, "turtle": true, "yellows": 6, "cap": -1, "blocking": false},
 }
 var start_health := 0
 var acted_clone := -1
@@ -84,6 +92,7 @@ var after_ko := false
 
 
 func _initialize() -> void:
+	shipped_blocking = PlayerDefense.BLOCKING_ENABLED
 	_build(1)
 
 
@@ -156,7 +165,7 @@ func _process(_delta: float) -> bool:
 				notes.append("mash then parry: %d whiffed presses on clone %d, clone %d still parried"
 					% [mashes, MASH_CLONE + 1, PARRY_CLONE + 1])
 				_restart(8)
-		8, 9, 10, 11:
+		8, 9, 10, 11, 12:
 			_play_barrage()
 			# A barrage that killed them never reaches the punish window, so both endings report.
 			if state_machine.is_recovering() or player.playerHealth <= 0:
@@ -255,6 +264,7 @@ func _launch(next: int) -> void:
 		_check_fresh_after_ko()
 	if not PROFILES.has(next):
 		player.playerHealth = 9999
+	PlayerDefense.BLOCKING_ENABLED = PROFILES[next].get("blocking", shipped_blocking) if PROFILES.has(next) else shipped_blocking
 	start_health = player.playerHealth
 	acted_clone = -1
 	reported = false
@@ -385,13 +395,18 @@ func _report_barrage() -> void:
 		_expect(taken <= profile.cap, "one barrage, %s: %d half-hearts, over the %d it is meant to cost"
 			% [profile.name, taken, profile.cap])
 		_expect(survived, "one barrage, %s: killed outright from full health" % profile.name)
-	if profile.turtle:
+	if profile.turtle and profile.get("blocking", shipped_blocking):
 		# The case that had to be checked rather than assumed: a guard that breaks mid-barrage, with
 		# no i-frames behind it, must not be a death sentence.
 		_expect(guard_broke, "the turtle's guard never broke, so the guard-break case wasn't tested")
 		notes.append("the guard broke mid-barrage and the player still walked out of it with %d of %d"
 			% [player.playerHealth, start_health])
-	if scenario >= 11:
+	elif profile.turtle:
+		# As the game ships, a held guard is only the parry's stance: it absorbs nothing and costs nothing.
+		_expect(not survived and demon.reds_parried == 0 and is_equal_approx(player.defense.stamina, player.defense.max_stamina),
+			"one barrage, %s: every red lands on a held guard, as on a player who never presses (%d taken, %d parried, %.0f stamina)"
+			% [profile.name, taken, demon.reds_parried, player.defense.stamina])
+	if scenario >= 12:
 		_finish()
 	else:
 		_restart(scenario + 1)
@@ -415,7 +430,7 @@ func _check_pattern() -> void:
 		for i in range(feints.size() - 1):
 			_expect(not (feints[i] and feints[i + 1]), "cycle %d: feints %d and %d are adjacent at %d yellows"
 				% [round_number, i, i + 1, yellows])
-	# Fifteen clones and eight compass points, so repeats are forced; what must never happen is two
+	# Fifteen clones and seven directions, so repeats are forced; what must never happen is two
 	# in a row from the same side.
 	_expect(demon.directions.size() == state_machine.clone_count,
 		"cycle %d: %d directions for %d clones" % [round_number, demon.directions.size(), state_machine.clone_count])
@@ -594,6 +609,7 @@ func _expect(ok: bool, message: String) -> void:
 
 func _finish() -> void:
 	done = true
+	PlayerDefense.BLOCKING_ENABLED = shipped_blocking
 	notes.append("most clone lights on screen at once, across every scenario: %d" % most_lights)
 	print("")
 	for note in notes:

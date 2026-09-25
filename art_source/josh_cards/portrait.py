@@ -1,4 +1,8 @@
-"""Josh's dialogue portrait: Assets/Characters/Josh/portrait.png.
+"""SUPERSEDED 2026-09-23: this draws the PREVIOUS design. The live portrait is built from the
+approved redesign by art_source/josh_redesign/portrait.py. Run without a destination, this now
+writes into its own folder, so it can no longer overwrite the shipped portrait by accident.
+
+Josh's dialogue portrait: Assets/Characters/Josh/portrait.png.
 
 The old file was the two-headed Carter-and-Josh bust from the tag-team fight - the same image
 sits in Carter's folder, byte for byte.  This draws Josh alone on the current design: gambler
@@ -249,7 +253,7 @@ def build():
 
 if __name__ == '__main__':
     out = (sys.argv[1] if len(sys.argv) > 1
-           else 'C:/Users/theyi/OneDrive/Documents/new-game-project/Assets/Characters/Josh')
+           else os.path.dirname(os.path.abspath(__file__)))
     c = build()
     p = out.rstrip('/\\') + '/portrait.png'
     write_png(p, W, H, to_rgba(c))

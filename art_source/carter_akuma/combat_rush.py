@@ -395,9 +395,10 @@ def draw(p):
         # NOT cover, or it lands under the shoulder and reads as a red smudge
         _, _, _, na_pre = arm_m(p['near'])
         panel = sub(jk, grow(na_pre, 1))
-        sg = inter(mark_m(p, panel), jk)
-        cv.part(sg, 'ember', ('dist', 3.2), TH_HARD2, bias=1)
-        cv.outline(sg, PALC['9'])
+        sg = inter(mark_m(p, panel), mark_cloth(jk))
+        # the same flat paint as the approved back view
+        import intro_sigil
+        intro_sigil.paint_rest(cv, sg)
         # a little bloom so it burns rather than sits there as a decal
         for y in range(H):
             for x in range(W):
@@ -686,8 +687,17 @@ def jacket_back_m(p, tor):
     return sub(j, CL.cut_beyond((cx, cy), (px_, py_), 1.10, amp=2.6, step=2.8))
 
 
+def mark_cloth(jk):
+    """Where the mark may be painted on this jacket: inside its keyline, not
+    over it.  Fitted onto a pitched back the emblem runs across the far
+    armhole, and painting the whole jacket mask let the red eat the black line
+    round his shoulder (the trident did, until 2026-09-23)."""
+    return erode(jk, 1)
+
+
 def mark_m(p, panel=None):
-    """The approved trident emblem fitted onto a pitched, foreshortened back.
+    """The approved emblem (intro_sigil.sigil - the 天 since 2026-09-23, the
+    trident before it) fitted onto a pitched, foreshortened back.
 
     The emblem is authored for the full 96-wide standing back view.  Dropped on
     a torso that is only two dozen pixels across it was clipped down to a red

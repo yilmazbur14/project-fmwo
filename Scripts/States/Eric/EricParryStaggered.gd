@@ -15,7 +15,7 @@ extends State
 @export var stagger_timer : Timer
 
 const EricPacing := preload("res://Scripts/EricPacing.gd")
-const EricPhaseTwoPose := preload("res://Scripts/EricPhaseTwoPose.gd")
+const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
 
 const FLASH := Color(1.6, 1.9, 2.6)
 const FLASH_TIME := 0.3
@@ -38,19 +38,11 @@ var drive_left := 0.0
 var drive_from := Vector2.ZERO
 var drive_to := Vector2.ZERO
 var driven: Node2D
-# Phase two: his frames come off the phase-two sheet instead of his own (EricPhaseTwoPose).
-var phase_two := false
-var sheet_texture: Texture2D
-var sheet_frames := 0
-var pose_frames: Array = []
-var pose_clock := 0.0
 
 
 func Enter() -> void:
 	glide_speed = EricPacing.value("stagger_glide_speed")
-	# His downed and idle frames both draw the sword, which in phase two is outside the ring.
-	phase_two = character_body.phase_two
-	_pose("stumble", "downed")
+	animation_player.play("downed")
 	# He can be standing on the player.
 	boss_collision_shape.disabled = true
 	var sfx: AudioStreamPlayer = character_body.get_node_or_null("WhirlwindSfxPlayer")
@@ -69,12 +61,6 @@ func Enter() -> void:
 
 
 func Exit() -> void:
-	if phase_two:
-		phase_two = false
-		var sprite: Sprite2D = character_body.sprite
-		sprite.hframes = sheet_frames
-		sprite.texture = sheet_texture
-		sheet_texture = null
 	stagger_timer.stop()
 	# Only while the window is still open: the next state may open the hurtbox itself.
 	if window_open:
@@ -96,14 +82,13 @@ func drive_player_in(player: Node2D) -> void:
 		side = 1.0
 	driven = player
 	drive_from = player.global_position
-	drive_to = Vector2(box.get_center().x + side * box.size.x * 0.5, box.end.y)
+	# On the floor, as his Broken drive is: low in the ring the foot of his hurtbox is past the bottom rope.
+	var area: Rect2 = EricArtLayout.PLAYER_AREA
+	drive_to = Vector2(box.get_center().x + side * box.size.x * 0.5, box.end.y).clamp(area.position, area.end)
 	drive_left = DRIVE_TIME
 
 
 func Physics_Update(delta: float) -> void:
-	if phase_two:
-		pose_clock += delta
-		character_body.sprite.frame = EricPhaseTwoPose.frame_at(pose_frames, pose_clock)
 	if drive_left > 0.0 and is_instance_valid(driven):
 		drive_left -= delta
 		var t := clampf(1.0 - drive_left / DRIVE_TIME, 0.0, 1.0)
@@ -121,22 +106,8 @@ func _on_parry_stagger_timer_timeout() -> void:
 	if eric_state_machine.current_state != self:
 		return
 	_close_window()
-	_pose("idle", "idle")
+	animation_player.play("idle")
 	gliding = true
-
-
-# `key` is the phase-two pose, `anim` the animation his own sheet plays for the same beat.
-func _pose(key: String, anim: StringName) -> void:
-	if not phase_two:
-		animation_player.play(anim)
-		return
-	animation_player.stop()
-	var sprite: Sprite2D = character_body.sprite
-	if sheet_texture == null:
-		sheet_texture = sprite.texture
-		sheet_frames = sprite.hframes
-	pose_frames = EricPhaseTwoPose.show(sprite, key)
-	pose_clock = 0.0
 
 
 func _close_window() -> void:

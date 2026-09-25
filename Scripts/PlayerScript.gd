@@ -1,8 +1,8 @@
 extends CharacterBody2D
 
 # A fight can hold the player for a parry-only sequence, where only the guard answers
-# (lock_actions), point them at what is rushing them (face_point) and put them somewhere (warp_to).
-# PlayerCombatFx draws the lock and the warp from these signals.
+# (lock_actions), point them at what is rushing them (face_point), put them somewhere (warp_to) and
+# drag them (add_drift). PlayerCombatFx draws the lock and the warp from these signals.
 signal actions_locked
 signal actions_unlocked
 signal warped(from: Vector2, to: Vector2)
@@ -133,6 +133,8 @@ var is_action_locked := false
 var lock_seals_guard := false
 # Set while a fight holds the player in a still pose (set_scripted_pose).
 var scripted_pose := false
+# The sheet a fight poses the locked player in (hold_pose): {texture, hframes, vframes}.
+var pose_sheet := {}
 # Where a fight wants the player looking, or Vector2.INF for the usual rules.
 var facing_point := Vector2.INF
 # The reworked feel, and every fight is on it. Everything reworked reads it: the dash here and in
@@ -146,7 +148,8 @@ var feel_v2 := true
 # where it is and the guard goes up in its place (_cancel_dash_into_guard), so a dash is a
 # non-committal approach the player can stop into a block or a parry at any point in it.
 # The parry that follows is the ordinary guarded one - same window, same mash lockout, same guarded
-# side - so a press that is late or mashed buys a block at full stamina instead of a parry.
+# side - so a press that is late or mashed buys a block at full stamina instead of a parry, or with
+# blocking switched off (PlayerDefense.BLOCKING_ENABLED) nothing at all.
 # Its own flag rather than feel_v2's, which is the feel every fight already ships with: this one is
 # being tried out on one fight, and a fight opts in with `player.dash_parry = true` in its _ready.
 var dash_parry := false
@@ -155,6 +158,14 @@ var dash_parry := false
 # the dash, and PlayerDefense's parry, because the wait for the next dash is what the cancel does not
 # buy back.
 var dash_cancelled := false
+var drift_velocity := Vector2.ZERO
+# Set by a sequence that takes the player past the ropes on purpose, and cleared once it has brought
+# them back: a boss entrance walking them in from outside the ring (BossEntrance), Danny's sumo
+# throwing the loser out through a gate. While it is on, _keep_in_ring() leaves them where they are put.
+var may_leave_ring := false
+# Where the player's origin may be with their body on the ring's floor, inside the inner faces of the
+# arena's walls (ArenaScene's wallBoundaries). Empty where there are none, as in the training room.
+var ring_origins := Rect2()
 
 var state_machine : Node
 var current_state : State
@@ -177,6 +188,7 @@ func _ready():
 	hurt_sfx_player.stream = load("res://Assets/Audio/SFX/player_hurt.ogg")
 
 	DialogueManager.dialogue_ended.connect(_on_dialogue_ended)
+	ring_origins = _find_ring_origins()
 
 func _process(delta: float) -> void:
 	if punch_buffered and not is_finishing and not combo.report_pending():
@@ -188,22 +200,32 @@ func _process(delta: float) -> void:
 		FightOutro.finish_fight.call_deferred(get_tree(), false)
 
 func _physics_process(delta: float) -> void:
+	_move(delta)
+	_keep_in_ring()
+
+
+func _move(delta: float) -> void:
 	_update_facing()
+	var drift := drift_velocity
+	drift_velocity = Vector2.ZERO
 
 	# A parry-only sequence roots the player where the fight put them: they still turn, but nothing
 	# here moves them, and the fight is free to write global_position itself.
 	if is_action_locked:
 		return
 
-	# Don't move during punch or block
-	if current_state.name == "Punching" || is_talking || is_grabbed || fight_over || is_finishing:
+	if is_talking || is_grabbed || fight_over || is_finishing || playerHealth <= 0:
 		return
-	if defense.is_guard_broken:
+	# Don't move during punch or block. A pull still drags a player who is swinging or stunned: those
+	# stop their own movement, not the fight's.
+	if current_state.name == "Punching" || defense.is_guard_broken:
+		_apply_drift(drift, delta)
 		return
 
 	# Held block brings the guard back up once a dash or a punch is over; not a bumper still held from a
-	# feel_v2 mash, though (the finisher's release latch, or the grab escape's).
-	if Input.is_action_pressed("block") and not punch_buffered and not _mash_latched():
+	# feel_v2 mash, though (the finisher's release latch, or the grab escape's). Without blocking, only
+	# while the press is still inside its parry window (PlayerDefense.guard_holds).
+	if Input.is_action_pressed("block") and not punch_buffered and not _mash_latched() and defense.guard_holds():
 		_raise_guard()
 
 	var dash_from := Vector2.INF
@@ -251,8 +273,53 @@ func _physics_process(delta: float) -> void:
 			velocity.y = move_toward(velocity.y, 0, SPEED)
 
 	move_and_slide()
+	_apply_drift(drift, delta)
 	if dash_from != Vector2.INF:
 		dash_stepped.emit(dash_from, global_position, kick_off)
+
+
+# px/s added on top of the player's own movement for the next physics step only. Calls add up;
+# the fight calls it every step it wants the pull.
+func add_drift(velocity_px: Vector2) -> void:
+	drift_velocity += velocity_px
+
+
+func _apply_drift(drift: Vector2, delta: float) -> void:
+	if drift == Vector2.ZERO:
+		return
+	var collision := move_and_collide(drift * delta)
+	if collision:
+		move_and_collide(collision.get_remainder().slide(collision.get_normal()))
+
+
+# The net under every way the player can end up past a rope: a fight's drive or warp written out
+# there, or a boss's body pushed into them against one, which the physics would squeeze out through
+# it. Whatever state they are in, they are put back on the floor after the step, unless a sequence
+# has let them leave (may_leave_ring).
+func _keep_in_ring() -> void:
+	if may_leave_ring or not ring_origins.has_area():
+		return
+	var inside := global_position.clamp(ring_origins.position, ring_origins.end)
+	if inside != global_position:
+		global_position = inside
+
+
+func _find_ring_origins() -> Rect2:
+	var walls := get_node_or_null(^"../../wallBoundaries")
+	if walls == null:
+		return Rect2()
+	var left := _shape_rect(walls.get_node(^"leftWall")).end.x
+	var right := _shape_rect(walls.get_node(^"rightWall")).position.x
+	var top := _shape_rect(walls.get_node(^"topWall")).end.y
+	var bottom := _shape_rect(walls.get_node(^"bottomWall")).position.y
+	var body := _shape_rect($CollisionShape2D)
+	var before := global_position - body.position
+	var after := body.end - global_position
+	return Rect2(left + before.x, top + before.y, right - left - before.x - after.x, bottom - top - before.y - after.y)
+
+
+func _shape_rect(shape: CollisionShape2D) -> Rect2:
+	return shape.global_transform * shape.shape.get_rect()
 
 func _input(event: InputEvent) -> void:
 	# The finisher swallows these presses before they reach this node; this guard doesn't rely on that order.
@@ -465,10 +532,41 @@ func lock_actions_sealed() -> void:
 func unlock_actions() -> void:
 	if not is_action_locked:
 		return
+	end_pose()
 	is_action_locked = false
 	lock_seals_guard = false
 	facing_point = Vector2.INF
 	actions_unlocked.emit()
+
+
+# A fight holding the player poses them off its own sheet (PlayerPosed): only inside a lock, never once
+# the fight is decided or during the finisher, and only on a player scene that has the Posed state. A
+# second call swaps the sheet in place. Whether it took.
+func hold_pose(sheet: Dictionary) -> bool:
+	if not is_action_locked or fight_over or is_finishing or not state_machine.states.has("Posed"):
+		return false
+	pose_sheet = sheet
+	if is_posed():
+		state_machine.current_state.apply_sheet()
+	else:
+		state_machine.on_child_transition(state_machine.current_state, "Posed")
+	return true
+
+
+# Columns of the pose sheet, seconds each (the last for the rest) and whether they loop; a one-shot
+# holds its last column. Nothing unless posed.
+func play_pose(frames: Array, times: Array, loop: bool) -> void:
+	if is_posed():
+		state_machine.current_state.play(frames, times, loop)
+
+
+func end_pose() -> void:
+	if is_posed():
+		state_machine.on_child_transition(state_machine.current_state, "Idle")
+
+
+func is_posed() -> bool:
+	return state_machine != null and state_machine.current_state == state_machine.states.get("Posed")
 
 
 # Deferred by its callers, like PlayerDefense's guard break: a seal can land inside a physics flush,
@@ -518,6 +616,7 @@ func warp_to(point: Vector2) -> void:
 	var from := global_position
 	global_position = point
 	velocity = Vector2.ZERO
+	drift_velocity = Vector2.ZERO
 	warped.emit(from, point)
 
 

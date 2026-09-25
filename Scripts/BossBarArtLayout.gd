@@ -130,21 +130,29 @@ const FINAL_BAR := {
 # One frame for everyone; the identity is the fill. `heat_ramp` is the placeholder ProgressBar's fill
 # colour walked from cold to hot by set_heat() - the stops are exactly the colours each boss script
 # switched between, so a caller passing 0.0 / 0.5 / 1.0 lands on them exactly. `low_color` replaces
-# the cold stop under `low_ratio`, which is the only shape Greyson's and Computah's bars needed.
+# the cold stop under `low_ratio`, which is the only shape Computah's bar needed.
 const BOSS_BARS := {
+	# A gold Jolly Roger over crossed cutlasses for his emblem, and a crimson fill with a gold trim line
+	# that heats to copper.
+	&"burak": {
+		"fill": "res://Assets/UI/boss_hp_fill_burak_3x.png",
+		"fill_hot": "res://Assets/UI/boss_hp_fill_hot_burak_3x.png",
+		"emblem": "res://Assets/UI/boss_hp_emblem_burak_3x.png",
+		"heat_ramp": [Color("#B02436"), Color("#CF7540")],
+	},
 	&"eric": {
 		"fill": "res://Assets/UI/boss_hp_fill_eric_3x.png",
 		"fill_hot": "res://Assets/UI/boss_hp_fill_hot_eric_3x.png",
 		"emblem": "res://Assets/UI/boss_hp_emblem_eric_3x.png",
 		"heat_ramp": [Color(0.85, 0.16, 0.16, 1), Color(0.95, 0.75, 0.1, 1), Color(1.0, 0.55, 0.0, 1)],
 	},
+	# Greyson, the second half of FIGHT 03: a double biceps for his emblem and his purple fill, the approved set
+	# (2026-09-24). The ramp is the fill's own two purples, for the flat fallback.
 	&"greyson": {
 		"fill": "res://Assets/UI/boss_hp_fill_greyson_3x.png",
 		"fill_hot": "res://Assets/UI/boss_hp_fill_hot_greyson_3x.png",
 		"emblem": "res://Assets/UI/boss_hp_emblem_greyson_3x.png",
-		"heat_ramp": [Color(0.72, 0.45, 0.92, 1), Color(1.0, 0.78, 0.22, 1)],
-		"low_color": Color(0.92, 0.42, 0.44, 1),
-		"low_ratio": 0.34,
+		"heat_ramp": [Color("#7C3BB4"), Color("#A5478F")],
 	},
 	&"computah": {
 		"fill": "res://Assets/UI/boss_hp_fill_computah_3x.png",
@@ -153,6 +161,14 @@ const BOSS_BARS := {
 		"heat_ramp": [Color(0.35, 0.72, 0.95, 1), Color(1.0, 0.78, 0.22, 1)],
 		"low_color": Color(0.95, 0.5, 0.3, 1),
 		"low_ratio": 0.34,
+	},
+	# A speaker for his emblem, and his shirt's lavender heating to raspberry, from his red roar eyes. The
+	# ramp only drives the flat fallback now.
+	&"matt": {
+		"fill": "res://Assets/UI/boss_hp_fill_matt_3x.png",
+		"fill_hot": "res://Assets/UI/boss_hp_fill_hot_matt_3x.png",
+		"emblem": "res://Assets/UI/boss_hp_emblem_matt_3x.png",
+		"heat_ramp": [Color(0.7, 0.71, 0.95, 1), Color(0.96, 0.84, 0.43, 1), Color(1.0, 0.55, 0.0, 1)],
 	},
 	&"mason": {
 		"fill": "res://Assets/UI/boss_hp_fill_mason_3x.png",
@@ -166,8 +182,7 @@ const BOSS_BARS := {
 		"emblem": "res://Assets/UI/boss_hp_emblem_josh_3x.png",
 		"heat_ramp": [Color(0.95, 0.75, 0.15, 1), Color(0.95, 0.75, 0.1, 1), Color(1.0, 0.55, 0.0, 1)],
 	},
-	# The art set is built because vs_card/bosses.py has his data; there is no Danny fight to wire it
-	# to yet, so nothing reaches this entry.
+	# Danny, boss 7. His set was built from vs_card/bosses.py's data before his fight existed.
 	&"danny": {
 		"fill": "res://Assets/UI/boss_hp_fill_danny_3x.png",
 		"fill_hot": "res://Assets/UI/boss_hp_fill_hot_danny_3x.png",
@@ -210,9 +225,12 @@ const BOSS_BARS := {
 # The baked nameplate lettering, keyed the way the plate is asked for: a boss, or a pair sharing one
 # plate. &"" means there is no baked plate and the block falls back to a themed Label.
 const PLATE_NAMES := {
+	&"burak": "res://Assets/UI/boss_plate_name_burak_3x.png",
 	&"eric": "res://Assets/UI/boss_plate_name_eric_3x.png",
 	&"greyson_pair": "res://Assets/UI/boss_plate_name_greyson_pair_3x.png",
+	&"greyson": "res://Assets/UI/boss_plate_name_greyson_3x.png",
 	&"computah": "res://Assets/UI/boss_plate_name_computah_3x.png",
+	&"matt": "res://Assets/UI/boss_plate_name_matt_3x.png",
 	&"mason": "res://Assets/UI/boss_plate_name_mason_3x.png",
 	&"josh": "res://Assets/UI/boss_plate_name_josh_3x.png",
 	&"danny": "res://Assets/UI/boss_plate_name_danny_3x.png",
@@ -231,6 +249,13 @@ const PAIR_PLATES := [&"greyson_pair", &"liam_pair"]
 # px from BLOCK_ANCHOR. `name_font_size` 0 means the theme's own size, which is what the single-bar
 # bosses used. Only the pair blocks have a panel, a bracket or row labels.
 const PLACEHOLDER_BLOCKS := {
+	&"burak": {
+		"size": Vector2(380, 56),
+		"name_offset": Vector2(50, -24),
+		"name_font_size": 0,
+		"name_outline": 6,
+		"rows": [Rect2(50, 10, 380, 22)],
+	},
 	&"eric": {
 		"size": Vector2(380, 56),
 		"name_offset": Vector2(50, -24),
@@ -267,6 +292,27 @@ const PLACEHOLDER_BLOCKS := {
 		"rows": [Rect2(50, 10, 380, 22)],
 	},
 	&"computah": {
+		"size": Vector2(380, 56),
+		"name_offset": Vector2(50, -24),
+		"name_font_size": 0,
+		"name_outline": 6,
+		"rows": [Rect2(50, 10, 380, 22)],
+	},
+	&"matt": {
+		"size": Vector2(380, 56),
+		"name_offset": Vector2(50, -24),
+		"name_font_size": 0,
+		"name_outline": 6,
+		"rows": [Rect2(50, 10, 380, 22)],
+	},
+	&"greyson": {
+		"size": Vector2(380, 56),
+		"name_offset": Vector2(50, -24),
+		"name_font_size": 0,
+		"name_outline": 6,
+		"rows": [Rect2(50, 10, 380, 22)],
+	},
+	&"danny": {
 		"size": Vector2(380, 56),
 		"name_offset": Vector2(50, -24),
 		"name_font_size": 0,

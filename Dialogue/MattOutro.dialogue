@@ -1,0 +1,12 @@
+# Placeholder lines for the end of the Matt fight, said before the fade to the Victory or Defeat screen.
+# player_won: the player beat Matt. player_lost: Matt beat the player.
+
+~ player_won
+Matt: *wheeze* ...okay. Okay. You got me, pal.
+Matt: ...top 5 though.
+=> END
+
+~ player_lost
+Matt: Haha! Sorry buddy, I get a little loud sometimes.
+Matt: Top 1. Obviously.
+=> END

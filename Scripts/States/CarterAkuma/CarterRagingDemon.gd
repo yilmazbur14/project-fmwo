@@ -8,9 +8,9 @@ extends State
 #   DARKEN 0.45 s  the crowd hushes, the music ducks, the dark comes in, a pool opens under them and
 #                  he is swallowed by it.
 #   RUSH   9.30 s  fifteen clones, one at a time and 0.62 s apart, each with a RED light (parry it)
-#                  or a YELLOW one (a feint - parrying it punishes you). Identical timing either way;
-#                  only the colour and the outcome differ, or the player would read the timing
-#                  instead of the colour and the move would die. Bite on a feint and the clone after
+#                  or the fake's pale X (a feint - parrying it punishes you). Identical timing either
+#                  way; only the mark and the outcome differ, or the player would read the timing
+#                  instead of the mark and the move would die. Bite on a feint and the clone after
 #                  it comes in as a PUNISH, which nothing answers.
 #                  None of them stop at the i-frames: being hit never hands the player the clones
 #                  behind it for free.
@@ -36,11 +36,16 @@ const HitInfo := preload("res://Scripts/HitInfo.gd")
 
 enum Beat { FLASH, YANK, DARKEN, RUSH, CLEAR }
 
-# The eight compass points a clone can come from, written out because a const can't call normalized().
+# The seven directions a clone can come from, written out because a const can't call normalized().
+# NOTHING COMES FROM DUE NORTH, AND THE TWO HIGH ONES ARE 37 DEGREES UP, NOT 45: the player is locked in
+# the middle of the ring with his health bar block right over them, so a clone from due north, or from
+# 45 degrees up at the full clone_radius, has its light or itself under the bar - and a light that
+# can't be seen isn't a read. From the middle, all seven keep the clone and its light clear of every
+# HUD block (CarterArtLayout.HUD_KEEP_OUT); the defence suite's carter_hud mode checks each of them.
 const COMPASS: Array[Vector2] = [
-	Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1),
+	Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1),
 	Vector2(0.70710678, 0.70710678), Vector2(-0.70710678, 0.70710678),
-	Vector2(0.70710678, -0.70710678), Vector2(-0.70710678, -0.70710678),
+	Vector2(0.8, -0.6), Vector2(-0.8, -0.6),
 ]
 # Reshuffles before the no-two-adjacent rule is given up on.
 const PATTERN_TRIES := 20
@@ -225,7 +230,7 @@ func _build_pattern() -> void:
 		feints[index] = true
 
 	# The first clone always comes from the left or the right - the reading the player already has.
-	# After that: eight compass points and fifteen clones, so the deck is shuffled, dealt out and
+	# After that: seven directions and fifteen clones, so the deck is shuffled, dealt out and
 	# shuffled again. The rule that survives the repeats is the one that matters, which is that no
 	# two clones in a row ever come from the same side.
 	var first: Vector2 = Vector2.LEFT if randi() % 2 == 0 else Vector2.RIGHT
@@ -398,8 +403,7 @@ func _next_clone() -> void:
 
 # Along the direction it was dealt, shortened rather than clamped per axis, so the clone still comes
 # from its compass point. The bounds keep the whole clone AND the light over its head inside the
-# view: at the full clone_radius a clone from due north would have its colour off the top of the
-# screen, and a colour that can't be read is not a read.
+# view, and COMPASS keeps them out from under the HUD: a light that can't be read is not a read.
 func _spawn_point(to_point: Vector2, direction: Vector2) -> Vector2:
 	var bounds := _clone_bounds()
 	var inside := to_point.clamp(bounds.position, bounds.end)
@@ -464,6 +468,10 @@ func _on_block_pressed(_credited := false) -> void:
 	clone_punished = true
 	feints_parried += 1
 	punish_next = true
+	# The punish clone's hit is what costs a bitten feint its read on his Break gauge. The last clone
+	# has no clone after it to be that bill, so the read is taken here instead.
+	if clone_index == feints.size() - 1 and body.break_gauge:
+		body.break_gauge.add(-body.break_gauge.hit_loss)
 	state_machine.drain_stamina(state_machine.feint_stamina)
 	state_machine.end_parry_streak()
 	body.show_word("FEINT!")
@@ -495,9 +503,12 @@ func _begin_clear() -> void:
 	state_machine.set_player_stage_z(player_stage_z)
 
 
-# Out along the axis the last clone came from, so the eye already knows where to look.
+# Out along the axis the last clone came from, so the eye already knows where to look. With a Break
+# owed, only its side of him: level with the player in the middle, where a full juggle can be thrown.
 func _recover_spot() -> Vector2:
 	var axis := last_direction if last_direction != Vector2.ZERO else Vector2.RIGHT
+	if state_machine.break_owed:
+		axis = Vector2.RIGHT if axis.x >= 0.0 else Vector2.LEFT
 	var bounds: Rect2 = state_machine.ROPES.grow(-RECOVER_MARGIN)
 	return (state_machine.ARENA_CENTRE + axis * state_machine.recover_offset).clamp(bounds.position, bounds.end).round()
 
@@ -505,7 +516,7 @@ func _recover_spot() -> Vector2:
 func _hand_over() -> void:
 	var recover: State = state_machine.states.get("Recover")
 	if recover:
-		recover.prepare(reds_parried, reds_missed, feints_parried, reds_total)
+		recover.prepare(reds_parried, reds_missed, feints_parried, reds_total, -1.0, state_machine.take_break_owed())
 	state_machine.on_child_transition(self, "Recover")
 
 

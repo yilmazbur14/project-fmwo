@@ -3,7 +3,17 @@ extends State
 # Liam and Bixby's entrance, as named beats: carry_in plays first, then LiamPreFight.dialogue calls the
 # rest between its lines and waits for each one. Placement follows the entrance mockups
 # (LiamEntranceLayout).
+#
+# The carry-in is the walk-in: a second go at the fight in the same run opens on the throne already
+# set down. The lines and their beats still play then, and the hold to skip still takes them.
+#
+# Every wait is a node-bound tween, so a pause stops the entrance where it is and a hit-stop carries
+# it with the fight. A cut-short entrance never kills a tween something is waiting on: `finished`
+# makes the carry-in bail and `cut` makes every beat bail, and every stepping callback is a no-op
+# after them. A held skip runs the waits out on the spot rather than letting them run their time
+# (BossEntrance.run_out), so nothing of the transformation surfaces again once the fight is on.
 
+const BossEntrance := preload("res://Scripts/BossEntrance.gd")
 const LiamEntranceLayout := preload("res://Scripts/LiamEntranceLayout.gd")
 const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
@@ -13,6 +23,8 @@ const CARRIERS_TEXTURE := preload("res://Assets/Characters/Liam/Entrance/liam_ca
 const SLAP_KEYS := preload("res://Assets/Characters/Liam/Entrance/liam_slap_keys.png")
 const FED_UP := preload("res://Assets/Characters/Liam/Entrance/bixby_fedup.png")
 const SWALLOW_KEYS := preload("res://Assets/Characters/Liam/Entrance/bixby_swallow_keys.png")
+# This fight's place in the order, for the entrance's once-per-run flag.
+const FIGHT_SCENE := "res://Scenes/Bosses/LiamBossFightScene.tscn"
 
 @export var body : CharacterBody2D
 @export var procession : Node2D
@@ -105,9 +117,28 @@ var carrier_rests := {}
 var bixby_shadow: Sprite2D
 var liam_shadow: Sprite2D
 var aura_loop: Tween
+# The arena's darkening, never waited on, so a skip can stop it wherever it has got to.
+var dim_fade: Tween
+# The skip and its hint, up through the carry-in and the lines.
+var entrance: CanvasLayer
+# Enter() is deferred, so anything that can reach in from outside checks this first.
+var entered := false
+# The carry-in is over, one way or another. finish_entrance() is the only thing that sets it.
+var finished := false
+var dialogue_started := false
+# The lines are over for good - a held skip took them, or the fight started over the top of them -
+# and a beat they would still have called does nothing.
+var cut := false
+# The tweens the entrance is waiting on, for the skip to run out.
+var waits: Array[Tween] = []
+# The flopped carriers' shadows and sweat drops are down.
+var flopped := false
+# The ring is where the roar leaves it.
+var beats_done := false
 
 
 func Enter() -> void:
+	entered = true
 	for spec in LiamEntranceLayout.MARCH_SHADOWS:
 		_add_shadow(march_shadows, spec[0], spec[1])
 	_add_shadow(set_down_shadows, LiamEntranceLayout.SET_DOWN_SHADOW[0], LiamEntranceLayout.SET_DOWN_SHADOW[1])
@@ -117,12 +148,35 @@ func Enter() -> void:
 	transform_aura.offset = LiamEntranceLayout.transform_offset()
 	dim.color.a = 0.0
 	flash.color = Color(LiamEntranceLayout.FLASH_COLOR, 0.0)
+	entrance = BossEntrance.new()
+	entrance.name = "BossEntrance"
+	add_child(entrance)
+	entrance.skipped.connect(_on_skipped)
+	entrance.begin()
+	if BossEntrance.already_seen(FIGHT_SCENE):
+		finish_entrance()
+		_start_dialogue()
+		return
 	_play()
+
+
+# The fight starts here, and a harness that starts it over the top of the lines leaves through here
+# too, so this is also what guarantees the beast is standing ready however the entrance ended.
+func Exit() -> void:
+	cut = true
+	_cut_carry_in()
+	_finish_beats()
+	if is_instance_valid(entrance):
+		entrance.queue_free()
+	entrance = null
 
 
 func _play() -> void:
 	await carry_in()
-	state_machine.show_pre_fight_dialogue(self)
+	if finished:
+		return
+	finish_entrance()
+	_start_dialogue()
 
 
 # Behind everything else on `parent`.
@@ -144,13 +198,17 @@ func carry_in() -> void:
 	get_tree().call_group("arena_crowd", "cheer", LiamEntranceLayout.MARCH_TIME)
 	var march := create_tween()
 	march.tween_method(_march.bind(start), 0.0, 1.0, LiamEntranceLayout.MARCH_TIME)
-	await march.finished
+	await _wait(march)
+	if finished:
+		return
 
 	land_sfx_player.play()
 	body.shake_screen(SET_DOWN_SHAKE_STRENGTH, SET_DOWN_SHAKE_STEPS, SET_DOWN_SHAKE_STEP_TIME)
 	march_shadows.hide()
 	set_down_shadows.show()
 	await _pause(BEAT_BEFORE_FLOP)
+	if finished:
+		return
 
 	var flop := create_tween().set_parallel()
 	for carrier_name in LiamEntranceLayout.CARRIERS:
@@ -159,18 +217,17 @@ func carry_in() -> void:
 		carrier.texture = CARRIERS_TEXTURE
 		carrier.frame = spec.frame
 		flop.tween_method(_flop.bind(carrier, carrier.position, spec.flop, deg_to_rad(spec.turn)), 0.0, 1.0, LiamEntranceLayout.FLOP_TIME)
-	await flop.finished
-	for carrier_name in LiamEntranceLayout.CARRIERS:
-		var spec: Dictionary = LiamEntranceLayout.CARRIERS[carrier_name]
-		_add_shadow(set_down_shadows, spec.shadow, LiamEntranceLayout.FLOPPED_SHADOW_RADII)
-		var sweat := LiamEntranceLayout.sweat_drop()
-		sweat.position = spec.sweat
-		marcher.add_child(sweat)
+	await _wait(flop)
+	if finished:
+		return
+	_lay_out_flopped()
 	get_tree().call_group("arena_crowd", "cheer", FLOP_CHEER)
 	await _pause(BEAT_AFTER_FLOP)
 
 
 func _march(weight: float, start: Vector2) -> void:
+	if finished:
+		return
 	marcher.position = start.lerp(Vector2.ZERO, weight).round()
 	var step := int(weight * LiamEntranceLayout.MARCH_TIME / LiamEntranceLayout.WALK_FRAME_TIME) % LiamEntranceLayout.WALK_FRAMES
 	walking_carrier.frame = step
@@ -182,12 +239,29 @@ func _march(weight: float, start: Vector2) -> void:
 
 
 func _flop(weight: float, carrier: Sprite2D, from: Vector2, to: Vector2, turn: float) -> void:
+	if finished:
+		return
 	carrier.position = (from.lerp(to, weight) - Vector2(0, LiamEntranceLayout.FLOP_HOP * 4.0 * weight * (1.0 - weight))).round()
 	carrier.rotation = turn * weight
 
 
+# The flopped carriers' floor shadows and sweat drops, once, whichever way the carry-in ended.
+func _lay_out_flopped() -> void:
+	if flopped:
+		return
+	flopped = true
+	for carrier_name in LiamEntranceLayout.CARRIERS:
+		var spec: Dictionary = LiamEntranceLayout.CARRIERS[carrier_name]
+		_add_shadow(set_down_shadows, spec.shadow, LiamEntranceLayout.FLOPPED_SHADOW_RADII)
+		var sweat := LiamEntranceLayout.sweat_drop()
+		sweat.position = spec.sweat
+		marcher.add_child(sweat)
+
+
 # Liam and Bixby jump down off the throne to stand in front of it.
 func liam_and_bixby_step_down() -> void:
+	if cut:
+		return
 	var seat := downstage.to_local(procession.to_global(LiamEntranceLayout.SEAT))
 	var cushion := downstage.to_local(procession.to_global(LiamEntranceLayout.CUSHION))
 	seated_liam.hide()
@@ -200,7 +274,9 @@ func liam_and_bixby_step_down() -> void:
 	var hop := create_tween().set_parallel()
 	hop.tween_method(_hop.bind(hop_liam, seat, LiamEntranceLayout.LIAM_FEET), 0.0, 1.0, LiamEntranceLayout.HOP_TIME)
 	hop.tween_method(_hop.bind(hop_bixby, cushion, Vector2.ZERO), 0.0, 1.0, LiamEntranceLayout.HOP_TIME)
-	await hop.finished
+	await _wait(hop)
+	if cut:
+		return
 	bixby_shadow.show()
 	liam_shadow.show()
 	body.shake_screen(LANDING_SHAKE_STRENGTH, HIT_SHAKE_STEPS, HIT_SHAKE_STEP_TIME)
@@ -208,31 +284,45 @@ func liam_and_bixby_step_down() -> void:
 
 
 func _hop(weight: float, node: Node2D, from: Vector2, to: Vector2) -> void:
+	if cut:
+		return
 	node.position = (from.lerp(to, weight) - Vector2(0, LiamEntranceLayout.HOP_HEIGHT * 4.0 * weight * (1.0 - weight))).round()
 
 
 func liam_slaps_bixby() -> void:
+	if cut:
+		return
 	_show_storyboard(SLAP_KEYS, 0)
 	await _pause(WIND_UP_HOLD)
+	if cut:
+		return
 	_show_storyboard(SLAP_KEYS, 1)
 	slap_sfx_player.play()
 	_hit_shake()
 	get_tree().call_group("arena_crowd", "cheer", SMACK_CHEER)
 	await _pause(SMACK_HOLD)
+	if cut:
+		return
 	# "He likes it!", while Bixby glares.
 	_show_storyboard(SLAP_KEYS, 2)
 	await _pause(LIKES_IT_HOLD)
 
 
 func bixby_growls() -> void:
+	if cut:
+		return
 	_show_storyboard(FED_UP, 0)
 	growl_sfx_player.play()
 	await _pause(FED_UP_HOLD)
 
 
 func bixby_swallows_liam() -> void:
+	if cut:
+		return
 	_show_storyboard(SWALLOW_KEYS, 0)
 	await _pause(LUNGE_HOLD)
+	if cut:
+		return
 	_show_storyboard(SWALLOW_KEYS, 1)
 	liam_shadow.hide()
 	gulp_sfx_player.play()
@@ -240,6 +330,8 @@ func bixby_swallows_liam() -> void:
 	_hit_shake()
 	get_tree().call_group("arena_crowd", "cheer", CHOMP_CHEER)
 	await _pause(CHOMP_HOLD)
+	if cut:
+		return
 	_show_storyboard(SWALLOW_KEYS, 2)
 	await _pause(GULP_HOLD)
 
@@ -247,6 +339,8 @@ func bixby_swallows_liam() -> void:
 # Bixby freezes, cracks open, tears off the floor, swells into the beast and detonates, and the beast drops
 # out of the blast and roars. bixby_transform.png carries it; every cue below hangs off one of its frames.
 func bixby_transforms() -> void:
+	if cut:
+		return
 	storyboard.hide()
 	transform_body.frame = 0
 	transform_stage.show()
@@ -254,12 +348,21 @@ func bixby_transforms() -> void:
 	for index in LiamEntranceLayout.TRANSFORM_TIMES.size():
 		play.tween_callback(_transform_frame.bind(index))
 		play.tween_interval(LiamEntranceLayout.TRANSFORM_TIMES[index])
-	await play.finished
+	await _wait(play)
+	if cut:
+		return
 	await _beast_lands()
+	if cut:
+		return
 	await _beast_roars()
+	if cut:
+		return
+	beats_done = true
 
 
 func _transform_frame(index: int) -> void:
+	if cut:
+		return
 	transform_body.frame = index
 	var times := LiamEntranceLayout.TRANSFORM_TIMES
 	match index:
@@ -280,7 +383,7 @@ func _transform_frame(index: int) -> void:
 			bixby_shadow.hide()
 			_shockwave()
 			_shake(LIFT_SHAKE, LiamEntranceLayout.transform_time(7, 8))
-		# 10-14: he swells and grows horns while the arena darkens and the view pushes in on him.
+		# 10-14: he swells and his heads light one at a time while the arena darkens and the view pushes in on him.
 		10:
 			_dim_to(DIM_DEEPEST, LiamEntranceLayout.transform_time(10, 17))
 			_zoom(SWELL_ZOOM, LiamEntranceLayout.transform_time(10, 14))
@@ -322,21 +425,27 @@ func _beast_lands() -> void:
 	downstage.hide()
 	body.appear(downstage.global_position, BixbyBeastArtLayout.HOVER_HEIGHT * BixbyBeastArtLayout.SCALE)
 	body.play_anim(&"land")
+	var touchdown := BixbyBeastArtLayout.time_to_step(&"land", 1)
 	var fall := create_tween()
-	fall.tween_method(_fall.bind(body.height), 0.0, 1.0, BixbyBeastArtLayout.time_to_step(&"land", 1))
-	await fall.finished
+	fall.tween_method(_fall.bind(body.height), 0.0, 1.0, touchdown)
+	await _wait(fall)
+	if cut:
+		return
 	land_sfx_player.play()
 	_shake(LANDING_SHAKE, LANDING_SHAKE_TIME)
-	if not body.anim_done:
-		await body.anim_finished
+	# The rest of the landing pose, on this node's clock rather than on his anim_finished, so a held
+	# skip can run it out with everything else.
+	await _pause(BixbyBeastArtLayout.anim_time(&"land") - touchdown)
 
 
 func _fall(weight: float, from_height: float) -> void:
+	if cut:
+		return
 	body.height = from_height * (1.0 - weight * weight)
 	body.place()
 
 
-# The roar he lands on, held until the sound has decayed.
+# The roar he lands on, held until the sound has decayed and never cut off before the pose is through.
 func _beast_roars() -> void:
 	body.play_anim(&"roar")
 	roar_sfx_player.play()
@@ -346,12 +455,123 @@ func _beast_roars() -> void:
 	for cue in ROAR_SHAKES:
 		shakes.tween_interval(cue[0])
 		shakes.tween_callback(_shake.bind(cue[1], cue[2]))
-	await _pause(ROAR_HOLD)
-	if not body.anim_done:
-		await body.anim_finished
+	await _pause(maxf(ROAR_HOLD, BixbyBeastArtLayout.anim_time(&"roar")))
 
 
+#ENDING IT
+
+# The one way the carry-in ends: its last beat, a skip, or the fight starting over the top of it.
+# Idempotent - it leaves the throne set down with its carriers flopped whichever of those got here.
+func finish_entrance() -> void:
+	if finished or not entered:
+		return
+	finished = true
+	procession.show()
+	marcher.position = Vector2.ZERO
+	march_shadows.hide()
+	set_down_shadows.show()
+	for carrier_name in LiamEntranceLayout.CARRIERS:
+		var carrier: Sprite2D = marcher.get_node(NodePath(carrier_name))
+		var spec: Dictionary = LiamEntranceLayout.CARRIERS[carrier_name]
+		carrier.texture = CARRIERS_TEXTURE
+		carrier.frame = spec.frame
+		carrier.position = spec.flop
+		carrier.rotation = deg_to_rad(spec.turn)
+	_lay_out_flopped()
+	if is_instance_valid(entrance):
+		entrance.release_player()
+	BossEntrance.mark_seen(FIGHT_SCENE)
+
+
+# Where the lines leave the ring once the roar has died away: the throne gone, Liam swallowed, the
+# storyboard and the transformation's stage struck, the arena lit, and the beast standing where Bixby
+# stood, on the roar's last frame.
+func _finish_beats() -> void:
+	if beats_done:
+		return
+	beats_done = true
+	if aura_loop != null:
+		aura_loop.kill()
+	if dim_fade != null:
+		dim_fade.kill()
+	procession.modulate.a = 0.0
+	procession.hide()
+	seated_liam.hide()
+	throne_bixby.hide()
+	downstage.hide()
+	hop_liam.hide()
+	hop_bixby.hide()
+	storyboard.hide()
+	bixby_shadow.hide()
+	liam_shadow.hide()
+	transform_stage.hide()
+	transform_aura.hide()
+	transform_shockwave.hide()
+	dim.color.a = 0.0
+	flash.color.a = 0.0
+	body.swallow_liam()
+	# Hovering first and then on the floor, the way he lands: where he appears is clamped for the height
+	# he appears at.
+	body.appear(downstage.global_position, BixbyBeastArtLayout.HOVER_HEIGHT * BixbyBeastArtLayout.SCALE)
+	body.height = 0.0
+	body.place()
+	body.play_anim(&"roar", &"", BixbyBeastArtLayout.ANIMS[&"roar"].frames.size() - 1)
+
+
+# The carry-in cut on the spot and the lines started: where a second go at the fight starts on its
+# own. Public, so the defence suite can cut the entrance this way - its modes are about the fight,
+# and read the lines or throw them away themselves.
+func skip() -> void:
+	if finished or cut:
+		return
+	_cut_carry_in()
+	BossEntrance.settle_arena(get_tree())
+	_start_dialogue()
+
+
+# What a held ui_cancel does: the carry-in, whatever is left of the lines and their beats, and the
+# card's build-up, all at once, landing on the card's flash with the ring where the roar leaves it.
+func skip_to_fight() -> void:
+	if not entered or cut:
+		return
+	cut = true
+	BossEntrance.close_balloon(state_machine.pre_fight_balloon)
+	_cut_carry_in()
+	_finish_beats()
+	state_machine.end_pre_fight_dialogue()
+	BossEntrance.settle_arena(get_tree())
+	BossEntrance.card_to_flash(get_tree())
+
+
+func _on_skipped() -> void:
+	skip_to_fight()
+
+
+# The lines have handed over to the VS card, and the skip goes with them.
+func lines_over() -> void:
+	if is_instance_valid(entrance):
+		entrance.end()
+
+
+func _cut_carry_in() -> void:
+	finish_entrance()
+	BossEntrance.run_out(waits)
+
+
+func _start_dialogue() -> void:
+	if dialogue_started or cut:
+		return
+	dialogue_started = true
+	state_machine.show_pre_fight_dialogue(self)
+
+
+#PIECES
+
+# Also what the roar's own shakes, queued ahead of time, come back through: a skip in the middle of it
+# must not shake the fight.
 func _shake(strength: float, seconds: float) -> void:
+	if cut:
+		return
 	body.shake_screen(strength, maxi(roundi(seconds / SHAKE_STEP_TIME), 1), SHAKE_STEP_TIME)
 
 
@@ -361,7 +581,8 @@ func _zoom(to_zoom: float, seconds: float) -> void:
 
 
 func _dim_to(alpha: float, seconds: float) -> void:
-	dim.create_tween().tween_property(dim, "color:a", alpha, seconds)
+	dim_fade = dim.create_tween()
+	dim_fade.tween_property(dim, "color:a", alpha, seconds)
 
 
 func _flash() -> void:
@@ -428,4 +649,10 @@ func _hit_shake() -> void:
 func _pause(seconds: float) -> void:
 	var tween := create_tween()
 	tween.tween_interval(seconds)
+	await _wait(tween)
+
+
+func _wait(tween: Tween) -> void:
+	waits.append(tween)
 	await tween.finished
+	waits.erase(tween)

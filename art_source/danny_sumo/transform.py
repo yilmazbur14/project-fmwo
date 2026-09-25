@@ -21,7 +21,7 @@ from pngio import write_png, upscale, read_png       # noqa: E402
 from gifio import write_gif                          # noqa: E402
 from rig import to_pix                                # noqa: E402
 import danny_small as SM                              # noqa: E402
-import danny_honda as SU                               # noqa: E402
+import evolved as EV   # the evolved form, redesigned 2026-09-23 (was danny_honda)  # noqa: E402
 
 BW, BH = 176, 144            # the shared transformation frame
 SMALL_OX, SMALL_OY = 56, 80  # where the 64x64 small form sits inside it
@@ -49,7 +49,7 @@ def small_in_big(key, dx=0, dy=0):
 
 
 def sumo_in_big(pose, dx=0, dy=0):
-    return big_frame(to_pix(SU.build(pose)), dx, dy)
+    return big_frame(EV.pix(pose), dx, dy)
 
 
 def silhouette(frame, colour=WHITE):

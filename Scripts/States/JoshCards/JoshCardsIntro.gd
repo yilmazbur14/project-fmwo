@@ -2,9 +2,14 @@ extends State
 
 # Josh's entrance, built entirely from the placeholder kit: a card spins down and plants itself in the
 # floor, a fan bursts out of it and snaps upward in a flash, and he is standing there when the light
-# clears. Every wait is a node-bound tween, so a freeze holds it.
+# clears. Every wait is a node-bound tween, so a freeze holds it. A cut-short entrance never kills one
+# something is waiting on: `finished` makes every step bail instead, and a held skip runs the waits
+# out on the spot rather than letting them run their time (BossEntrance.run_out).
 
+const BossEntrance := preload("res://Scripts/BossEntrance.gd")
 const JoshArtLayout := preload("res://Scripts/JoshArtLayout.gd")
+# This fight's place in the order, for the entrance's once-per-run flag.
+const FIGHT_SCENE := "res://Scenes/Bosses/JoshBossFightScene.tscn"
 
 @export var body : CharacterBody2D
 @export var stage : Node2D
@@ -46,9 +51,26 @@ const FLICK_FLASH := 0.5
 const BEAT_AFTER_FLICK := 0.55
 
 var fan: Array[Node2D] = []
+# Runs from the moment he appears to the start of the frame his entrance pose flicks the card on.
+var flick_cue: Tween
+# The drawn card burst, and the card he flicks at the camera, while each is up.
+var burst: Sprite2D
+var flicked: Node2D
+# The skip and its hint, up through the entrance and the lines.
+var entrance: CanvasLayer
+# Enter() is deferred, so anything that can reach in from outside checks this first.
+var entered := false
+# The entrance is over, one way or another. finish_entrance() is the only thing that sets it.
+var finished := false
+var dialogue_started := false
+# A held skip took everything up to the VS card, and the lines are gone.
+var cut := false
+# The tweens the entrance is waiting on, for the skip to run out.
+var waits: Array[Tween] = []
 
 
 func Enter() -> void:
+	entered = true
 	body.height = 0.0
 	body.ground_position = body.global_position
 	body.place()
@@ -57,7 +79,27 @@ func Enter() -> void:
 	body.air.hide()
 	body.shadow.hide()
 	flash.color.a = 0.0
+	# On the retry path too: the entrance is skipped there, but the lines still play and the hold
+	# still skips them.
+	entrance = BossEntrance.new()
+	entrance.name = "BossEntrance"
+	add_child(entrance)
+	entrance.skipped.connect(_on_skipped)
+	entrance.begin()
+	if BossEntrance.already_seen(FIGHT_SCENE):
+		finish_entrance()
+		_start_dialogue()
+		return
 	_play()
+
+
+# The fight starts here, and a harness that starts it over the top of the entrance leaves through
+# here too, so this is also what guarantees he is standing ready however the entrance ended.
+func Exit() -> void:
+	_cut_entrance()
+	if is_instance_valid(entrance):
+		entrance.queue_free()
+	entrance = null
 
 
 func _play() -> void:
@@ -66,17 +108,30 @@ func _play() -> void:
 		await _card_burst()
 	else:
 		await _plant_card()
+		if finished:
+			return
 		await _fan_out()
+		if finished:
+			return
 		await _he_is_there()
+	if finished:
+		return
+	if flick_cue.is_running():
+		await _wait(flick_cue)
+	if finished:
+		return
 	await _flick_at_camera()
-	state_machine.show_pre_fight_dialogue()
+	if finished:
+		return
+	finish_entrance()
+	_start_dialogue()
 
 
 # A card plants itself in the canvas, the deck fans out along the floor and snaps upward, and he is
 # standing there as it clears.
 func _card_burst() -> void:
 	var spec := JoshArtLayout.FINAL_CARD_BURST
-	var burst := Sprite2D.new()
+	burst = Sprite2D.new()
 	burst.texture = load(spec.texture)
 	burst.hframes = spec.hframes
 	burst.scale = Vector2.ONE * spec.scale
@@ -91,8 +146,10 @@ func _card_burst() -> void:
 		if i == spec.appear_frame:
 			_appear()
 		await _pause(times[i])
+		if finished:
+			return
 	burst.queue_free()
-	await _pause(BEAT_AFTER_RAIN)
+	burst = null
 
 
 # A single gold card spins down out of the dark and buries itself upright in the canvas.
@@ -100,21 +157,23 @@ func _plant_card() -> void:
 	var card := _card(PLANT_SIZE, true)
 	card.position = Vector2(0, -PLANT_RISE)
 	stage.add_child(card)
+	fan.append(card)
 	var drop := create_tween()
 	drop.tween_method(func(weight: float) -> void:
 		card.position = Vector2(0, lerpf(-PLANT_RISE, 0.0, weight * weight)).round()
 		card.rotation = TAU * PLANT_SPINS * (1.0 - weight) * (1.0 - weight)
 	, 0.0, 1.0, PLANT_TIME)
-	await drop.finished
+	await _wait(drop)
+	if finished:
+		return
 	card.rotation = 0.0
 	card_sfx_player.play()
 	body.shake_screen(PLANT_SHAKE, PLANT_SHAKE_STEPS, PLANT_SHAKE_STEP_TIME)
-	fan.append(card)
 
 
 # The deck bursts out of it in a ring, then snaps up in a column of white.
 func _fan_out() -> void:
-	var burst := create_tween().set_parallel()
+	var spread := create_tween().set_parallel()
 	var count: int = JoshArtLayout.PLACEHOLDER_CARD_BURST.cards
 	for i in count:
 		var card := _card(JoshArtLayout.PLACEHOLDER_CARD_BURST.size, false)
@@ -123,17 +182,21 @@ func _fan_out() -> void:
 		fan.append(card)
 		var angle := TAU * i / count
 		var out := Vector2(cos(angle), sin(angle) * 0.45) * FAN_RADIUS
-		burst.tween_method(func(weight: float) -> void:
+		spread.tween_method(func(weight: float) -> void:
 			card.position = (Vector2(0, -PLANT_SIZE.y / 2.0) + out * weight).round()
 			card.rotation = angle + TAU * weight
 		, 0.0, 1.0, FAN_TIME)
-	await burst.finished
+	await _wait(spread)
+	if finished:
+		return
 
 	var snap := create_tween().set_parallel()
 	for card in fan:
 		snap.tween_property(card, "position", card.position - Vector2(0, SNAP_RISE), SNAP_TIME)
 	snap.tween_property(flash, "color:a", 1.0, SNAP_TIME * 0.5)
-	await snap.finished
+	await _wait(snap)
+	if finished:
+		return
 	_clear_fan()
 
 
@@ -141,7 +204,10 @@ func _fan_out() -> void:
 func _appear() -> void:
 	body.air.show()
 	body.shadow.show()
+	body.face_player()
 	body.play_anim(&"intro")
+	flick_cue = create_tween()
+	flick_cue.tween_interval(_flick_time())
 	get_tree().call_group("arena_crowd", "cheer", APPEAR_CHEER)
 	var fade := flash.create_tween()
 	fade.tween_property(flash, "color:a", 0.0, FLASH_OUT_TIME)
@@ -165,30 +231,122 @@ func _he_is_there() -> void:
 			card.position = from.lerp(rest, weight * weight).round()
 			card.rotation = turn * (1.0 - weight * 0.6)
 		, 0.0, 1.0, RAIN_TIME).set_delay(i * 0.05)
-	await rain.finished
+	await _wait(rain)
+	if finished:
+		return
 	land_sfx_player.play()
 	await _pause(BEAT_AFTER_RAIN)
 
 
-# One last card flicked straight at the camera, on the entrance's own flick frames.
+# One last card flicked straight at the camera, on the entrance's own flick frame and out the side he
+# faces.
 func _flick_at_camera() -> void:
 	card_sfx_player.play()
 	var card := _card(JoshArtLayout.PLACEHOLDER_THROWN_CARD.size, false)
 	card.position = Vector2(0, -180)
 	stage.add_child(card)
+	flicked = card
+	var side := -1.0 if body.sprite.flip_h else 1.0
 	var fly := create_tween()
 	fly.tween_method(func(weight: float) -> void:
-		card.position = Vector2(lerpf(0.0, FLICK_TRAVEL, weight), -180.0 + 120.0 * weight).round()
-		card.rotation = TAU * 4.0 * weight
+		card.position = Vector2(lerpf(0.0, FLICK_TRAVEL * side, weight), -180.0 + 120.0 * weight).round()
+		card.rotation = TAU * 4.0 * weight * side
 		card.scale = Vector2.ONE * lerpf(1.0, FLICK_GROW, weight)
 	, 0.0, 1.0, FLICK_TIME)
 	fly.parallel().tween_property(flash, "color:a", FLICK_FLASH, FLICK_TIME)
-	await fly.finished
+	await _wait(fly)
+	if finished:
+		return
 	card.queue_free()
+	flicked = null
 	var fade := flash.create_tween()
 	fade.tween_property(flash, "color:a", 0.0, FLASH_OUT_TIME)
 	await _pause(BEAT_AFTER_FLICK)
+	if finished:
+		return
 	body.play_anim(&"idle")
+
+
+#ENDING IT
+
+# The one way the entrance ends: its last beat, a skip, or the fight starting over the top of it.
+# Idempotent - it leaves him exactly as the fight expects him whichever of those got here.
+func finish_entrance() -> void:
+	if finished or not entered:
+		return
+	finished = true
+	body.air.show()
+	body.shadow.show()
+	body.face_player()
+	if body.current_anim != &"idle":
+		body.play_anim(&"idle")
+	flash.color.a = 0.0
+	if is_instance_valid(entrance):
+		entrance.release_player()
+	BossEntrance.mark_seen(FIGHT_SCENE)
+
+
+# The entrance cut on the spot and the lines started: where a second go at the fight starts on its
+# own. Public, so the defence suite can cut the entrance this way - its modes are about the fight,
+# and read the lines or throw them away themselves.
+func skip() -> void:
+	if finished or cut:
+		return
+	_cut_entrance()
+	BossEntrance.settle_arena(get_tree())
+	_start_dialogue()
+
+
+# What a held ui_cancel does: the entrance, whatever is left of the lines and the card's build-up,
+# all at once, landing on the card's flash. His lines call no beats, so the entrance's end is all
+# there is to leave.
+func skip_to_fight() -> void:
+	if not entered or cut:
+		return
+	cut = true
+	BossEntrance.close_balloon(state_machine.pre_fight_balloon)
+	_cut_entrance()
+	state_machine.end_pre_fight_dialogue()
+	BossEntrance.settle_arena(get_tree())
+	BossEntrance.card_to_flash(get_tree())
+
+
+func _on_skipped() -> void:
+	skip_to_fight()
+
+
+# The lines have handed over to the VS card, and the skip goes with them.
+func lines_over() -> void:
+	if is_instance_valid(entrance):
+		entrance.end()
+
+
+# The entrance's end, with its waits run out and none of its cards left up. The flash is cleared
+# after the run-out, which drives it wherever the cut-short step was taking it.
+func _cut_entrance() -> void:
+	finish_entrance()
+	BossEntrance.run_out(waits)
+	if is_instance_valid(burst):
+		burst.queue_free()
+	burst = null
+	if is_instance_valid(flicked):
+		flicked.queue_free()
+	flicked = null
+	_clear_fan()
+	flash.color.a = 0.0
+
+
+func _start_dialogue() -> void:
+	if dialogue_started or cut:
+		return
+	dialogue_started = true
+	state_machine.show_pre_fight_dialogue()
+
+
+# The placeholder entrance is one frame, so the flick comes on whatever step it has.
+func _flick_time() -> float:
+	var frames: Array = JoshArtLayout.anim(&"intro").frames
+	return JoshArtLayout.time_to_step(&"intro", mini(JoshArtLayout.INTRO_FLICK_STEP, frames.size() - 1))
 
 
 func _card(size: Vector2, upright: bool) -> Node2D:
@@ -229,11 +387,18 @@ func _drawn_card(size: Vector2) -> Node2D:
 
 func _clear_fan() -> void:
 	for card in fan:
-		card.queue_free()
+		if is_instance_valid(card):
+			card.queue_free()
 	fan.clear()
 
 
 func _pause(seconds: float) -> void:
 	var tween := create_tween()
 	tween.tween_interval(seconds)
+	await _wait(tween)
+
+
+func _wait(tween: Tween) -> void:
+	waits.append(tween)
 	await tween.finished
+	waits.erase(tween)

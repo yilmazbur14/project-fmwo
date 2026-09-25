@@ -102,9 +102,12 @@ func play(boss_key: String) -> void:
 	visible = true
 	set_physics_process(true)
 	set_process_input(true)
-	# Deferred: the player clears is_talking on the same dialogue_ended this is played from, and the
-	# two handlers run in tree order. By the end of the frame the hold is the card's either way, and
-	# the next frame's input hasn't been read yet.
+	# Taken now, inside the same dialogue_ended the lines let the player go on. PlayerScript's handler
+	# is connected in its _ready, ahead of any fight's one-shot, so it has already run - and a hold left
+	# to the end of the frame gives the physics step in between a free player, who walks for a frame
+	# if a direction is held as the last line is read. Taken again once the frame's handlers are all
+	# done, in case one connected after this ever lets them go.
+	_hold_player(true)
 	_hold_player.call_deferred(true)
 
 

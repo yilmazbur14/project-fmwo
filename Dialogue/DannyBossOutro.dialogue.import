@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://dfjvrio10hirg"
+path="res://.godot/imported/DannyBossOutro.dialogue-50e09c3e1da48a7a3c60a721a2c3a875.tres"
+
+[deps]
+
+source_file="res://Dialogue/DannyBossOutro.dialogue"
+dest_files=["res://.godot/imported/DannyBossOutro.dialogue-50e09c3e1da48a7a3c60a721a2c3a875.tres"]
+
+[params]
+
+defaults=true

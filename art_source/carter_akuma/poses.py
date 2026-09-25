@@ -178,9 +178,9 @@ def sigil_v1():
 
 
 def sigil():
-    """ORIGINAL mark brushed on the back of the gi - the dark power he has
-    given himself over to.  Bold, symmetrical about the spine, thick enough to
-    survive the 3x blit and the flare.  Defined in intro_sigil.py."""
+    """The mark brushed on the back of the gi: Akuma's 天, "heaven", since
+    2026-09-23 (it was an original trident before that).  Defined in
+    intro_sigil.py, which owns the shape and its paint at rest."""
     import intro_sigil
     return intro_sigil.sigil()
 
@@ -237,10 +237,10 @@ def draw_back_body(cv):
     gi_fade(cv, jk, 64.0, 76.0)
     seg(cv, [(24, 46), (30, 42), (39, 40)], 'a')
     seg(cv, [(30, 48), (29, 56), (29, 64), (30, 71)], 'b')
-    # the mark, brushed across the back
+    # the mark, brushed across the back: flat paint, not a bevelled badge
+    import intro_sigil
     sg = inter(sigil(), jk)
-    cv.part(sg, 'ember', ('dist', 3.2), TH_HARD2, bias=1)
-    cv.outline(sg, PALC['9'])
+    intro_sigil.paint_rest(cv, sg)
 
     blt = P.belt()
     cv.part(blt, 'belt', cylm((20.0, 65.6), (76.0, 65.6), 3.8), TH_HARD2, bias=0)

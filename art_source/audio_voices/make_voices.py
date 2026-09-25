@@ -341,16 +341,12 @@ def voice_mason():
 
 
 def voice_greyson():
-    """The pilot and gamer: a short, slightly nasal pulse at ~470 Hz with a boosted 1.4 kHz "nose" resonance."""
-    variants = []
-    for f0, shape in ((470, [(0, 0.98), (10, 1.01), (38, 0.985)]),
-                      (488, [(0, 1.0), (38, 0.97)]),
-                      (455, [(0, 0.99), (20, 1.015), (38, 1.0)])):
-        n = samples(38)
-        buzz = oscillator([f0 * m for m in contour(n, shape)], pulse(0.22, 24))
-        nasal = mix((0.5, buzz), (1.0, bandpass(buzz, 1400, 2.0)))
-        variants.append(mul(lowpass(nasal, 4200), envelope(n, 3, 10, decay_ms=40)))
-    return variants
+    """The gym bro, loud and hyped (approved 2026-09-24): a chesty ~205 Hz bark jumping up into a "yeah", a "bro" or a
+    "huh!". Built by art_source/audio_greyson/make_greyson_sfx.py, which ships it with his fight's sounds; taken from
+    there so the two can never drift apart."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "audio_greyson"))
+    import make_greyson_sfx
+    return make_greyson_sfx.gym_bro_raw()
 
 
 def voice_danny():
@@ -373,6 +369,36 @@ def voice_bixby():
         tone = mul(lowpass(oscillator(freqs, [(1, 1.0), (2, 0.35), (3, 0.12)]), 2500), envelope(n, 4, 16, decay_ms=38))
         burst = mul(bandpass(noise(n, rng), 1600, 1.1), envelope(n, 1.5, 40, decay_ms=6))
         variants.append(mix((1.0, tone), (0.6, burst)))
+    return variants
+
+
+def voice_matt():
+    """Loud and friendly: a brassy "bwah" at ~245 Hz. A 0.3-duty pulse through an "ah" formant around 850 Hz, with a
+    presence bump at 2.4 kHz so it cuts through, a fast 3 ms attack and some saturation for the bark in it. It lifts a
+    touch and then falls away, like the start of a big laugh."""
+    variants = []
+    for f0 in (232, 245, 252):
+        n = samples(60)
+        freqs = [f0 * m for m in contour(n, [(0, 1.0), (18, 1.03), (60, 0.96)])]
+        buzz = oscillator(freqs, pulse(0.3, 40))
+        tone = mix((0.5, buzz), (1.0, bandpass(buzz, 850, 1.4)), (0.4, bandpass(buzz, 2400, 2.2)))
+        tone = saturate(normalized(tone), 1.6)
+        variants.append(mul(lowpass(tone, 6500), envelope(n, 3, 18, decay_ms=75)))
+    return variants
+
+
+def voice_captain():
+    """Captain Burak, cocky and swaggering: a "hah" at ~170 Hz. A 0.35-duty pulse through an "a" formant around 750
+    Hz, scooping up from a shade flat to a shade sharp over its first 50 ms like a grin in the voice, with a little
+    saturation for the swagger. The table's melody tips every other blip up a step."""
+    variants = []
+    for f0 in (164, 170, 178):
+        n = samples(58)
+        freqs = [f0 * m for m in contour(n, [(0, 0.97), (50, 1.04), (58, 1.04)])]
+        buzz = oscillator(freqs, pulse(0.35, 40))
+        tone = mix((0.5, buzz), (1.0, bandpass(buzz, 750, 1.4)))
+        tone = saturate(normalized(tone), 1.3)
+        variants.append(mul(lowpass(tone, 6000), envelope(n, 3, 16, decay_ms=70)))
     return variants
 
 
@@ -399,6 +425,8 @@ VOICES = {
     "greyson": voice_greyson,
     "danny": voice_danny,
     "bixby": voice_bixby,
+    "matt": voice_matt,
+    "captain": voice_captain,
     "neutral": voice_neutral,
 }
 
@@ -417,6 +445,8 @@ PREVIEW_LINES = [
     ("greyson", "Greyson", "Get UP, Computah! I skipped the gym for this! Look at his face, Computah!"),
     ("danny", "Danny", "I'm only gonna explain this once, I need to get back to my Tarky raid."),
     ("bixby", "Bixby", "Grrrrrrr... *GULP*"),
+    ("matt", "Matt", "Well anyways, I'm Matt, calm cool and collected, you ever play RuneScape? I love RuneScape!"),
+    ("captain", "Captain Burak", "Ahoy, newcomer! Welcome aboard the server."),
     ("nathan", "Nathan", "Hi, this is some dialogue. For more information see the online documentation."),
 ]
 PREVIEW_GAP_MS = 600
@@ -436,7 +466,8 @@ def read_table():
     gap = int(re.search(r"const MIN_BLIP_GAP_MS := (\d+)", text).group(1))
     neutral = re.search(r'const NEUTRAL_VOICE := "(\w+)"', text).group(1)
     voices = {}
-    for name, body in re.findall(r'^\t"(\w+)": \{\n(.*?)^\t\},?$', text, re.M | re.S):
+    # A key may be two words, like "captain burak".
+    for name, body in re.findall(r'^\t"([\w ]+)": \{\n(.*?)^\t\},?$', text, re.M | re.S):
         def number(key):
             return float(re.search(r'"%s": (-?[\d.]+)' % key, body).group(1))
         voices[name] = {

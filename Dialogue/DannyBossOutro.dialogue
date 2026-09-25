@@ -1,0 +1,13 @@
+# The lines for the end of the Danny fight, approved by the user, said before the fade to the Victory or Defeat
+# screen. player_won: the player pushed him out of the ring. player_lost: he beat the player, in the fight or the
+# sumo.
+
+~ player_won
+Danny: ...ow. okay. #helper's yours.
+Danny: wake me up when it's raid time.
+=> END
+
+~ player_lost
+Danny: out of the ring, dum dum. that's sumo.
+Danny: ...five more minutes.
+=> END

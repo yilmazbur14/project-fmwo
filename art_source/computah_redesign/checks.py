@@ -41,11 +41,15 @@ def main(fw=96):
         ks = [100.0 * c[KEYLINE] / sum(c.values()) for c in rows]
         ns = [len(c) for c in rows]
         black = sum(c.get((0, 0, 0), 0) for c in rows)
+        name = os.path.basename(path)
         print("%-30s %d frames  keyline %4.1f-%4.1f%%  colours %2d-%2d  pure black %d"
-              % (os.path.basename(path), len(rows), min(ks), max(ks),
-                 min(ns), max(ns), black))
-        if black or max(ns) > 32 or not (18.0 <= min(ks) <= 26.0):
-            worst.append(os.path.basename(path))
+              % (name, len(rows), min(ks), max(ks), min(ns), max(ns), black))
+        # computah_armless is the one body sheet with its arm missing: deleting the
+        # cannon from his defeat frame alone lifts the keyline share to ~26.2%, so it
+        # is held to that geometric floor in armless() instead of this band.
+        band_ok = name == "computah_armless.png" or 18.0 <= min(ks) <= 26.0
+        if black or max(ns) > 32 or not band_ok:
+            worst.append(name)
     if worst:
         print("OUT OF BAND: " + ", ".join(worst))
     return 1 if worst else 0
@@ -184,6 +188,42 @@ def dormant_handover(fw=96):
     return bad
 
 
+def armless():
+    """The armless set (armless.py): every proof and lint armless_build.py gates its
+    ship on, re-run here without writing anything, plus the one thing only a check
+    after shipping can see - that the live copies in Assets are the working copies."""
+    import armless_build as AB
+    from imgdiff import pixel_diff
+    bad = 0
+    for label, (ok, msg) in (
+            ("body is defeat's last frame, minus the arm",
+             (AB.prove_body() is None, AB.prove_body() or "pixel for pixel")),
+            ("that frame is the shipped one",
+             (AB.prove_source() is None, AB.prove_source() or "pixel for pixel")),
+            ("haul -> prop hand-over", AB.prove_handoff()),
+            ("prop is the cannon Greyson wears", AB.prove_worn()),
+            ("grip held for Greyson's tear sheet", AB.prove_grip())):
+        print("  %-44s %s  %s" % (label, "ok  " if ok else "FAIL", msg))
+        bad += not ok
+    images = {name: AB.A.render(name) for name in AB.A.SHEETS}
+    fatal = AB.lint(images)
+    for f in fatal:
+        print("  LINT: " + f)
+    bad += len(fatal)
+    for name, im in images.items():
+        for where, folder in (("working", HERE), ("live", AB.ASSETS)):
+            path = os.path.join(folder, name + ".png")
+            if not os.path.exists(path):
+                print("  %-18s %s copy MISSING" % (name, where))
+                bad += 1
+                continue
+            d = pixel_diff(Image.open(path), im)
+            print("  %-18s %-7s copy %s" % (name, where,
+                                            d or "is what the rig builds"))
+            bad += d is not None
+    return 1 if bad else 0
+
+
 if __name__ == "__main__":
     fw = int(sys.argv[1]) if len(sys.argv) > 1 else 96
     code = main(fw)
@@ -195,4 +235,6 @@ if __name__ == "__main__":
     code |= fall_band(fw)
     print()
     code |= dormant_handover(fw)
+    print()
+    code |= armless()
     sys.exit(code)

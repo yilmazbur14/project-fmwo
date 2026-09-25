@@ -1,6 +1,6 @@
 extends State
 
-@export var animation_player : AnimationPlayer
+@export var body : CharacterBody2D
 
 @onready var state_machine = get_parent()
 
@@ -8,7 +8,10 @@ var rested := 0.0
 
 
 func Enter() -> void:
-	animation_player.play("idle")
+	# Out of his intro he is idling already, and restarting the loop would jump him a frame as the
+	# fight starts.
+	if body.current_anim != &"idle":
+		body.play_state_anim(&"idle")
 	rested = 0.0
 
 

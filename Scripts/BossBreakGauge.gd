@@ -6,17 +6,27 @@ extends Node
 # finisher needs. It never decays. After a Break it empties and takes nothing until unlock_delay after
 # the finisher that followed has ended, or after he got up again if none came.
 # It listens only to signals the player already has, and counts only the attacks its fight owns: the
-# fight sets owns_attack and strong_parry_ids before the gauge is added. Eric's (EricScript,
-# EricPacing V2) is the fight on it today, and the gains below are still the ones he was tuned on, so a
-# second fight taking one wants its own.
+# fight sets owns_attack (and earns_from, where fewer of his attacks fill it than drain it),
+# strong_parry_ids and its own numbers before the gauge is added. Every fight with a Break has one. The
+# defaults below are the ones Eric (EricScript, EricPacing V2) was tuned on; the others set theirs from
+# a BREAK table on their body, most of them on one rule: N clean reads from empty is a Break.
 
 signal changed(value: float, max_value: float)
 signal broke
 signal locked_changed(locked: bool)
 
+# "N reads" makes a read max_value / N, and N of those can sum to a hair under max_value in floating
+# point: twelve twelfths make 99.99999999999999. This is the gauge's one tolerance for that, so a fight
+# gives max_value / N as it is and never rounds its gains to make the fraction land.
+const BREAK_EPSILON := 1e-4
+
 # Which attack ids are this boss's, answered by the fight itself: a prefix test where his ids are
-# regular, a list where they aren't.
+# regular, a list where they aren't. Hits and guard breaks from these drain the gauge.
 var owns_attack: Callable
+# Which parries and perfect dodges fill it: func(hit: RefCounted) -> bool, handed the whole HitInfo so a
+# fight can pay once per bolt or per breath. Unset, owns_attack on the hit's id. Nothing is deduplicated
+# here: which hits are the same read is the fight's call.
+var earns_from: Callable
 # The parries that stagger him on the spot, worth grab_parry_gain instead of parry_gain.
 var strong_parry_ids: Array[StringName] = []
 
@@ -34,7 +44,7 @@ var strong_parry_ids: Array[StringName] = []
 # Game seconds.
 @export var unlock_delay := 3.0
 
-# Both set by EricScript before the gauge is added.
+# Both set by the fight before the gauge is added.
 var boss: Node
 var player: Node
 
@@ -74,7 +84,7 @@ func add(amount: float) -> bool:
 	value = clampf(value + amount, 0.0, max_value)
 	if value == before:
 		return false
-	if value >= max_value:
+	if value >= max_value - BREAK_EPSILON:
 		_break()
 		return true
 	changed.emit(value, max_value)
@@ -94,13 +104,19 @@ func _is_own(hit: RefCounted) -> bool:
 	return owns_attack.call(hit.attack_id)
 
 
+func _earns(hit: RefCounted) -> bool:
+	if earns_from.is_null():
+		return _is_own(hit)
+	return earns_from.call(hit)
+
+
 func _on_parried(hit: RefCounted, _contact_point: Vector2, _staggered: bool, _streak: int) -> void:
-	if _is_own(hit):
+	if _earns(hit):
 		add(grab_parry_gain if hit.attack_id in strong_parry_ids else parry_gain)
 
 
 func _on_perfect_dodged(hit: RefCounted) -> void:
-	if _is_own(hit):
+	if _earns(hit):
 		add(perfect_dodge_gain)
 
 

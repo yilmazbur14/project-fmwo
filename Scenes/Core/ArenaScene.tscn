@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://4pqund3nukl7"]
 
-[ext_resource type="Texture2D" path="res://Assets/Environment/crowd_v2.png" id="1_wtggk"]
+[ext_resource type="Texture2D" path="res://Assets/Environment/crowd_v3.png" id="1_wtggk"]
 [ext_resource type="Script" path="res://Scripts/ArenaCrowdScript.gd" id="5_crowd"]
 [ext_resource type="PackedScene" uid="uid://c7l5sbpwdkp6y" path="res://Scenes/Player/MainPlayer.tscn" id="2_fovy7"]
 [ext_resource type="Texture2D" uid="uid://dkdgje27jlnib" path="res://Assets/Environment/boundaries.png" id="3_fnbqh"]
@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://cqp8hs3ye2v0n" path="res://Scenes/Core/PauseMenuScene.tscn" id="8_pause"]
 [ext_resource type="PackedScene" path="res://Scenes/Core/VsCardScene.tscn" id="9_vscard"]
 [ext_resource type="Script" path="res://Scripts/ArenaGate.gd" id="10_gates"]
+[ext_resource type="Texture2D" path="res://Assets/Environment/arena_ringside_crowd.png" id="11_ringside_crowd"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_y32ns"]
 size = Vector2(1720, 10)
@@ -22,6 +23,12 @@ size = Vector2(10, 880)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_epypp"]
 size = Vector2(1720, 10)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_backing_h"]
+size = Vector2(2130, 210)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_backing_v"]
+size = Vector2(210, 1290)
 
 [node name="Arena" type="Node2D" unique_id=991001701]
 
@@ -36,11 +43,19 @@ scale = Vector2(3, 3)
 texture = ExtResource("6_ringside")
 centered = false
 
+[node name="RingsideCrowd" type="Sprite2D" parent="."]
+editor_description = "The ringside crowd over the ringside surround: 640x360 at 3x from the screen origin, 7 frames that ArenaCrowdScript runs with the crowd band (0-2 calm, 3-4 cheering, 5-6 booing)."
+scale = Vector2(3, 3)
+texture = ExtResource("11_ringside_crowd")
+centered = false
+hframes = 7
+script = ExtResource("5_crowd")
+
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1288694375]
 position = Vector2(960, 60)
 scale = Vector2(3, 3)
 texture = ExtResource("1_wtggk")
-hframes = 5
+hframes = 7
 script = ExtResource("5_crowd")
 
 [node name="Mat" type="Sprite2D" parent="."]
@@ -142,6 +157,26 @@ scale = Vector2(1.5859377, 1.1875007)
 texture = ExtResource("4_2uq8x")
 flip_h = true
 flip_v = true
+
+[node name="topWallBacking" type="CollisionShape2D" parent="wallBoundaries"]
+editor_description = "Solid wall behind the thin top wall: flush with its inner face (y 105) and 200 px past its outer one, and across the corners, so a body pushed at the rope can't be squeezed out through it or step past it. Nothing draws it."
+position = Vector2(960, 0)
+shape = SubResource("RectangleShape2D_backing_h")
+
+[node name="bottomWallBacking" type="CollisionShape2D" parent="wallBoundaries"]
+editor_description = "Solid wall behind the thin bottom wall: flush with its inner face (y 975) and 200 px past its outer one, and across the corners. The gates' doorway is only drawn, so this runs under it too: entrances and the sumo move fighters through it on written positions."
+position = Vector2(960, 1080)
+shape = SubResource("RectangleShape2D_backing_h")
+
+[node name="leftWallBacking" type="CollisionShape2D" parent="wallBoundaries"]
+editor_description = "Solid wall behind the thin left wall: flush with its inner face (x 105) and 200 px past its outer one, and across the corners."
+position = Vector2(0, 540)
+shape = SubResource("RectangleShape2D_backing_v")
+
+[node name="rightWallBacking" type="CollisionShape2D" parent="wallBoundaries"]
+editor_description = "Solid wall behind the thin right wall: flush with its inner face (x 1815) and 200 px past its outer one, and across the corners."
+position = Vector2(1920, 540)
+shape = SubResource("RectangleShape2D_backing_v")
 
 [node name="Gates" type="Node2D" parent="."]
 editor_description = "The rope gates a boss entrance opens and slams. Hidden until one does, so every other fight draws what it always did. z 2 puts them over the ropes, which the fights draw at z 1."

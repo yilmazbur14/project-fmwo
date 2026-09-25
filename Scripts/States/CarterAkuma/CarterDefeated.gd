@@ -5,6 +5,10 @@ extends State
 
 @export var body : CharacterBody2D
 
+# A juggle killed him: he has landed from it and lies on its `down` loop (BossJuggled), so his defeat
+# isn't played over the top. Set by CarterStateMachine.land_juggled.
+var lying := false
+
 
 func Enter() -> void:
 	body.velocity = Vector2.ZERO
@@ -13,4 +17,5 @@ func Enter() -> void:
 	body.show_body(true)
 	body.show_mark_glow(false)
 	body.show_aura(false)
-	body.play_anim(&"defeat")
+	if not lying:
+		body.play_anim(&"defeat")

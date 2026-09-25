@@ -12,17 +12,22 @@ signal beat_window_changed(open: bool)
 signal charged_hit_landed(target: Node)
 # Any punch that dealt damage.
 signal punch_landed(target: Node, dealt: int, charged: bool)
+# A punch that reached a boss and dealt nothing: he isn't open, or this opening's allowance is spent
+# (PunchAllowance). PlayerCombatFx answers it with a dull deflect, so it is never silent.
+signal punch_refused(target: Node)
 
 const HitStop := preload("res://Scripts/HitStop.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
 const PlayerFeel := preload("res://Scripts/PlayerFeel.gd")
+const PunchAllowance := preload("res://Scripts/PunchAllowance.gd")
 
 # The beat window's offset and length are PlayerFeel's. A swing lasts 22 physics frames (0.37s) from
 # the press to its hitbox switching off, so today's window runs 0.42s-0.77s after the press that
 # started it, feel_v2's 0.41s-0.66s: any press rhythm faster than about 2.7 a second lands a press
 # mid-swing.
-@export var hits_to_charge := 3
-@export var charged_damage := 2
+# PunchAllowance's, which every boss's per-opening allowance is worked out from.
+@export var hits_to_charge := PunchAllowance.HITS_TO_CHARGE
+@export var charged_damage := PunchAllowance.CHARGED_DAMAGE
 @export var charged_hit_stop := 0.1
 @export var shake_strength := 10.0
 
@@ -129,6 +134,7 @@ func resolve_punch(target: Node) -> int:
 	var dealt: int = target.take_punch(charged_damage if charged else 1)
 	if dealt <= 0:
 		reset()
+		punch_refused.emit(target)
 		return 0
 
 	count += 1
@@ -141,6 +147,16 @@ func resolve_punch(target: Node) -> int:
 	elif beat_missed:
 		reset()
 	return dealt
+
+
+# A punch on a boss outside his windows, whose hurtbox is switched off, so no take_punch() ever hears it
+# (PlayerPunching): refused the same way.
+func refuse_punch(target: Node) -> void:
+	if not swing_open:
+		return
+	swing_open = false
+	reset()
+	punch_refused.emit(target)
 
 
 func _set_window(open: bool) -> void:

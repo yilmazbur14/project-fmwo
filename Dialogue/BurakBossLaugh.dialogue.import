@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://bwcsxurgrul02"
+path="res://.godot/imported/BurakBossLaugh.dialogue-93d1b8ab8e00fd148f7413919ff06410.tres"
+
+[deps]
+
+source_file="res://Dialogue/BurakBossLaugh.dialogue"
+dest_files=["res://.godot/imported/BurakBossLaugh.dialogue-93d1b8ab8e00fd148f7413919ff06410.tres"]
+
+[params]
+
+defaults=true

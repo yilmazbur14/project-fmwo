@@ -53,18 +53,29 @@ def build_intro():
 MARK_LV = [0.10, 0.34, 0.66, 1.00, 0.70, 0.36]
 
 
+# The overlay's frame is a CONTRACT with the fight: CarterArtLayout's
+# FINAL_MARK_GLOW frame_size (64, 54) and offset (16, 32), and the KO scales the
+# glow about that box's centre.  It used to be derived - the trident's bounding
+# box plus 18 - which is where these numbers came from.  The 天 that replaced
+# the trident is wider and shallower, and deriving the box from it would have
+# moved the overlay and broken the contract, so the box is now fixed and the
+# emblem is checked against it instead.
+MARK_BOX = (16, 32, 64, 54)
+# How far glow_halo can reach from the emblem: at level 1.0 its ring 14 is the
+# last one with any pixels in it (ring 15 dithers to nothing).
+HALO_REACH = 14
+
+
 def mark_box():
     sg = IF.sigil_mask()
     xs = [x for y in range(H) for x in range(W) if sg[y][x]]
     ys = [y for y in range(H) for x in range(W) if sg[y][x]]
-    # the peak's free-air bloom reaches 16 rings, so anything tighter than
-    # this clips the halo square at the texture edge
-    pad = 18
-    x0 = max(0, min(xs) - pad)
-    y0 = max(0, min(ys) - pad)
-    x1 = min(W - 1, max(xs) + pad)
-    y1 = min(H - 1, max(ys) + pad)
-    return x0, y0, x1 - x0 + 1, y1 - y0 + 1
+    x0, y0, bw, bh = MARK_BOX
+    assert (x0 + HALO_REACH <= min(xs) and max(xs) + HALO_REACH <= x0 + bw - 1
+            and y0 + HALO_REACH <= min(ys) and max(ys) + HALO_REACH <= y0 + bh - 1), \
+        ('the emblem and its halo no longer fit the overlay box', MARK_BOX,
+         (min(xs), min(ys), max(xs), max(ys)))
+    return MARK_BOX
 
 
 def build_mark_glow():
