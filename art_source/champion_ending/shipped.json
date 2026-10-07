@@ -1,0 +1,36 @@
+{
+  "approved": "2026-10-06, the user: \"approve all, glove cup, reveal is fine\" (trophy take A, the Glove Cup)",
+  "source": "scratchpad champion/approval (artist aa07dd36986c4d599); rig + contract copied beside this file",
+  "files": {
+    "Assets/Environment/Champion/champion_trophy.png": "2ddac8293b2bcf8649cc7ba53a2c4564e0b13916540ecefc70a9a35d795748dd",
+    "Assets/Environment/Champion/champion_trophy_stand_idle.png": "a5f358fd2804e9702e0731081d7384b41bb36b8c9db3fb50baa10c6a72e8d872",
+    "Assets/Environment/Champion/champion_stand.png": "9bbbb499e007f02b24fad8dbea4679ea8242a057acc027ee1a85b9428ebe12c8",
+    "Assets/Characters/MainPlayer/player_trophy_lift.png": "6d402af79fa78f7679b100d4800f9ba1f9c5b83c79883d5596223ea2f22d51f1",
+    "Assets/Environment/Champion/champion_lift_flash.png": "3c93ae56e945a7c1f42a2b4706ed2d1dfb805b0a3bc69ae6c97e5e504fbe92e3",
+    "Assets/Environment/Champion/champion_confetti_burst.png": "8cdf19c75bc6231ef6cce4a11f0c9745710e182b1a5a226c77dd0965ef4fd8c7",
+    "Assets/Environment/Champion/champion_confetti_rain.png": "d8102101355926ae9d4a40e3bd61d663ea6ff960b1dfe0a8cc9c8131d98b3c98",
+    "Assets/Environment/Champion/champion_spot_sweep.png": "e9fdfcb3aa2fb91ad687ad3dff8c444cb149416baa0906050bcf1bbc27944a12",
+    "Assets/Environment/crowd_v3_roar.png": "ff7069d33fdae75fffcbecee3937a7b740f1ea538e89e0a35540597697961fec",
+    "Assets/Environment/arena_ringside_crowd_roar.png": "186b5c4bd14c0a5905f748e5ef41d2a01553f6ba2590296f4e1444261c4ce8e5",
+    "Assets/UI/Screens/credits_champion.png": "823ce9bc6f630abe821721c10c26ce67c53d9cee0e91221e7e83fbee882f40a5",
+    "Assets/Environment/Champion/champion_trophy.aseprite": "cbd8d7d828ab08332dc205be86e70dd19a4b7b057d70f875a795404d1b948ed0",
+    "Assets/Environment/Champion/champion_trophy_stand_idle.aseprite": "f5b43e83298145bcbfc9562b004104205ef76bccf21a6bfd2aa2c1ab8eeb05b9",
+    "Assets/Environment/Champion/champion_stand.aseprite": "f53b711ca6dba1d467ca82bd3d6b4c2637e42a89bf42dffc18fd4102f43ed009",
+    "Assets/Characters/MainPlayer/player_trophy_lift.aseprite": "797f8ad081d243355d2804b6f4909b1a2f73f9f2e50c168f981e4691f1085b79",
+    "Assets/Environment/Champion/champion_lift_flash.aseprite": "c5136a06c4bbd4e17e55acd3f9272e16eb1ea96871af92a304138eb6bcd6efe7",
+    "Assets/Environment/Champion/champion_confetti_burst.aseprite": "d4e39383ff08e4d15a3c990767ef1002bdb206a0f9aa51a5f144dbc6df01099d",
+    "Assets/Environment/Champion/champion_confetti_rain.aseprite": "d50cc6a4a7ee9f42a7b3c3a11bc9deb5a1b7ccc361bac1b423b42a7270a8b8b0",
+    "Assets/Environment/Champion/champion_spot_sweep.aseprite": "6de1399df20d662a17673c2263fccb32b817c1cb80acb1249d46c0a4c30c06c6",
+    "Assets/Environment/crowd_v3_roar.aseprite": "3be6ec9f0c4bd79f69bbf4c0f4a66ed36d46fbc1224271308c9a0021b8e5e96e",
+    "Assets/Environment/arena_ringside_crowd_roar.aseprite": "5751341e2e3d1b9a9032002f3c4c2173a3a75fe2441a5828cc2d3d9fb6cc00b9",
+    "Assets/UI/Screens/credits_champion.aseprite": "01d0b323261da3ecac495002641392107ab8fe7ba7223c335e9f901fbf40d90b",
+    "Assets/Characters/MainPlayer/player_trophy_lift_burak.png": "bcf75e606640d5cf0fc524fa86da812721ced84f8cddc1e62661450600d26cd9",
+    "Assets/Characters/MainPlayer/player_trophy_lift_stand.png": "ce00ea886eea0f484cb426d3f291ad4bf5a1a0708cdcf6785e306e8a45ab0cf2",
+    "Assets/Characters/MainPlayer/player_trophy_lift_trophy.png": "f22db17b5e40b111497a372d3949c079f3be60fedb43cf195dc0b255636ceaf0",
+    "Assets/Characters/MainPlayer/player_trophy_lift_grip.png": "074799c301ec0e3c0bd42ee4494a616611516be0d5d13e94ba2d42fd5c9bf09a",
+    "Assets/Characters/MainPlayer/player_trophy_lift_fx.png": "7403e46c41f27b0d8cb46a6b7c018f23a292dafed474c032c3bd560a963911e6"
+  },
+  "replaced": {
+    "Assets/Environment/Champion/champion_confetti_burst.png": "2026-10-06: re-cut from a 28x1 strip (17920 px, over the GPU max) to a 7x4 grid (4480x1440, hframes 7, vframes 4); same 28 frames pixel-identical; old strip backed up in scratchpad champion/replaced"
+  }
+}

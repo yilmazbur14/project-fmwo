@@ -11,12 +11,14 @@ THE METHOD is the 09-23 portrait's, on the v2 rig (art_source/jordan_v2, importe
      a little right of centre: the crane of his neck, not a framing slip.
   2. Scaled by 1.5 (dkit.resample, Josh's scaling), no pixel invented.
   3. The one-pixel rim-light pass.
+  3b. SKINNY (2026-09-28): the shirt's line weight kept at the sprite's (tee_line_weight, below).
   4. Hand detail in v2's own palette (jv2_base.PAL: the approved keys, the skin keys on the pallor):
      the 09-23 portrait's details on the face v2 keeps, re-authored because v2's one-row drop pairs
      the rows up differently at 1.5x; a black core down each of the rig's own dark grooves between
      the greasy clumps, carried into the hairline; the forelock's outline closed; the side hair
      parted; the thin neck's jaw shadow, back contour and Adam's apple; the gaping collar's band;
-     the drooping sleeve's creases, both armpits, the far drape fold; the stain's core; the jewel.
+     the fitted near sleeve's one crease (the sack's two creases, armpits and far drape fold until
+     2026-09-28); the stain's core; the jewel.
 
 THE NUMBERS (the coordinator's target: the same crop of v2 frame 0, box, hand and forearm out):
   that crop is 24.1% black over 22 colours; the portrait is 23.2% over 25 (v2 frame 0 alone 28.2%
@@ -25,6 +27,16 @@ THE NUMBERS (the coordinator's target: the same crop of v2 frame 0, box, hand an
   line at 1.5x covers two thirds of the area it did. Straight 1.5x gives 17.4%. The rest could only
   come from doubled outlines or from turning his darkest tones black, which moves the number, not
   the drawing. measure() prints them on every build.
+  In the fitted tee (2026-09-28) the crop is 24.0% over 22 and the portrait 22.6% over 25 (v2 frame 0
+  alone 29.6%, the sheet 30.1%). The head is unchanged at 20.9%; the body is 27.3% against the crop's
+  33.7%. The sack's creases, armpits and far drape fold were drawn in black, and the fitted tee keeps
+  one crease, so the portrait has 12 fewer black pixels.
+  SKINNY (approved the same day, art_source/jordan_fit/skinny): the crop is 23.9% over 22 (v2 frame 0
+  alone 30.7%, the sheet 31.2%), and the coordinator's rule is that the portrait HIT it. Straight from
+  the skinny rig it came to 22.8%: the head 20.9% (the crop's 20.3%) but the body 28.3% against the
+  crop's 33.8%, the resample thinning the shirt's keylines to two thirds of their weight. So the tee's
+  lines are drawn at the sprite's weight (tee_line_weight): 24.2% over 25, the head still 20.9%
+  and the body 33.5% (the crop's 33.8%).
 
     python portrait_v2.py            # build into the scratchpad, measure, round-trip the .aseprite
     python portrait_v2.py --ship     # ...then write Assets/Characters/Jordan/portrait.png + .aseprite
@@ -197,15 +209,11 @@ BODY = {
     # outer edge rolls over into a black fold against the tee
     (27, 56): '2', (30, 57): '3', (31, 57): '2', (32, 57): '2', (33, 57): '2',
     (42, 54): 'k', (42, 55): 'k', (39, 56): 'k',
-    # the drooping near sleeve: a crease where it bunches at the armpit, its tail, the lit lip above
-    # it, and the armpit itself closed to black where sleeve meets body
-    (22, 58): 'k', (21, 59): 'k', (20, 60): 'k', (19, 61): 'V', (18, 62): 'V',
-    (21, 58): 'T', (20, 59): 'T',
-    (21, 62): 'k', (20, 63): 'k', (22, 61): 'T',       # a second, lower one, as the 09-23 sleeve had
-    (23, 61): 'k', (23, 62): 'k', (23, 63): 'k',
-    # the far side: the sack-like tee's long vertical drape fold, and the far armpit
-    (46, 59): 'k', (46, 60): 'k', (46, 61): 'v', (45, 62): 'v',
-    (49, 61): 'k', (49, 62): 'k',
+    # the near sleeve, FITTED since 2026-09-28 (art_source/jordan_fit, approved "everywhere"): one
+    # crease under it where it pulls in toward the armpit, with its lit lip. (The sack's sleeve had
+    # two, where it bunched, and the armpit closed to black; the sack's long drape fold down the far
+    # side and its far armpit went with it.)
+    (21, 62): 'k', (20, 63): 'k', (22, 61): 'T',
     # the drip stain off the collar, darker at its core
     (41, 57): 'a', (42, 58): 'a',
     # the crown's red jewel, lit on its upper left
@@ -213,12 +221,38 @@ BODY = {
 }
 
 
+def tee_line_weight(px, bust):
+    """The shirt's keylines at the sprite's weight. At 1.5x the resample keeps a 1px keyline 1px wide,
+    two thirds of the area it covered at 1x, so the thin tee's outlines (its sleeves, the seam where
+    each meets the body, the far shoulder) came out lighter than the sprite draws them. On the shirt
+    rows only (48 down; the head is never touched), a between-pixel of the resample (one that samples
+    two source pixels along one axis) becomes keyline when either of those source pixels is keyline
+    and it would otherwise be the tee's red: the lines the sprite has, at its weight, nothing new."""
+    def axis(o):
+        q, r = divmod(o, 3)
+        return [2 * q] if r == 0 else ([2 * q + 1] if r == 2 else [2 * q, 2 * q + 1])
+    add = []
+    for (ox, oy), k in px.items():
+        if oy < 48 or k not in RED:
+            continue
+        xs, ys = axis(ox), axis(oy)
+        if (len(xs) == 1) == (len(ys) == 1):
+            continue
+        if any(bust.get((SX0 + x, SY0 + y)) == 'k' for x in xs for y in ys):
+            add.append((ox, oy))
+    for q in add:
+        px[q] = 'k'
+    return len(add)
+
+
 def build(detail=True):
-    raw = dkit.resample(bust_1x(), SX0, SY0, N)
+    bust = bust_1x()
+    raw = dkit.resample(bust, SX0, SY0, N)
     px = dict(raw)
     if not detail:
         return px
     rim_pass(px, rim_keep())
+    tee_line_weight(px, bust)
     for q in GROOVES + GROOVE_ENDS:
         assert raw.get(q) == 'h', ('not a groove pixel in the resample', q, raw.get(q))
         px[q] = 'k'

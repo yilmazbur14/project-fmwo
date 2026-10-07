@@ -12,8 +12,9 @@ extends State
 # exactly without its art ever being turned. The spot is valid if his feet land in STAND_RECT, at
 # least mystic_spot_gap from where he was, on a heading the last cast didn't use, with his mouth at
 # least mystic_bolt_clearance from every live bolt; picked uniformly from all valid ones. Failing
-# that, the heading rule goes, then the clearance, then the range may drop to mystic_range_floor. A
-# cast with nowhere to go, or one that would put a sixth bolt in the air, is skipped.
+# that, the heading rule goes, then the clearance, then the range may drop to mystic_range_floor, and
+# last the gap from where he was. A cast with nowhere to go, or one that would put a sixth bolt in the
+# air, is skipped.
 #
 # FREEZE SAFETY: every wait is a Physics_Update accumulator and every effect is node-bound.
 
@@ -22,12 +23,16 @@ const MattArtLayout := preload("res://Scripts/MattArtLayout.gd")
 const BOLT_SCENE := preload("res://Scenes/Bosses/MattMysticBoltScene.tscn")
 
 const SHOT_ID := &"matt_mystic_shot"
-# A spot is chosen off these passes in turn, each dropping one more rule.
+# A spot is chosen off these passes in turn, each dropping one more rule. The last lets the spot gap go: from
+# HOME, a player 400-600 px to his side at his height has no lattice spot that is both in STAND_RECT and
+# mystic_spot_gap from him, and a skipped cast skips the next too, since he hasn't moved - the whole volley
+# fired nothing (playtest 2026-10-04).
 const PASSES := [
-	{"heading_rule": true, "clearance": true, "floor": false},
-	{"heading_rule": false, "clearance": true, "floor": false},
-	{"heading_rule": false, "clearance": false, "floor": false},
-	{"heading_rule": false, "clearance": false, "floor": true},
+	{"heading_rule": true, "clearance": true, "floor": false, "gap": true},
+	{"heading_rule": false, "clearance": true, "floor": false, "gap": true},
+	{"heading_rule": false, "clearance": false, "floor": false, "gap": true},
+	{"heading_rule": false, "clearance": false, "floor": true, "gap": true},
+	{"heading_rule": false, "clearance": false, "floor": true, "gap": false},
 ]
 
 @export var body : CharacterBody2D
@@ -168,7 +173,7 @@ func _choose_spot() -> Dictionary:
 				continue
 			for reach in _ranges(rules.floor):
 				var candidate := _spot(aim, heading, reach)
-				if _valid(candidate, rules.clearance):
+				if _valid(candidate, rules.clearance, rules.gap):
 					found.append(candidate)
 		if not found.is_empty():
 			return found[state_machine.rng.randi_range(0, found.size() - 1)]
@@ -194,12 +199,12 @@ func _spot(aim: Vector2, heading: Vector2, reach: float) -> Dictionary:
 	return {"feet": feet, "mouth": mouth, "heading": heading, "range": reach, "player": aim, "flip": flip}
 
 
-func _valid(candidate: Dictionary, clearance: bool) -> bool:
+func _valid(candidate: Dictionary, clearance: bool, gap := true) -> bool:
 	var feet: Vector2 = candidate.feet
 	var stand: Rect2 = state_machine.STAND_RECT
 	if feet.x < stand.position.x or feet.x > stand.end.x or feet.y < stand.position.y or feet.y > stand.end.y:
 		return false
-	if feet.distance_to(body.global_position) < state_machine.mystic_spot_gap:
+	if gap and feet.distance_to(body.global_position) < state_machine.mystic_spot_gap:
 		return false
 	if clearance:
 		for bolt in state_machine.live_bolts():

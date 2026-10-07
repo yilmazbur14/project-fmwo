@@ -506,6 +506,11 @@ const BEAM_BALL_Z := 3
 # MUST NEVER BE MISTAKEN FOR THEM: full size, not the 48x48 halflings, and dark and violet, the barrage
 # wraith's own colour, so they read as apparitions rather than as four more Carters.
 const BEAM_CLONE_TINT := Color(0.42, 0.26, 0.56, 0.88)
+# Over every fighter on the clone layer and not y-sorted, a figure would bury a player standing up among the
+# four, lock ring and all, so one the player's sprite overlaps goes see-through: its self_modulate alpha eases
+# to this over BEAM_CLONE_SEE_THROUGH_TIME, and back once they are clear (CarterBeamRush._step_see_through).
+const BEAM_CLONE_SEE_THROUGH := 0.35
+const BEAM_CLONE_SEE_THROUGH_TIME := 0.12
 
 
 #THE MESSATSU

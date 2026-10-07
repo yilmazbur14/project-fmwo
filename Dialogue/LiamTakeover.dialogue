@@ -1,0 +1,21 @@
+# Liam's takeover: beast Bixby is beaten and has coughed him up, and he takes the fight over. "This fight just got a whole
+# lot harder." is the user's own; the rest is the plan's draft (Liam's elements phase, section 2). Each "do" line plays a
+# beat in LiamTakeover.gd, and the dialogue waits for it before the next line.
+# The tags: `liam` picks his talk gesture (thanks, explain, elements, smug, laugh, staff), and `blips` turns the laugh's
+# talk blips off, the laugh being its voice. The player speaks as Burak. Never [wait=N] or "do wait(N)" in here: both run
+# on a SceneTree timer, which ticks through the pause screen and which the hold-to-skip can't run out.
+
+~ start
+do liam_gets_up()
+Liam: *cough* *hack*... Ugh. Thanks for getting me out of there, newcomer. I owe you one. [#liam=thanks]
+Liam: But don't get too excited. Bixby's my student... and the only element he ever mastered was fire. [#liam=explain]
+Liam: Me? I've mastered all four. Water. Earth. Fire. Air. [#liam=elements]
+Liam: This fight just got a whole lot harder. [#liam=smug]
+do anime_laugh()
+Liam: Nyahahahaha! [#liam=laugh, #blips=off]
+do staff_from_mouth()
+Liam: Kept it somewhere safe. [#liam=staff]
+Burak: ew.
+do earth_pillar()
+do ride_to_the_top()
+=> END

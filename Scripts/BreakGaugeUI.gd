@@ -12,6 +12,7 @@ extends Control
 # was first, so his and Mason's builds keep working without passing one.
 
 const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
+const HudPlayerFade := preload("res://Scripts/HudPlayerFade.gd")
 
 # Both set by the fight before it is added.
 var gauge: Node
@@ -42,6 +43,7 @@ func _ready() -> void:
 	size = spec.size
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build()
+	HudPlayerFade.wrap(self)
 	bar.value = _bar_value(gauge.value, gauge.max_value)
 	gauge.changed.connect(_on_changed)
 	gauge.broke.connect(_on_broke)

@@ -7,7 +7,7 @@ extends State
 #                  ghosts behind it are what make it read as him grabbing you rather than as a bug.
 #   DARKEN 0.45 s  the crowd hushes, the music ducks, the dark comes in, a pool opens under them and
 #                  he is swallowed by it.
-#   RUSH   9.30 s  fifteen clones, one at a time and 0.62 s apart, each with a RED light (parry it)
+#   RUSH  11.16 s  eighteen clones, one at a time and 0.62 s apart, each with a RED light (parry it)
 #                  or the fake's pale X (a feint - parrying it punishes you). Identical timing either
 #                  way; only the mark and the outcome differ, or the player would read the timing
 #                  instead of the mark and the move would die. Bite on a feint and the clone after
@@ -15,6 +15,10 @@ extends State
 #                  None of them stop at the i-frames: being hit never hands the player the clones
 #                  behind it for free.
 #   CLEAR  0.50 s  the lights come up and he is standing there, open.
+# A PARRY THAT BREAKS HIM ENDS THE BARRAGE ON THE SPOT, by the user's call (2026-09-27): "the attack
+# should immediately stop and Carter should be hittable". No clone comes after it: the lights start
+# coming up on him that frame, as CLEAR brings them, and he is handed to his Break's window at once
+# (on_broke), so his Recover opens while they are still coming up.
 #
 # IT IS ONE STATE ON PURPOSE. The lock, the player's draw order and the darkness have to be taken and
 # given back as a unit, and a single Exit() funnel into release() is the only way every failure path -
@@ -29,6 +33,7 @@ extends State
 const CarterArtLayout := preload("res://Scripts/CarterArtLayout.gd")
 const CLONE_SCENE := preload("res://Scenes/Bosses/CarterCloneScene.tscn")
 const HitInfo := preload("res://Scripts/HitInfo.gd")
+const FinisherArtLayout := preload("res://Scripts/FinisherArtLayout.gd")
 
 @export var body : CharacterBody2D
 
@@ -47,8 +52,6 @@ const COMPASS: Array[Vector2] = [
 	Vector2(0.70710678, 0.70710678), Vector2(-0.70710678, 0.70710678),
 	Vector2(0.8, -0.6), Vector2(-0.8, -0.6),
 ]
-# Reshuffles before the no-two-adjacent rule is given up on.
-const PATTERN_TRIES := 20
 # How far inside the ropes a clone and the spot he comes back at have to stay.
 const SPAWN_MARGIN := 40.0
 const RECOVER_MARGIN := 120.0
@@ -99,6 +102,11 @@ var reds_parried := 0
 var reds_missed := 0
 var feints_parried := 0
 var punishes_landed := 0
+# Every red that reached the player, however it was answered: what a barrage a Break cut short is
+# judged perfect against.
+var reds_struck := 0
+# Whether his gauge broke in the middle of it, which is what ended it.
+var broke := false
 
 var yank_from := Vector2.ZERO
 var yank_landed := false
@@ -121,6 +129,8 @@ func Enter() -> void:
 	reds_missed = 0
 	feints_parried = 0
 	punishes_landed = 0
+	reds_struck = 0
+	broke = false
 	_build_pattern()
 	listening = state_machine.connect_block_presses(_on_block_pressed)
 	# On the first frame of the eye flash, not at the end of it.
@@ -164,7 +174,9 @@ func release(keep_dark := false) -> void:
 			state_machine.disconnect_block_presses(_on_block_pressed)
 	listening = false
 	if is_instance_valid(body):
-		if not keep_dark:
+		# In CLEAR the dark and the music are already on their way back, on node-bound tweens of their
+		# own: a Break hands over in the middle of that, and snapping would cut the lights coming up.
+		if not keep_dark and beat != Beat.CLEAR:
 			body.snap_dark_clear()
 			body.snap_music_level()
 		body.show_body(true)
@@ -172,6 +184,22 @@ func release(keep_dark := false) -> void:
 	_clear_clones()
 	_clear_ghosts()
 	clone = null
+
+
+#THE GAUGE
+# His fight-long gauge. A parry that fills it ends the barrage on the spot, as the header says.
+
+# His Break, deferred here from CarterAkumaScript._on_break through the state machine: the gauge fills
+# inside the physics flush a clone's contact resolves in, where states can't switch. The lights start
+# coming up and he is put where they will find him, then handed straight to his Break's window;
+# release() takes every clone still out.
+func on_broke() -> void:
+	if released:
+		return
+	broke = true
+	if beat != Beat.CLEAR:
+		_begin_clear()
+	_hand_over()
 
 
 func Physics_Update(delta: float) -> void:
@@ -205,29 +233,27 @@ func Physics_Update(delta: float) -> void:
 
 # Locked once, here, so a hit landing mid-sequence can never change what the rest of it does.
 func _build_pattern() -> void:
-	var count: int = maxi(state_machine.clone_count, 1)
-	var yellows: int = clampi(state_machine.cycle_yellows, 0, maxi(count - 1, 0))
+	var count: int = maxi(state_machine.barrage_clones(), 1)
+	# Clone 1 is never a feint, and no two feints are adjacent: at most half of the rest can lie.
+	var yellows: int = clampi(state_machine.cycle_yellows, 0, count / 2)
 	reds_total = count - yellows
 
 	feints.clear()
 	feints.resize(count)
 	feints.fill(false)
 	# Clone 1 is never a feint: it teaches the rhythm at the top of every barrage.
-	var slots: Array[int] = []
-	for i in range(1, count):
-		slots.append(i)
-	var pick: Array = slots.slice(0, yellows)
-	for attempt in PATTERN_TRIES:
-		slots.shuffle()
-		pick = slots.slice(0, yellows)
-		# No two feints adjacent, at every tier. At a 0.62 s cadence two lies back to back are
-		# unreadable rather than hard, and a bitten feint turns the clone after it into a punish -
-		# which would eat the second feint and waste it. yellow_count() is capped so this always has
-		# an answer.
-		if not _adjacent(pick):
-			break
-	for index in pick:
-		feints[index] = true
+	# No two feints adjacent, at every tier. At a 0.62 s cadence two lies back to back are unreadable
+	# rather than hard, and a bitten feint turns the clone after it into a punish - which would eat the
+	# second feint and waste it. DEALT, NOT DRAWN AND RETRIED: `yellows` picks from the slots less the
+	# gaps they need, sorted, each pushed on by one per feint before it, which makes every arrangement
+	# with no two adjacent equally likely. Twenty reshuffles hoping for one left two feints adjacent in
+	# 55% of the six-feint rounds and 7% of the five (measured 2026-10-05).
+	var picks: Array = range(count - yellows)
+	picks.shuffle()
+	picks = picks.slice(0, yellows)
+	picks.sort()
+	for i in picks.size():
+		feints[1 + picks[i] + i] = true
 
 	# The first clone always comes from the left or the right - the reading the player already has.
 	# After that: seven directions and fifteen clones, so the deck is shuffled, dealt out and
@@ -394,7 +420,7 @@ func _next_clone() -> void:
 	state_machine.add_hazard(rush, from_point, body.clone_layer)
 	clone = rush
 	# The light comes up on the frame the clone appears, and the parry is re-armed on that same
-	# frame, all fifteen, every round. Without it a whiffed press on one clone can leave the next one
+	# frame, every one of them, every round. Without it a whiffed press on one clone can leave the next one
 	# mathematically unparryable (PlayerDefense.parry_mash_lockout).
 	clone.show_light()
 	state_machine.rearm_parry()
@@ -439,6 +465,7 @@ func _strike() -> void:
 			punishes_landed += 1
 		body.strike_sfx_player.play()
 		return
+	reds_struck += 1
 	match result:
 		HitInfo.Result.PARRIED:
 			reds_parried += 1
@@ -503,20 +530,38 @@ func _begin_clear() -> void:
 	state_machine.set_player_stage_z(player_stage_z)
 
 
-# Out along the axis the last clone came from, so the eye already knows where to look. With a Break
-# owed, only its side of him: level with the player in the middle, where a full juggle can be thrown.
+# Out along the axis the last clone came from, so the eye already knows where to look. With a Break,
+# only its side of him: level with the player in the middle, where a full juggle can be thrown and
+# nothing of him is near the HUD.
 func _recover_spot() -> Vector2:
 	var axis := last_direction if last_direction != Vector2.ZERO else Vector2.RIGHT
-	if state_machine.break_owed:
+	if broke or state_machine.break_owed:
 		axis = Vector2.RIGHT if axis.x >= 0.0 else Vector2.LEFT
-	var bounds: Rect2 = state_machine.ROPES.grow(-RECOVER_MARGIN)
+	var bounds := _recover_bounds()
 	return (state_machine.ARENA_CENTRE + axis * state_machine.recover_offset).clamp(bounds.position, bounds.end).round()
 
 
+# Where _recover_spot may kneel him: inside the ropes, and low enough that his kneeling body and the
+# finisher's daze stars over its head clear his health bar block (HUD_KEEP_OUT's first). Out along the two
+# compass points 37 degrees up he would otherwise kneel with his head under it and the stars behind it.
+func _recover_bounds() -> Rect2:
+	var bounds: Rect2 = state_machine.ROPES.grow(-RECOVER_MARGIN)
+	var stars := FinisherArtLayout.stars()
+	var over_feet: float = -CarterArtLayout.DAZE_ANCHOR.y + stars.pivot.y * stars.scale
+	var top := maxf(bounds.position.y, CarterArtLayout.HUD_KEEP_OUT[0].end.y + CarterArtLayout.HUD_CLEARANCE + over_feet)
+	return Rect2(bounds.position.x, top, bounds.size.x, bounds.end.y - top)
+
+
 func _hand_over() -> void:
+	var owed: bool = state_machine.take_break_owed()
 	var recover: State = state_machine.states.get("Recover")
 	if recover:
-		recover.prepare(reds_parried, reds_missed, feints_parried, reds_total, -1.0, state_machine.take_break_owed())
+		# A Break cuts the barrage short, so it is judged perfect on the reds he got to throw.
+		var total: int = reds_struck if broke else reds_total
+		recover.prepare(reds_parried, reds_missed, feints_parried, total, -1.0, broke or owed)
+		if state_machine.chains_on(self, recover):
+			state_machine.chain_on(recover)
+			return
 	state_machine.on_child_transition(self, "Recover")
 
 

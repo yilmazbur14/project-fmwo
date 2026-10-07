@@ -36,4 +36,6 @@ func Update(_delta: float) -> void:
 
 
 func Physics_Update(_delta: float) -> void:
-	player.velocity = Vector2.ZERO
+	# On ice PlayerScript carries the landing on and coasts it out.
+	if not player.on_ice:
+		player.velocity = Vector2.ZERO

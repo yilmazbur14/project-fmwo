@@ -1,0 +1,325 @@
+{
+ "boss": "carter",
+ "sheet": "res://Assets/Characters/Carter/carter_idle.png",
+ "frame": [
+  96,
+  96
+ ],
+ "feet": [
+  48,
+  95
+ ],
+ "idle_frames": [
+  0,
+  1,
+  2,
+  3
+ ],
+ "note": "Texels on the frame, (0,0) its top-left; a ring hook is its hole, the texel the string ties to. \"back\" sits between the shoulder blades, behind the body on every front view: draw its string UNDER the sprite. \"_l\"/\"_r\" are screen left/right on the unflipped sheet (mirror x as frame_width - 1 - x when flipped). relative_to_feet = texel - feet. carry_frames: the same points tracked onto his fight sheets; null = not found there, to be filled by hand.",
+ "frames": {
+  "0": {
+   "head": [
+    48,
+    27
+   ],
+   "back": [
+    48,
+    58
+   ],
+   "wrist_l": [
+    20,
+    72
+   ],
+   "wrist_r": [
+    75,
+    72
+   ],
+   "knee_l": [
+    39,
+    79
+   ],
+   "knee_r": [
+    57,
+    79
+   ]
+  },
+  "1": {
+   "head": [
+    48,
+    26
+   ],
+   "back": [
+    48,
+    57
+   ],
+   "wrist_l": [
+    20,
+    72
+   ],
+   "wrist_r": [
+    75,
+    72
+   ],
+   "knee_l": [
+    39,
+    79
+   ],
+   "knee_r": [
+    57,
+    79
+   ]
+  },
+  "2": {
+   "head": [
+    48,
+    26
+   ],
+   "back": [
+    48,
+    57
+   ],
+   "wrist_l": [
+    20,
+    72
+   ],
+   "wrist_r": [
+    75,
+    72
+   ],
+   "knee_l": [
+    39,
+    79
+   ],
+   "knee_r": [
+    57,
+    79
+   ]
+  },
+  "3": {
+   "head": [
+    48,
+    27
+   ],
+   "back": [
+    48,
+    58
+   ],
+   "wrist_l": [
+    20,
+    72
+   ],
+   "wrist_r": [
+    75,
+    72
+   ],
+   "knee_l": [
+    39,
+    79
+   ],
+   "knee_r": [
+    57,
+    79
+   ]
+  }
+ },
+ "relative_to_feet": {
+  "0": {
+   "head": [
+    0,
+    -68
+   ],
+   "back": [
+    0,
+    -37
+   ],
+   "wrist_l": [
+    -28,
+    -23
+   ],
+   "wrist_r": [
+    27,
+    -23
+   ],
+   "knee_l": [
+    -9,
+    -16
+   ],
+   "knee_r": [
+    9,
+    -16
+   ]
+  },
+  "1": {
+   "head": [
+    0,
+    -69
+   ],
+   "back": [
+    0,
+    -38
+   ],
+   "wrist_l": [
+    -28,
+    -23
+   ],
+   "wrist_r": [
+    27,
+    -23
+   ],
+   "knee_l": [
+    -9,
+    -16
+   ],
+   "knee_r": [
+    9,
+    -16
+   ]
+  },
+  "2": {
+   "head": [
+    0,
+    -69
+   ],
+   "back": [
+    0,
+    -38
+   ],
+   "wrist_l": [
+    -28,
+    -23
+   ],
+   "wrist_r": [
+    27,
+    -23
+   ],
+   "knee_l": [
+    -9,
+    -16
+   ],
+   "knee_r": [
+    9,
+    -16
+   ]
+  },
+  "3": {
+   "head": [
+    0,
+    -68
+   ],
+   "back": [
+    0,
+    -37
+   ],
+   "wrist_l": [
+    -28,
+    -23
+   ],
+   "wrist_r": [
+    27,
+    -23
+   ],
+   "knee_l": [
+    -9,
+    -16
+   ],
+   "knee_r": [
+    9,
+    -16
+   ]
+  }
+ },
+ "carry_frames": {
+  "Carter/carter_rush.png": {
+   "0": {
+    "head": [
+     52,
+     32
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "1": {
+    "head": [
+     55,
+     30
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "2": {
+    "head": [
+     57,
+     28
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "3": {
+    "head": [
+     58,
+     28
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   }
+  },
+  "Carter/carter_messatsu_charge.png": {
+   "0": {
+    "head": [
+     60,
+     32
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "1": {
+    "head": [
+     60,
+     32
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "2": {
+    "head": [
+     60,
+     32
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "3": {
+    "head": [
+     60,
+     32
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   }
+  }
+ }
+}

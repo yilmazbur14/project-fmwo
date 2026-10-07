@@ -75,12 +75,15 @@ ellipse = J.lib.ellipse
 
 
 def limb(segments, knobs=(), base='d', lit='e', shade='c', light=RIG):
-    """jv2_body.limb: a stick arm (capsules and bony knobs) with its rims facing the light."""
+    """jv2_body.limb: a stick arm (capsules and bony knobs) with its rims facing the light. Callers
+    pass the fitted build's radii; like the rig (SKINNY, 2026-09-28) it takes ARM_THIN off every
+    segment's radius and KNOB_THIN off every knob's."""
     lh, lv, sh_, sv = light.rim_dirs()
     shape = set()
     for (p0, p1, r0, r1) in segments:
-        shape |= J.kit.capsule(p0, p1, r0, r1)
+        shape |= J.kit.capsule(p0, p1, max(V2.MIN_R, r0 - V2.ARM_THIN), max(V2.MIN_R, r1 - V2.ARM_THIN))
     for (cx, cy, r) in knobs:
+        r = max(V2.MIN_KNOB, r - V2.KNOB_THIN)
         shape |= ellipse(cx, cy, r, r)
     part = fill(shape, base)
     rim(part, lit, *lh)
@@ -91,7 +94,7 @@ def limb(segments, knobs=(), base='d', lit='e', shade='c', light=RIG):
 
 
 def sleeve(pts, hem, lit=True, light=RIG):
-    """jv2_body.sleeve: a baggy sleeve, lit on the side toward the light, its underside dark."""
+    """jv2_body.sleeve: a sleeve on any outline, lit on the side toward the light, its underside dark."""
     lh, _, sh_, sv = light.rim_dirs()
     s = fill(poly(pts), 'R')
     rim(s, 'T' if lit else 'R', *lh)
@@ -102,24 +105,19 @@ def sleeve(pts, hem, lit=True, light=RIG):
 
 
 def raised_sleeve_far(arm, light=RIG):
-    """The shipped v2 taunt's far sleeve (janim_taunt.far_raised_sleeve), fallen back and bunched round
-    the top of the raised arm, on his shadow side: no lit rim, its shade rims on the edges away from
-    the light. The fold and the opening round the arm (the trim, the dark inside, the trim across)
-    are drawing and stay where they are."""
+    """The fitted taunt's far sleeve (jv2_body.far_raised_cuff, 2026-09-28; until then the bunched
+    sleeve jj_snap.TAUNT_SLEEVE), ridden up round the top of the raised arm, on his shadow side: no lit
+    rim, its shade rims on the edges away from the light. The fold and the trim across the opening are
+    drawing and stay where they are."""
     _, _, sh_, sv = light.rim_dirs()
-    part = fill(poly(S.TAUNT_SLEEVE), 'R')
+    part = fill(poly([(99.2 - x, y) for (x, y) in V2.RAISED_CUFF]), 'R')
     rim(part, 'V', *sh_)
     rim(part, 'v', *sv, only='RV')
-    stroke(part, S.TAUNT_SLEEVE_FOLD, 'V', only='R')
-    for y, (lo, hi), key in S.TAUNT_SLEEVE_OPENING:
-        xs = [x for (x, yy) in arm if yy == y]
-        a0, a1 = (min(xs) - 1, max(xs) + 1) if xs else (99, -99)      # the arm and its keyline
-        for x in range(lo, hi + 1):
-            if x < a0 or x > a1:
-                part[(x, y)] = key
-    row, x0, x1 = S.TAUNT_SLEEVE_TRIM
-    for x in range(x0, x1):
-        part[(x, row)] = '1'
+    stroke(part, [(59, 47), (58, 49)], 'V', only='R')
+    top = min(y for (x, y) in part)
+    for (x, y) in list(part):
+        if y == top:
+            part[(x, y)] = '1'
     return part
 
 
@@ -161,14 +159,19 @@ def _mir(x, lo, hi, flip):
     return (-x, -hi, -lo) if flip else (x, lo, hi)
 
 
+def _px(shape):
+    """A leg given as a pixel set (the skinny rig's row spans) or as polygon points."""
+    return set(shape) if isinstance(shape, (set, frozenset)) else poly(shape)
+
+
 def jeans(near, far, hips, near_hem=None, far_hem=None, details=(), light=RIG, split_y=70):
-    """jv2_body.legs' jeans rules on any leg polygons: the near leg lit down its edge toward the
-    light ('S', then 's'), 'n' on the far edge; the far leg dark at both edges with its one lit line
-    inside the lit one; the hips across the whole width. Lit from whichever side edge faces the key
-    light. near_hem / far_hem: the stacks at the ankles, part of each leg."""
-    near_px = poly(near) | (poly(near_hem) if near_hem else set())
-    far_px = poly(far) | (poly(far_hem) if far_hem else set())
-    hips_px = poly(hips)
+    """jv2_body.legs' jeans rules on any legs (pixel sets or polygons): the near leg lit down its edge
+    toward the light ('S', then 's'), 'n' on the far edge; the far leg dark at both edges with its one
+    lit line inside the lit one; the hips across the whole width. Lit from whichever side edge faces
+    the key light. near_hem / far_hem: the stacks at the ankles, part of each leg."""
+    near_px = _px(near) | (_px(near_hem) if near_hem else set())
+    far_px = _px(far) | (_px(far_hem) if far_hem else set())
+    hips_px = _px(hips)
     part = fill(near_px | far_px | hips_px, 'N')
     flip = light.h == 'right'
     for (x, y) in list(part):
@@ -192,26 +195,15 @@ def jeans(near, far, hips, near_hem=None, far_hem=None, details=(), light=RIG, s
     return part
 
 
-# jv2_body.legs' own drawing: the fly, the bony kneecaps, the folds behind the knees, the drag down
-# each shin, the stacks at the ankles.
-V2_LEG_DETAILS = (
-    ('stroke', [(50, 66), (50, 71)], 'n', None),
-    ('pix', [(46, 76), (47, 77), (46, 77), (47, 78)], 's', None),
-    ('pix', [(51, 76), (50, 77), (51, 77), (51, 78)], 's', None),
-    ('stroke', [(44, 80), (46, 81)], 'n', 'N'),
-    ('stroke', [(53, 80), (55, 81)], 'n', 'N'),
-    ('stroke', [(43, 73), (45, 75)], 'n', 'N'),
-    ('stroke', [(53, 72), (54, 74)], 'n', 'N'),
-    ('stroke', [(40, 85), (42, 86), (45, 85)], 'n', 'NsS'),
-    ('stroke', [(40, 87), (43, 87), (45, 86)], 's', 'N'),
-    ('stroke', [(53, 85), (55, 86), (58, 85)], 'n', 'Ns'),
-    ('stroke', [(54, 87), (57, 87)], 's', 'N'),
-)
+# jv2_body.legs' own drawing (the skinny jeans', 2026-09-28): the fly, the bony kneecaps, the folds
+# behind the knees, the drag down each thigh, the stacks at the ankles.
+V2_LEG_DETAILS = V2.LEG_DETAILS
 
 
 def legs(light=RIG):
-    """jv2_body.legs (the thin standing jeans), lit from the side edge facing the light."""
-    return jeans(V2.NEAR_LEG, V2.FAR_LEG, V2.HIPS, V2.NEAR_HEM, V2.FAR_HEM, V2_LEG_DETAILS, light)
+    """jv2_body.legs (the skinny standing jeans, row spans), lit from the side edge facing the light."""
+    near, far, hips = V2.leg_pixels()
+    return jeans(near, far, hips, None, None, V2_LEG_DETAILS, light, split_y=V2.LEG_SPLIT_Y)
 
 
 def denim_limb(segments, light=RIG, near=True, knobs=()):
@@ -243,10 +235,10 @@ def denim_details(part, strokes):
 
 
 def shirt(frame=0, light=RIG):
-    """jv2_body.shirt, the tee hanging off him like a sack, its cloth turned like a cylinder lit
-    from the side edge that faces the light. The collar, the seam, the print, the drape, the folds
-    and the scruff are the rig's, where the rig put them."""
-    T = S.rig_torso
+    """jv2_body.shirt, the SKINNY build's tee (2026-09-28: the fitted tee made tighter the same day;
+    until then a sack with long drapes), its cloth turned like a cylinder lit from the side edge that
+    faces the light. The collar, the seam, the print (its side outline columns cropped, as the rig
+    crops them), the folds and the scruff are the rig's, where the rig put them."""
     part = fill(poly(V2.TORSO), 'R')
     for x, yc in V2.COLLAR.items():
         for y in range(40, yc):
@@ -274,35 +266,25 @@ def shirt(frame=0, light=RIG):
         if (x, yc) in part:
             part[(x, yc)] = '1'
     for (x, y) in list(part):
-        if y == V2.BAND_Y and (x <= 41 or x >= 58):
+        if y == V2.BAND_Y and (x < V2.PRINT_X0 or x > V2.PRINT_X1):
             part[(x, y)] = 'k'
-    rows = [r.replace(' ', '') for r in T.PRINT]
-    for q, k in amap(rows, *V2.PRINT_AT).items():
+    for q, k in V2.print_part().items():
         if q in part:
             part[q] = k
-    # the drape: two long folds, where the rig puts them; the one on the lit side is drawn in the
-    # shade tone over the lit cloth, the one on the shaded side deepens the shade
-    near_fold = [(40, 54), (40, 60), (41, 64)]
-    far_fold = [(59, 50), (59, 56), (58, 60)]
-    lit_fold, dark_fold = (far_fold, near_fold) if flip else (near_fold, far_fold)
-    stroke(part, lit_fold, 'V', only='RT')
-    stroke(part, dark_fold, 'v', only='V')
 
     def fold(pts, key='q', only='PQ'):
         for q in pts:
-            if part.get(q) in only:
+            if q in part and part[q] in only:
                 part[q] = key
     if frame == 0:
-        fold(((42, 64), (43, 65), (44, 65), (45, 66), (46, 67), (46, 68), (47, 69)))
-        fold(((43, 64), (44, 64), (46, 66)), 'Q', 'P')
-        fold(((42, 67), (43, 68), (43, 69)))
-        fold(((51, 65), (51, 66), (50, 67), (50, 68)))
-        fold(((52, 66), (51, 67)), 'Q', 'P')
+        fold(((42, 64), (43, 64), (44, 64), (45, 65), (46, 65)))
+        fold(((42, 63), (43, 63), (45, 64)), 'Q', 'P')
+        fold(((42, 66), (43, 66), (44, 67), (45, 67)))
+        fold(((44, 66),), 'Q', 'P')
     else:
-        fold(((44, 64), (44, 65), (45, 66), (45, 67), (45, 68), (44, 69)))
-        fold(((43, 65), (44, 66), (44, 67)), 'Q', 'P')
-        fold(((50, 66), (50, 67), (51, 68), (51, 69)))
-        fold(((49, 67), (50, 68)), 'Q', 'P')
+        fold(((43, 66), (44, 66), (45, 67), (46, 67)))
+        fold(((44, 65), (45, 66)), 'Q', 'P')
+    fold(((52, 68), (51, 67)))
     for q in ((55, 46), (56, 46), (56, 47)):
         if part.get(q) in ('R', 'T', 'V'):
             part[q] = 'b'
@@ -310,6 +292,22 @@ def shirt(frame=0, light=RIG):
         if q in part:
             part[q] = 'c'
     return part
+
+
+def fitted_sleeve(root, elbow, near=True, light=RIG, **kw):
+    """jv2_body.near_sleeve / far_sleeve (the fitted short sleeve, 2026-09-28) on any arm, its lit and
+    shade rims turned to the light: the outline is v2's own (jv2_body.sleeve_outline), the collar end
+    and the shoulder line moved with the shoulder."""
+    if near:
+        mx, my = root[0] - V2.NEAR_ROOT[0], root[1] - V2.NEAR_ROOT[1]
+        pts, hem = V2.sleeve_outline(root, elbow, (V2.NEAR_COLLAR[0] + mx, V2.NEAR_COLLAR[1] + my),
+                                     [(x + mx, y + my) for (x, y) in V2.NEAR_SHOULDER], +1, **kw)
+        return sleeve(pts, hem, True, light)
+    kw.setdefault('length', 4.6)
+    mx, my = root[0] - V2.FAR_ROOT[0], root[1] - V2.FAR_ROOT[1]
+    pts, hem = V2.sleeve_outline(root, elbow, (V2.FAR_COLLAR[0] + mx, V2.FAR_COLLAR[1] + my),
+                                 [(x + mx, y + my) for (x, y) in V2.FAR_SHOULDER], -1, **kw)
+    return sleeve(pts, hem, False, light)
 
 
 # ------------------------------------------------------------------------------ the box
@@ -431,16 +429,15 @@ def _selftest():
     mine = limb([((40.6, 49.2), (32.4, 57.2), 1.55, 1.45), ((32.4, 57.2), (38.2, 63.2), 1.45, 1.3)],
                 knobs=((32.4, 57.4, 1.9),))
     checks.append(('near arm', mine, near[0][0]))
-    mine_sl = sleeve([(44.2, 43.4), (41.4, 44.6), (38.6, 47.2), (35.4, 51.6), (33.6, 54.0),
-                      (37.6, 57.8), (41.2, 55.2), (42.6, 51.6), (43.4, 47.6)], [(34, 54), (37, 57)])
+    mine_sl = fitted_sleeve(V2.NEAR_ROOT, (32.4, 57.2), near=True)
     checks.append(('near sleeve', mine_sl, near[1][0]))
     far = V2.far_arm_box_low()
     mine_far = limb([((57.8, 48.5), (62.6, 56.4), 1.5, 1.4), ((62.6, 56.4), (63.8, 63), 1.4, 1.3)],
                     knobs=((62.6, 56.6, 1.7),), base='c', lit='d', shade='b')
     checks.append(('far arm', mine_far, far[0][0]))
-    mine_fsl = sleeve([(55.6, 43.4), (58.4, 44.8), (60.8, 47.6), (62.4, 51.2), (63, 53.8),
-                       (58.8, 55.4), (57.4, 51), (57, 47)], [(59, 55), (62, 54)], lit=False)
+    mine_fsl = fitted_sleeve(V2.FAR_ROOT, (62.6, 56.4), near=False)
     checks.append(('far sleeve', mine_fsl, far[1][0]))
+    checks.append(('far cuff', raised_sleeve_far({}), V2.far_raised_cuff({})))
     for name, a, b in checks:
         same = a == b
         print('%-12s at the rig light vs the v2 rig: %s' % (name, 'identical' if same else 'DIFFERENT'))

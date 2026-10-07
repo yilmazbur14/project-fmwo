@@ -12,10 +12,19 @@ const BossBreakGauge := preload("res://Scripts/BossBreakGauge.gd")
 const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
 # What Liam says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/LiamOutro.dialogue"
-const NEXT_FIGHT_SCENE := "res://Scenes/Bosses/JordanBossFightScene.tscn"
+# His fight's place in the order; GameProgress decides what follows it.
+const FIGHT_SCENE := "res://Scenes/Bosses/LiamBossFightScene.tscn"
+# The fight's second half: beaten, he coughs Liam up and Liam takes the fight over in a scene of his own (LiamTakeover),
+# whose end is the fight's. With liam_follows off, it ends at his defeat as it always has.
+const LIAM_SCENE := "res://Scenes/Bosses/LiamScene.tscn"
+# Where the boss select's LIAM row finds him down (start_at_liam).
+const LIAM_START_FEET := Vector2(882, 770)
+@export var liam_follows := true
 
 #CONSTANTS
-@export var max_health := 16
+# The user doubled it from 16 (2026-09-25), then raised it 25% (2026-09-30); 70 in the tuning round of 2026-10-04
+# (difficulty 7): with the finisher a share of it, four windows, two loops of his attacks.
+@export var max_health := 70
 var boss_health := max_health
 const MAX_HITS_PER_WINDOW := 3
 # Each opening takes the damage of a clean chain of MAX_HITS_PER_WINDOW punches (PunchAllowance).
@@ -50,18 +59,15 @@ const BREAK := {
 	"unlock_delay": 3.0,
 	"broken_time": 3.0,
 }
-# What fills it: not the Inferno's fireballs, too many to a shower for each to be a read, nor its embers,
-# which lie still on the floor. Anything of his that lands drains it.
-const BREAK_EARNING_IDS: Array[StringName] = [&"bixby_fire_breath", &"bixby_sonic_beam", &"bixby_quake_ring", &"bixby_inferno"]
+# What fills it: not the Inferno's fireballs, too many to a shower for each to be a read, nor its embers or
+# the floor his Flyby leaves burning, which lie still. Anything of his that lands drains it.
+const BREAK_EARNING_IDS: Array[StringName] = [&"bixby_flyby_breath", &"bixby_sonic_beam", &"bixby_quake_ring", &"bixby_inferno"]
 
 #UI (BossHealthBarUI builds it at runtime)
 var health_bar: Control
 var hud_layer: CanvasLayer
 var break_gauge: Node
 var gauge_bar: Control
-# Whether the fire breath going now has filled the gauge yet: a breath is one read however often its stream
-# is parried. Each breath starts it over (BixbyBeastFireBreath).
-var breath_read := false
 # How long the bar takes to fade as he takes the rope, and to come back as he leaves it.
 const HUD_FADE_TIME := 0.25
 var hud_fade: Tween
@@ -71,7 +77,6 @@ var hud_fade: Tween
 @export var shadow: Sprite2D
 @onready var air: Node2D = $Air
 @onready var sprite: Sprite2D = $Air/Sprite2D
-@onready var fire_hitbox: Area2D = $Air/FireHitbox
 @onready var hurtbox: Area2D = $Air/Hurtbox
 @onready var state_machine = $StateManager
 
@@ -127,8 +132,6 @@ var anim_clock := 0.0
 var anim_next := &""
 var anim_done := false
 var shadow_sheets: Array[Texture2D] = []
-# Fire outline per fire-breath frame.
-var fire_shapes := {}
 
 
 func _ready() -> void:
@@ -200,15 +203,8 @@ func _add_break_gauge(player: Node) -> void:
 	break_gauge.broke.connect(_on_break)
 
 
-# Every breath shares the one fire hitbox, so its one read is counted here rather than by source.
 func _earns_break(hit: RefCounted) -> bool:
-	if not BREAK_EARNING_IDS.has(hit.attack_id):
-		return false
-	if hit.attack_id == &"bixby_fire_breath":
-		if breath_read:
-			return false
-		breath_read = true
-	return true
+	return BREAK_EARNING_IDS.has(hit.attack_id)
 
 
 # The gauge fills inside physics flushes and his own physics steps, where his states can't switch.
@@ -236,14 +232,6 @@ func _apply_art_layout() -> void:
 	shadow.hframes = roundi(shadow.texture.get_width() / BixbyBeastArtLayout.SHADOW_FRAME_SIZE.x)
 	shadow.offset = BixbyBeastArtLayout.shadow_offset()
 	shadow.modulate.a = BixbyBeastArtLayout.SHADOW_ALPHA
-
-	for frame in BixbyBeastArtLayout.FIRE_OUTLINES:
-		var shape := CollisionPolygon2D.new()
-		shape.polygon = BixbyBeastArtLayout.fire_outline(frame)
-		shape.disabled = true
-		fire_hitbox.add_child(shape)
-		fire_shapes[frame] = shape
-
 	_fit_hurtbox(BixbyBeastArtLayout.RECOVER_BODY_BOX)
 
 
@@ -313,29 +301,11 @@ func _show_anim_frame() -> void:
 	var mirrored: bool = anim.get("flips", false) and flying_left
 	sprite.flip_h = mirrored
 	shadow.flip_h = mirrored
-	# The fire hitbox is always the fire the current frame draws.
-	_set_fire_shape(frame if anim.sheet == BixbyBeastArtLayout.FIRE_SHEET else -1)
-
-
-func _set_fire_shape(frame: int) -> void:
-	for shape_frame in fire_shapes:
-		# Frames can change inside a physics flush, where shapes can't be switched directly.
-		fire_shapes[shape_frame].set_deferred("disabled", shape_frame != frame)
 
 
 # The frame of `sheet` on screen right now, or -1 if that isn't the sheet he's drawing.
 func drawn_frame_of(sheet: String) -> int:
 	return sprite.frame if anim.get("sheet", "") == sheet else -1
-
-
-func fire_touches(area: Area2D) -> bool:
-	return fire_hitbox.get_overlapping_areas().has(area)
-
-
-# Where the full stream's fire meets the floor, in global px.
-func fire_ground_contact() -> Rect2:
-	var contact := BixbyBeastArtLayout.local_rect(BixbyBeastArtLayout.FIRE_GROUND_CONTACT)
-	return Rect2(air.global_position + contact.position, contact.size)
 
 
 #FLIGHT
@@ -357,7 +327,7 @@ func feet_position() -> Vector2:
 
 
 # The uppercut shoves him back (PlayerFinisher). He flies, so his floor point simply moves, clamped
-# to the same bounds his own flight uses; the fire patches he has already laid stay where they are.
+# to the same bounds his own flight uses.
 func knock_back(push: Vector2, time: float) -> void:
 	var bounds := ground_bounds(height)
 	var target := (ground_position + push).clamp(bounds.position, bounds.end)
@@ -400,6 +370,34 @@ func leave_rope(drop := 0.0) -> void:
 	place()
 	_fit_hurtbox(BixbyBeastArtLayout.RECOVER_BODY_BOX)
 	_fade_hud(1.0)
+
+
+# The Flyby (BixbyBeastFlyby): on a pass along the top of the ring with his feet, his anchor, at `anchor`. His floor
+# point goes up to the rope line, as on the perch, so he sorts behind everyone on the mat with a negative height, and
+# there is no floor under him for a shadow.
+func place_on_pass(anchor: Vector2) -> void:
+	var rope_y: float = state_machine.ROPES.position.y
+	ground_position = Vector2(anchor.x, rope_y)
+	height = rope_y - anchor.y
+	fly_velocity = Vector2.ZERO
+	shadow.hide()
+	place()
+
+
+# Off a pass, or off the top of the screen: hovering at his usual height with his feet where they are, his shadow and
+# the HUD back. Every way out of the Flyby comes through here (its release()), so nothing leaves them faded.
+func end_pass() -> void:
+	var feet := feet_position()
+	height = HOVER_HEIGHT_PX
+	ground_position = feet + Vector2(0, height)
+	shadow.modulate.a = BixbyBeastArtLayout.SHADOW_ALPHA
+	shadow.show()
+	place()
+	set_hud_faded(false)
+
+
+func set_hud_faded(faded: bool) -> void:
+	_fade_hud(state_machine.inferno_hud_fade_alpha if faded else 1.0)
 
 
 # Bound to the bar itself, so a pause or a finisher's freeze holds it with the fight.
@@ -446,22 +444,6 @@ func ground_bounds(at_height: float) -> Rect2:
 		minf(ropes.end.x - shadow_box.end.x, VIEW_SIZE.x - body_box.end.x),
 		minf(ropes.end.y - shadow_box.end.y, VIEW_SIZE.y - body_box.end.y + at_height))
 	return Rect2(top_left, bottom_right - top_left)
-
-
-# Where his feet go to breathe fire on a player standing at `target`: straight above them, with the player
-# breath_aim_depth px below his feet, in the wide lower half of the stream. A player that close to the back
-# rope or a side rope is out of reach with his whole sprite on screen, so there he rises or leans past the
-# edge of the screen, but only as far as the fire needs to reach them.
-func breath_aim(target: Vector2) -> Vector2:
-	var fire_box := BixbyBeastArtLayout.local_rect(BixbyBeastArtLayout.FIRE_DRAWN)
-	var on_screen_top := -fire_box.position.y
-	var y: float = target.y - state_machine.breath_aim_depth
-	if y < on_screen_top:
-		y = maxf(minf(on_screen_top, target.y + state_machine.breath_mouth_reach), on_screen_top - state_machine.breath_top_overshoot)
-	var overshoot: float = state_machine.breath_side_overshoot
-	return Vector2(
-		clampf(target.x, -fire_box.position.x - overshoot, VIEW_SIZE.x - fire_box.end.x + overshoot),
-		minf(y, VIEW_SIZE.y - fire_box.end.y))
 
 
 #EFFECTS
@@ -606,7 +588,7 @@ func is_down() -> bool:
 	return is_broken() or is_juggled()
 
 
-# The three-bar mash and the juggle are the Break's payout alone: the juggle's shares of his 16 health
+# The three-bar mash and the juggle are the Break's payout alone: the juggle's shares of his 40 health
 # would end the fight inside two ordinary windows.
 func can_be_juggled() -> bool:
 	return not defeated and boss_health > 0 and is_broken()
@@ -660,10 +642,46 @@ func _on_defeated() -> void:
 	get_tree().call_group("arena_crowd", "cheer", 2.0)
 
 
-# Called by Defeated once the coughed-up Liam has landed, so the win lines come after it.
+# Called by Defeated once the coughed-up Liam has landed, so the win lines come after it - or, with Liam taking the
+# fight over, his takeover.
 func finish_victory() -> void:
-	GameProgress.next_boss_scene = NEXT_FIGHT_SCENE
+	if liam_follows and ResourceLoader.exists(LIAM_SCENE):
+		_hand_to_liam()
+		return
+	GameProgress.next_boss_scene = GameProgress.next_fight_after(FIGHT_SCENE)
 	FightOutro.finish_fight(get_tree(), true)
+
+
+#LIAM'S TAKEOVER
+
+# Beaten, but the fight isn't over: Liam takes it over, and its end is his from here. So Bixby leaves the boss group -
+# FightOutro would otherwise play his lines and tell him the player lost - and the target group, so the player's
+# punches and facing stop looking for him.
+func _hand_to_liam() -> void:
+	remove_from_group(FightOutro.BOSS_GROUP)
+	hurtbox.remove_from_group("boss_target")
+	var scene: Node = load(LIAM_SCENE).instantiate()
+	scene.get_node("LiamCharacterBody").bixby = self
+	get_parent().add_sibling(scene)
+
+
+# The main menu's LIAM row (GameProgress.start_at_liam, taken by BixbyBeastStateMachine._ready): the fight opens with
+# him already beaten, on his defeat's last frame with Liam coughed up, and Liam takes it over from there. His intro is
+# never entered, so the defeat comes on from no state at all. outro_started keeps Defeated from handing over a second
+# time when it sees the frame Liam lands on.
+func start_at_liam() -> void:
+	appear(LIAM_START_FEET)
+	defeated = true
+	boss_health = 0
+	# Down before the first frame is drawn: an empty bar, not a hit draining it.
+	if health_bar:
+		health_bar.set_value(0, 0, BossHealthBarUI.HIT_SILENT)
+	_refresh_health_bar()
+	set_hurtbox_active(false)
+	state_machine.enter_defeated()
+	state_machine.states["Defeated"].outro_started = true
+	play_anim(&"defeat", &"", BixbyBeastArtLayout.ANIMS[&"defeat"].frames.size() - 1)
+	_hand_to_liam()
 
 
 # Called by FightOutro when the player loses.
@@ -674,7 +692,6 @@ func on_player_defeated() -> void:
 
 # Whoever won, or once he's Broken, no fire and nothing he's sent out may stay live.
 func clear_hazards() -> void:
-	_set_fire_shape(-1)
 	for hazard in get_tree().get_nodes_in_group(state_machine.HAZARD_GROUP):
 		hazard.queue_free()
 

@@ -103,14 +103,26 @@ static func within(grid: Dictionary, mask: PackedByteArray, reach: float) -> Pac
 
 
 # The eruptions' clock, after the first pose's strike: when each goes off, and when its burst starts and stops
-# hurting after that.
+# hurting after that; each zone's notice and ring; and the slams' clock on the same count - each slam as it lands,
+# and `start`, when a player can first play the maze: every zone down (the last slam) and zone 1 told, and never
+# after zone 1's ring begins.
 static func clock(t) -> Dictionary:
 	var pose: Node = t.sm.states["Pose"]
+	var slams: Node = t.sm.states["Slams"]
 	var burst: Dictionary = load("res://Scripts/GreysonArtLayout.gd").fx(&"erupt_burst")
 	var zone: Dictionary = load("res://Scripts/GreysonArtLayout.gd").fx(&"zone")
 	var frames: Array = burst.hurt_frames
-	return {eruptions = pose.eruptions.duplicate(), ring = zone.ring_lead, radii = zone.radii,
-		first_hurt = frames[0] * burst.frame_time, hurt_end = (frames[-1] + 1) * burst.frame_time}
+	var strike: float = slams.duration() + pose.turn_time
+	var first: float = 2.0 * slams.teleport_time + slams.windup_time
+	var apart: float = first + slams.recover_time
+	var landings: Array[float] = []
+	for k in slams.slams:
+		landings.append(first + apart * k - strike)
+	var eruptions: Array = pose.eruptions.duplicate()
+	var start: float = minf(maxf(eruptions[0] - pose.eruption_notice, landings[-1]), eruptions[0] - zone.ring_lead)
+	return {eruptions = eruptions, ring = zone.ring_lead, radii = zone.radii, notice = pose.eruption_notice,
+		first_hurt = frames[0] * burst.frame_time, hurt_end = (frames[-1] + 1) * burst.frame_time,
+		landings = landings, start = start, per_slam = slams.zones_per_slam}
 
 
 # Interval k's walking time: up to zone k's first hurt, from the start (k = 0) or from zone k-1's last.
@@ -132,135 +144,179 @@ static func forward(grid: Dictionary, start: Vector2, zones: Array, times: Dicti
 	return sets
 
 
-# Where a player standing through zone k's burst can go on and come through all the later ones.
-static func backward(grid: Dictionary, zones: Array, times: Dictionary, margin: float) -> Array:
-	var sets: Array = []
-	sets.resize(zones.size())
-	var last := zones.size() - 1
-	sets[last] = outside(grid, zones[last], times.radii, margin)
-	for k in range(last - 1, -1, -1):
-		sets[k] = both(outside(grid, zones[k], times.radii, margin), within(grid, sets[k + 1], WALK * leg_time(times, k + 1, 0.0)))
-	return sets
+# STEPPED, for the weave and the earliest punch: time in STEP_TIME steps and the floor in STEP_CELL cells, a row a
+# bitmask, so a player standing across bursts can be followed step by step (the octile sets above only say where
+# they can be as each burst comes). A step moves a cell to any of its eight neighbours: STEP_CELL px straight in
+# STEP_TIME is the player's walk, and the diagonal is the keyboard's own diagonal (PlayerScript moves both axes at
+# full speed).
+const STEP_TIME := 0.05
+const STEP_CELL := 30.0
 
 
-# A walk from `start` at `start_time` that comes through every burst and stands on `goal` for `hold` s as early as
-# it can: {legs: [{from, to, punch}] in pose time, at: when it gets to `goal`, interval: the one it punches in}, or
-# {} if it can't. Leg k is walked from its `from`; a punch leg holds on `goal` and then walks on to its `to`.
-static func weave(grid: Dictionary, start: Vector2, zones: Array, times: Dictionary, start_time: float, margin: float, goal: Vector2, hold: float) -> Dictionary:
-	var fwd := forward(grid, start, zones, times, start_time, margin)
-	var back := backward(grid, zones, times, margin)
-	var n := zones.size()
-	var to_goal := distance_from(grid, _single(grid, goal))
-	for j in n + 1:
-		var begin: float = start_time if j == 0 else times.eruptions[j - 1] + times.hurt_end
-		var near := INF
-		var from_cell := -1
-		if j == 0:
-			near = start.distance_to(goal)
-		else:
-			var standing := both(fwd[j - 1], back[j - 1])
-			for i in standing.size():
-				if standing[i] == 1 and to_goal[i] < near:
-					near = to_goal[i]
-					from_cell = i
-		if near == INF:
+static func step_grid(ropes: Rect2) -> Dictionary:
+	var columns := int(ropes.size.x / STEP_CELL)
+	return {origin = ropes.position, columns = columns, rows = int(ropes.size.y / STEP_CELL), full = (1 << columns) - 1}
+
+
+static func step_centre(grid: Dictionary, row: int, column: int) -> Vector2:
+	return grid.origin + (Vector2(column, row) + Vector2(0.5, 0.5)) * STEP_CELL
+
+
+static func step_cell(grid: Dictionary, point: Vector2) -> Vector2i:
+	return Vector2i(clampi(int((point.x - grid.origin.x) / STEP_CELL), 0, grid.columns - 1),
+		clampi(int((point.y - grid.origin.y) / STEP_CELL), 0, grid.rows - 1))
+
+
+static func has_cell(rows: PackedInt64Array, cell: Vector2i) -> bool:
+	return (rows[cell.y] >> cell.x) & 1 == 1
+
+
+# A row's bit set where a cell's centre is `margin` or more outside the zone on `centre`.
+static func step_outside(grid: Dictionary, centre: Vector2, radii: Vector2, margin: float) -> PackedInt64Array:
+	var rows := PackedInt64Array()
+	rows.resize(grid.rows)
+	var half := radii + Vector2.ONE * margin
+	for row in grid.rows:
+		var bits := 0
+		for column in grid.columns:
+			var d := step_centre(grid, row, column) - centre
+			if pow(d.x / half.x, 2.0) + pow(d.y / half.y, 2.0) > 1.0:
+				bits |= 1 << column
+		rows[row] = bits
+	return rows
+
+
+# Every cell one step from a set one, or on it.
+static func step_spread(grid: Dictionary, rows: PackedInt64Array) -> PackedInt64Array:
+	var out := PackedInt64Array()
+	out.resize(rows.size())
+	var full: int = grid.full
+	for row in rows.size():
+		var near := rows[row]
+		if row > 0:
+			near |= rows[row - 1]
+		if row < rows.size() - 1:
+			near |= rows[row + 1]
+		out[row] = (near | (near << 1) | (near >> 1)) & full
+	return out
+
+
+static func step_and(a: PackedInt64Array, b: PackedInt64Array) -> PackedInt64Array:
+	var out := PackedInt64Array()
+	out.resize(a.size())
+	for row in a.size():
+		out[row] = a[row] & b[row]
+	return out
+
+
+# The whole run on the steps from `start_time` (the eruptions' clock) to `until`: each step's time and the cells safe
+# then - clear of every zone whose burst is hurting - and, walking from `start`, where the player can be on each step
+# (reach) and where they can be and still come through every burst after (live).
+static func stepped(grid: Dictionary, start: Vector2, zones: Array, times: Dictionary, start_time: float, margin: float, until: float) -> Dictionary:
+	var clear: Array = []
+	for zone in zones:
+		clear.append(step_outside(grid, zone, times.radii, margin))
+	var all := PackedInt64Array()
+	all.resize(grid.rows)
+	all.fill(grid.full)
+	var count := int(ceilf((until - start_time) / STEP_TIME)) + 1
+	var clocks: Array[float] = []
+	var safe: Array = []
+	for i in count:
+		var at: float = start_time + i * STEP_TIME
+		clocks.append(at)
+		var rows := all
+		for k in zones.size():
+			# A step before the burst starts hurting or after it stops still counts if the walk to or from its cell
+			# overlaps the burst: the steps fall anywhere against the eruptions, and a hurt frame 0.003 s after a step
+			# found the player still on the way out of it.
+			if at > times.eruptions[k] + times.first_hurt - STEP_TIME + 0.0001 and at < times.eruptions[k] + times.hurt_end + STEP_TIME - 0.0001:
+				rows = step_and(rows, clear[k])
+		safe.append(rows)
+	var reach: Array = []
+	var here := PackedInt64Array()
+	here.resize(grid.rows)
+	var first := step_cell(grid, start)
+	here[first.y] = 1 << first.x
+	for i in count:
+		if i > 0:
+			here = step_spread(grid, here)
+		here = step_and(here, safe[i])
+		reach.append(here)
+	var live: Array = []
+	live.resize(count)
+	var after: PackedInt64Array = safe[count - 1]
+	live[count - 1] = after
+	for i in range(count - 2, -1, -1):
+		after = step_and(step_spread(grid, after), safe[i])
+		live[i] = after
+	return {clocks = clocks, safe = safe, reach = reach, live = live}
+
+
+# The first step a walk from the run's start can stand on one of `goals` for `hold` s and come through every burst
+# after: its index, or -1. On the eruptions' clock, no sooner than `not_before` (his window opening).
+static func first_punch(run: Dictionary, goals: Array[Vector2i], hold: float, not_before: float) -> Dictionary:
+	var span := int(ceilf(hold / STEP_TIME))
+	var count: int = run.clocks.size()
+	for i in count - span:
+		if run.clocks[i] < not_before - 0.0001:
 			continue
-		var onward := 0.0
-		var onward_cell := -1
-		if j < n:
-			onward = INF
-			for i in back[j].size():
-				if back[j][i] == 1 and goal.distance_to(centre_of(grid, i)) < onward:
-					onward = goal.distance_to(centre_of(grid, i))
-					onward_cell = i
-		var length: float = INF if j == n else times.eruptions[j] + times.first_hurt - begin
-		if (near + onward) / WALK + hold > length:
-			continue
-		var legs: Array = []
-		var here := start
-		var waypoints: Array = []
-		if j > 0:
-			waypoints = _back_track(grid, fwd, from_cell, j - 1, times, start_time)
-		for k in waypoints.size():
-			var leave: float = start_time if k == 0 else times.eruptions[k - 1] + times.hurt_end
-			legs.append({from = leave, to = waypoints[k], punch = false})
-			here = waypoints[k]
-		legs.append({from = begin, to = goal, punch = true})
-		if j < n:
-			legs.append({from = begin + near / WALK + hold, to = centre_of(grid, onward_cell), punch = false})
-			var at: int = onward_cell
-			for k in range(j + 1, n):
-				at = _step_on(grid, back[k], at, WALK * leg_time(times, k, start_time), goal)
-				legs.append({from = times.eruptions[k - 1] + times.hurt_end, to = centre_of(grid, at), punch = false})
-		return {legs = legs, at = begin + near / WALK, interval = j}
-	return {}
-
-
-# The earliest a walk from `start` at `start_time` can stand on any cell of `goals` for `hold` s and still come
-# through every burst: {at, interval}, or {} if never. Cells are paired - the walk in and the walk on are from the
-# same goal cell.
-static func earliest(grid: Dictionary, start: Vector2, zones: Array, times: Dictionary, start_time: float, margin: float, goals: PackedByteArray, hold: float) -> Dictionary:
-	var fwd := forward(grid, start, zones, times, start_time, margin)
-	var back := backward(grid, zones, times, margin)
-	var n := zones.size()
-	for j in n + 1:
-		var begin: float = start_time if j == 0 else times.eruptions[j - 1] + times.hurt_end
-		var inward: PackedFloat32Array
-		if j == 0:
-			inward = distance_from(grid, _single(grid, start))
-		else:
-			inward = distance_from(grid, both(fwd[j - 1], back[j - 1]))
-		var onward := PackedFloat32Array()
-		if j < n:
-			onward = distance_from(grid, back[j])
-		var length: float = INF if j == n else times.eruptions[j] + times.first_hurt - begin
-		var soonest := INF
-		for i in goals.size():
-			if goals[i] == 0 or inward[i] == INF:
+		for goal in goals:
+			if not has_cell(run.reach[i], goal) or not has_cell(run.live[i + span], goal):
 				continue
-			var out: float = 0.0 if j == n else onward[i]
-			if (inward[i] + out) / WALK + hold <= length:
-				soonest = minf(soonest, begin + inward[i] / WALK)
-		if soonest < INF:
-			return {at = soonest, interval = j}
+			var stays := true
+			for j in range(i, i + span + 1):
+				stays = stays and has_cell(run.safe[j], goal)
+			if stays:
+				return {step = i, cell = goal}
 	return {}
 
 
-static func _single(grid: Dictionary, point: Vector2) -> PackedByteArray:
-	var mask := PackedByteArray()
-	mask.resize(grid.columns * grid.rows)
-	mask[index_of(grid, point)] = 1
-	return mask
+# That walk, a cell a step from the start to the punch, then holding there, then on through the bursts after it:
+# [{at, to, punch}] on the eruptions' clock, `punch` on the step the hold starts. Staying put is always preferred.
+static func punch_route(grid: Dictionary, run: Dictionary, punch: Dictionary, hold: float) -> Array:
+	var span := int(ceilf(hold / STEP_TIME))
+	var cells: Array[Vector2i] = []
+	cells.resize(punch.step + 1)
+	cells[punch.step] = punch.cell
+	for i in range(punch.step - 1, -1, -1):
+		cells[i] = _step_back(grid, run.reach[i], cells[i + 1])
+	for i in span:
+		cells.append(punch.cell)
+	var count: int = run.clocks.size()
+	for i in range(punch.step + span + 1, count):
+		cells.append(_step_toward(grid, run.live[i], cells[i - 1], punch.cell))
+	var route: Array = []
+	for i in cells.size():
+		if i == 0 or cells[i] != cells[i - 1] or i == punch.step:
+			route.append({at = run.clocks[i], to = step_centre(grid, cells[i].y, cells[i].x), punch = i == punch.step})
+	return route
 
 
-# The cells stood on through bursts 0..last, ending on `cell`, each a straight walk from the one before.
-static func _back_track(grid: Dictionary, fwd: Array, cell: int, last: int, times: Dictionary, start_time: float) -> Array:
-	var points: Array = []
-	points.resize(last + 1)
-	points[last] = centre_of(grid, cell)
-	for k in range(last, 0, -1):
-		var reach: float = WALK * leg_time(times, k, start_time)
-		var best := -1
-		var best_gap := INF
-		for i in fwd[k - 1].size():
-			if fwd[k - 1][i] == 1:
-				var gap: float = centre_of(grid, i).distance_to(points[k])
-				if gap <= reach and gap < best_gap:
-					best = i
-					best_gap = gap
-		points[k - 1] = centre_of(grid, best)
-	return points
+# A cell of `rows` a step from `cell` (itself first).
+static func _step_back(grid: Dictionary, rows: PackedInt64Array, cell: Vector2i) -> Vector2i:
+	if has_cell(rows, cell):
+		return cell
+	for d in [Vector2i(0, -1), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(1, 0), Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
+		var near: Vector2i = cell + d
+		if near.x >= 0 and near.y >= 0 and near.x < grid.columns and near.y < grid.rows and has_cell(rows, near):
+			return near
+	return cell
 
 
-# The cell of `mask` a straight walk of `reach` from `cell` gets to that is nearest `goal`.
-static func _step_on(grid: Dictionary, mask: PackedByteArray, cell: int, reach: float, goal: Vector2) -> int:
-	var from := centre_of(grid, cell)
+# The cell of `rows` a step from `cell` nearest `goal`, staying put if `cell` is one.
+static func _step_toward(grid: Dictionary, rows: PackedInt64Array, cell: Vector2i, goal: Vector2i) -> Vector2i:
+	if has_cell(rows, cell):
+		return cell
 	var best := cell
 	var best_gap := INF
-	for i in mask.size():
-		if mask[i] == 1 and centre_of(grid, i).distance_to(from) <= reach:
-			var gap := centre_of(grid, i).distance_to(goal)
+	for dy in [-1, 0, 1]:
+		for dx in [-1, 0, 1]:
+			var near := cell + Vector2i(dx, dy)
+			if near.x < 0 or near.y < 0 or near.x >= grid.columns or near.y >= grid.rows or not has_cell(rows, near):
+				continue
+			var gap := Vector2(near - goal).length()
 			if gap < best_gap:
-				best = i
+				best = near
 				best_gap = gap
 	return best

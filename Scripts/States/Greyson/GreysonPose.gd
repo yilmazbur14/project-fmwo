@@ -2,40 +2,46 @@ extends State
 
 # Greyson's poses (plan section 3.4), attack 1's punish window: six poses to the crowd - A, B, C, A, B, C - on a
 # fixed clock, the pose sheets' 0.3 s strike and 1.2 s hold, so the race (plan section 4) comes out the same every
-# time. A pose that ends unhit banks a cell of his hype meter to a cheer; the first hit in a pose spoils it - half
-# a cell off, a boo, and pose_hit held to the pose's end - and later hits in it only deal their damage. The meter
-# carries from cycle to cycle, and a bank that fills it fires the spirit bomb.
-# The zones Slams planted go off one after another through poses 1-3, the last as pose 3 ends (eruptions, from
-# GreysonStateMachine's queue). The single-bar finisher's uppercut ends the phase (the body's end_recovery, then
-# stagger_then_start_cycle).
+# time. A pose that ends unhit banks `bank` cells of his hype meter to a cheer (two since the user's 2026-09-30
+# "double the speed greyson builds his hype meter", so three clean poses fill it); the first hit in a pose spoils
+# it - a boo, and pose_hit held to the pose's end - and later hits in it only deal their damage. Any hit that lands
+# on him also empties the meter (GreysonScript.hit_resets_hype), whenever it comes. The meter carries from cycle to
+# cycle, and a bank that fills it fires the spirit bomb.
+# The zones Slams planted go off one after another from around the first strike (eruptions, on
+# GreysonStateMachine's eruption clock). The single-bar finisher's uppercut ends the phase (the body's
+# end_recovery, then stagger_then_start_cycle).
 
 @export var body : CharacterBody2D
 
 @onready var state_machine = get_parent()
 
 #PACING (seconds)
-# Before the first pose he plants the barbell and turns to the crowd, his window still shut (plan section 3's
-# 5.90-6.20).
-@export var turn_time := 0.3
+# Before the first pose he plants the barbell and turns to the crowd, his window still shut.
+@export var turn_time := 0.15
 @export var pose_time := 1.5
 # A cheer lasts until the next pose resolves; a boo this long.
 @export var boo_time := 1.75
 
 #HYPE (cells)
-@export var bank := 1.0
+@export var bank := 2.0
+# A spoiled pose's own drain. It only shows with GreysonScript.hit_resets_hype off: the hit that spoils a pose has
+# already emptied the meter.
 @export var spoil := -0.5
 # The flex's pitch on an empty meter and on a full one: it climbs with his hype.
 @export var flex_pitch := Vector2(1.0, 1.3)
 
 #ERUPTIONS (seconds)
-# When the zones Slams planted go off, the oldest first, counted from the first pose's strike: back to back through
-# poses 1 and 2, a gap early in pose 3, and the last as pose 3 ends (3 x pose_time). Keep them at least 0.8 s
-# apart, so no zone's ring starts before the one before it has done hurting.
-@export var eruptions: Array[float] = [0.6, 1.4, 2.2, 3.0, 4.5]
-# How long before it goes off each is told, turning from waiting to next: at least the zone's ring_lead, so its
-# ring runs in full. The spacing plus ring_lead has the next one lit while the one before it rushes. None is told
+# When the zones Slams planted go off, the oldest first, counted from the first pose's strike: from 0.45 s, 32 and 33
+# frames apart in turn, 0.54 s on average and each on a frame (0.6 apart until the user's 2026-10-06 "denser move
+# sets"), the eighth in pose 3. The slams test's fence sweep proves
+# a walk (no dash) comes through them all, and its weave reaches him without a burst.
+# The first is no sooner than a walk out of a zone after the last slam lands (a zone's ry at the player's walk, plus
+# the ring's start).
+@export var eruptions: Array[float] = [0.45, 0.9833, 1.5333, 2.0667, 2.6167, 3.15, 3.7, 4.2333]
+# How long before it goes off each is told, turning from waiting to next (stage 2, its rumble rising): at least the
+# zone's ring_lead, so its ring runs in full. Slams starts the clock that tells them, so the first can be told
 # before the poses begin.
-@export var eruption_notice := 1.4
+@export var eruption_notice := 1.2
 
 # A the three-quarter back twist, B the front double biceps, C the rear V.
 const POSES: Array[StringName] = [&"pose_a", &"pose_b", &"pose_c", &"pose_a", &"pose_b", &"pose_c"]
@@ -49,7 +55,6 @@ var pose_clock := 0.0
 var spoiled := false
 # The phase is under way, so cutting it short quiets the crowd.
 var live := false
-var eruptions_told := 0
 
 # For the tests.
 var entered_count := 0
@@ -69,8 +74,7 @@ func Enter() -> void:
 	body.velocity = Vector2.ZERO
 	body.set_hurtbox_active(false)
 	body.play_state_anim(&"idle")
-	eruptions_told = 0
-	_tell_eruptions()
+	state_machine.start_eruption_clock(turn_time, false)
 	turn_left = turn_time
 	if turn_left <= 0.0:
 		_open(0.0)
@@ -84,7 +88,6 @@ func Physics_Update(delta: float) -> void:
 	if not live:
 		return
 	phase_clock += delta
-	_tell_eruptions()
 	if pose_index < 0:
 		turn_left -= delta
 		if turn_left <= 0.0:
@@ -134,14 +137,6 @@ func _strike(index: int, into: float) -> void:
 	body.play_anim(POSES[index])
 	body.play_sfx(&"flex", lerpf(flex_pitch.x, flex_pitch.y, body.hype / body.HYPE_MAX))
 
-
-# The first pose strikes as the turn ends, on the fixed clock, so each zone's fuse runs to its time exactly
-# whenever the step that tells it falls.
-func _tell_eruptions() -> void:
-	var since_strike := phase_clock - turn_time
-	while eruptions_told < eruptions.size() and since_strike >= eruptions[eruptions_told] - eruption_notice:
-		state_machine.schedule_next_eruption(eruptions[eruptions_told] - since_strike)
-		eruptions_told += 1
 
 
 func _resolve(into: float) -> void:

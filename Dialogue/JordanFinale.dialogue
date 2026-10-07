@@ -1,0 +1,34 @@
+# Jordan's finale: walk_out plays in the arena (JordanWalkOut), room in his room (JordanFinaleScript). The user's
+# lines (2026-09-28) exactly as written, missing apostrophes added; two speeches split into two balloons at a
+# sentence break, words unchanged. Never [wait=N] or "do wait(N)": the hold-to-skip can't run those out.
+
+~ walk_out
+do storms_off()
+Jordan: No you cheated, don't cheat, don't cheat, no don't cheat. I won't allow cheaters in this server
+do gone()
+=> END
+
+~ room
+Burak: what the hell dude? I won, game over, now let me into the server
+do no_answer()
+do bosses_walk_in()
+Liam: Hey bud... I think he has you muted... [#liam=smug]
+Burak: Uhhh ok, I have an idea
+do moustache_on()
+do tap_shoulder()
+Aiden: Hey Jordan! My name's Aiden! I love funkos, I love Nintendo and I definitely don't cheat! Can I be let into the server?
+Jordan: Hey! What's going on Aiden? Weird, you look exactly like a guy named Burak I saw... [#jordan=friendly]
+Jordan: Anyways! Yes dude, you sound like a cool dude! Of course you can! Here let me just send you the server invite... [#jordan=friendly]
+do moustache_falls()
+Jordan: Hey wait a second... You're Burak! That damn cheating hockey puck! You...You tricked me.... [#jordan=glare]
+do room_trembles()
+Liam: Hey buddy why don't we just calm down... [#liam=nervous]
+do disintegrate_liam()
+Jordan: What an idiot. He was trying to trick me too. But I'm done playing your games. [#jordan=rage]
+Jordan: What you don't understand is... [shake rate=20.0 level=6 connected=1]This is my world, my server, the others don't even exist if I don't want them to.[/shake] [#jordan=rage]
+do disintegrate_the_rest()
+Jordan: [shake rate=20.0 level=6 connected=1]The only person in this server.... is just me.[/shake] [#jordan=rage]
+do room_comes_apart()
+do ascend()
+Jordan: Welcome to my world, Burak. [#portrait=demon, #jordan=god]
+=> END

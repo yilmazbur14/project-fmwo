@@ -3,33 +3,39 @@ extends RefCounted
 # greyson_slams (coder B): Greyson's slams and their eruption zones (GreysonSlams, GreysonEruptionScript; plan
 # sections 3.2, 3.3 and 9.6), in his test scene, the cycle pinned to his slams and poses. --fixed-fps 60. tier=
 #   timeline  (the default) each teleport to the spot furthest from the player's feet and never the one he is on,
-#             home last; five slams 1.30 s apart from 0.90 s, each zone by the fence rule - on the player's feet
-#             at that slam, or beside the waiting zones when they stood in one (zone 5 here); none going off in the
-#             slams, all five waiting as he lands home and goes into
-#             Pose at 7.00 s; then set off oldest first at GreysonPose's eruptions from the first pose's strike
-#             (0.6, 1.4, 2.2, 3.0 and 4.5 s), the last as pose 3 ends, never under 0.8 s apart, each told
-#             eruption_notice before (or as the poses begin) with its ring the last ring_lead; each rumble ramped
-#             up its fuse and stopped as it goes; the feet in zone 1 as it goes hit once.
+#             home last; four slams 0.62 s apart from 0.50 s, each planting two zones by the fence rule - on the
+#             player's feet at that slam, or beside the waiting zones when they stood in one, a slam's second
+#             always beside; none going off in the slams, all eight waiting as he lands home and goes into Pose at
+#             2.72 s; then set off oldest first at GreysonPose's eruptions from the first pose's strike, to the
+#             frame, none closer than ERUPTION_GAP_FLOOR, each told eruption_notice before - the first ones
+#             while he is still slamming - with its ring the last ring_lead; each rumble ramped up its fuse and
+#             stopped as it goes; the feet in zone 1 as it goes hit once.
 #   feet      the player's feet just outside zone 1 as it goes off, their body over it: no hit.
 #   dash      a dash through zone 1 as it goes off: DODGED, a perfect dodge, and no read.
 #   break     a Break in the middle of the slams: every zone still waiting fizzles, none goes off, and he is
 #             left visible.
 #   fence     the fence swept, zone_spot alone: players standing still or drifting through the slams from spots
-#             all over the floor; every zone keeps the fence rule, and from wherever the player is as zone 1's ring
-#             starts a walk (no dash) comes through all five bursts (maze.gd). The numbers are logged.
-#   still     a player standing still through it all: zone 1 lands on them, the other four box them in, and
+#             all over the floor; every zone keeps the fence rule, and from wherever the player is once every zone
+#             is down and zone 1 told (maze.clock's start) a walk (no dash) comes through all eight bursts
+#             (maze.gd); a player standing still can walk out of zone 1 inside its ring. The numbers are logged.
+#   still     a player standing still through it all: zone 1 lands on them, the other seven box them in, and
 #             zone 1's burst hits them.
 #   step      the old way out, a player standing still through the slams who steps out of zone 1 as it rings and
 #             stands there: a later zone of the fence hits them.
-#   weave     a player standing still through the slams who then walks the maze (maze.weave): out of each zone
-#             before it goes, and to him to punch as soon as the bursts let them. No burst hits them, and they
-#             reach him in pose 2 or 3.
+#   weave     a player standing still through the slams who, once the last zone is down, walks the maze
+#             (maze.weave): out of each zone before it goes, and to him to punch as soon as the bursts let them. No
+#             burst hits them, and they reach him in pose 2 or 3.
+#   ring      (playtest 2026-10-04) zone 1's yellow ring with the player standing on its centre: over their head,
+#             not on their body; a zone by the top rope keeps its ring inside the ropes, one under his HUD below it.
 
 const Plates := preload("res://art_source/defense_tests/greyson/plates.gd")
 const Maze := preload("res://art_source/defense_tests/greyson/maze.gd")
 const HitInfo := preload("res://Scripts/HitInfo.gd")
 const FRAME_TIME := 1.0 / 60.0
 const SLACK := FRAME_TIME + 0.0001
+# The closest two eruptions may go off: the fence sweep (a walk through all eight) and the weave (no burst, and him
+# reached in poses 1-3) both pass with them this close (the 2026-10-06 density pass; 0.6 before it).
+const ERUPTION_GAP_FLOOR := 0.5
 # Where the player stands for each slam in the timeline, the third outside the zones' inset so it is clamped.
 const SLAM_FEET: Array[Vector2] = [Vector2(700, 820), Vector2(1300, 700), Vector2(1790, 950), Vector2(400, 300),
 	Vector2(1100, 400)]
@@ -58,6 +64,8 @@ static func run(t) -> void:
 			await tier_step(t)
 		"weave":
 			await tier_weave(t)
+		"ring":
+			await tier_ring(t)
 		_:
 			t.check(false, "greyson_slams has no tier %s" % t.tier)
 
@@ -95,13 +103,17 @@ static func tier_timeline(t) -> void:
 	var pose: Node = t.sm.states["Pose"]
 	var ring_lead: float = load("res://Scripts/GreysonArtLayout.gd").fx(&"zone").ring_lead
 	var count: int = slams.slams
+	var zone_count: int = count * slams.zones_per_slam
 	var seen := {"steps": 0, "states": [], "zones": {}, "start": t.boss.fight_clock, "erupted": {}, "fuses": {}, "ids": {}}
 	var watch := watch_slams(t, seen)
 	t.physics_frame.connect(watch)
+	# Nothing banks: this is about the zones' clock, and his third bank would fire the bomb before the last one goes.
+	var hold := func(): t.boss.reset_hype()
+	t.physics_frame.connect(hold)
 	t.sm.start_cycle()
 	# Each slam's feet while it winds up; then in zone 1 as it goes, and off the ring once it has hurt.
 	for k in count:
-		await t.wait_until(func(): return slams.beat == slams.Beat.WINDUP and slams.slammed == k and slams.beat_clock >= 0.25, 240)
+		await t.wait_until(func(): return slams.beat == slams.Beat.WINDUP and slams.slammed == k and slams.beat_clock >= slams.windup_time / 2.0, 240)
 		await Plates.put_feet(t, SLAM_FEET[k])
 	await t.wait_until(func(): return not Plates.state_is(t, "Slams"), 240)
 	var waiting_home: int = t.sm.live_zones().size()
@@ -110,10 +122,11 @@ static func tier_timeline(t) -> void:
 	await t.wait_until(func(): return seen.erupted.has(0), 120)
 	await t.wait(15)
 	await Plates.put_feet(t, Plates.AWAY)
-	var all_went := func() -> bool: return seen.erupted.size() == count
+	var all_went := func() -> bool: return seen.erupted.size() == zone_count
 	await t.wait_until(all_went, 600)
 	await t.wait(2)
 	t.physics_frame.disconnect(watch)
+	t.physics_frame.disconnect(hold)
 	var times: Array = slams.slam_clocks.map(func(at): return snappedf(at - seen.start, 0.0001))
 	t.log_p("states %s" % [seen.states.map(func(s): return [s[0], snappedf(s[1], 0.001)])])
 	t.log_p("spots %s from feet %s; slams at %s; zones on %s" % [slams.spots, slams.picked_from, times, slams.zone_centres])
@@ -130,39 +143,42 @@ static func tier_timeline(t) -> void:
 	var on_time := times.size() == count
 	for i in times.size():
 		on_time = on_time and absf(times[i] - (first + apart * i)) <= SLACK
-	t.check(count == 5 and on_time, "five slams, %.2f s apart from %.2f s, to the frame (%s)" % [apart, first, times])
-	var broken := fence_broken(t, slams, SLAM_FEET, slams.zone_centres, slams.placements)
-	t.check(slams.zone_centres.size() == count and broken == "", "each zone by the fence rule: on the player's feet, or beside the waiting zones when they stood in one %s" % broken)
-	t.check(slams.placements == [&"aimed", &"aimed", &"aimed", &"aimed", &"fence"],
-		"zones 1-4 on the feet, zone 5 beside, the feet then in zone 2 (%s, at %s)" % [slams.placements, slams.zone_centres])
+	t.check(count == 4 and on_time, "four slams, %.2f s apart from %.2f s, to the frame (%s)" % [apart, first, times])
+	var broken := fence_broken(t, slams, slams.slam_feet, slams.zone_centres, slams.placements)
+	t.log_p("zones placed %s" % [slams.placements])
+	t.check(zone_count == 8 and slams.zone_centres.size() == zone_count and broken == "",
+		"eight zones, two a slam, each by the fence rule: on the player's feet, or beside the waiting zones when they stood in one %s" % broken)
+	var seconds_beside := true
+	for k in count:
+		seconds_beside = seconds_beside and slams.placements[2 * k + 1] != &"aimed"
+	t.check(slams.placements[0] == &"aimed" and seconds_beside, "zone 1 on the player's feet, and each slam's second beside the zones already down (%s)" % [slams.placements])
 	var into_pose: Array = seen.states.filter(func(s): return s[0] == "Pose")
 	var done_at: float = apart * count + 2.0 * slams.teleport_time
 	t.check(not into_pose.is_empty() and absf(into_pose[0][1] - done_at) <= SLACK, "done at %.2f s, landed home, into Pose (%s)" % [done_at, into_pose])
-	t.check(gone_in_slams == 0 and waiting_home == count, "none goes off in the slams: all %d still waiting as he goes into Pose (%d)" % [count, waiting_home])
+	t.check(gone_in_slams == 0 and waiting_home == zone_count, "none goes off in the slams: all %d still waiting as he goes into Pose (%d)" % [zone_count, waiting_home])
 
 	t.log_p("-- the poses set them off")
 	var strike: float = into_pose[0][1] + pose.turn_time if not into_pose.is_empty() else INF
 	var went: Array = []
-	for k in count:
+	for k in zone_count:
 		went.append(snappedf(seen.erupted.get(k, -1.0) - strike, 0.0001))
 	var fuses: Array = []
-	for k in count:
+	for k in zone_count:
 		fuses.append(seen.fuses.get(k, [-1.0, -1.0]).map(func(x): return snappedf(x, 0.0001)))
-	t.log_p("from the first strike, zones 1-%d went off at %s s (want %s); rung and gone off that long after each was told: %s" % [count, went, pose.eruptions, fuses])
+	t.log_p("from the first strike, zones 1-%d went off at %s s (want %s); rung and gone off that long after each was told: %s" % [zone_count, went, pose.eruptions, fuses])
 	var in_order: bool = went.size() == pose.eruptions.size()
 	for k in went.size():
 		in_order = in_order and absf(went[k] - pose.eruptions[k]) <= SLACK
 	t.check(in_order, "oldest first, at %s s from the first pose's strike, to the frame" % [pose.eruptions])
-	t.check(absf(went[-1] - 3.0 * pose.pose_time) <= SLACK, "the last as pose 3 ends (%.4f s)" % went[-1])
 	var spaced := true
 	for k in range(1, went.size()):
-		spaced = spaced and went[k] - went[k - 1] >= 0.8 - SLACK
-	t.check(spaced, "never under 0.8 s apart: no ring starts while the burst before it can still hurt")
+		spaced = spaced and went[k] - went[k - 1] >= ERUPTION_GAP_FLOOR - SLACK
+	t.check(spaced, "never closer than %.2f s apart, the spacing the fence and weave tiers were proven at (%.4f s the last)" % [ERUPTION_GAP_FLOOR, went[-1]])
 	var told_ahead := true
-	for k in count:
-		var notice: float = minf(pose.eruption_notice, pose.eruptions[k] + pose.turn_time)
-		told_ahead = told_ahead and absf(fuses[k][1] - notice) <= SLACK and absf(fuses[k][0] - (notice - ring_lead)) <= SLACK
-	t.check(told_ahead, "each told %.2f s before it goes, or as the poses begin, its ring the last %.2f s" % [pose.eruption_notice, ring_lead])
+	for k in zone_count:
+		var notice: float = minf(pose.eruption_notice, pose.eruptions[k] + slams.duration() + pose.turn_time)
+		told_ahead = told_ahead and absf(fuses[k][1] - notice) <= 2.0 * SLACK and absf(fuses[k][0] - (notice - ring_lead)) <= 2.0 * SLACK
+	t.check(told_ahead, "each told %.2f s before it goes, the first while he is still slamming, its ring the last %.2f s" % [pose.eruption_notice, ring_lead])
 	t.check(t.events.size() == 1 and t.events[0].id == &"greyson_eruption" and t.player.playerHealth == 998,
 		"the feet in zone 1 as it goes: hit once, for a whole heart (health %d)" % t.player.playerHealth)
 	t.check(t.sm.live_zones().is_empty(), "and none left waiting")
@@ -249,14 +265,16 @@ static func tier_break(t) -> void:
 	await t.wait(90)
 	t.physics_frame.disconnect(watch)
 	t.log_p("zones %d, hidden as it broke %s, now %s, visible %s" % [ids.size(), hidden_before, t.sm.current_state.name, t.boss.sprite.visible])
-	t.check(ids.size() == 2 and fizzling and t.sm.live_zones().is_empty(), "both zones fizzled at the Break, and the queue emptied")
+	t.check(ids.size() == 2 * slams.zones_per_slam and fizzling and t.sm.live_zones().is_empty() and not t.sm.eruption_clock_running,
+		"the %d zones of two slams fizzled at the Break, the queue emptied and the eruption clock stopped" % ids.size())
 	t.check(not goes[0] and t.events.is_empty(), "none went off")
 	t.check(ids.all(func(id): return Plates.live(id) == null), "and they are gone")
 	t.check(Plates.state_is(t, "Broken") and t.boss.sprite.visible, "Broken, and visible")
 
 
-# His slams run until zone 1 is planted and scheduled - the poses tell it as they begin - with the player standing
-# at `stand`; the state machine then held still around it, so only the zone runs on. Zone 1, or null.
+# His slams run until zone 1 is planted and scheduled - the eruption clock tells it as the last slam comes - with the
+# player standing at `stand`; the state machine then held still around it, so only the zone runs on. Zone 1, or
+# null.
 static func first_zone_to_go(t, stand: Vector2 = SLAM_FEET[0]) -> Node2D:
 	await Plates.park(t, stand)
 	var slams: Node = t.sm.states["Slams"]
@@ -285,9 +303,11 @@ const SWEEP_STEP := Vector2(150, 120)
 const SWEEP_DRIFTS: Array[Vector2] = [Vector2.ZERO, Vector2(124, 85), Vector2(-85, 124), Vector2(-124, -85)]
 const MAZE_MARGIN := 4.0
 # The bots walk to cells whose centres are this far outside any zone about to go off, and hold this long on his
-# side to punch.
-const BOT_MARGIN := 16.0
-const BOT_HOLD := 0.4
+# side to punch, a whole swing (PlayerPunching holds them still for it) and the suite's swing()'s few frames after.
+const BOT_MARGIN := 32.0
+const BOT_HOLD := 0.5
+# How far off its cell a bot's feet may be when it swings.
+const PUNCH_SLOP := 12.0
 
 
 # The span of an offset in zone radii (1: on the edge; 2: two zones touching), and the share of a zone's area
@@ -365,21 +385,21 @@ static func tier_fence(t) -> void:
 	var times := Maze.clock(t)
 	var grid := Maze.make_grid(t.sm.ROPES)
 	var ropes: Rect2 = t.sm.ROPES
-	var first: float = 2.0 * slams.teleport_time + slams.windup_time
-	var apart: float = first + slams.recover_time
-	var ring_start: float = times.eruptions[0] - times.ring
+	# On the eruptions' clock: each landing, then the maze's start.
 	var marks: Array[float] = []
-	for k in slams.slams:
-		marks.append(first + apart * k)
-	marks.append(apart * slams.slams + 2.0 * slams.teleport_time + pose.turn_time + ring_start)
-	var reach := reach_cells(t, grid)
+	marks.assign(times.landings)
+	marks.append(times.start)
+	var steps := Maze.step_grid(ropes)
+	var goals := punch_cells(t, steps)
 	var punch_poses := {}
+	var punch_times: Array[float] = []
 	var fenced_steps := [0, 0]
 	var cases := 0
 	var failures: Array[String] = []
 	var kinds := {}
 	var tightest := {cells = 1 << 30, case = ""}
 	var longest_out := 0.0
+	var longest_still := 0.0
 	var spent := 0
 	var y := ropes.position.y + SWEEP_STEP.y / 2.0
 	while y < ropes.end.y:
@@ -388,21 +408,26 @@ static func tier_fence(t) -> void:
 			for drift in SWEEP_DRIFTS:
 				var track := drift_track(Vector2(x, y), drift, marks, ropes)
 				var waiting: Array[Vector2] = []
+				var zone_feet: Array[Vector2] = []
 				var placed_kinds: Array = []
 				var started := Time.get_ticks_usec()
 				for k in slams.slams:
-					var placed: Dictionary = slams.zone_spot(track[k], waiting)
-					waiting.append(placed.centre)
-					placed_kinds.append(placed.kind)
-					kinds[placed.kind] = kinds.get(placed.kind, 0) + 1
+					for n in slams.zones_per_slam:
+						var placed: Dictionary = slams.zone_spot(track[k], waiting)
+						waiting.append(placed.centre)
+						zone_feet.append(track[k])
+						placed_kinds.append(placed.kind)
+						kinds[placed.kind] = kinds.get(placed.kind, 0) + 1
 				spent += Time.get_ticks_usec() - started
 				cases += 1
 				var label := "from %s drifting %s" % [Vector2(x, y).round(), drift]
-				var broken := fence_broken(t, slams, track, waiting, placed_kinds)
-				var sets: Array = Maze.forward(grid, track[-1], waiting, times, ring_start, MAZE_MARGIN)
+				var broken := fence_broken(t, slams, zone_feet, waiting, placed_kinds)
+				var sets: Array = Maze.forward(grid, track[-1], waiting, times, times.start, MAZE_MARGIN)
 				var sizes: Array = sets.map(func(s): return Maze.count(s))
 				var out: float = Maze.distance_from(grid, Maze.outside(grid, waiting[0], times.radii, MAZE_MARGIN))[Maze.index_of(grid, track[-1])]
 				longest_out = maxf(longest_out, out)
+				if drift == Vector2.ZERO:
+					longest_still = maxf(longest_still, out)
 				if broken != "" or sizes.has(0):
 					failures.append("%s: zones %s %s, safe cells at each burst %s" % [label, waiting, broken, sizes])
 				elif sizes.min() < tightest.cells:
@@ -414,21 +439,42 @@ static func tier_fence(t) -> void:
 						if span_of(step - waiting[k], times.radii) <= 1.0:
 							fenced_steps[0] += 1
 							break
-					var best: Dictionary = Maze.earliest(grid, track[-1], waiting, times, -pose.turn_time, BOT_MARGIN, reach, BOT_HOLD)
-					var at_pose: String = "never" if best.is_empty() else str(maxi(floori(best.at / pose.pose_time) + 1, 1))
+					var run: Dictionary = Maze.stepped(steps, track[-1], waiting, times, times.start, MAZE_MARGIN, times.eruptions[-1] + 1.0)
+					var best: Dictionary = Maze.first_punch(run, goals, BOT_HOLD, 0.0)
+					var at_pose: String = "after the bursts"
+					if not best.is_empty():
+						var at: float = run.clocks[best.step]
+						punch_times.append(at)
+						at_pose = str(floori(at / pose.pose_time) + 1)
 					punch_poses[at_pose] = punch_poses.get(at_pose, 0) + 1
 			x += SWEEP_STEP.x
 		y += SWEEP_STEP.y
-	t.log_p("%d cases (%d starts, still and three drifts): placements %s; zone_spot %.1f ms a zone on average" % [cases, cases / SWEEP_DRIFTS.size(), kinds, spent / 1000.0 / (cases * slams.slams)])
+	var zones_placed: int = cases * slams.slams * slams.zones_per_slam
+	var to_first_hurt: float = times.eruptions[0] + times.first_hurt - times.start
+	t.log_p("%d cases (%d starts, still and three drifts), %d zones a case: placements %s; zone_spot %.1f ms a zone on average" % [cases, cases / SWEEP_DRIFTS.size(), slams.slams * slams.zones_per_slam, kinds, spent / 1000.0 / zones_placed])
+	t.log_p("the maze starts %.2f s from the first strike, the last zone down and zone 1 told; zone 1 hurts %.2f s after" % [times.start, to_first_hurt])
 	t.log_p("the tightest: %d safe %d px cells at one burst (%s)" % [tightest.cells, Maze.CELL, tightest.case])
-	t.log_p("standing still through the slams, the pose a flawless walk (no dash, from the poses' start) could first punch him in, anywhere in reach: %s" % [punch_poses])
+	punch_times.sort()
+	t.log_p("standing still through the slams, the pose a flawless walk (no dash, from the maze's start) could first punch him in: %s; from the first strike %s" % [punch_poses,
+		"never" if punch_times.is_empty() else "%.2f s at the soonest, %.2f s the median, %.2f s at the latest" % [punch_times[0], punch_times[punch_times.size() / 2], punch_times[-1]]])
 	t.log_p("standing still, the one step out of zone 1 lands in a later zone of the fence from %d of %d starts" % fenced_steps)
-	t.log_p("the longest walk out of zone 1 from where the player stood: %.0f px, %.2f s at %.0f px/s; its ring and the burst's first hurt frame give %.2f s" % [longest_out, longest_out / Maze.WALK, Maze.WALK, times.ring + times.first_hurt])
+	t.log_p("the longest walk out of zone 1 from where the player stood at the start: %.0f px (standing still %.0f px), at %.0f px/s %.2f s (%.2f s); zone 1 hurts %.2f s after the start, and its ring and first hurt frame are %.2f s" % [longest_out, longest_still, Maze.WALK, longest_out / Maze.WALK, longest_still / Maze.WALK, to_first_hurt, times.ring + times.first_hurt])
 	for failure in failures.slice(0, 6):
 		t.log_p("  %s" % failure)
 	t.check(cases > 0 and failures.is_empty(),
-		"every case keeps the fence rule, and a walk with no dash comes through all five bursts (%d of %d fail)" % [failures.size(), cases])
-	t.check(longest_out <= Maze.WALK * (times.ring + times.first_hurt), "zone 1 can always be walked out of before it hurts")
+		"every case keeps the fence rule, and a walk with no dash comes through all %d bursts (%d of %d fail)" % [slams.slams * slams.zones_per_slam, failures.size(), cases])
+	t.check(longest_out <= Maze.WALK * to_first_hurt, "zone 1 can always be walked out of before it hurts")
+	t.check(longest_still <= Maze.WALK * (times.ring + times.first_hurt), "and a player who stood still can walk out of it inside its ring")
+
+
+# The eruptions' clock, from the first strike: the poses' own, and the state machine's before them (-INF otherwise).
+static func strike_clock(t) -> float:
+	var pose: Node = t.sm.states["Pose"]
+	if t.sm.current_state == pose:
+		return pose.phase_clock - pose.turn_time
+	if t.sm.current_state == t.sm.states["Slams"] and t.sm.eruption_clock_running:
+		return t.sm.eruption_clock
+	return -INF
 
 
 # The poses' clock from the first strike: less than 0 through the turn, and -INF out of the poses.
@@ -455,17 +501,22 @@ static func watch_hits(t, hits: Array) -> Callable:
 			zone.answered.connect(got)
 
 
-# A player standing at `feet` through the slams, into the poses: the watch on their hits running.
-static func stand_through_slams(t, feet: Vector2, hits: Array) -> Callable:
+# A player standing at `feet` through the slams, into the poses - or, `to_last` on, only until the last slam has
+# landed, every zone down: the watch on their hits running.
+static func stand_through_slams(t, feet: Vector2, hits: Array, to_last := false) -> Callable:
 	await Plates.park(t, feet)
 	var watch := watch_hits(t, hits)
 	t.physics_frame.connect(watch)
 	t.sm.start_cycle()
-	await t.wait_until(func(): return Plates.state_is(t, "Pose"), 600)
+	var slams: Node = t.sm.states["Slams"]
+	if to_last:
+		await t.wait_until(func(): return slams.slammed >= slams.slams or Plates.state_is(t, "Pose"), 600)
+	else:
+		await t.wait_until(func(): return Plates.state_is(t, "Pose"), 600)
 	return watch
 
 
-# The poses played on past pose 3's end, so all five bursts are over.
+# The poses played on past pose 3's end, so all the bursts are over.
 static func past_the_bursts(t) -> void:
 	var pose: Node = t.sm.states["Pose"]
 	await t.wait_until(func(): return not Plates.state_is(t, "Pose") or pose.pose_index >= 3, 600)
@@ -481,8 +532,9 @@ static func tier_still(t) -> void:
 	t.physics_frame.disconnect(watch)
 	var broken := fence_broken(t, slams, slams.slam_feet, slams.zone_centres, slams.placements)
 	t.log_p("zones at %s, placed %s from the feet %s; hit by zones %s, health %d" % [slams.zone_centres, slams.placements, slams.slam_feet[0], hits, t.player.playerHealth])
-	t.check(slams.placements == [&"aimed", &"fence", &"fence", &"fence", &"fence"] and broken == "",
-		"zone 1 on them, and the other four beside it by the fence rule %s" % broken)
+	var beside: bool = slams.placements.slice(1).all(func(kind): return kind != &"aimed")
+	t.check(slams.placements.size() == slams.slams * slams.zones_per_slam and slams.placements[0] == &"aimed" and beside and broken == "",
+		"zone 1 on them, and the other %d beside the zones already down by the fence rule %s" % [slams.placements.size() - 1, broken])
 	t.check(not hits.is_empty() and hits[0] == 1, "standing there, zone 1's burst hits them (%s)" % [hits])
 
 
@@ -544,20 +596,30 @@ static func punch_feet(t, side: float) -> Vector2:
 	return at + (t.sm.player_feet() - t.player.global_position)
 
 
-# The cells whose feet can punch him where he poses: a punch facing him, from the left or the right, over his
-# hurtbox. Not only the suite's two spots beside his feet: higher up his side lands too.
-static func reach_cells(t, grid: Dictionary) -> PackedByteArray:
+# The step cells whose feet can punch him where he stands now (he is to be at HOME), with a bot's PUNCH_SLOP px off
+# its cell to spare: the player plainly faces him side-on there (PlayerScript._aim, past its turning hysteresis), and
+# the punch still lands PUNCH_SLOP px further from him.
+static func punch_cells(t, steps: Dictionary) -> Array[Vector2i]:
 	var shape: CollisionShape2D = t.boss.get_node("Hurtbox/CollisionShape2D")
 	var box: Rect2 = shape.global_transform * shape.shape.get_rect()
 	var offset: Vector2 = t.sm.player_feet() - t.player.global_position
 	var scale: Vector2 = t.player.global_scale
-	var mask := PackedByteArray()
-	mask.resize(grid.columns * grid.rows)
-	for i in mask.size():
-		var at: Vector2 = Maze.centre_of(grid, i) - offset
-		var punch: Rect2 = t.player.punch_box(t.player.Facing.LEFT if at.x > box.get_center().x else t.player.Facing.RIGHT)
-		mask[i] = 1 if Rect2(at + punch.position * scale, punch.size * scale).intersects(box) else 0
-	return mask
+	var cells: Array[Vector2i] = []
+	for row in steps.rows:
+		for column in steps.columns:
+			var at: Vector2 = Maze.step_centre(steps, row, column) - offset
+			var aim: Vector2 = at.clamp(box.position, box.end) - at
+			if absf(aim.x) < 2.0 * (absf(aim.y) + PUNCH_SLOP) or aim.x == 0.0:
+				continue
+			var facing: int = t.player.Facing.RIGHT if aim.x > 0.0 else t.player.Facing.LEFT
+			var punch: Rect2 = t.player.punch_box(facing)
+			var away := Vector2(-signf(aim.x) * PUNCH_SLOP, 0.0)
+			var lands := true
+			for slip in [away, Vector2(0, PUNCH_SLOP), Vector2(0, -PUNCH_SLOP)]:
+				lands = lands and Rect2(at + slip + punch.position * scale, punch.size * scale).intersects(box)
+			if lands:
+				cells.append(Vector2i(column, row))
+	return cells
 
 
 static func tier_weave(t) -> void:
@@ -565,34 +627,110 @@ static func tier_weave(t) -> void:
 	var slams: Node = t.sm.states["Slams"]
 	var pose: Node = t.sm.states["Pose"]
 	var hits: Array = []
-	var watch: Callable = await stand_through_slams(t, STAND_FEET, hits)
+	# Where a punch lands on him at HOME, read while he stands there.
+	await Plates.park(t, STAND_FEET)
+	var steps := Maze.step_grid(t.sm.ROPES)
+	var goals := punch_cells(t, steps)
+	var watch: Callable = await stand_through_slams(t, STAND_FEET, hits, true)
 	var times := Maze.clock(t)
-	var grid := Maze.make_grid(t.sm.ROPES)
 	var zones: Array = slams.zone_centres.duplicate()
-	var start_time := pose_clock(t)
-	var feet: Vector2 = t.sm.player_feet()
-	var plan := {}
-	for side in [-1.0, 1.0]:
-		var tried: Dictionary = Maze.weave(grid, feet, zones, times, start_time, BOT_MARGIN, punch_feet(t, side), BOT_HOLD)
-		if not tried.is_empty() and (plan.is_empty() or tried.at < plan.at):
-			plan = tried
-	if plan.is_empty():
+	var start_time := strike_clock(t)
+	var run: Dictionary = Maze.stepped(steps, t.sm.player_feet(), zones, times, start_time, BOT_MARGIN, times.eruptions[-1] + 1.5)
+	var punch: Dictionary = Maze.first_punch(run, goals, BOT_HOLD, 0.0)
+	if punch.is_empty():
 		t.check(false, "a walk through the maze to him exists (zones %s)" % [zones])
 		t.physics_frame.disconnect(watch)
 		return
-	t.log_p("zones at %s, placed %s; the plan: %s; at his side %.2f s after the first strike" % [zones, slams.placements, plan.legs.map(func(leg): return [snappedf(leg.from, 0.01), leg.to.round(), leg.punch]), plan.at])
-	var best: Dictionary = Maze.earliest(grid, feet, zones, times, start_time, BOT_MARGIN, reach_cells(t, grid), BOT_HOLD)
-	t.log_p("the earliest a flawless walk could punch him from anywhere in reach: %s" % ("never" if best.is_empty() else "%.2f s after the first strike, pose %d" % [best.at, floori(best.at / pose.pose_time) + 1]))
+	var route: Array = Maze.punch_route(steps, run, punch, BOT_HOLD)
+	t.log_p("zones at %s, placed %s; planned from %.2f s: at his side %.2f s after the first strike, %d moves" % [zones, slams.placements, start_time, run.clocks[punch.step], route.size()])
+	var bot := {"held": []}
+	var offset: Vector2 = t.sm.player_feet() - t.player.global_position
 	var landed := {pose = -1, at = INF}
-	for leg in plan.legs:
-		await t.wait_until(func(): return pose_clock(t) >= leg.from, 400)
-		await walk_feet_to(t, leg.to, 120)
-		if leg.punch:
+	var punched := false
+	var index := 0
+	var worst_lag := 0.0
+	for frame in 60 * 8:
+		var now := strike_clock(t)
+		if now == -INF:
+			break
+		while index + 1 < route.size() and now >= route[index + 1].at - Maze.STEP_TIME:
+			index += 1
+			if route[index].punch:
+				break
+		var leg: Dictionary = route[index]
+		var there: bool = t.sm.player_feet().distance_to(leg.to) <= 10.0
+		if leg.punch and not punched and now >= leg.at and (there or now >= leg.at + Maze.STEP_TIME * 2.0):
+			punched = true
+			t._bot_release(bot)
+			t.log_p("swinging at %.2f s from the feet %s (planned %s), facing %d, him %s open %s" % [now, t.sm.player_feet(), leg.to, t.player.facing, t.sm.current_state.name, t.sm.is_open()])
 			var dealt: int = await t.swing()
-			if dealt > 0 and landed.pose < 0:
-				landed = {pose = pose.pose_index + 1, at = pose_clock(t)}
+			t.log_p("  dealt %d, his health %d, hits this window %d" % [dealt, t.boss.boss_health, t.boss.hits_this_window])
+			if dealt > 0:
+				landed = {pose = pose.pose_index + 1, at = strike_clock(t)}
+			continue
+		if now >= leg.at:
+			worst_lag = maxf(worst_lag, t.sm.player_feet().distance_to(leg.to))
+		t._bot_walk(bot, leg.to - offset)
+		await t.physics_frame
+		if index == route.size() - 1 and now > times.eruptions[-1] + times.hurt_end + 0.1:
+			break
+	t._bot_release(bot)
 	await past_the_bursts(t)
 	t.physics_frame.disconnect(watch)
-	t.log_p("punched him in pose %d, %.2f s after the first strike; hit by zones %s, health %d" % [landed.pose, landed.at, hits, t.player.playerHealth])
+	t.log_p("punched him in pose %d, %.2f s after the first strike; the feet at most %.0f px off the plan; hit by zones %s, health %d" % [landed.pose, landed.at, worst_lag, hits, t.player.playerHealth])
 	t.check(hits.is_empty(), "no burst hits them")
-	t.check(landed.pose in [2, 3], "and they reach him and punch in pose 2 or 3 (pose %d)" % landed.pose)
+	t.check(landed.pose in [1, 2, 3], "and they reach him and punch in poses 1-3, before his third bank fills the meter (pose %d)" % landed.pose)
+
+
+# Zone 1's yellow ring with the player standing on its centre as it rings (playtest 2026-10-04: it stood on their feet,
+# drawn over the fighters, and covered them to the chest just as they had to move): over their head, clear of their
+# body and over the zone's centre; and a zone planted up by the top rope keeps its ring inside the ropes.
+static func tier_ring(t) -> void:
+	t.log_p("-- zone 1's yellow ring over a player standing on its centre")
+	var zone := await first_zone_to_go(t)
+	if zone == null:
+		return
+	await Plates.put_feet(t, zone.global_position)
+	var id := zone.get_instance_id()
+	await t.wait_until(func(): return Plates.live(id) == null or Plates.live(id).stage == 3, 120)
+	await t.wait(2)
+	var ring := ring_rect(t, zone)
+	var body: Rect2 = t.hurtbox_rect()
+	t.log_p("zone at %s, ring %s, the player's hurtbox %s" % [zone.global_position, ring, body])
+	t.check(ring.size != Vector2.ZERO, "the ring is up as it rushes")
+	t.check(not ring.intersects(body) and ring.end.y <= body.position.y, "over their head, clear of their body (ring bottom %.0f, their top %.0f)" % [ring.end.y, body.position.y])
+	t.check(absf(ring.get_center().x - zone.global_position.x) <= 2.0, "over the zone's centre")
+	t.sm.clear_pending_zones()
+	t.sm.set_physics_process(true)
+	await t.wait(20)
+	var high := await ring_of_zone_at(t, Vector2(400, t.sm.ROPES.position.y + 10.0))
+	t.check(high.size != Vector2.ZERO and high.position.y >= t.sm.ROPES.position.y - 1.0, "a zone by the top rope keeps its ring inside the ropes (top %.0f)" % high.position.y)
+	# Under his HUD block it is never lifted up into it (the HUD is drawn over the ring).
+	var hud: Rect2 = t.sm.HUD_FADE_RECT
+	for centre in [Vector2(960, 300), Vector2(960, 230)]:
+		var under := await ring_of_zone_at(t, centre)
+		t.check(under.size != Vector2.ZERO and under.position.y >= hud.end.y - 1.0, "a zone at %s keeps its ring below his HUD (top %.0f, the HUD to %.0f)" % [centre, under.position.y, hud.end.y])
+
+
+# A zone of his planted at `centre` and told to go at once: its ring's drawn rect, then the zone fizzled.
+static func ring_of_zone_at(t, centre: Vector2) -> Rect2:
+	var zone: Node2D = load("res://Scripts/GreysonEruptionScript.gd").new()
+	zone.player = t.player
+	zone.body = t.boss
+	t.sm.add_hazard(zone, centre, t.boss.floor_layer)
+	zone.schedule(0.5)
+	await t.wait(3)
+	var ring := ring_rect(t, zone)
+	t.log_p("a zone at %s: ring %s" % [zone.global_position, ring])
+	zone.fizzle()
+	await t.wait(20)
+	return ring
+
+
+# The drawn rect of `zone`'s yellow ring, or an empty one.
+static func ring_rect(t, zone: Node2D) -> Rect2:
+	for tell in t.live_tells():
+		if tell.name == "ParryTell%d" % zone.get_instance_id() and tell.get("sprite") is Sprite2D:
+			var sprite: Sprite2D = tell.sprite
+			return sprite.get_global_transform() * sprite.get_rect()
+	return Rect2()

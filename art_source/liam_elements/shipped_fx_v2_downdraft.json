@@ -1,0 +1,9 @@
+{
+ "approved": "2026-09-29 with the fx_v2 set (the user: \"approved but wheres the fire?\")",
+ "note": "held until LiamArtLayout's DOWNDRAFT_* matched the art; the coder reported 20x80 / pivot (10,0) / 0.04 in",
+ "shipped_by": "coordinator, exclusive-create copy, sha256 verified",
+ "files": {
+  "Assets/Characters/Liam/Elements/liam_downdraft.png": "1a4cb69a0b769c70e25b30f89ca666a308ff46efe07d87abd22b21c8b3e8e2a5",
+  "Assets/Characters/Liam/Elements/liam_downdraft.aseprite": "a5bb37b3c6e75f0a0ae8d758d9f057eb04d4b98392cbd26862575852d836c010"
+ }
+}

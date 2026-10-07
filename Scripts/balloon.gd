@@ -11,8 +11,8 @@ const FIGHT_PANEL_OFFSET_RIGHT: float = -24.0
 
 const DialogueVoices := preload("res://Scripts/DialogueVoices.gd")
 
-## Speakers whose portrait lives in a folder not named after them.
-const PORTRAIT_FOLDERS := {"Captain Burak": "BurakBoss"}
+## Speakers whose portrait lives in a folder not named after them. Aiden is Burak in a moustache (JordanFinale).
+const PORTRAIT_FOLDERS := {"Captain Burak": "BurakBoss", "Aiden": "Burak"}
 
 ## The dialogue resource
 @export var dialogue_resource: DialogueResource
@@ -187,7 +187,11 @@ func apply_dialogue_line() -> void:
 
 	character_label.visible = not dialogue_line.character.is_empty()
 	character_label.text = tr(dialogue_line.character, "dialogue")
-	var portriat_path: String = "res://Assets/Characters/%s/portrait.png" % PORTRAIT_FOLDERS.get(dialogue_line.character, dialogue_line.character)
+	var portrait_file := "portrait"
+	# A `portrait` tag asks for another of the speaker's portraits, portrait_<value>.png: until it is drawn, none shows.
+	if dialogue_line.has_tag("portrait"):
+		portrait_file = "portrait_%s" % dialogue_line.get_tag_value("portrait")
+	var portriat_path: String = "res://Assets/Characters/%s/%s.png" % [PORTRAIT_FOLDERS.get(dialogue_line.character, dialogue_line.character), portrait_file]
 	print("Portrait path: ", portriat_path)
 	if is_instance_valid(portrait):
 		if ResourceLoader.exists(portriat_path):

@@ -16,6 +16,7 @@ extends Control
 # holds the chrome it was built with instead of asking the flag again.
 
 const BossBarArtLayout := preload("res://Scripts/BossBarArtLayout.gd")
+const HudPlayerFade := preload("res://Scripts/HudPlayerFade.gd")
 const THEME := "res://Assets/UI/ui_theme.tres"
 
 # What kind of hit a set_value() is reporting. HIT_SILENT is a correction rather than damage - a
@@ -58,6 +59,7 @@ func _ready() -> void:
 		_build_final()
 	else:
 		_build_placeholder()
+	HudPlayerFade.wrap(self)
 
 
 # A row whose boss has no drawn fill - the legacy Carter & Josh pair the split superseded - keeps the

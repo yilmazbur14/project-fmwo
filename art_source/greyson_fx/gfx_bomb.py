@@ -85,12 +85,14 @@ def line(g, x0, y0, x1, y1, keyfn):
             g[y][x] = k
 
 
-def sphere(g, R, seed, breathe=0.0):
-    """The sphere of radius R standing on the muzzle."""
+def sphere(g, R, seed, breathe=0.0, feed=True, halo=None, spike_from=16):
+    """The sphere of radius R standing on the muzzle. The doom orb (art_source/greyson_doom_orb) draws its stages
+    with this too: feed=False leaves out the beam from the muzzle, halo overrides the haze's scale, and
+    spike_from is the smallest radius that gets the rim's spikes. The defaults draw the shipped bomb."""
     gap = max(3.0, GAP * R / float(R_FULL))
     cx, cy = MX, MY - gap - R
     rnd = random.Random(seed)
-    k_halo = max(0.35, R / float(R_FULL))
+    k_halo = max(0.35, R / float(R_FULL)) if halo is None else halo
     bands = body_bands(R)
     haze = [(lim * k_halo + breathe, k) for (lim, _, _), k in zip(HAZE, HAZE_KEYS)]
     reach = int(R + haze[-1][0] + 2)
@@ -109,7 +111,7 @@ def sphere(g, R, seed, breathe=0.0):
                         break
     # fine short spikes all round the rim: a stroke in from the rim over the pale body (the hatching), and one out
     # into the haze; along the bottom the outer strokes turn downward and lengthen into drips
-    if R >= 16:
+    if R >= spike_from:
         s = R / float(R_FULL)
         n = int(2 * math.pi * R / 3.0)
         for i in range(n):
@@ -130,6 +132,8 @@ def sphere(g, R, seed, breathe=0.0):
                  lambda t: 'I' if t < 0.55 else ('<' if t < 0.8 else '>'))
     # the feed from the cannon's muzzle up into the sphere's foot: a white spine in a cyan glow, flaring as it
     # meets the sphere
+    if not feed:
+        return
     y_top = int(cy + R - 2)
     for y in range(y_top, int(MY) + 1):
         t = (MY - y) / max(1.0, MY - y_top)

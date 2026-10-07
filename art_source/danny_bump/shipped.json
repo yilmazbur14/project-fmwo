@@ -1,0 +1,17 @@
+{
+ "approved": "2026-09-30, the user: \"approve all for now\" (Danny bump/back/splash/rope/big-slam art; picks: stars on his back, side-view wind-up, collar showing; the addendum's 4 gameplay defaults)",
+ "source": "art_source/danny_bump/approval/",
+ "shipped_by": "coordinator, exclusive-create copy, sha256 verified",
+ "files": {
+  "Assets/Characters/Danny/Sumo/danny_sumo_bump.png": "f14e02e9a1d6ae18f8414fc3f2b65d907c111ef8b43f89f6fe988f4546badfcb",
+  "Assets/Characters/Danny/Sumo/danny_sumo_bump.aseprite": "abecaffeed6629a01aa01377f74c49746b8523be3a771a6ae0fd7879a0cace08",
+  "Assets/Characters/Danny/Sumo/danny_sumo_back.png": "0298003df9e244a00743620317549752ec8c2a138faa6947acf8c1aa0b6adaa6",
+  "Assets/Characters/Danny/Sumo/danny_sumo_back.aseprite": "74092fabe3190b755db02fe7805812229365e59159e9543cac269975cef0e060",
+  "Assets/Characters/Danny/FX/danny_worm_splash.png": "48271519e2089454cb96bd55b4612bd5e75350d0208eb30e9e47958251807109",
+  "Assets/Characters/Danny/FX/danny_worm_splash.aseprite": "c87e7bf23ad6525f9f0655769d05038c99cfcdfd845c80d86b2d6b643210ec8b",
+  "Assets/Characters/Danny/FX/danny_rope_impact.png": "221fa4ad3d0cc52ec48aeb50e1ee3e4142685164415b48a3022aea084c1824d7",
+  "Assets/Characters/Danny/FX/danny_rope_impact.aseprite": "0a96dd68baa6455803f449d507727f555cbfb81609df8e16c07b1f28a0ac3d4e",
+  "Assets/Characters/Danny/FX/danny_big_slam_impact.png": "9b9ae03cf6520e4f9cfc0a7ebb509c28fbbb39cbccbfb9b5e5824d99ea3259f8",
+  "Assets/Characters/Danny/FX/danny_big_slam_impact.aseprite": "4c234ea25f44cb114accf525567cd49c6f5eac3aaba05c1aafb9c8e7c3a1554b"
+ }
+}

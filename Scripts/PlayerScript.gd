@@ -26,9 +26,17 @@ var direction = Vector2.ZERO
 # Read by Computah's laser, which players are meant to dash through.
 var last_dodge_physics_frame := -1
 var previous_dodge_physics_frame := -1
+# The late-diagonal grace, which a fight sets in its _ready (Liam's: 2); at 0 the dash is exactly what it always was. A
+# straight dash whose held input adds the other arrow within this many frames of its kick-off turns diagonal, the rest
+# of its frames aimed at the clean diagonal's end from where it started (dash_origin). dash_frame counts its frames.
+var dash_diagonal_grace := 0
+var dash_origin := Vector2.ZERO
+var dash_frame := 0
+var dash_turned := false
 
 #PLAYER STATS
-var playerHealth = 6
+# Half-hearts: full is every container the HUD draws, 8 (6 until 2026-09-30).
+var playerHealth = preload("res://Scripts/PlayerHealthArtLayout.gd").CONTAINERS * 2
 # var playerHealth = 1000
 
 #TIMERS
@@ -159,6 +167,15 @@ var dash_parry := false
 # buy back.
 var dash_cancelled := false
 var drift_velocity := Vector2.ZERO
+# Ice under the player (Liam's frozen floor, LiamTremors, through set_ice): walking eases toward the held direction at
+# ice_accel and slides to a stop at ice_friction, a dash's landing carries on at ice_dash_carry, and the states that
+# stop the player dead every step coast instead. Off, every path is exactly what it was without it.
+var on_ice := false
+var ice_accel := 1800.0
+var ice_friction := 1200.0
+var ice_dash_carry := 450.0
+# A dash ended on ice and its landing hasn't carried on yet.
+var ice_carry_owed := false
 # Set by a sequence that takes the player past the ropes on purpose, and cleared once it has brought
 # them back: a boss entrance walking them in from outside the ring (BossEntrance), Danny's sumo
 # throwing the loser out through a gate. While it is on, _keep_in_ring() leaves them where they are put.
@@ -166,6 +183,12 @@ var may_leave_ring := false
 # Where the player's origin may be with their body on the ring's floor, inside the inner faces of the
 # arena's walls (ArenaScene's wallBoundaries). Empty where there are none, as in the training room.
 var ring_origins := Rect2()
+# The presses a trigger can be rebound to (InputSettings.rebind), and which of them are on a trigger still
+# pulled past its dead zone. A trigger reports every step of its pull as another motion event past the dead
+# zone, and each one reads as a fresh press: one pull of a trigger-bound parry was five presses, which spent
+# five missed parries and ended its own window, so it could never parry (the 2026-10-04 playtest).
+const AXIS_PRESS_ACTIONS: Array[StringName] = [&"punch", &"dodge", &"block"]
+var axis_held := {}
 
 var state_machine : Node
 var current_state : State
@@ -236,20 +259,41 @@ func _move(delta: float) -> void:
 		# the dash key in the same frame still counts.
 		if feel_v2 and kick_off:
 			direction = status.steer(InputSettings.move_vector())
+		if kick_off:
+			dash_origin = global_position
+			dash_frame = 0
+			dash_turned = false
+		elif dash_frame <= dash_diagonal_grace:
+			var turned := _late_diagonal(status.steer(InputSettings.move_vector()))
+			if turned != Vector2.ZERO:
+				direction = turned
+				dash_turned = true
 		dash_from = global_position
 		dodge_timer += delta
 		velocity = direction.normalized() * DODGE_SPEED
+		if dash_turned:
+			# Its frames left, this one included, bring it to the clean diagonal's end: the length a dash always has.
+			var frames_left := maxi(roundi((dodge_time - dodge_timer) / delta) + 1, 1)
+			velocity = (dash_origin + direction.normalized() * DODGE_SPEED * dodge_time - global_position) / (frames_left * delta)
 
 		if dodge_timer >= dodge_time:
 			is_dodging = false
 			dodge_timer = 0.0
+			if on_ice:
+				ice_carry_owed = true
 			defense.on_dash_ended()
 			var state_name: String = state_machine.current_state.name
 			if state_name == "Idle" or state_name == "Walking":
 				state_machine.on_child_transition(state_machine.current_state, "DashRecovery")
 
 	elif defense.is_dash_recovering():
-		velocity = Vector2.ZERO
+		if not on_ice:
+			velocity = Vector2.ZERO
+		elif ice_carry_owed:
+			ice_carry_owed = false
+			velocity = direction.normalized() * ice_dash_carry
+		else:
+			ice_coast(delta)
 
 	else:
 		# Reversed while a status inverts the controls (PlayerStatus); the axes stay separate, so the
@@ -261,27 +305,59 @@ func _move(delta: float) -> void:
 		if state_machine.current_state.name == "Blocking":
 			speed *= defense.block_move_speed_ratio
 
-		# Slowing down stays at full rate, so a guard raised mid-knockback still stops the player.
-		if directionHorz:
-			velocity.x = directionHorz * speed
+		if on_ice:
+			# Both axes ease together, so a corridor run straight along never drifts sideways.
+			var target := Vector2(directionHorz, directionVert) * speed
+			velocity = velocity.move_toward(target, (ice_accel if target != Vector2.ZERO else ice_friction) * delta)
 		else:
-			velocity.x = move_toward(velocity.x, 0, SPEED)
+			# Slowing down stays at full rate, so a guard raised mid-knockback still stops the player.
+			if directionHorz:
+				velocity.x = directionHorz * speed
+			else:
+				velocity.x = move_toward(velocity.x, 0, SPEED)
 
-		if directionVert:
-			velocity.y = directionVert * speed
-		else:
-			velocity.y = move_toward(velocity.y, 0, SPEED)
+			if directionVert:
+				velocity.y = directionVert * speed
+			else:
+				velocity.y = move_toward(velocity.y, 0, SPEED)
 
 	move_and_slide()
 	_apply_drift(drift, delta)
 	if dash_from != Vector2.INF:
+		dash_frame += 1
 		dash_stepped.emit(dash_from, global_position, kick_off)
+
+
+# The diagonal a straight dash turns into when the held `input` keeps its arrow and adds the other one, or ZERO: never
+# a reversal, and nothing for a dash that is diagonal already or has no direction.
+func _late_diagonal(input: Vector2) -> Vector2:
+	if direction.x != 0.0 and direction.y != 0.0:
+		return Vector2.ZERO
+	if direction.x != 0.0 and signf(input.x) == signf(direction.x) and input.y != 0.0:
+		return input
+	if direction.y != 0.0 and signf(input.y) == signf(direction.y) and input.x != 0.0:
+		return input
+	return Vector2.ZERO
 
 
 # px/s added on top of the player's own movement for the next physics step only. Calls add up;
 # the fight calls it every step it wants the pull.
 func add_drift(velocity_px: Vector2) -> void:
 	drift_velocity += velocity_px
+
+
+# The floor under the player turns to ice, or back. The fight hands in its own feel.
+func set_ice(on: bool, accel := 1800.0, friction := 1200.0, dash_carry := 450.0) -> void:
+	on_ice = on
+	ice_accel = accel
+	ice_friction = friction
+	ice_dash_carry = dash_carry
+	ice_carry_owed = false
+
+
+# One step of sliding to a stop on ice.
+func ice_coast(delta: float) -> void:
+	velocity = velocity.move_toward(Vector2.ZERO, ice_friction * delta)
 
 
 func _apply_drift(drift: Vector2, delta: float) -> void:
@@ -322,6 +398,8 @@ func _shape_rect(shape: CollisionShape2D) -> Rect2:
 	return shape.global_transform * shape.shape.get_rect()
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventJoypadMotion and _repeat_of_held_axis(event):
+		return
 	# The finisher swallows these presses before they reach this node; this guard doesn't rely on that order.
 	if is_finishing or finisher.is_input_locked():
 		return
@@ -331,13 +409,16 @@ func _input(event: InputEvent) -> void:
 	# A dash's recovery frames: the guard may go up, and a parry ends them, but nothing else counts.
 	if defense.is_dash_recovering() and not event.is_action_pressed("block"):
 		return
+	# Nor its moving frames a punch: one pressed in them froze the dash where it was for the whole swing, still dashing,
+	# and finished it after (the 2026-10-04 playtest).
+	if is_dodging and event.is_action_pressed("punch"):
+		return
 	# A parry-only sequence: the guard is the only answer the player has. Block presses go on through
 	# to on_block_pressed() and _raise_guard(), so parries read exactly as they always do. A sealed
 	# lock takes that answer away too.
 	if is_action_locked and (lock_seals_guard or not event.is_action_pressed("block")):
 		return
 	if event.is_action_pressed("punch") and not is_talking and not is_grabbed and not fight_over:
-		combo.register_press()
 		# A press held back until the last punch's report is in, so its hit can't be lost.
 		if combo.report_pending():
 			punch_buffered = true
@@ -350,10 +431,11 @@ func _input(event: InputEvent) -> void:
 
 	if event.is_action_pressed("block"):
 		# A press during a dash still counts toward a parry; the guard goes up when the dash ends, or
-		# with dash_parry the press ends the dash itself and the guard goes up in its place.
-		defense.on_block_pressed()
-		_cancel_dash_into_guard()
-		_raise_guard()
+		# with dash_parry the press ends the dash itself and the guard goes up in its place. One the
+		# stamina bar refuses does nothing at all.
+		if defense.on_block_pressed():
+			_cancel_dash_into_guard()
+			_raise_guard()
 
 	if event.is_action_pressed("dodge"):
 		# Before anything about the dash is set, so a refused one can't grant dash immunity. The cooldown
@@ -373,6 +455,21 @@ func _input(event: InputEvent) -> void:
 		# print("Punch")
 		# The live state: the guard may have gone up earlier in this same input flush.
 		state_machine.on_child_transition(state_machine.current_state, "Punching")
+
+
+# Whether this trigger report only repeats a pull already counted, for whichever press it is bound to. Kept
+# up to date ahead of every early return in _input, so a trigger let go while the player can't act still
+# counts as let go.
+func _repeat_of_held_axis(event: InputEventJoypadMotion) -> bool:
+	for action in AXIS_PRESS_ACTIONS:
+		if not event.is_action(action):
+			continue
+		var held := axis_held.has(action)
+		if event.is_action_pressed(action):
+			axis_held[action] = true
+			return held
+		axis_held.erase(action)
+	return false
 
 
 # What walking reads: the move keys and stick, or nothing while keys held from a feel_v2 mash are
@@ -459,15 +556,17 @@ func dodge_ghost_position() -> Vector2:
 
 
 func _apply_damage(hit: RefCounted) -> void:
-	# The boss-select panel's playtest invincibility. Only the health loss is skipped: the combo still
-	# breaks, the i-frames still run, the hit feedback still plays and a grab still holds. So the fight
-	# behaves exactly as it does in a real run and can be watched all the way through.
+	# The boss-select panel's playtest invincibility. Only the health loss is skipped: the combo's count
+	# goes the way any hit takes it (PlayerCombo.keep_count_when_hit), the i-frames still run, the hit
+	# feedback still plays and a grab still holds. So the fight behaves exactly as it does in a real run and
+	# can be watched all the way through.
 	if not GameProgress.playtest_invincible:
 		playerHealth = maxi(playerHealth - hit.damage, 0)
 	if playerHealth <= 0:
 		status.clear_all()
 		unlock_actions()
-	combo.reset()
+		set_ice(false)
+	combo.reset_unless_kept()
 	healthUI.update_health(playerHealth)
 	invincibility_timer.start()
 	is_invincible = true
@@ -513,7 +612,7 @@ func lock_actions() -> void:
 	is_dodging = false
 	dodge_timer = 0.0
 	punch_buffered = false
-	combo.reset()
+	combo.reset_unless_kept()
 	defense.clear_dash_recovery()
 	defense.clear_dodge_ghost()
 	actions_locked.emit()
@@ -673,6 +772,7 @@ func begin_finisher() -> void:
 	defense.clear_dash_recovery()
 	status.clear_all()
 	unlock_actions()
+	set_ice(false)
 	velocity = Vector2.ZERO
 
 
@@ -701,6 +801,7 @@ func end_fight() -> void:
 	hype.on_fight_over()
 	status.clear_all()
 	unlock_actions()
+	set_ice(false)
 	# A finisher under way plays out to its landing first.
 	if is_finishing:
 		finisher.finished.connect(_stand_still, CONNECT_ONE_SHOT)

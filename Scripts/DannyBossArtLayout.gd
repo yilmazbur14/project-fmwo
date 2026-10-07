@@ -42,6 +42,11 @@ const HIT_SHEET := SHEET_DIR + "danny_sumo_hit.png"
 const DEFEAT_SHEET := SHEET_DIR + "danny_sumo_defeat.png"
 const EVOLVE_SHEET := SHEET_DIR + "danny_sumo_evolve.png"
 const SLAP_SHEET := SHEET_DIR + "danny_sumo_slap.png"
+const HEADBUTT_SHEET := SHEET_DIR + "danny_sumo_headbutt.png"
+const SLEEP_HIT_SHEET := SHEET_DIR + "danny_sumo_sleep_hit.png"
+# Addendum 1's body sheets (art_source/danny_bump, bump_export.py; the numbers are the artist's report).
+const BUMP_SHEET := SHEET_DIR + "danny_sumo_bump.png"
+const BACK_SHEET := SHEET_DIR + "danny_sumo_back.png"
 # The training room's Danny, before he evolves: stands on (0, -32).
 const SMALL_FRAME := Vector2(64, 64)
 const SMALL_FEET := Vector2(32, 63)
@@ -50,6 +55,16 @@ const JUMP_FEET := Vector2(88, 159)
 # The torpedo is side-on and flies screen-right: every frame stands on its bottom centre.
 const HEADBUTT_FRAME := Vector2(224, 144)
 const HEADBUTT_FEET := Vector2(112, 143)
+# The belly bump is side-on like the torpedo and faces screen-right, on a taller frame: the run stands 164 texels.
+const BUMP_FRAME := Vector2(224, 168)
+const BUMP_FEET := Vector2(112, 167)
+# Lying is wide. The ground point is under the middle of his back; unflipped, his head points screen-left.
+const BACK_FRAME := Vector2(256, 160)
+const BACK_FEET := Vector2(128, 159)
+# How far the string's art reaches either side of his feet column, in texels: the slam's squash, columns 2-173 of
+# danny_sumo_slam.png round 88, with the tuck (danny_sumo_air.png, 5-170) inside it. DannyBossSlams keeps the spot
+# he hops to this far in from the screen's sides, so the tuck and the landings are never cut off there.
+const STRING_REACH := 86.0
 
 # What the player can punch and turns to face. `idle` is every standing pose, on a 176x144 frame: his head
 # and torso from the top of the beanie to the floor, the spread arms and thighs left out (288 x 426 px).
@@ -60,9 +75,17 @@ const BODY_BOXES := {
 	&"idle": Rect2(40, 2, 96, 142),
 	&"sleep": Rect2(2, 16, 172, 128),
 	&"headbutt": Rect2(4, 52, 197, 89),
+	# Lying on his back (DannyBossOnBack): the artist's BACK_BOX, his raised legs in and the daze stars out.
+	&"back": Rect2(32, 40, 215, 120),
 }
 const BODY_BOX_FRAMES := {
 	&"headbutt": {frame = HEADBUTT_FRAME, feet = HEADBUTT_FEET},
+	&"back": {frame = BACK_FRAME, feet = BACK_FEET},
+}
+# A box whose sheet isn't drawn, on the frame of the stand-in the animation named shows instead: lying on his
+# back, the nap's box on the nap frame.
+const PLACEHOLDER_BODY_BOXES := {
+	&"back": {anim = &"back_daze", box = Rect2(2, 16, 172, 128)},
 }
 
 # The top of his beanie over its middle column (where the badges and the daze stars stand), one point an
@@ -109,6 +132,23 @@ const CROWNS := {
 	&"push_win": Vector2(88, 15),
 	&"push_skid": Vector2(88, 10),
 	&"push_out": Vector2(88, 1),
+	# The belly bump's, the artist's (the run's is its first frame's). On his back: the top of his head as he lies,
+	# the artist's for the daze and the flinch and measured the same way on the landing; the tuck's beanie on the
+	# bounce's first frame; and the top of the ball he rolls up in.
+	&"bump_slide": Vector2(104, 6),
+	&"bump_stomp": Vector2(109, 13),
+	&"bump_slap": Vector2(113, 15),
+	&"bump_crouch": Vector2(107, 20),
+	&"bump_run": Vector2(104, 6),
+	&"bump_contact": Vector2(98, 4),
+	&"bump_rebound": Vector2(92, 1),
+	&"bump_skid": Vector2(101, 7),
+	&"bump_slip": Vector2(53, 63),
+	&"back_bounce": Vector2(118, 44),
+	&"back_land": Vector2(98, 92),
+	&"back_daze": Vector2(101, 85),
+	&"back_hit": Vector2(100, 88),
+	&"back_roll": Vector2(167, 41),
 }
 # The same, on each stand-in's frame.
 const PLACEHOLDER_CROWNS := {
@@ -135,6 +175,21 @@ const PLACEHOLDER_CROWNS := {
 	&"push_win": Vector2(88, 2),
 	&"push_skid": Vector2(88, 2),
 	&"push_out": Vector2(87, 1),
+	# Addendum 1's stand-ins, each the crown of the shipped frame it shows (PLACEHOLDER_ANIMS).
+	&"bump_slide": Vector2(88, 1),
+	&"bump_stomp": Vector2(158, 12),
+	&"bump_slap": Vector2(158, 12),
+	&"bump_crouch": Vector2(158, 12),
+	&"bump_run": Vector2(145, 54),
+	&"bump_contact": Vector2(153, 51),
+	&"bump_rebound": Vector2(68, 9),
+	&"bump_skid": Vector2(68, 9),
+	&"bump_slip": Vector2(87, 1),
+	&"back_bounce": Vector2(87, 1),
+	&"back_land": Vector2(88, 17),
+	&"back_daze": Vector2(88, 17),
+	&"back_hit": Vector2(93, 13),
+	&"back_roll": Vector2(88, 3),
 }
 const DEFAULT_CROWN := Vector2(88, 2)
 
@@ -165,6 +220,28 @@ const HEADS := {
 	&"headbutt_recoil": Vector2(103, 42),
 }
 const PLACEHOLDER_HEAD := Vector2(116, 30)
+# The front of his belly in the belly bump, which is what meets the player and what his run is measured from: the
+# artist's BELLY FRONT texel, on each animation's first frame; on the stand-ins, the torpedo's head front on the
+# frame each shows. At 3x it stands above a standing player's head, which is why he draws behind them in the run.
+const BELLIES := {
+	&"bump_stomp": Vector2(158, 95),
+	&"bump_slap": Vector2(166, 89),
+	&"bump_crouch": Vector2(168, 82),
+	&"bump_run": Vector2(164, 72),
+	&"bump_contact": Vector2(159, 73),
+	&"bump_rebound": Vector2(167, 76),
+	&"bump_skid": Vector2(173, 64),
+}
+const PLACEHOLDER_BELLIES := {
+	&"bump_stomp": Vector2(185, 38),
+	&"bump_slap": Vector2(185, 38),
+	&"bump_crouch": Vector2(185, 38),
+	&"bump_run": Vector2(200, 81),
+	&"bump_contact": Vector2(206, 83),
+	&"bump_rebound": Vector2(103, 42),
+	&"bump_skid": Vector2(103, 42),
+}
+const PLACEHOLDER_BELLY := Vector2(200, 81)
 const HANDS := {
 	&"push_set": Vector2(87.5, 128),
 	&"push_strain": Vector2(86.5, 128),
@@ -183,6 +260,7 @@ const PUSH_PALMS := {
 }
 const SNORES := {
 	&"sleep": Vector2(100, 14),
+	&"back_daze": Vector2(101, 85),
 }
 const PLACEHOLDER_SNORE := Vector2(110, 30)
 # Where the finisher's daze stars circle and a badge's tip stands, over his crown.
@@ -216,6 +294,10 @@ const USE_FINAL_ANIMS := {
 	&"headbutt": true,
 	&"block": true,
 	&"push": true,
+	# Addendum 1's belly bump and his fall onto his back: on, and only honoured once the sheet's file is there
+	# (is_final), so shipping the approved sheets is all that wires them.
+	&"bump": true,
+	&"back": true,
 }
 
 # The shipped sheets' timings (art_source/danny_sumo_v2/anim.py and art_source/danny_sumo/sheets.py), and the
@@ -287,6 +369,26 @@ const FINAL_ANIMS := {
 	&"push_win": {sheet = SHEET_DIR + "danny_sumo_push.png", frames = [4], times = [0.15], loop = false},
 	&"push_skid": {sheet = SHEET_DIR + "danny_sumo_push.png", frames = [5], times = [0.12], loop = false},
 	&"push_out": {sheet = SHEET_DIR + "danny_sumo_push.png", frames = [6, 7], times = [0.11, 0.22], loop = false},
+	# ADDENDUM 1's, the artist's report (art_source/danny_bump). The belly bump, side-on facing right: 0 the stomp,
+	# 1 the belly slap, 2 the crouch he holds (the red read), 3-6 the run, 7 the contact, 8 the rebound off a parry,
+	# 9 the skid, 10 the slip. Sliding toward the player, his suriashi is the run's frames at 90 ms.
+	&"bump_slide": {sheet = BUMP_SHEET, frames = [3, 4, 5, 6], times = [0.09], loop = true, frame = BUMP_FRAME, feet = BUMP_FEET},
+	&"bump_stomp": {sheet = BUMP_SHEET, frames = [0], times = [0.25], loop = false, frame = BUMP_FRAME, feet = BUMP_FEET},
+	&"bump_slap": {sheet = BUMP_SHEET, frames = [1], times = [0.20], loop = false, frame = BUMP_FRAME, feet = BUMP_FEET},
+	&"bump_crouch": {sheet = BUMP_SHEET, frames = [2], times = [1.0], loop = true, frame = BUMP_FRAME, feet = BUMP_FEET},
+	&"bump_run": {sheet = BUMP_SHEET, frames = [3, 4, 5, 6], times = [0.06], loop = true, frame = BUMP_FRAME, feet = BUMP_FEET},
+	&"bump_contact": {sheet = BUMP_SHEET, frames = [7], times = [1.0], loop = true, frame = BUMP_FRAME, feet = BUMP_FEET},
+	&"bump_rebound": {sheet = BUMP_SHEET, frames = [8], times = [1.0], loop = true, frame = BUMP_FRAME, feet = BUMP_FEET},
+	&"bump_skid": {sheet = BUMP_SHEET, frames = [9], times = [1.0], loop = true, frame = BUMP_FRAME, feet = BUMP_FEET},
+	&"bump_slip": {sheet = BUMP_SHEET, frames = [10], times = [1.0], loop = true, frame = BUMP_FRAME, feet = BUMP_FEET},
+	# On his back: 0 knocked off the fists (the slam's tuck, front on), 1 flipping over (the code carries the arc), 2
+	# landing, 3-6 dazed with his legs kicking and the stars drawn in, 7 a flinch, 8-10 rolling up, 10 front on and
+	# handing over to the idle's first frame.
+	&"back_bounce": {sheet = BACK_SHEET, frames = [0, 1], times = [0.15, 0.30], loop = false, frame = BACK_FRAME, feet = BACK_FEET},
+	&"back_land": {sheet = BACK_SHEET, frames = [2], times = [0.15], loop = false, frame = BACK_FRAME, feet = BACK_FEET},
+	&"back_daze": {sheet = BACK_SHEET, frames = [3, 4, 5, 6], times = [0.14], loop = true, frame = BACK_FRAME, feet = BACK_FEET},
+	&"back_hit": {sheet = BACK_SHEET, frames = [7], times = [0.12], loop = false, frame = BACK_FRAME, feet = BACK_FEET},
+	&"back_roll": {sheet = BACK_SHEET, frames = [8, 9, 10], times = [0.15], loop = false, frame = BACK_FRAME, feet = BACK_FEET},
 }
 
 # The stand-ins, off the shipped sheets (the plan's art contract). Their timings match the final rows', so a
@@ -315,6 +417,22 @@ const PLACEHOLDER_ANIMS := {
 	&"push_win": {sheet = SLAP_SHEET, frames = [2], times = [0.15], loop = false},
 	&"push_skid": {sheet = SLAP_SHEET, frames = [5], times = [0.12], loop = false},
 	&"push_out": {sheet = HIT_SHEET, frames = [0, 1], times = [0.11, 0.22], loop = false},
+	# Addendum 1's (the plan's section D.1): the belly bump on the torpedo's side view, which its final shares, and
+	# his time on his back on the front view's hit, nap and wake frames. The slide keeps the step it always had.
+	&"bump_slide": {sheet = STEP_SHEET, frames = [0, 1, 2, 3], times = [0.06], loop = true},
+	&"bump_stomp": {sheet = HEADBUTT_SHEET, frames = [0], times = [0.25], loop = false, frame = HEADBUTT_FRAME, feet = HEADBUTT_FEET},
+	&"bump_slap": {sheet = HEADBUTT_SHEET, frames = [0], times = [0.20], loop = false, frame = HEADBUTT_FRAME, feet = HEADBUTT_FEET},
+	&"bump_crouch": {sheet = HEADBUTT_SHEET, frames = [0], times = [1.0], loop = true, frame = HEADBUTT_FRAME, feet = HEADBUTT_FEET},
+	&"bump_run": {sheet = HEADBUTT_SHEET, frames = [2, 3], times = [0.05], loop = true, frame = HEADBUTT_FRAME, feet = HEADBUTT_FEET},
+	&"bump_contact": {sheet = HEADBUTT_SHEET, frames = [4], times = [1.0], loop = true, frame = HEADBUTT_FRAME, feet = HEADBUTT_FEET},
+	&"bump_rebound": {sheet = HEADBUTT_SHEET, frames = [5], times = [1.0], loop = true, frame = HEADBUTT_FRAME, feet = HEADBUTT_FEET},
+	&"bump_skid": {sheet = HEADBUTT_SHEET, frames = [5], times = [1.0], loop = true, frame = HEADBUTT_FRAME, feet = HEADBUTT_FEET},
+	&"bump_slip": {sheet = HIT_SHEET, frames = [0], times = [1.0], loop = true},
+	&"back_bounce": {sheet = HIT_SHEET, frames = [0, 1], times = [0.20, 0.25], loop = false},
+	&"back_land": {sheet = DEFEAT_SHEET, frames = [3], times = [0.15], loop = false},
+	&"back_daze": {sheet = DEFEAT_SHEET, frames = [3], times = [1.0], loop = true},
+	&"back_hit": {sheet = SLEEP_HIT_SHEET, frames = [0, 1], times = [0.09, 0.17], loop = false},
+	&"back_roll": {sheet = WAKE_SHEET, frames = [0, 1, 2], times = [0.14, 0.09, 0.26], loop = false},
 }
 
 #THE PLAYER'S POSES (PlayerPosed, through DannyBossStateMachine.hold_player_pose)
@@ -389,7 +507,34 @@ const FX := {
 	# One per skidding foot, drawn for a foot sliding left: row 0 his, row 1 the player's.
 	&"sumo_dust": {texture = FX_DIR + "danny_sumo_dust.png", hframes = 5, vframes = 2, frame_time = 0.06,
 		danny_row = 0, player_row = 1, offset = Vector2(-16, -12)},
+	# ADDENDUM 1's three sheets, the artist's report: each is only drawn with its flag in USE_FINAL_FX on and its file
+	# there (final_fx), and stands in in code until then. `frame_times`, where a sheet has them, are seconds per
+	# frame (fx_frame_time). The worm burst a hop throws out (DannyBossSplash), on the floor under him, its pivot
+	# (96,78) on the landing's contact and its outermost worms landing on the splash zone's edge (77 x 28 texels).
+	&"worm_splash": {texture = FX_DIR + "danny_worm_splash.png", hframes = 6, frame_time = 0.05, offset = Vector2(0, -22)},
+	# The side rope bowing where the belly bump drove the player into it, or he ran into it himself
+	# (DannyBossBellyBump): drawn for the right rope with its pivot (34,56) on the rope's inner line, flipped for the
+	# left, and over the ropes, which it paints out where they bow.
+	&"rope_impact": {texture = FX_DIR + "danny_rope_impact.png", hframes = 6, frame_time = 0.05,
+		frame_times = [0.05, 0.15, 0.10, 0.07, 0.07, 0.06], offset = Vector2(-2, 0)},
+	# The fifth slam's own impact, pivot (144,84) on his rear's contact: frame 0's flash is his 132 x 22 footprint,
+	# and the last frame is the cracks alone.
+	&"big_slam_impact": {texture = FX_DIR + "danny_big_slam_impact.png", hframes = 7, frame_time = 0.05,
+		frame_times = [0.05, 0.05, 0.05, 0.06, 0.07, 0.08, 0.12], cracks_frame = 6, offset = Vector2(0, -20)},
+	# Code, never art: the hop's splash zone, a dashed outline in the dodge tell's yellow.
+	&"splash_zone": {color = Color(1.0, 0.85, 0.15, 0.7), width = 3.0, dash = 18.0, gap = 12.0},
+	# The worm burst's stand-in: this many of his globs flung out from the landing to the zone's edge.
+	&"splash_globs": {count = 8, time = 0.25},
 }
+const USE_FINAL_FX := {
+	&"worm_splash": true,
+	&"rope_impact": true,
+	&"big_slam_impact": true,
+}
+# Awaiting the user's pick (the artist's question 1): what shows he is dazed on his back. &"stars", the artist's
+# pick, are drawn into the back sheet's daze frames (and in code over its stand-in); &"zs" rise his nap's Z's from
+# his head instead, and want the artist's star-less export of those frames with them.
+const BACK_DAZE_MARK := &"stars"
 
 #THE TUG-OF-WAR METER (HUD layer; FX_FOR_CODER's meter)
 # The _3x copies, positioned in 1x texels times SCALE. Its fills are revealed by a region crop from the
@@ -471,9 +616,26 @@ const SFX := {
 	&"push_strain": {stream = SFX_DIR + "danny_push_strain.wav", pitch = 1.0, volume_db = -10.0, loop = true},
 	&"pushed_out": {stream = SFX_DIR + "danny_pushed_out.wav", pitch = 1.0, volume_db = -2.0},
 	&"break_sting": {stream = SFX_DIR + "break_sting.wav", pitch = 1.0, volume_db = 0.0},
+	# Addendum 1's, on files he already has (its section D.2) until the sound agent makes his own through the gated
+	# art_source/audio_danny. The fifth slam is two, played together: his slam dropped, and the quake under it.
+	&"hop_slam": {stream = SFX_DIR + "danny_butt_slam.wav", pitch = 1.15, volume_db = -3.0},
+	&"big_slam": {stream = SFX_DIR + "danny_butt_slam.wav", pitch = 0.8, volume_db = 0.0},
+	&"big_slam_quake": {stream = SFX_DIR + "earthquake_slam.ogg", pitch = 0.85, volume_db = 0.0},
+	&"worm_splash": {stream = SFX_DIR + "danny_glob_splat.wav", pitch = 0.85, volume_db = -2.0},
+	&"back_bounce": {stream = SFX_DIR + "danny_slam_bonk.wav", pitch = 0.9, volume_db = -3.0},
+	&"back_hit": {stream = SFX_DIR + "danny_sleep_hit.wav", pitch = 1.2, volume_db = -6.0},
+	&"back_roll": {stream = SFX_DIR + "danny_wake.wav", pitch = 1.1, volume_db = -6.0},
+	&"bump_stomp": {stream = SFX_DIR + "matt_stomp.wav", pitch = 1.0, volume_db = 0.0},
+	&"belly_slap": {stream = SFX_DIR + "hit_impact.ogg", pitch = 0.75, volume_db = -4.0},
+	&"bump_charge": {stream = SFX_DIR + "danny_headbutt_charge.wav", pitch = 0.85, volume_db = -6.0},
+	&"bump_launch": {stream = SFX_DIR + "danny_headbutt_launch.wav", pitch = 0.9, volume_db = -3.0},
+	&"bump_hit": {stream = SFX_DIR + "danny_headbutt_hit.wav", pitch = 1.0, volume_db = -2.0},
+	&"clash": {stream = SFX_DIR + "wrestler_collision.ogg", pitch = 0.9, volume_db = 0.0},
+	&"rope_slam": {stream = SFX_DIR + "eric_crash_thud.wav", pitch = 1.3, volume_db = -2.0},
+	&"slip": {stream = SFX_DIR + "danny_glob_splat.wav", pitch = 0.8, volume_db = -4.0},
 }
 # How many players a sound gets, for the ones a string or a pair overlaps with itself.
-const SFX_VOICES := {&"butt_slam": 2, &"glob_splat": 3, &"spit": 2, &"regen_tick": 2, &"sumo_stomp": 2}
+const SFX_VOICES := {&"butt_slam": 2, &"glob_splat": 3, &"spit": 2, &"regen_tick": 2, &"sumo_stomp": 2, &"worm_splash": 3}
 
 # "Five More Minutes", written for this fight and APPROVED. It loops by its own import, so nothing here
 # rewrites its loop points, and it is never preloaded: the shared theme stands in if it is missing. -4 dB is
@@ -485,6 +647,10 @@ const THEME_FALLBACK := "res://Assets/Audio/Music/boss_theme.ogg"
 const THEME_FALLBACK_DB := -7.0
 
 
+# Which files exist, looked up once each: is_final() and final_fx() ask every step.
+static var _existing := {}
+
+
 # An animation goes by its sheet's flag: its own name's if it has one (sleep_hit), else its first word's.
 static func uses_final(anim_name: StringName) -> bool:
 	if USE_FINAL_ANIMS.has(anim_name):
@@ -492,8 +658,25 @@ static func uses_final(anim_name: StringName) -> bool:
 	return USE_FINAL_ANIMS.get(StringName(String(anim_name).get_slice("_", 0)), false)
 
 
+# Its final row is drawn: its flag is on and its sheet's file is there, so a flag turned on ahead of its sheet
+# keeps the stand-in rather than loading nothing.
+static func is_final(anim_name: StringName) -> bool:
+	return uses_final(anim_name) and FINAL_ANIMS.has(anim_name) and _exists(FINAL_ANIMS[anim_name].sheet)
+
+
+# An FX sheet of USE_FINAL_FX's is drawn: its flag is on and its file is there.
+static func final_fx(key: StringName) -> bool:
+	return USE_FINAL_FX.get(key, false) and _exists(FX[key].texture)
+
+
+static func _exists(path: String) -> bool:
+	if not _existing.has(path):
+		_existing[path] = ResourceLoader.exists(path)
+	return _existing[path]
+
+
 static func anim(anim_name: StringName) -> Dictionary:
-	if uses_final(anim_name) and FINAL_ANIMS.has(anim_name):
+	if is_final(anim_name):
 		return FINAL_ANIMS[anim_name]
 	if PLACEHOLDER_ANIMS.has(anim_name):
 		return PLACEHOLDER_ANIMS[anim_name]
@@ -545,14 +728,19 @@ static func texel_local(point: Vector2, anim_name: StringName, flip := false) ->
 	return frame_local(point, spec)
 
 
-# A body box in px from his feet, drawn unflipped, on its own frame (BODY_BOX_FRAMES) or a 176x144 one.
+# A body box in px from his feet, drawn unflipped, on its own frame (BODY_BOX_FRAMES) or a 176x144 one; its
+# stand-in's while the sheet it belongs to isn't drawn.
 static func body_rect(key: StringName) -> Rect2:
 	var box: Rect2 = BODY_BOXES.get(key, BODY_BOXES[&"idle"])
-	return Rect2(frame_local(box.position, BODY_BOX_FRAMES.get(key, {})), box.size * SCALE)
+	var frame: Dictionary = BODY_BOX_FRAMES.get(key, {})
+	if PLACEHOLDER_BODY_BOXES.has(key) and not is_final(PLACEHOLDER_BODY_BOXES[key].anim):
+		box = PLACEHOLDER_BODY_BOXES[key].box
+		frame = {}
+	return Rect2(frame_local(box.position, frame), box.size * SCALE)
 
 
 static func crown(anim_name: StringName) -> Vector2:
-	if uses_final(anim_name):
+	if is_final(anim_name):
 		return CROWNS.get(anim_name, DEFAULT_CROWN)
 	return PLACEHOLDER_CROWNS.get(anim_name, DEFAULT_CROWN)
 
@@ -577,14 +765,26 @@ static func snore(anim_name: StringName) -> Vector2:
 	return _point(SNORES, PLACEHOLDER_SNORE, anim_name)
 
 
+static func belly(anim_name: StringName) -> Vector2:
+	if is_final(anim_name) and BELLIES.has(anim_name):
+		return BELLIES[anim_name]
+	return PLACEHOLDER_BELLIES.get(anim_name, PLACEHOLDER_BELLY)
+
+
 static func _point(finals: Dictionary, placeholder: Vector2, anim_name: StringName) -> Vector2:
-	if uses_final(anim_name) and finals.has(anim_name):
+	if is_final(anim_name) and finals.has(anim_name):
 		return finals[anim_name]
 	return placeholder
 
 
 static func fx(key: StringName) -> Dictionary:
 	return FX[key]
+
+
+# Seconds on frame `i` of an FX sheet: its own in `frame_times`, else the sheet's frame_time.
+static func fx_frame_time(spec: Dictionary, i: int) -> float:
+	var times: Array = spec.get("frame_times", [])
+	return times[i] if i < times.size() else spec.frame_time
 
 
 # An offset off a centred sheet's middle, kept on its pivot under the sheet's flips.

@@ -26,20 +26,25 @@ const OUTRO_DIALOGUE := "res://Dialogue/MattOutro.dialogue"
 const FIGHT_SCENE := "res://Scenes/Bosses/MattBossFightScene.tscn"
 
 #CONSTANTS
-# 36, one half-heart a punch: a fight of three to five punish windows.
-@export var max_health := 36
+# 90 (the user doubled it from 36, 2026-09-25, then raised it 25%, 2026-09-30), one half-heart a punch. Every
+# finisher pays a share of max_health, so his length is how many windows and Breaks he gives, not this.
+@export var max_health := 90
+# A punish window's POW dazes him for the finisher, as every fight's does. Off is Carter's Break-only rule, his for
+# a day (2026-10-04) until the user took it out of every fight but Jordan's kaiju (2026-10-05): the knob stays.
+@export var daze_in_recover := true
 var boss_health := max_health
 const MAX_HITS_PER_WINDOW := 3
 # Each opening takes the damage of a clean chain of MAX_HITS_PER_WINDOW punches (PunchAllowance).
 const PunchAllowance := preload("res://Scripts/PunchAllowance.gd")
 const PHANTOM_HIT_WINDOW := 0.5
 const HUD_FADE_TIME := 0.25
-# The Break gauge, in BossBreakGauge's own names: eight clean reads from empty are a Break. A parry or a
-# perfect dodge is a read, a punch a quarter and a charged one a half, a hit taken one read back and a
-# guard break two. He has no grab and nothing to reflect, so a grab parry is just a read and a reflect
+# The Break gauge, in BossBreakGauge's own names: BREAK_READS clean reads from empty are a Break. 8 before the Echo
+# Roars, 23 while a Break was his only finisher; 18 since (2026-10-05), a bonus about once a fight now that an
+# Echo instance alone hands a good reader about 18 reads. A parry or a perfect dodge is a read, a punch a quarter and
+# a charged one a half, a hit taken one read back and a guard break two. He has no grab and nothing to reflect, so a grab parry is just a read and a reflect
 # nothing. broken_time is BossBroken's window.
 # BREAK_READ is BossBreakGauge's max_value of 100 over N, given as it is (BREAK_EPSILON).
-const BREAK_READS := 8
+const BREAK_READS := 18
 const BREAK_READ := 100.0 / BREAK_READS
 const BREAK := {
 	"parry_gain": BREAK_READ,
@@ -54,8 +59,9 @@ const BREAK := {
 	"broken_time": 3.0,
 }
 # His attacks whose parries and perfect dodges fill the gauge, one read each (_earns_read). Every attack
-# of his drains it. The Glass Row's booms are answered, never parried, and pay hype instead.
-const BREAK_READ_IDS: Array[StringName] = [&"matt_mystic_shot", &"matt_trueshot", &"matt_yell"]
+# of his drains it. The Glass Row's booms are answered, never parried, and pay hype instead. An Echo ring
+# parried, or a BOOMBURST dashed through, is a read; a ghost is never hit and a punish never answered.
+const BREAK_READ_IDS: Array[StringName] = [&"matt_mystic_shot", &"matt_trueshot", &"matt_yell", &"matt_echo", &"matt_boomburst"]
 # Set on a bolt's, a wave's or a yell ring's hit source once it has paid its read.
 const READ_PAID := &"matt_read_paid"
 
@@ -178,7 +184,7 @@ func _build_sfx() -> void:
 		var players: Array[AudioStreamPlayer] = []
 		for i in voices:
 			var sfx := AudioStreamPlayer.new()
-			sfx.stream = load(spec.stream)
+			sfx.stream = load(MattArtLayout.sfx_stream(key))
 			sfx.volume_db = spec.volume_db
 			add_child(sfx)
 			players.append(sfx)
@@ -549,11 +555,14 @@ func is_down() -> bool:
 	return is_broken() or is_juggled()
 
 
-# The player's finisher (PlayerFinisher): a charged punch in his recovery or his Break dazes him, once a
-# window, and never while he is yelling.
+# The player's finisher (PlayerFinisher): a charged punch in his Break dazes him, once a window. In his recovery
+# only with daze_in_recover, and never while he is yelling.
 func can_be_dazed() -> bool:
-	return not defeated and boss_health > 0 and not daze_used and _is_open() \
-		and not state_machine.is_yelling()
+	if defeated or boss_health <= 0 or daze_used:
+		return false
+	if is_broken():
+		return true
+	return daze_in_recover and state_machine.is_recovering() and not state_machine.is_yelling()
 
 
 # The three-bar mash and the juggle are the Break's payout alone; his recovery pays the plain one-bar

@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-07",
+  "what": "The third uppercut's banner renamed KNIGHT BREAKER! -> MAX. UPPERCUT! (the user: 'instead of knight breaker for an uppercut, canm we change it to Max. Uppercut'; approved: 'approve the banner'). Same recipe as tier_stamps.py's knight_breaker (11-row italic kit glyphs, 'knight' scheme, 160x20 x2 frames, 80 ms, tag pulse); X and '.' drawn new in the same construction. File names kept so the import settings stay.",
+  "builder": "art_source/eric_v2_ui/max_uppercut/max_uppercut.py (writes only into its own folder; the original ran from scratch)",
+  "shipped": {
+    "knight_breaker.png": "c46f79e73162744e42fffc97818743afbbfe03e4ff4be03d0c4eda32b41731b2",
+    "knight_breaker_3x.png": "b0a87930de70a25149e9ffd880f55c81570f67664a0bf46acfbc05a66fb4263b",
+    "knight_breaker.aseprite": "e343b97b7789fa4a90d67fb38ed654bf83445de419908bff01691c8d7f7154a8"
+  },
+  "replaced": {
+    "knight_breaker.png": "f7e1325ae257619cb847a7df25566f7e87845296daa6c5b9f1353d99b4475a72",
+    "knight_breaker_3x.png": "f5b0c214abb8797c90544c04d4c93d31065023e3d8ad3dfb982908c6866d7abb",
+    "knight_breaker.aseprite": "b2700f858a55e81c7bacdb50441e6f1831ca7691f4eaa5e0b01105903b2b24f0"
+  },
+  "note": "The previous files are in git history."
+}

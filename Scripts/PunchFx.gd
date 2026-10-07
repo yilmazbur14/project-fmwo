@@ -23,8 +23,13 @@ extends Node2D
 # the boss at FX_Z_INDEX, the finisher's effects layer: unlike the dash's effects (PlayerDashFx), which
 # sit under the player, these have to show on top of whatever the fist reached.
 
+const PunchComboArtLayout := preload("res://Scripts/PunchComboArtLayout.gd")
+
 # player_4dir_sheet.png's punch columns that show a swoosh frame: 7 the arm snapping out, 8 full extension.
 const SWOOSH_FRAME_BY_COLUMN := {7: 0, 8: 1}
+# A later combo hit on its own sheet (PunchComboArtLayout) shows them on the same two beats, counted from
+# its first column.
+const COMBO_SWOOSH_FRAME_BY_BEAT := {2: 0, 3: 1}
 const FULL_EXTENSION_FRAME := 1
 const AFTERIMAGE_FRAME := 2
 # Game seconds the afterimage holds once the arm is back. The swing's report lands two physics frames
@@ -54,6 +59,9 @@ var reached := false
 var whooshed := false
 var afterimage_left := 0.0
 var swing_facing := 0
+# The animation the swing plays: hit 1's "punch", or - only ever with PunchComboArtLayout's switch on - a
+# later combo hit's, drawn on its own columns with its own glove.
+var swing_animation := "punch"
 # The punch hitbox's global rect and the player's transform, kept from the swing: the report lands
 # after the swing, when the player may already be moving.
 var reach_rect := Rect2()
@@ -83,6 +91,8 @@ func swing() -> void:
 	whooshed = false
 	afterimage_left = 0.0
 	swing_facing = player.facing
+	# PlayerPunching.Enter has already started it.
+	swing_animation = String(player.animation_player.current_animation)
 	_keep_reach()
 	swoosh.hide()
 
@@ -104,7 +114,7 @@ func _step_swoosh(delta: float) -> void:
 				swoosh.hide()
 			return
 		_keep_reach()
-		var frame: int = SWOOSH_FRAME_BY_COLUMN.get(player.sprite.frame_coords.x, -1)
+		var frame := _swoosh_frame()
 		if frame < 0:
 			swoosh.hide()
 			return
@@ -124,6 +134,13 @@ func _step_swoosh(delta: float) -> void:
 
 func _still_swinging() -> bool:
 	return player.state_machine.current_state.name == "Punching" and player.sprite.visible and not player.is_grabbed
+
+
+func _swoosh_frame() -> int:
+	var column: int = player.sprite.frame_coords.x
+	if PunchComboArtLayout.FIRST_COLUMNS.has(swing_animation):
+		return COMBO_SWOOSH_FRAME_BY_BEAT.get(column - PunchComboArtLayout.FIRST_COLUMNS[swing_animation], -1)
+	return SWOOSH_FRAME_BY_COLUMN.get(column, -1)
 
 
 func _show_swoosh(frame: int) -> void:
@@ -169,14 +186,17 @@ func _step_star(delta: float) -> void:
 
 # Where the fist met the target: the near face of the target's hurtbox inside the reach, along the
 # punch, but never nearer than the glove's front and never past the reach's far edge; centred across
-# the part of the reach the hurtbox covers. With no hurtbox found, the glove's front.
+# the part of the reach the hurtbox covers - except a later combo hit's, on its fist, which is drawn off
+# the hitbox it shares with hit 1 (PunchComboArtLayout). With no hurtbox found, the glove's front.
 func contact_point(target: Node) -> Vector2:
 	var reach := reach_rect
 	var overlap := reach.intersection(_target_rect(target, reach))
 	if not overlap.has_area():
 		overlap = reach
-	var front: Vector2 = swing_transform * GLOVE_FRONTS[swing_facing]
+	var front: Vector2 = swing_transform * _glove_fronts()[swing_facing]
 	var middle := overlap.get_center()
+	if PunchComboArtLayout.GLOVE_FRONTS.has(swing_animation):
+		middle = front
 	if swing_facing == player.Facing.RIGHT:
 		return Vector2(clampf(overlap.position.x, front.x, reach.end.x), middle.y)
 	if swing_facing == player.Facing.LEFT:
@@ -184,6 +204,10 @@ func contact_point(target: Node) -> Vector2:
 	if swing_facing == player.Facing.UP:
 		return Vector2(middle.x, clampf(overlap.end.y, reach.position.y, front.y))
 	return Vector2(middle.x, clampf(overlap.position.y, front.y, reach.end.y))
+
+
+func _glove_fronts() -> Array:
+	return PunchComboArtLayout.GLOVE_FRONTS.get(swing_animation, GLOVE_FRONTS)
 
 
 # The target's own face-able hurtbox (group boss_target, shaped by a child CollisionShape2D), or else

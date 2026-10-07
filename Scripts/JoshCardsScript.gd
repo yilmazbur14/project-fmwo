@@ -7,6 +7,7 @@ const HitStop := preload("res://Scripts/HitStop.gd")
 const FightOutro := preload("res://Scripts/FightOutro.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
 const JoshArtLayout := preload("res://Scripts/JoshArtLayout.gd")
+const JoshMonteLayout := preload("res://Scripts/JoshMonteLayout.gd")
 const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 const BossBreakGauge := preload("res://Scripts/BossBreakGauge.gd")
 const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
@@ -15,31 +16,30 @@ const OUTRO_DIALOGUE := "res://Dialogue/JoshOutro.dialogue"
 const FIGHT_SCENE := "res://Scenes/Bosses/JoshBossFightScene.tscn"
 
 #CONSTANTS
-@export var max_health := 14
+# The user doubled it from 14 (2026-09-25), raised it 25% (2026-09-30), then to 50 with the tuning round's package
+# (2026-10-04).
+@export var max_health := 50
 var boss_health := max_health
+# His phase-two split at half health. Nothing reads it since the Wild Cards rework (2026-09-28) dropped
+# the split and the floor that held him above it until a phase-two cycle; kept for the attacks to come.
 const PHASE_TWO_RATIO := 0.5
 const MAX_HITS_PER_WINDOW := 3
 # Each opening takes the damage of a clean chain of MAX_HITS_PER_WINDOW punches (PunchAllowance).
 const PunchAllowance := preload("res://Scripts/PunchAllowance.gd")
 const PHANTOM_HIT_WINDOW := 0.5
 const VIEW_SIZE := Vector2(1920, 1080)
-# He eases into and out of every move, the way beast Bixby does: his speed never changes faster than
-# FLY_ACCELERATION px/s², and over the last stretch he slows as if FLY_ARRIVE_TIME seconds away.
-const FLY_ACCELERATION := 3000.0
-const FLY_ARRIVE_TIME := 0.25
-# Riding sideways faster than this turns his frames to face the way he's going.
-const FLY_TURN_SPEED := 60.0
 # Over the ropes while he rides, on the floor while he stands.
 const AIR_Z := 3
 const GROUND_Z := 0
 
 #BREAK GAUGE (BossBreakGauge)
-# Eight clean reads from empty are a guaranteed Break: a parry or perfect dodge of his is a read, a hit
+# Twelve clean reads from empty (eight until the tuning round of 2026-10-04) are a guaranteed Break: a parry or
+# perfect dodge of his is a read, a hit
 # costs one and a guard break two, and a landed punch is a quarter of one (charged, a half), so a 3-punch
 # combo is one read. Nothing decays. BREAK_READ is BossBreakGauge's max_value of 100 over N, given as it
 # is (BREAK_EPSILON). Nothing of his staggers him on a parry or comes back at him, so there is no strong
 # parry or reflect here, and the gauge takes none (_add_break_gauge).
-const BREAK_READS := 8
+const BREAK_READS := 12
 const BREAK_READ := 100.0 / BREAK_READS
 const BREAK := {
 	"parry_gain": BREAK_READ,
@@ -51,14 +51,23 @@ const BREAK := {
 	"unlock_delay": 3.0,
 	"broken_time": 3.0,
 }
-# What fills it: his thrown cards and his falling ones read right. Every one of his attacks drains it,
-# the bombs too, but they don't fill it: he scatters too many of them for each to be a read.
-const BREAK_EARNS: Array[StringName] = [&"josh_card_throw", &"josh_card_fall"]
+# What fills it: a perfect dodge through his Wild Cards, one read a volley however many of its cards the
+# dash goes through (JoshCardsWildCards.pay_read), and a parry or a perfect dodge of each landing of his
+# Hand Slam, a read each: every landing is its own source (JoshHandSlamHit); a perfect dodge through a beam of
+# his Gun Hands, a read each (JoshGunBeam); and a parry of the real him in his Portal Monte (JoshMonteFigure), not a
+# strong parry, since his grab_parry_gain is 0. Every one of his attacks drains it.
+const BREAK_EARNS: Array[StringName] = [&"josh_wild_card", &"josh_hand_slam", &"josh_gun_beam", &"josh_monte_strike"]
 
 #UI (BossHealthBarUI builds it at runtime)
 var hud_layer: CanvasLayer
 var health_bar: Control
+var gauge_bar: Control
 var break_gauge: Node
+# The boss bar and the Break bar under it fade while his hands or a slam's badge are over them (update_hud_fade).
+const HUD_FADE_ALPHA := 0.3
+const HUD_FADE_TIME := 0.25
+var hud_fade: Tween
+var hud_fade_to := 1.0
 
 # Kept under a node that y-sorts at the top edge of the arena floor, so it is drawn under every
 # character wherever it goes.
@@ -81,7 +90,6 @@ const THEME_DB := -7.0
 @onready var music_player: AudioStreamPlayer = $MusicPlayer
 @onready var hit_sfx_player: AudioStreamPlayer = $HitSfxPlayer
 @onready var victory_sfx_player: AudioStreamPlayer = $VictorySfxPlayer
-@onready var glide_sfx_player: AudioStreamPlayer = $GlideSfxPlayer
 @onready var throw_sfx_player: AudioStreamPlayer = $ThrowSfxPlayer
 @onready var land_sfx_player: AudioStreamPlayer = $LandSfxPlayer
 @onready var recover_sfx_player: AudioStreamPlayer = $RecoverSfxPlayer
@@ -89,7 +97,6 @@ const THEME_DB := -7.0
 @onready var reveal_sfx_player: AudioStreamPlayer = $RevealSfxPlayer
 @onready var card_sfx_player: AudioStreamPlayer = $CardSfxPlayer
 
-var phase_two := false
 var defeated := false
 var hits_this_window := 0
 var punches := PunchAllowance.new()
@@ -100,6 +107,13 @@ var fight_clock := 0.0
 var last_contact_hit_time := -INF
 
 var sprite_base_position: Vector2
+
+# The player's sprite y-sorts this far over their feet (their body's centre is 42 px over the foot of their hurtbox,
+# and every fight scene sets their sprite 13 texels, 39 px, under it), so everything drawn of him sorts on a point as
+# far over his: a player whose feet are in front of his is drawn in front of him, where on his own feet he won every
+# tie up to 3 px. His floor point, his hurtbox and every point measured off Air stay where they were.
+const SORT_LIFT := 3.0
+var sort_point: Node2D
 
 # The floor point under him, where his shadow is, and how many px above it his feet are. His node sits
 # on the floor point, and everything drawn is snapped to whole pixels.
@@ -114,9 +128,6 @@ var knock_tween: Tween
 var shadow_sprite: Sprite2D
 var glider_sprite: Sprite2D
 var glider_clock := 0.0
-# His card growing under him or shrinking away: hiding it stops this too, or it would go on scaling the
-# hidden card up and the next mount would show it whole at once.
-var glider_tween: Tween
 
 var current_anim := &""
 var anim: Dictionary = {}
@@ -134,6 +145,7 @@ func _ready() -> void:
 
 	sprite_base_position = sprite.position
 	ground_position = global_position
+	_lift_sort_point()
 	_apply_art_layout()
 	var player := get_tree().current_scene.get_node_or_null(FightOutro.PLAYER_PATH)
 	if player:
@@ -153,7 +165,6 @@ func _ready() -> void:
 		music_player.stream.loop = true
 	hit_sfx_player.stream = load("res://Assets/Audio/SFX/hit_impact.ogg")
 	victory_sfx_player.stream = load("res://Assets/Audio/SFX/victory_fanfare.ogg")
-	glide_sfx_player.stream = load("res://Assets/Audio/SFX/whirlwind_whoosh.ogg")
 	throw_sfx_player.stream = load("res://Assets/Audio/SFX/whirlwind_whoosh.ogg")
 	land_sfx_player.stream = load("res://Assets/Audio/SFX/wrestler_collision.ogg")
 	recover_sfx_player.stream = load("res://Assets/Audio/SFX/downed_stinger.ogg")
@@ -168,7 +179,7 @@ func _add_break_gauge(player: Node) -> void:
 	break_gauge.boss = self
 	break_gauge.player = player
 	break_gauge.owns_attack = func(id: StringName) -> bool: return str(id).begins_with("josh_")
-	break_gauge.earns_from = func(hit: RefCounted) -> bool: return BREAK_EARNS.has(hit.attack_id)
+	break_gauge.earns_from = func(hit: RefCounted) -> bool: return BREAK_EARNS.has(hit.attack_id) and state_machine.pay_volley_read(hit)
 	break_gauge.parry_gain = BREAK.parry_gain
 	break_gauge.perfect_dodge_gain = BREAK.perfect_dodge_gain
 	break_gauge.punch_gain = BREAK.punch_gain
@@ -371,9 +382,19 @@ func juggle_knock_back(push: Vector2, time: float) -> void:
 	knock_back(Vector2(x - ground_position.x, 0.0), time)
 
 
+# Air goes under a node SORT_LIFT over his floor point, which sorts with the player while Air draws with it.
+func _lift_sort_point() -> void:
+	sort_point = Node2D.new()
+	sort_point.name = "SortPoint"
+	sort_point.position = Vector2(0, -SORT_LIFT)
+	add_child(sort_point)
+	air.reparent(sort_point)
+	y_sort_enabled = true
+
+
 func place() -> void:
 	global_position = ground_position.round()
-	air.position = Vector2(0, -roundf(height))
+	air.position = Vector2(0, SORT_LIFT - roundf(height))
 	# The shadow never leaves the floor however high he rides: only which frame it draws changes.
 	shadow.global_position = global_position
 	var riding_height: float = state_machine.glider_height
@@ -383,25 +404,6 @@ func place() -> void:
 		return
 	shadow.scale = Vector2.ONE * lerpf(1.0, JoshArtLayout.SHADOW_AIR_SCALE, lift)
 	shadow.modulate.a = JoshArtLayout.SHADOW_ALPHA * lerpf(1.0, JoshArtLayout.SHADOW_AIR_ALPHA, lift)
-
-
-# Moves his floor point toward `target` and returns how far off it still is.
-func fly_toward(target: Vector2, max_speed: float, delta: float) -> float:
-	var to_target := target - ground_position
-	var distance := to_target.length()
-	var desired := Vector2.ZERO
-	if distance > 0.0:
-		# Never faster than he can brake from at half his acceleration, so he doesn't overshoot.
-		var speed := minf(max_speed, minf(sqrt(FLY_ACCELERATION * distance), distance / FLY_ARRIVE_TIME))
-		desired = to_target / distance * speed
-	fly_velocity = fly_velocity.move_toward(desired, FLY_ACCELERATION * delta)
-	ground_position += fly_velocity * delta
-	place()
-	if absf(fly_velocity.x) > FLY_TURN_SPEED and (fly_velocity.x < 0.0) != flying_left:
-		flying_left = fly_velocity.x < 0.0
-		if anim.get("flips", false):
-			_show_anim_frame()
-	return ground_position.distance_to(target)
 
 
 # On the ground he turns to the player. Set before the pose that uses it, so the pose is drawn toward
@@ -433,28 +435,7 @@ func set_air_draw(up: bool) -> void:
 	sprite.z_index = AIR_Z if up else GROUND_Z
 
 
-# The card he rides grows under his feet as he steps on, and shrinks away when he drops off.
-func grow_glider(seconds: float) -> void:
-	glider_clock = 0.0
-	_place_glider()
-	glider.show()
-	if glider_tween:
-		glider_tween.kill()
-	glider_tween = glider.create_tween()
-	glider_tween.tween_property(glider, "scale", Vector2.ONE, seconds).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
-
-func shrink_glider(seconds: float) -> void:
-	if glider_tween:
-		glider_tween.kill()
-	glider_tween = glider.create_tween()
-	glider_tween.tween_property(glider, "scale", Vector2.ZERO, seconds).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	glider_tween.tween_callback(glider.hide)
-
-
 func hide_glider() -> void:
-	if glider_tween:
-		glider_tween.kill()
 	glider.scale = Vector2.ZERO
 	glider.hide()
 
@@ -475,40 +456,23 @@ func shake_sprite(strength: float, steps: int, step_time: float) -> void:
 	tween.tween_callback(func() -> void: sprite.position = sprite_base_position)
 
 
-# The call the three-card monte's reveal makes, over his health bar.
-func show_banner(text: String) -> void:
-	var label := Label.new()
-	label.text = text
-	label.theme = load("res://Assets/UI/ui_theme.tres")
-	label.add_theme_font_size_override("font_size", JoshArtLayout.BANNER_FONT_SIZE)
-	label.add_theme_color_override("font_color", JoshArtLayout.BANNER_COLOR)
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	label.add_theme_constant_override("outline_size", JoshArtLayout.BANNER_OUTLINE)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.size = Vector2(1400, 160)
-	label.pivot_offset = label.size / 2.0
-	label.position = JoshArtLayout.BANNER_CENTRE - label.size / 2.0
-	label.scale = Vector2.ONE * JoshArtLayout.BANNER_FROM_SCALE
-	hud_layer.add_child(label)
-
-	var show := label.create_tween()
-	show.tween_property(label, "scale", Vector2.ONE * JoshArtLayout.BANNER_TO_SCALE,
-		JoshArtLayout.BANNER_GROW_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	show.tween_interval(JoshArtLayout.BANNER_TIME - JoshArtLayout.BANNER_GROW_TIME)
-	show.tween_property(label, "modulate:a", 0.0, 0.3)
-	show.tween_callback(label.queue_free)
-
-
 #COMBAT
 
-# Punches only reach him while he is down, recovering or Broken. The hurtbox keeps its facing groups the
-# whole fight, so the player still faces him while he rides and his thrown cards land inside the guarded
-# arc.
+# Punches only reach him while he is down, recovering or Broken. The hurtbox keeps its facing groups
+# whenever he can be seen (set_target_active), so the player faces him wherever he stands.
 func set_hurtbox_active(active: bool) -> void:
 	# Deferred: monitoring can't change inside a physics flush.
 	hurtbox.set_deferred("monitoring", active)
 	hurtbox.set_deferred("monitorable", active)
+
+
+# Whether the player faces him and aims at him at all: off while he is gone from the screen
+# (JoshCardsWildCards), so nothing turns the player toward the spot he left.
+func set_target_active(on: bool) -> void:
+	if on and not hurtbox.is_in_group("boss_target"):
+		hurtbox.add_to_group("boss_target")
+	elif not on and hurtbox.is_in_group("boss_target"):
+		hurtbox.remove_from_group("boss_target")
 
 
 func _on_hurtbox_entered(area: Area2D) -> void:
@@ -555,25 +519,9 @@ func take_punch(amount: int) -> int:
 	return dealt
 
 
-# Phase two can't be skipped: until a phase-two cycle starts, he can't drop past the threshold.
-func _lowest_health() -> int:
-	if state_machine.cycle_phase == 0:
-		return floori(max_health * PHASE_TWO_RATIO)
-	return 0
-
-
-# A juggle's uppercuts go on past the threshold once it has been crossed. The cycle's phase only
-# catches up at the next start_cycle(), so on the phase floor every uppercut after the one that reached
-# it would deal a literal zero. Mason's rule, and the juggle's alone: punches and the single-bar finisher
-# keep the phase floor.
-func _juggle_floor() -> int:
-	return 0 if phase_two else _lowest_health()
-
-
-# A hit that would carry past the floor is cut down to reach it exactly: the phase floor, unless the hit
-# brings its own (take_juggle_hit).
-func _apply_damage(amount: int, pitch := 1.0, lowest := -1) -> int:
-	var dealt := mini(amount, boss_health - (_lowest_health() if lowest < 0 else lowest))
+# A hit that would carry past his last health point is cut down to it.
+func _apply_damage(amount: int, pitch := 1.0) -> int:
+	var dealt := mini(amount, boss_health)
 	if dealt <= 0:
 		return 0
 
@@ -582,9 +530,6 @@ func _apply_damage(amount: int, pitch := 1.0, lowest := -1) -> int:
 	_hit_feedback()
 	hit_sfx_player.pitch_scale = pitch
 	hit_sfx_player.play()
-
-	if not phase_two and get_health_ratio() <= PHASE_TWO_RATIO:
-		phase_two = true
 
 	if boss_health > 0:
 		state_machine.flinch()
@@ -595,13 +540,9 @@ func _apply_damage(amount: int, pitch := 1.0, lowest := -1) -> int:
 	return dealt
 
 
-# The player's finisher (PlayerFinisher). His windows can be dazed, once each, and only while the
-# finisher can still take health past the floor it would meet: the phase floor in his recovery, and in
-# his Break, which pays out in the juggle, the juggle's own.
+# The player's finisher (PlayerFinisher). His windows can be dazed, once each.
 func can_be_dazed() -> bool:
-	if defeated or daze_used or not _in_window():
-		return false
-	return boss_health > (_juggle_floor() if is_broken() else _lowest_health())
+	return not defeated and not daze_used and _in_window() and boss_health > 0
 
 
 # The three-bar mash and the juggle are the Break's payout alone; his recovery pays the single-bar
@@ -639,7 +580,7 @@ func end_recovery(stagger_time: float) -> bool:
 	return true
 
 
-# Past the hit cap, which the combo that led to it has used up, but not past the phase floor.
+# Past the hit cap, which the combo that led to it has used up.
 func take_finisher(amount: int) -> int:
 	if not _in_window():
 		return 0
@@ -669,10 +610,9 @@ func juggle_headroom() -> float:
 	return state_machine.states["Juggled"].headroom()
 
 
-# Past the hit cap, as take_finisher, on the juggle's own floor, with his hit sound pitched up a step
-# each uppercut.
+# Past the hit cap, as take_finisher, with his hit sound pitched up a step each uppercut.
 func take_juggle_hit(amount: int, pitch: float) -> int:
-	return _apply_damage(amount, pitch, _juggle_floor())
+	return _apply_damage(amount, pitch)
 
 
 func get_juggle_point() -> Vector2:
@@ -689,11 +629,6 @@ func outro_line_delay(_player_won: bool) -> float:
 # not on the floor under him. On the ground the two are the same point.
 func get_daze_anchor() -> Vector2:
 	return air.global_position + JoshArtLayout.mirrored(JoshArtLayout.DAZE_ANCHOR, sprite.flip_h)
-
-
-# Where a parry tell stands while he winds up a throw: over his head at whatever height he is.
-func tell_anchor() -> Vector2:
-	return air.global_position + JoshArtLayout.mirrored(JoshArtLayout.TELL_ANCHOR, sprite.flip_h)
 
 
 func get_finisher_hurtbox() -> Area2D:
@@ -760,10 +695,73 @@ func _build_hud() -> void:
 	hud_layer.add_child(health_bar)
 
 	if break_gauge:
-		var gauge_bar := BreakGaugeUI.new()
+		gauge_bar = BreakGaugeUI.new()
 		gauge_bar.gauge = break_gauge
 		hud_layer.add_child(gauge_bar)
 		gauge_bar.position = health_bar.break_gauge_anchor()
+
+
+# The bars fade while anything in `rects` is over the boss bar block (JoshArtLayout.HUD_KEEP_OUT's first, with its
+# clearance), and come back as it leaves.
+func update_hud_fade(rects: Array[Rect2]) -> void:
+	var block: Rect2 = JoshArtLayout.HUD_KEEP_OUT[0].grow(JoshArtLayout.HUD_CLEARANCE)
+	var covered := rects.any(func(rect: Rect2) -> bool: return rect.intersects(block))
+	_fade_hud(HUD_FADE_ALPHA if covered else 1.0)
+
+
+func restore_hud() -> void:
+	_fade_hud(1.0)
+
+
+# Bound to the bar itself, so a pause or a finisher's freeze holds it with the fight. A fade already on its way to
+# `alpha` is left to run, so asking for it every step still takes HUD_FADE_TIME. A bar already gone with the scene
+# can't make a tween.
+func _fade_hud(alpha: float) -> void:
+	if not health_bar or not health_bar.is_inside_tree():
+		return
+	if hud_fade and hud_fade.is_valid() and is_equal_approx(hud_fade_to, alpha):
+		return
+	if hud_fade:
+		hud_fade.kill()
+	hud_fade_to = alpha
+	if is_equal_approx(health_bar.modulate.a, alpha):
+		return
+	hud_fade = health_bar.create_tween().set_parallel()
+	for bar: Control in [health_bar, gauge_bar]:
+		if bar:
+			hud_fade.tween_property(bar, "modulate:a", alpha, HUD_FADE_TIME)
+
+
+func add_player_hype(amount: float) -> void:
+	var player: Node = state_machine.get_player()
+	var hype: Node = player.get_node_or_null("Hype") if player else null
+	if hype:
+		hype.add(amount)
+
+
+# A word across the screen (a bitten fake's "FEINT!"), on his HUD layer, as Carter's: on his spot, or centred on
+# `centre` (JoshMonteLayout.word_centre moves it off the marks).
+func show_word(text: String, centre: Vector2 = JoshMonteLayout.WORD.centre) -> void:
+	var spec: Dictionary = JoshMonteLayout.WORD
+	var label := Label.new()
+	label.text = text
+	label.theme = load("res://Assets/UI/ui_theme.tres")
+	label.add_theme_font_size_override("font_size", spec.font_size)
+	label.add_theme_color_override("font_color", spec.color)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	label.add_theme_constant_override("outline_size", spec.outline)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.size = Vector2(1400, 160)
+	label.pivot_offset = label.size / 2.0
+	label.position = centre - label.size / 2.0
+	label.scale = Vector2.ONE * spec.from_scale
+	hud_layer.add_child(label)
+	var show := label.create_tween()
+	show.tween_property(label, "scale", Vector2.ONE * spec.to_scale, spec.grow_time).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	show.tween_interval(spec.time - spec.grow_time)
+	show.tween_property(label, "modulate:a", 0.0, 0.3)
+	show.tween_callback(label.queue_free)
 
 
 func _hit_feedback() -> void:

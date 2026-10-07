@@ -1,15 +1,15 @@
 extends CharacterBody2D
 
 # Carter, boss 5. He has three moves. The Raging Demon: he flashes his eyes, drags the player to the
-# middle of the ring, puts the lights out and sends fifteen clones through them one at a time, then
+# middle of the ring, puts the lights out and sends eighteen clones through them one at a time, then
 # stands there open while the lights come back. The Beam Rush: four clones at the top of the ring
 # charge beams, lock them onto the player and fire them, three volleys to be escaped rather than
-# parried, and once in it he teleports in beside the player and strikes. The Messatsu: he puts the lights out, reappears across the ring
-# charging a beam locked onto the player, and fires it as the lights come back on - six hits, each its
-# own parry.
-# Every parry of all three fills his fight-long Break gauge, and eight clean ones from empty break him.
-# A Break's window is his Recover cashed from it, and it pays the tiered finisher's juggle
-# (CarterJuggled). The Beam Rush ends on its Break; the other two bank it and play on to their end.
+# parried, and once in it he teleports in beside the player and strikes. The Messatsu: he puts the
+# lights out, reappears across the ring charging a beam locked onto the player, and fires it as the
+# lights come back on - six hits, each its own parry.
+# Every parry of all three fills his fight-long Break gauge, and fourteen clean ones from empty break
+# him. A Break ends whatever attack is running on the spot, into his Recover cashed from it - open at
+# once - which pays the tiered finisher's juggle (CarterJuggled).
 # Each sequence lives in its own state - CarterRagingDemon, CarterBeamRush, CarterMessatsu - and this
 # node is his body, his health, his art and the darkness the sequences borrow.
 # Not to be confused with Scripts/CarterScript.gd, the wrestler Mason calls in - a different
@@ -30,15 +30,16 @@ const OUTRO_DIALOGUE := "res://Dialogue/CarterOutro.dialogue"
 const FIGHT_SCENE := "res://Scenes/Bosses/CarterBossFightScene.tscn"
 
 #CONSTANTS
-# Josh is 14 and Mason 10; Carter is fight 5 of 7, and he has three attacks rather than one.
-# A window he earns pays three punches on the beat (1 + 1 + 2) and a 13-point finisher, supercharged
-# 20; a Break's window pays the tiered juggle instead, 8 + 5 + 8 = 21 for all three bars. So a perfect
-# Raging Demon - whose eighth red breaks him - takes 32: seven banked for the parries, the punches and
-# the juggle. A Beam Rush ended by a Break takes 25 - it banks nothing - and one simply sat through
-# earns a 1.5 s window and almost nothing. A perfect Messatsu from an empty gauge takes 21: four
-# banked for its six parries, the punches and the plain finisher.
-# So a good player needs three attacks read well, which is what the rotation gives them: one of each.
-@export var max_health := 50
+# 125, doubled from 50 by the user with every boss's (2026-09-25) and raised 25% with them (2026-09-30):
+# Josh is 35 and Mason 120; Carter is fight 5 of 7, and he has three attacks rather than one.
+# Every finisher pays a share of max_health - the plain one 25%, the juggle 25/35/50% for one, two or
+# three bars, x1.6 with full hype, which a parry fight fills inside its first barrage - so this number
+# doesn't set his length: how many finisher windows he hands out does. That is his move set's job.
+@export var max_health := 125
+# Only a Break's window dazes him (can_be_dazed). Off by the user's call (2026-10-05): "lets remove this
+# rule except for jordan on the kaiju". On (2026-10-04 to 10-05), every window he earns without a Break
+# pays its banked damage and three punches and nothing more.
+@export var break_only_finisher := false
 var boss_health := max_health
 const MAX_HITS_PER_WINDOW := 3
 # Each opening takes the damage of a clean chain of MAX_HITS_PER_WINDOW punches (PunchAllowance).
@@ -57,13 +58,17 @@ const RUSH_SFX := [
 ]
 
 # His Break gauge, on the rule every fight's is on: this many clean reads from empty is a Break. The
-# number is the user's: "if the player can parry 8 in a row, that should be enough to break carter".
-# Every parry is one read - a red clone, his strike, a hit of his Messatsu - a hit taken costs one back
-# and a guard break two. 100 is BossBreakGauge.max_value, and 100 / 8 is exact in floating point, so
-# eight parries land on it. His is a parry fight: a perfect dodge earns nothing (the Messatsu's skips its
-# whole string, and the Beam Rush's beams can only be dodged) and neither does a punch. No grabs and nothing of his to fling back, so no
-# grab or reflect gain.
-const BREAK_READS := 8
+# user's 8 from 2026-09-27 ("if the player can parry 8 in a row, that should be enough to break
+# carter"), 14 on 2026-10-04 and 18 since 2026-10-05: one whole first barrage read clean, all eighteen
+# reds. With his attacks chained (CarterStateMachine.chain_attacks) a Break is the one way to open him
+# mid-combo, and at 14 the first barrage and the strike after it broke him so often that two finishers
+# had him down in about 40 s. Every parry is one read - a red clone, his strike, a hit of his Messatsu -
+# a hit taken costs one back and a guard break two. 100 / 18 isn't exact in floating point, and
+# eighteen of it sum a hair under 100: BossBreakGauge's BREAK_EPSILON is what lands the last on it. His
+# is a parry fight: a perfect dodge earns nothing (the Messatsu's skips its whole string, and the Beam
+# Rush's beams can only be dodged) and neither does a punch. No grabs and nothing of his to fling back,
+# so no grab or reflect gain.
+const BREAK_READS := 18
 const BREAK_READ := 100.0 / BREAK_READS
 const BREAK := {
 	"parry_gain": BREAK_READ,
@@ -856,14 +861,15 @@ func _apply_damage(amount: int, pitch := 1.0) -> int:
 	return dealt
 
 
-# The player's finisher (PlayerFinisher). Only his recovery can be dazed, once per window.
+# The player's finisher (PlayerFinisher). Only his recovery can be dazed, once per window, and with
+# break_only_finisher only a Break's.
 func can_be_dazed() -> bool:
-	return not defeated and boss_health > 0 and not daze_used and state_machine.is_recovering()
+	return not defeated and boss_health > 0 and not daze_used and state_machine.is_recovering() \
+		and (not break_only_finisher or state_machine.current_state.from_break)
 
 
 # The three-bar mash and the juggle are a Break's payout alone: a window cashed from one. Every other
-# window pays the plain single-bar finisher - the juggle's shares are of his max health, and on every
-# window they would end the fight in two cycles.
+# window pays the plain single-bar finisher.
 func can_be_juggled() -> bool:
 	return not defeated and boss_health > 0 and state_machine.is_recovering() and state_machine.current_state.from_break
 

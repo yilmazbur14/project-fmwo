@@ -31,6 +31,20 @@ const VOICES := {
 		"every": 4,
 		"volume_db": 0.0,
 	},
+	# Burak in a moustache, calling himself Aiden to get into Jordan's server (JordanFinale.dialogue): his own blips
+	# put on about a fourth higher, quicker, and tipping up every other blip - a put-on nice-guy voice.
+	"aiden": {
+		"streams": [
+			preload("res://Assets/Audio/SFX/Voices/voice_burak_1.wav"),
+			preload("res://Assets/Audio/SFX/Voices/voice_burak_2.wav"),
+			preload("res://Assets/Audio/SFX/Voices/voice_burak_3.wav"),
+		],
+		"pitch_min": 1.30,
+		"pitch_max": 1.36,
+		"melody": [1.0, 1.06],
+		"every": 3,
+		"volume_db": 0.0,
+	},
 	# Deep, warm and a little gritty, and heavier, so a touch slower.
 	"eric": {
 		"streams": [
@@ -204,6 +218,20 @@ const VOICES := {
 		"melody": [1.0],
 		"every": 4,
 		"volume_db": -1.0,
+	},
+	# The unseen arena announcer at the champion ending (ChampionEndingLayout.ANNOUNCER_NAME): Eric's deep blips
+	# pitched down a little further and stepping up through the line, a big-room build to the name the crowd drowns.
+	"???": {
+		"streams": [
+			preload("res://Assets/Audio/SFX/Voices/voice_eric_1.wav"),
+			preload("res://Assets/Audio/SFX/Voices/voice_eric_2.wav"),
+			preload("res://Assets/Audio/SFX/Voices/voice_eric_3.wav"),
+		],
+		"pitch_min": 0.80,
+		"pitch_max": 0.84,
+		"melody": [1.0, 1.0, 1.06, 1.12],
+		"every": 3,
+		"volume_db": 3.0,
 	},
 }
 

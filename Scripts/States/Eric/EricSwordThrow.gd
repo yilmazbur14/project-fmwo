@@ -2,13 +2,14 @@ extends State
 
 # Eric throws his sword at where the player stands. It sticks in the ground and sends out an
 # earthquake ring, then flies back to his hand.
-# The wind-up warns first: a parry while the sword is in the air flings it back at him, and it takes
-# a chip of health off and staggers him where he threw it when it arrives. A held guard absorbs it
-# as before, and an unparried sword plants and rings as before.
+# The wind-up warns first: a parry as the sword comes down on its mark flings it back at him, and it
+# takes a chip of health off and staggers him where he threw it when it arrives. A held guard absorbs
+# it as before, and an unparried sword plants and rings as before. It hurts nobody on the way to the
+# mark (EricThrownSwordScript), and nobody on the way back to his hand.
 # The V2 whirlwind ends in this same state (EricStateMachine.throw_from_whirlwind): the spin lets the
-# sword go on these release frames, so the parry, the chip and the uppercut are the throw's own. That
+# sword go on these release frames, so the parry, the chip and the stagger are the throw's own. That
 # one skips off the mat instead of planting, so there is no ring and no wait before he takes it back,
-# and he is open to punches while it is out of his hands.
+# and he is open to punches while it is out of his hands, a POW there dazing him (EricScript.can_be_dazed).
 
 @export var animation_player : AnimationPlayer
 @export var character_body : CharacterBody2D
@@ -120,7 +121,6 @@ func release_sword() -> void:
 	eric_state_machine.add_hazard(sword, Vector2(hand.x, _ground_y()), false)
 	sword.lay_shadow_on(eric_state_machine.ground_layer())
 	sword.plants = not from_whirlwind
-	sword.returns_harmless = from_whirlwind
 	sword.throw(hand, _ground_y(), player.global_position)
 	# The reworked feel only. The sword is aimed at where they stood and never re-aims, so once they
 	# have walked off that spot the throw says nothing: the floor says where and when it lands, and
@@ -133,10 +133,12 @@ func release_sword() -> void:
 		# before this is still a warning to read, not a free punch.
 		hurtbox.set_deferred("monitoring", true)
 		hurtbox.set_deferred("monitorable", true)
+		# An opening of its own, with its own daze (EricScript.can_be_dazed).
+		character_body.daze_used = false
 	_play_whoosh()
 
 
-# Called by the boss once the player parries the sword in the air (EricScript.parry_stagger). It
+# Called by the boss once the player parries the sword on its mark (EricScript.parry_stagger). It
 # is already stopped where they caught it; from here it only flies at him, and nothing interrupts it
 # short of the fight ending, which frees every hazard.
 func reflect(stagger_duration: float) -> void:
@@ -149,8 +151,10 @@ func reflect(stagger_duration: float) -> void:
 
 # The flung-back sword arrives. It never planted, so there is no ring; it is spent on him, and his
 # staggered frames draw him holding it again, ready for the next throw.
-# Reading his own sword back into his chest is the payoff move: the stagger it leaves him in opens a
-# finisher daze and the uppercut fires on its own. A reflect that kills him outright never gets
+# Reading his own sword back into his chest is the payoff move. With EricPacing's reflect_auto_uppercut
+# (V1) the stagger it leaves him in opens a finisher daze and the uppercut fires on its own; without it
+# (V2 since 2026-10-04) it is a plain parry stagger, open to punches, as a parried bear hug is, and the
+# payoff is the chip and a big share of his Break gauge. A reflect that kills him outright never gets
 # there, and the outro runs off take_punch as it always has.
 func _on_sword_struck_thrower() -> void:
 	if eric_state_machine.current_state != self:
@@ -163,6 +167,9 @@ func _on_sword_struck_thrower() -> void:
 	# V2: it fills his Break gauge too, and one it fills breaks him instead.
 	var gauge: Node = character_body.break_gauge
 	if gauge and gauge.add(gauge.reflect_gain):
+		return
+	if not EricPacing.value("reflect_auto_uppercut"):
+		eric_state_machine.parry_stagger(pending_stagger, throw_spot)
 		return
 	# This window is its own daze, whatever an earlier Downed window spent.
 	character_body.daze_used = false

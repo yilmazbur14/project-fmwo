@@ -1,0 +1,531 @@
+{
+ "palette": {
+  "0": "#F6EFDC",
+  "5": "#463C2C",
+  "6": "#6B5D44",
+  "7": "#9E8D68",
+  "8": "#C8B994",
+  "9": "#E6DBBE",
+  "G": "#B07D22",
+  "N": "#20203C",
+  "O": "#F5D94E",
+  "R": "#C2283A",
+  "S": "#45487F",
+  "T": "#E8605A",
+  "V": "#861826",
+  "W": "#FFFFFF",
+  "Y": "#FFF3B0",
+  "Z": "#C96C74",
+  "a": "#84412F",
+  "b": "#B86C4E",
+  "c": "#DB976C",
+  "d": "#F0B98E",
+  "e": "#FBD6B0",
+  "g": "#7A5216",
+  "h": "#130B09",
+  "i": "#24160F",
+  "j": "#3D261A",
+  "k": "#000000",
+  "l": "#5F3C29",
+  "m": "#8A5B3D",
+  "n": "#14142A",
+  "o": "#E0AB35",
+  "p": "#E0917C",
+  "r": "#E07A2C",
+  "s": "#32335C",
+  "t": "#5E63A0",
+  "v": "#4A0C16",
+  "w": "#2B0A12",
+  "x": "#4D1420",
+  "y": "#7A2032",
+  "z": "#A63B4B"
+ },
+ "glow_palette_additive": {
+  "E": "#4A0E18",
+  "Q": "#845C1C",
+  "U": "#56340C",
+  "e": "#28060C",
+  "q": "#160C03",
+  "u": "#2E1A06"
+ },
+ "small_portal": {
+  "files": [
+   "josh_small_portal_open_back.png",
+   "josh_small_portal_open_glow.png",
+   "josh_small_portal_loop_back.png",
+   "josh_small_portal_loop_glow.png",
+   "josh_small_portal_burst_back.png",
+   "josh_small_portal_burst_glow.png",
+   "josh_small_portal_close_back.png",
+   "josh_small_portal_close_glow.png"
+  ],
+  "ship_to": "Assets/Characters/Josh/Portals/",
+  "frame": [
+   56,
+   56
+  ],
+  "pivot": [
+   28,
+   28
+  ],
+  "pivot_is": "the opening centre (corner convention, offset = frame/2 - pivot; the pivot is the frame centre, so flip_h is free)",
+  "FLOOR_DROP_texels": 22,
+  "FLOOR_DROP_px_at_3x": 66,
+  "scale": 3,
+  "layers": {
+   "back": "normal blend, drawn behind whatever comes out",
+   "glow": "additive (blend ADD)"
+  },
+  "sequences": {
+   "open": {
+    "frames": 4,
+    "times": [
+     0.06,
+     0.07,
+     0.08,
+     0.09
+    ],
+    "total": 0.3,
+    "loops": false
+   },
+   "loop": {
+    "frames": 8,
+    "times": [
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "total": 0.8,
+    "loops": true
+   },
+   "burst": {
+    "frames": 3,
+    "times": [
+     0.05,
+     0.06,
+     0.07
+    ],
+    "total": 0.18,
+    "loops": false
+   },
+   "close": {
+    "frames": 4,
+    "times": [
+     0.05,
+     0.05,
+     0.05,
+     0.05
+    ],
+    "total": 0.2,
+    "loops": false
+   }
+  },
+  "sequence_notes": {
+   "open": "frame 0 is the dealt card flipping open at the pivot; runs into loop frame 0",
+   "loop": "seamless (the card ring turns back two slots while the vortex turns two arms)",
+   "burst": "the flare as the figure comes out: vortex white-hot, the ring blown out; back into the loop",
+   "close": "ends on an empty frame; free the node after it"
+  },
+  "drawn_box_texels": {
+   "back": [
+    4,
+    7,
+    48,
+    48
+   ],
+   "with_glow": [
+    4,
+    5,
+    50,
+    50
+   ]
+  },
+  "drawn_size_texels": [
+   45,
+   42
+  ],
+  "drawn_size_px_at_3x": [
+   135,
+   126
+  ],
+  "reach_from_pivot_texels": 24.8,
+  "opening_radius_texels": 9.5,
+  "rim_outer_radius_texels": 12.5,
+  "neutral": "one look for every small gate: the marks (strong parry badge / pale X) are the only difference",
+  "badge_anchor_suggestion_px": "badge tip 6 px over the gate top: pivot.y - 69 px"
+ },
+ "josh_dive": {
+  "file": "josh_dive.png",
+  "ship_to": "Assets/Characters/Josh/",
+  "frame": [
+   80,
+   80
+  ],
+  "feet": [
+   40,
+   79
+  ],
+  "facing": "right (flip_h for the left gate)",
+  "frames": 5,
+  "times": [
+   0.12,
+   0.1,
+   0.1,
+   0.1,
+   0.08
+  ],
+  "total": 0.5,
+  "beats": [
+   "crouch",
+   "leap (the deck flung ahead)",
+   "dive (a card leading him in)",
+   "dive (folding into cards, head and hat first)",
+   "vanish (a twist of cards)"
+  ],
+  "heading_deg_above_horizontal": 40,
+  "body_centre_texels_per_frame": [
+   [
+    39.8,
+    50.9
+   ],
+   [
+    44.1,
+    37.6
+   ],
+   [
+    41.8,
+    41.1
+   ],
+   [
+    38.9,
+    48.4
+   ],
+   [
+    50.2,
+    33.0
+   ]
+  ],
+  "dive_centre": [
+   42,
+   41
+  ],
+  "aim_note": "raise him until DIVE_CENTRE (his middle on the airborne frames, texels in the cell) meets the opening, not his feet: it sits 114 px over the feet anchor at 3x",
+  "vanish_at": [
+   50,
+   33
+  ]
+ },
+ "josh_emerge": {
+  "file": "josh_emerge.png",
+  "ship_to": "Assets/Characters/Josh/",
+  "optional": true,
+  "frame": [
+   80,
+   80
+  ],
+  "feet": [
+   40,
+   79
+  ],
+  "facing": "right",
+  "frames": 4,
+  "times": [
+   0.08,
+   0.12,
+   0.14,
+   0.16
+  ],
+  "total": 0.5,
+  "beats": [
+   "cards pour out of the gate",
+   "dropping out feet first, winded",
+   "THUD: squat, arms out, cards burst round his boots",
+   "josh_recovery frame 0 (hands off to recover)"
+  ],
+  "body_centre_texels_per_frame": [
+   [
+    39.8,
+    24.0
+   ],
+   [
+    41.0,
+    40.8
+   ],
+   [
+    45.0,
+    52.2
+   ],
+   [
+    45.0,
+    51.5
+   ]
+  ],
+  "on_floor_from_frame": 2
+ },
+ "josh_monte_slash": {
+  "file": "josh_monte_slash.png",
+  "ship_to": "Assets/Characters/Josh/",
+  "frame": [
+   128,
+   80
+  ],
+  "feet": [
+   64,
+   79
+  ],
+  "facing": "right, blade reaching right; flip_h mirrors about the feet (column 64 = frame centre)",
+  "frames": 4,
+  "times": [
+   0.08,
+   0.1,
+   0.1,
+   0.16
+  ],
+  "dash_frames_0_1_total": 0.18,
+  "contact_frame": 2,
+  "follow_through_frame": 3,
+  "beats": [
+   "burst out: low launch, sabre trailing, cards peeling off behind",
+   "the draw: dashing, sabre held back flat at his hip",
+   "CONTACT: rising cut across the player's middle, smear from the floor to the blade",
+   "follow-through: the cut carried up and away"
+  ],
+  "blade": "five of his gold cards laid end to end (dark-gold seams, a black spade on each), one keyline, the last card tapering to the point, a cream-card cross-guard",
+  "contact_point_from_feet_texels": [
+   47.8,
+   -23.1
+  ],
+  "contact_point_from_feet_px_at_3x": [
+   143.4,
+   -69.3
+  ],
+  "blade_tip_on_contact_from_feet_texels": [
+   60.7,
+   -27.5
+  ],
+  "figure_centre_from_feet_texels": [
+   4,
+   -32
+  ],
+  "placement_note": "to land the cut on the hurtbox centre H: feet = H - contact_point*3 (x mirrored when flipped)",
+  "drawn_box_per_frame": [
+   [
+    18,
+    16,
+    92,
+    79
+   ],
+   [
+    21,
+    13,
+    93,
+    79
+   ],
+   [
+    24,
+    16,
+    126,
+    79
+   ],
+   [
+    28,
+    13,
+    126,
+    79
+   ]
+  ]
+ },
+ "josh_monte_scatter": {
+  "file": "josh_monte_scatter.png",
+  "ship_to": "Assets/Characters/Josh/Cards/",
+  "optional": true,
+  "frame": [
+   96,
+   96
+  ],
+  "pivot": [
+   48,
+   48
+  ],
+  "pivot_is": "the figure's centre: put it on feet + figure_centre_from_feet (x mirrored when flipped)",
+  "frames": 6,
+  "times": [
+   0.05,
+   0.05,
+   0.05,
+   0.05,
+   0.05,
+   0.05
+  ],
+  "total": 0.3,
+  "beats": [
+   "the pop: the pack flashed white and gold in his shape",
+   "the cards flung out all round, spinning, thinning out, the last six falling"
+  ]
+ },
+ "loop_seamless": true,
+ "audit": {
+  "josh_small_portal_open_back": {
+   "opaque": 2357,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "colours": 18,
+   "strays": 0,
+   "border_pixels_top_left_right": 0,
+   "empty_frames": [],
+   "black_ratio": 0.319
+  },
+  "josh_small_portal_open_glow": {
+   "opaque": 1123,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "colours": 3,
+   "strays": 0,
+   "border_pixels_top_left_right": 0,
+   "empty_frames": [],
+   "black_ratio": 0.0
+  },
+  "josh_small_portal_loop_back": {
+   "opaque": 8058,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "colours": 17,
+   "strays": 0,
+   "border_pixels_top_left_right": 0,
+   "empty_frames": [],
+   "black_ratio": 0.315
+  },
+  "josh_small_portal_loop_glow": {
+   "opaque": 2812,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "colours": 2,
+   "strays": 0,
+   "border_pixels_top_left_right": 0,
+   "empty_frames": [],
+   "black_ratio": 0.0
+  },
+  "josh_small_portal_burst_back": {
+   "opaque": 3309,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "colours": 18,
+   "strays": 0,
+   "border_pixels_top_left_right": 0,
+   "empty_frames": [],
+   "black_ratio": 0.309
+  },
+  "josh_small_portal_burst_glow": {
+   "opaque": 1568,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "colours": 3,
+   "strays": 0,
+   "border_pixels_top_left_right": 0,
+   "empty_frames": [],
+   "black_ratio": 0.0
+  },
+  "josh_small_portal_close_back": {
+   "opaque": 716,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "colours": 16,
+   "strays": 0,
+   "border_pixels_top_left_right": 0,
+   "empty_frames": [
+    3
+   ],
+   "black_ratio": 0.457
+  },
+  "josh_small_portal_close_glow": {
+   "opaque": 470,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "colours": 3,
+   "strays": 0,
+   "border_pixels_top_left_right": 0,
+   "empty_frames": [
+    3
+   ],
+   "black_ratio": 0.0
+  },
+  "josh_dive": {
+   "opaque": 8837,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "colours": 37,
+   "strays": 0,
+   "border_pixels_top_left_right": 0,
+   "empty_frames": [],
+   "black_ratio": 0.301
+  },
+  "josh_emerge": {
+   "opaque": 7905,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "colours": 37,
+   "strays": 0,
+   "border_pixels_top_left_right": 0,
+   "empty_frames": [],
+   "black_ratio": 0.301
+  },
+  "josh_monte_slash": {
+   "opaque": 10770,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "colours": 37,
+   "strays": 0,
+   "border_pixels_top_left_right": 0,
+   "empty_frames": [],
+   "black_ratio": 0.276
+  },
+  "josh_monte_scatter": {
+   "opaque": 6406,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "colours": 11,
+   "strays": 0,
+   "border_pixels_top_left_right": 0,
+   "empty_frames": [],
+   "black_ratio": 0.38
+  }
+ },
+ "ship_paths_after_approval": {
+  "josh_small_portal_open_back.png": "Assets/Characters/Josh/Portals/josh_small_portal_open_back.png",
+  "josh_small_portal_open_glow.png": "Assets/Characters/Josh/Portals/josh_small_portal_open_glow.png",
+  "josh_small_portal_loop_back.png": "Assets/Characters/Josh/Portals/josh_small_portal_loop_back.png",
+  "josh_small_portal_loop_glow.png": "Assets/Characters/Josh/Portals/josh_small_portal_loop_glow.png",
+  "josh_small_portal_burst_back.png": "Assets/Characters/Josh/Portals/josh_small_portal_burst_back.png",
+  "josh_small_portal_burst_glow.png": "Assets/Characters/Josh/Portals/josh_small_portal_burst_glow.png",
+  "josh_small_portal_close_back.png": "Assets/Characters/Josh/Portals/josh_small_portal_close_back.png",
+  "josh_small_portal_close_glow.png": "Assets/Characters/Josh/Portals/josh_small_portal_close_glow.png",
+  "josh_dive.png": "Assets/Characters/Josh/josh_dive.png",
+  "josh_emerge.png": "Assets/Characters/Josh/josh_emerge.png",
+  "josh_monte_slash.png": "Assets/Characters/Josh/josh_monte_slash.png",
+  "josh_monte_scatter.png": "Assets/Characters/Josh/Cards/josh_monte_scatter.png"
+ },
+ "files": [
+  "josh_small_portal_open_back.png",
+  "josh_small_portal_open_glow.png",
+  "josh_small_portal_loop_back.png",
+  "josh_small_portal_loop_glow.png",
+  "josh_small_portal_burst_back.png",
+  "josh_small_portal_burst_glow.png",
+  "josh_small_portal_close_back.png",
+  "josh_small_portal_close_glow.png",
+  "josh_dive.png",
+  "josh_emerge.png",
+  "josh_monte_slash.png",
+  "josh_monte_scatter.png",
+  "josh_monte_sheet.png",
+  "mock_monte_1_red.png",
+  "mock_monte_2_feint.png",
+  "mock_monte_3_contact.png",
+  "gif_monte_dive_deal_burst_parry.gif"
+ ]
+}

@@ -1,0 +1,52 @@
+{
+  "shipped": "2026-10-04T12:20:22",
+  "by": "coordinator",
+  "approval": "user 2026-10-04: 'approve all and implement'",
+  "source": "scratchpad/jordan_kaiju/approval/*.aseprite layers (kaiju+fx | rider), recomposes the approved PNGs pixel-identically",
+  "layout": {
+    "frame": [
+      200,
+      240
+    ],
+    "frames": [
+      "0 mounted idle",
+      "1 breath charge (plates 0-3 lit, 4 half, jaw open)"
+    ],
+    "scale": 3,
+    "frame_top_left_screen_at_home": [
+      72,
+      146
+    ],
+    "feet_frame_px": [
+      86,
+      218
+    ],
+    "home_screen": [
+      330,
+      800
+    ],
+    "rider_sheet_shares_frame_geometry": true
+  },
+  "files": [
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_standin.png",
+      "sha256": "2d1d870af9996a30e8e46bacb0dd0ef64684091e8dc36bfe154d39a3e9ddb9c5",
+      "bytes": 14075
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_standin.aseprite",
+      "sha256": "ebfeb1f7fd4076580c8597d40668aea2c79eb1431b99b30f7aa9b7e8662579d7",
+      "bytes": 10659
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/jordan_ride_standin.png",
+      "sha256": "ecbc8d62e29d01d7b4674d5a4567b57248c173f121f3c925e1393f8755d3c27f",
+      "bytes": 3612
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/jordan_ride_standin.aseprite",
+      "sha256": "fa4e7484455781604dc5e288c2832537f4380e5a5a6b0a6aef9e1366a20d085e",
+      "bytes": 2716
+    }
+  ]
+}

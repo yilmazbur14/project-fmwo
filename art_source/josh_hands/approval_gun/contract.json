@@ -1,0 +1,366 @@
+{
+ "scale": 3,
+ "drawn_as": "the RIGHT side's hand pointing LEFT (the giant's left hand, the approved handedness); the left is the code's mirror (flip_h about the pivot column)",
+ "frame": [
+  128,
+  128
+ ],
+ "pivot": [
+  64,
+  70
+ ],
+ "GUN_MUZZLE": [
+  30,
+  70
+ ],
+ "GUN_MUZZLE_note": "corner point: the beam centre line is row 70 (the pivot row, so the beam row is the node y); the fingertips end at column 30, the same on idle, charge and fire frame 0",
+ "GUN_BOX_TEXELS": [
+  -40,
+  -45,
+  72,
+  65
+ ],
+ "GUN_BOX_note": "Rect2 around the pivot (x, y, w, h) of every idle/charge/fire frame, glow included",
+ "box_vs_muzzle_row": {
+  "above": 45,
+  "below": 20,
+  "muzzle_to_cuff_edge": 66
+ },
+ "gun_form_box_texels": [
+  -41,
+  -43,
+  79,
+  82
+ ],
+ "clips": {
+  "gun_form": {
+   "frames": 6,
+   "times": [
+    0.05,
+    0.06,
+    0.07,
+    0.07,
+    0.07,
+    0.08
+   ],
+   "total": 0.4,
+   "loop": false,
+   "hold_last": false
+  },
+  "gun_idle": {
+   "frames": 4,
+   "times": [
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "total": 0.4,
+   "loop": true,
+   "hold_last": false
+  },
+  "gun_charge": {
+   "frames": 4,
+   "times": [
+    0.08,
+    0.08,
+    0.08,
+    0.08
+   ],
+   "total": 0.32,
+   "loop": true,
+   "hold_last": false
+  },
+  "gun_fire": {
+   "frames": 4,
+   "times": [
+    0.05,
+    0.08,
+    0.1,
+    0.12
+   ],
+   "total": 0.35,
+   "loop": false,
+   "hold_last": true
+  }
+ },
+ "muzzle_checks": {
+  "gun_idle": {
+   "tip_column": 30,
+   "barrel_rows": [
+    61,
+    78
+   ]
+  },
+  "gun_charge": {
+   "tip_column": 30,
+   "barrel_rows": [
+    61,
+    78
+   ]
+  },
+  "gun_fire": {
+   "tip_column": 30,
+   "barrel_rows": [
+    61,
+    78
+   ]
+  }
+ },
+ "beam": {
+  "pieces": {
+   "start": "josh_gun_beam_start.png 16x20: its right edge on the muzzle column, centre line on the muzzle row",
+   "tile": "josh_gun_beam_tile.png 16x20: seamless left-right, repeated from the start piece to the end piece",
+   "end": "josh_gun_beam_end.png 16x20: its left edge on the far rope (x 100 for the right hand)",
+   "glow": "josh_gun_beam_glow.png 16x32 (optional, additive): the halo, 6 texels past each edge"
+  },
+  "frames": 3,
+  "times": [
+   0.05,
+   0.05,
+   0.05
+  ],
+  "height_texels": 20,
+  "BEAM_HALF_px": 30,
+  "pivots_corner": {
+   "start": [
+    16,
+    10
+   ],
+   "tile": [
+    0,
+    10
+   ],
+   "end": [
+    0,
+    10
+   ],
+   "glow": [
+    0,
+    16
+   ]
+  },
+  "colours": "white core, cream, salmon #E8605A, crimson #C2283A, dark crimson #861826, wine edge #4D1420"
+ },
+ "flash": {
+  "file": "josh_gun_flash.png",
+  "frame": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ],
+  "times": [
+   0.04,
+   0.05,
+   0.06,
+   0.08
+  ]
+ },
+ "charge_fx": {
+  "file": "josh_gun_charge_fx.png",
+  "frame": [
+   32,
+   32
+  ],
+  "pivot": [
+   16,
+   16
+  ],
+  "times": [
+   0.08,
+   0.08,
+   0.08,
+   0.08,
+   0.08,
+   0.08
+  ],
+  "loop": true
+ },
+ "telegraph_colours": {
+  "fill": "#C2283A",
+  "rims": "#E8605A",
+  "flash": "#FFF3B0"
+ },
+ "posts_px_from_this_box": {
+  "node": {
+   "left": 104,
+   "right": 1816
+  },
+  "muzzle_x": {
+   "left": 206,
+   "right": 1714
+  },
+  "row_range": {
+   "left": [
+    143,
+    770
+   ],
+   "right": [
+    143,
+    874
+   ]
+  },
+  "beam": {
+   "left": [
+    206,
+    1820
+   ],
+   "right": [
+    100,
+    1714
+   ]
+  }
+ },
+ "audit": {
+  "josh_hand_gun_form": {
+   "opaque": 13796,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 18,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_hand_gun_form_glow": {
+   "opaque": 1441,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 1,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_hand_gun_idle": {
+   "opaque": 7200,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 15,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_hand_gun_idle_glow": {
+   "opaque": 826,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 1,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_hand_gun_charge": {
+   "opaque": 7385,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 18,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_hand_gun_charge_glow": {
+   "opaque": 1570,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 2,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_hand_gun_fire": {
+   "opaque": 7194,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 16,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_hand_gun_fire_glow": {
+   "opaque": 1438,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 3,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_gun_beam_start": {
+   "opaque": 960,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 6,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_gun_beam_tile": {
+   "opaque": 960,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 6,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_gun_beam_end": {
+   "opaque": 960,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 7,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_gun_beam_glow": {
+   "opaque": 306,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 2,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_gun_flash": {
+   "opaque": 773,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 7,
+   "strays": 0,
+   "empty_frames": []
+  },
+  "josh_gun_charge_fx": {
+   "opaque": 2419,
+   "semi_alpha": 0,
+   "off_palette": 0,
+   "lanes_gold": 0,
+   "colours": 10,
+   "strays": 0,
+   "empty_frames": []
+  }
+ },
+ "files": [
+  "josh_hand_gun_form.png",
+  "josh_hand_gun_form_glow.png",
+  "josh_hand_gun_idle.png",
+  "josh_hand_gun_idle_glow.png",
+  "josh_hand_gun_charge.png",
+  "josh_hand_gun_charge_glow.png",
+  "josh_hand_gun_fire.png",
+  "josh_hand_gun_fire_glow.png",
+  "josh_gun_beam_start.png",
+  "josh_gun_beam_tile.png",
+  "josh_gun_beam_end.png",
+  "josh_gun_beam_glow.png",
+  "josh_gun_flash.png",
+  "josh_gun_charge_fx.png",
+  "josh_gun_sheet.png",
+  "mock_gun_1_sweep.png",
+  "mock_gun_2_charge.png",
+  "mock_gun_3_fire.png",
+  "gif_gun_sweep_charge_fire.gif"
+ ]
+}

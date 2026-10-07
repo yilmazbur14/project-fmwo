@@ -7,8 +7,11 @@ extends Node2D
 # IT REPORTS ITS OWN HITS, as Matt's bolts and Captain Burak's balls do, because it needs the result: a
 # parried plate is knocked down, one that lands drops, and one dashed through flies on through the player.
 # Its hitbox is on no layer and in no "enemy projectile" group, so nothing else ever resolves it, and each
-# plate is its own hit source, so PlayerDefense's per-source absorb keeps a throw's three apart. The latch
+# plate is its own hit source, so PlayerDefense's per-source absorb keeps a throw's six apart. The latch
 # keeps it off the player for the rest of the pass it was answered on.
+# GONE STILL FLYING - off its last rope, or fizzled by a Break, the fight's end or its cap - it takes itself from
+# under any parry press still open, and that press owes nothing for it (the user, 2026-09-28): the plate it was
+# pressed for never came.
 # Its origin is the player's own hurtbox centre, so any facing parries it, a plate coming back off a rope
 # included. Parry-only: it isn't blockable, so a held guard is simply hit.
 # Its sheet hangs under an `art` node rather than straight off the plate, so PlayerCombatFx neither flashes
@@ -222,6 +225,8 @@ func _step_drop(delta: float) -> void:
 
 # Its puff where it is drawn, and the plate itself gone at once.
 func _vanish() -> void:
+	if not down and is_instance_valid(player):
+		player.defense.whiff_owed = false
 	spent = true
 	hitbox.get_child(0).set_deferred("disabled", true)
 	if is_instance_valid(body):

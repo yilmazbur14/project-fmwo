@@ -41,6 +41,12 @@ var shower_done := false
 var with_carter := false
 var carter_call: State
 var phone: Tween
+# Phase one's Carter call with a light rain under it (MasonStateMachine.carter_rain, run as "CarterRain"): Carter on
+# the call's own numbers and the rain on the state machine's rain_* knobs, every rain_target_every-th nugget aimed
+# where the player is heading rather than where they are.
+var rain := false
+# This shower's nugget warning, whichever numbers it runs on.
+var warning := 0.0
 # When each of his slams switches its hitbox on, in seconds from the heave, and for how long.
 var slams : Array[float] = []
 var slam_live := 0.0
@@ -55,7 +61,10 @@ func Enter() -> void:
 	landing_spots.clear()
 	landing_times.clear()
 	shower_done = false
-	with_carter = state_machine.carter_in_shower[state_machine.cycle_phase]
+	rain = state_machine.attack_variant == "CarterRain"
+	state_machine.attack_variant = ""
+	with_carter = rain or state_machine.carter_in_shower[state_machine.cycle_phase]
+	warning = state_machine.rain_warning if rain else state_machine.nugget_warning[state_machine.cycle_phase]
 	carter_call = state_machine.states["CallCarter"]
 	slams.clear()
 
@@ -63,9 +72,9 @@ func Enter() -> void:
 # Called by the nugget_toss animation on its heave frame, as the nuggets leave the bucket.
 func start_shower() -> void:
 	var phase: int = state_machine.cycle_phase
-	var count: int = state_machine.nugget_count[phase]
-	var interval: float = state_machine.nugget_shower_time[phase] / count
-	var warning: float = state_machine.nugget_warning[phase]
+	var count: int = state_machine.rain_count if rain else state_machine.nugget_count[phase]
+	var interval: float = (state_machine.rain_time if rain else state_machine.nugget_shower_time[phase]) / count
+	var aim_every: int = state_machine.rain_target_every if rain else target_every
 	if with_carter:
 		_call_carter()
 	# One tween runs the whole shower, so leaving the state stops it in one go.
@@ -79,7 +88,7 @@ func start_shower() -> void:
 		if gap > 0.0:
 			shower.tween_interval(gap)
 			gap = 0.0
-		shower.tween_callback(_drop_nugget.bind((i + 1) % target_every == 0, i * interval))
+		shower.tween_callback(_drop_nugget.bind((i + 1) % aim_every == 0, i * interval))
 	shower.tween_callback(func(): shower_done = true)
 
 
@@ -141,10 +150,17 @@ func _drop_nugget(aimed: bool, drop_time: float) -> void:
 	var player = state_machine.get_player()
 	if aimed and player:
 		var hurtbox_shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
-		spot = _aimed_spot(player.global_position, hurtbox_shape.global_transform * hurtbox_shape.shape.get_rect(), drop_time)
+		var target: Vector2 = player.global_position
+		var box: Rect2 = hurtbox_shape.global_transform * hurtbox_shape.shape.get_rect()
+		if rain:
+			var area: Rect2 = state_machine.BOMB_AREA
+			var lead: Vector2 = player.velocity.limit_length(state_machine.RAIN_LEAD_CAP) * warning * state_machine.rain_lead
+			var led: Vector2 = (target + lead).clamp(area.position, area.end)
+			box.position += led - target
+			target = led
+		spot = _aimed_spot(target, box, drop_time)
 	else:
 		spot = _random_open_spot(drop_time)
-	var warning: float = state_machine.nugget_warning[state_machine.cycle_phase]
 	var nugget = state_machine.spawn_hazard(NUGGET_METEOR_SCENE, spot)
 	nugget.drop(warning, keep_out.has_point(spot))
 	nuggets.append(nugget)
@@ -189,7 +205,7 @@ func _reaches(spot: Vector2, hurtbox: Rect2) -> bool:
 # room around it.
 func _random_open_spot(drop_time: float) -> Vector2:
 	var area: Rect2 = state_machine.BOMB_AREA
-	var wanted: int = state_machine.nugget_spread[state_machine.cycle_phase]
+	var wanted: int = state_machine.rain_spread if rain else state_machine.nugget_spread[state_machine.cycle_phase]
 	var spot := Vector2.ZERO
 	var best := Vector2.INF
 	var best_room := -1.0

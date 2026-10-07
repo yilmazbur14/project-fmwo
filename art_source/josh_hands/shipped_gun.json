@@ -1,0 +1,37 @@
+{
+ "approved": "2026-09-29, the user: \"approve and defaults on all questions asked for now\" (gun hands approved; picks: compact gun, beam WITHOUT its glow, use josh_gun_charge_fx)",
+ "source": "art_source/josh_hands/approval_gun/ (contract.json there is canonical)",
+ "not_shipped": [
+  "josh_gun_beam_glow.png",
+  "josh_gun_beam_glow.aseprite"
+ ],
+ "shipped_by": "coordinator, exclusive-create copy, sha256 verified against the source",
+ "files": {
+  "Assets/Characters/Josh/Hands/josh_hand_gun_form.png": "39b6dcdf582108332025d7a556d7e3af7df4ed9810e91f272500ccde60a29a1f",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_form.aseprite": "3ed4d50c7d2125008ea579ac8446e602e47a59ba25a25183cfd2c49436528d8c",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_form_glow.png": "9b00d5b58afdd86957976a13a24bc10b2030cda5e4fc2a01e79cc4b2e25065ef",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_form_glow.aseprite": "f4220cf97a075975cc30a0764fdf5b2c26f2bba7435dda953ead83f0d1593586",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_idle.png": "7fcc601aedce2fde1f1699d9e19ae05f11911520de77df3226de1228e9f2abfc",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_idle.aseprite": "b71de60500d086f6f4981a837947cd4b138989c5acb65405267995d320aef70f",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_idle_glow.png": "453963bd5ae3dae5cac48cebb3b721d9a0a08a5d4bc6e692c7b318b2065b117c",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_idle_glow.aseprite": "4c4945efc9f3fde823593766eead8a1667e226e0f326ac1815009f82117ca26b",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_charge.png": "4fc150e47e5cd1a85807ffd2e266cf2e8c3c0a794dac18714acbdcb5060f8494",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_charge.aseprite": "82cb41ecd496b4b751d96c2dad1699047c9f91da7b001f88f4a9264e19e21d2f",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_charge_glow.png": "96436df8b2d78fd1bcdb2a4590bc2dbdb6fbb0a1c37e7eabdb1abab36f73f69e",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_charge_glow.aseprite": "8ad89f3ff270066504b334bf1f6785f327536f78028895f29b7f70872007c876",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_fire.png": "563f147dd40e25af683c370ea1c17e01be25fcdb02625997267a13894ee7a38e",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_fire.aseprite": "a9a66c4f518448a73a87290869c00f09f4564e8ec6afb7f32d325937bfe3c707",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_fire_glow.png": "4d8b046eac319c43aeb01e5ae7109ff16047e46d63405a80086f1945e841c0aa",
+  "Assets/Characters/Josh/Hands/josh_hand_gun_fire_glow.aseprite": "4f1645bc906c322a3bc778da428491f7b396df5886a8d311d9c2fddb1fd05488",
+  "Assets/Characters/Josh/Hands/josh_gun_beam_start.png": "75fcd6ca2d7784c1aa27cf4c4376284ebeda96acc117374d2a82f0421004b088",
+  "Assets/Characters/Josh/Hands/josh_gun_beam_start.aseprite": "ca4041bae64832377bc940806424f191d18e743678de7aef6fc19c764151fafd",
+  "Assets/Characters/Josh/Hands/josh_gun_beam_tile.png": "d4ac1ad7db923650222e0c848a472e8eb07a12967aef6bffda612e7e27706ff5",
+  "Assets/Characters/Josh/Hands/josh_gun_beam_tile.aseprite": "ef083049105481a75bf1b20c961747cc44ed649ce067f0232f187ee05ffbb1e6",
+  "Assets/Characters/Josh/Hands/josh_gun_beam_end.png": "20645a85a437aece54ab3929a6294f0699046b782524bcb2628fdd43e77b4487",
+  "Assets/Characters/Josh/Hands/josh_gun_beam_end.aseprite": "cbd1a22c2ab539180e946355c134e788608fe637b3420f50772026ebec35eb71",
+  "Assets/Characters/Josh/Hands/josh_gun_flash.png": "8f34a29c47c5fdb511a57fe33eea39c68368a339c62de58432589d8dc0c84036",
+  "Assets/Characters/Josh/Hands/josh_gun_flash.aseprite": "7d616958ca5720adec8d2572bd45363de99a5450b2cea7cd19fe4ff660eaa865",
+  "Assets/Characters/Josh/Hands/josh_gun_charge_fx.png": "53cac5d20b6cfa6f8c8bcaa60b7cd9f87596ad27474715d3dca6a9560c998047",
+  "Assets/Characters/Josh/Hands/josh_gun_charge_fx.aseprite": "53b54cd9819c80ca0be7b1aeeb2989755ab49550222e34c12bdd8b5a5c492e73"
+ }
+}

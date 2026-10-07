@@ -92,16 +92,18 @@ const BADGE_AT := Vector2(1746, 888)
 #   fight      the fight scene the key belongs to, so a fight can look its own key up
 #   number     what the card counts this fight as, and which fight_NN plate it draws: its slot in
 #              GameProgress.BOSSES counted from 1, the number the boss select shows it under, so a
-#              fight still being built never moves the numbers of the ones after it.
+#              fight still being built never moves the numbers of the ones after it. A reorder of the
+#              ladder renumbers these and the ranks with it (verify_controls' ladder_order holds them
+#              to GameProgress); the art tools in art_source/vs_card_v2 read both off this table.
 #   name       what the name plate says; the placeholder writes it while the plate is missing
 #   epithet    the line under the band. Optional: a card with none lays out without it, and the
 #              six that aren't Eric's are stand-ins until the user approves them.
 #   rank       what a win promotes the player to, and which win_<rank> plate is drawn. It has to
-#              read the same as this fight's rank in GameProgress.BOSSES, which is what the
+#              read the same as GameProgress.RANKS at this fight's slot, which is what the
 #              Victory screen actually pays out. The last fight hands over an invite, not a rank,
 #              so its rank is empty and it draws no WIN plate.
 #   rank_icon  PLACEHOLDER ONLY: the frame of Assets/UI/Screens/rank_icons.png the stand-in badge
-#              shows, which is this fight's slot on the Victory screen's ladder
+#              shows, this boss's own face there (his "icon" in GameProgress.BOSSES)
 #   ramp       PLACEHOLDER ONLY: five colours, darkest first, for the boss's half of the band while
 #              it is drawn in code. The final halves carry their own ramp, baked in.
 #   portrait   PLACEHOLDER ONLY: the 64x64 dialogue portrait the stand-in half busts the boss with
@@ -113,68 +115,68 @@ const CARDS := {
 		"name": "BURAK",
 		"epithet": "THE CAPTAIN",
 		"rank": "@member",
-		"rank_icon": 1,
+		"rank_icon": 0,
 		"ramp": ["#06181A", "#0C3033", "#144C50", "#1E6A6E", "#2E8C8E"],
 		"portrait": "",
 	},
 	"eric": {
 		"fight": "res://Scenes/Bosses/EricBossFightScene.tscn",
-		"number": 2,
+		"number": 4,
 		"name": "ERIC",
 		"epithet": "THE WHITE KNIGHT",
-		"rank": "@regular",
-		"rank_icon": 2,
+		"rank": "@veteran",
+		"rank_icon": 1,
 		"ramp": ["#525A74", "#7A86A0", "#A3B1C2", "#CDD7E2", "#EAF0F6"],
 		"portrait": "res://Assets/Characters/Eric/portrait.png",
 	},
 	"computah": {
 		"fight": "res://Scenes/Bosses/ComputahBossFightScene.tscn",
-		"number": 3,
+		"number": 6,
 		"name": "COMPUTAH",
 		"epithet": "THE MACHINE",
-		"rank": "@active",
-		"rank_icon": 3,
+		"rank": "@vip",
+		"rank_icon": 2,
 		"ramp": ["#0B1620", "#12304A", "#1F5C8A", "#35A6D8", "#A9E4FF"],
 		"portrait": "res://Assets/Characters/Computah/portrait.png",
 	},
 	"matt": {
 		"fight": "res://Scenes/Bosses/MattBossFightScene.tscn",
-		"number": 4,
+		"number": 9,
 		"name": "MATT",
 		"epithet": "THE WALL OF SOUND",
-		"rank": "@veteran",
-		"rank_icon": 4,
+		"rank": "@admin",
+		"rank_icon": 3,
 		"ramp": ["#332F68", "#4F4D96", "#6D6FBC", "#8E91DA", "#B3B6F2"],
 		"portrait": "res://Assets/Characters/Matt/portrait.png",
 	},
 	"mason": {
 		"fight": "res://Scenes/Bosses/MasonBossFightScene.tscn",
-		"number": 5,
+		"number": 2,
 		"name": "MASON",
 		"epithet": "THE SHITPOSTER",
-		"rank": "@trusted",
-		"rank_icon": 5,
+		"rank": "@regular",
+		"rank_icon": 4,
 		"ramp": ["#3A2418", "#74432A", "#B07A34", "#D9A066", "#F2C457"],
 		"portrait": "res://Assets/Characters/Mason/portrait.png",
 	},
 	"josh": {
 		"fight": "res://Scenes/Bosses/JoshBossFightScene.tscn",
-		"number": 6,
+		"number": 3,
 		"name": "JOSH",
 		"epithet": "THE CARD SHARK",
-		"rank": "@vip",
-		"rank_icon": 6,
+		"rank": "@active",
+		"rank_icon": 5,
 		"ramp": ["#2B1B3A", "#45283C", "#6B3F7A", "#9C5FB5", "#D6A9E8"],
 		"portrait": "res://Assets/Characters/Josh/portrait.png",
 	},
 	# The night indigo his shipped band was drawn on (art_source/vs_card_v2/bands.py).
 	"danny": {
 		"fight": "res://Scenes/Bosses/DannyBossFightScene.tscn",
-		"number": 7,
+		"number": 5,
 		"name": "DANNY",
 		"epithet": "THE SLEEPING GIANT",
-		"rank": "@helper",
-		"rank_icon": 7,
+		"rank": "@trusted",
+		"rank_icon": 6,
 		"ramp": ["#0A0C1E", "#141A3A", "#1F2A5C", "#2E3E82", "#4A5CA8"],
 		"portrait": "res://Assets/Characters/Danny/portrait.png",
 	},
@@ -184,17 +186,17 @@ const CARDS := {
 		"name": "CARTER",
 		"epithet": "THE DEMON",
 		"rank": "@moderator",
-		"rank_icon": 8,
+		"rank_icon": 7,
 		"ramp": ["#140A0A", "#3C0C20", "#6E1F22", "#AC3232", "#D95763"],
 		"portrait": "res://Assets/Characters/Carter/portrait.png",
 	},
 	"liam": {
 		"fight": "res://Scenes/Bosses/LiamBossFightScene.tscn",
-		"number": 9,
+		"number": 7,
 		"name": "LIAM & BIXBY",
 		"epithet": "THE THRONE AND THE BEAST",
-		"rank": "@admin",
-		"rank_icon": 9,
+		"rank": "@helper",
+		"rank_icon": 8,
 		"ramp": ["#1A1016", "#4A1C08", "#7A3010", "#DF6C22", "#FFB45E"],
 		"portrait": "res://Assets/Characters/Liam/portrait.png",
 	},
@@ -204,7 +206,7 @@ const CARDS := {
 		"name": "JORDAN",
 		"epithet": "THE ADMIN",
 		"rank": "",
-		"rank_icon": 10,
+		"rank_icon": 9,
 		"ramp": ["#0B0A12", "#222034", "#3F3F74", "#5B6EE1", "#CBDBFC"],
 		"portrait": "res://Assets/Characters/Jordan/portrait.png",
 	},

@@ -5,8 +5,8 @@ extends Node2D
 # right, meeting at the knot, which stands where the rope is. The fills are revealed by cropping their
 # regions at their own texel columns, never stretched, so the knit of his stays put under the knot, and both
 # step a whole texel at a time. The centre line, the tachiai line, stays put over them.
-# The Sumo state pushes the rope in every step (set_rope) and turns `surging` on as Danny surges: his end
-# glows from then on, and the player's end pulses red while the rope is past DANGER_ROPE. Both pulses are
+# The Sumo state pushes the rope in every step (set_rope) and holds `surging` on while Danny surges: his end
+# glows through each surge, and the player's end pulses red while the rope is past DANGER_ROPE. Both pulses are
 # code-drawn, on copies of the frame's own ends, until they are drawn. PUSH! under it is written out the
 # way the finisher prompt writes the words it has no art for.
 # THE MASH KEYS stand either side of it (show_keys), as the finisher prompt's stand either side of its meter:

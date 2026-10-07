@@ -165,6 +165,9 @@ func _next() -> void:
 			_to(Beat.ARM, arm_time)
 		Beat.ARM:
 			_add_fx()
+			# His doom orb has ridden up to the muzzle through the arm: the sphere grows on from it.
+			if is_instance_valid(body.doom_orb):
+				fx.first_frame = body.doom_orb.hands_to_bomb()
 			fx.gather(body.muzzle_point(&"spirit"), gather_time, _cooled())
 			body.play_sfx(&"spirit_charge")
 			rumble_left = 0.0

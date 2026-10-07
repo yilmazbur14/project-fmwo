@@ -1,0 +1,263 @@
+{
+ "approval_pass": "2026-09-29",
+ "sheet": "bixby_beast_flyby.png",
+ "frame_size": [
+  192,
+  160
+ ],
+ "anchor": [
+  96,
+  151
+ ],
+ "scale": 3,
+ "drawn_facing": "right; the engine mirrors about the anchor column for flying left",
+ "pass_anchor_y": 300,
+ "clips": {
+  "flyby_glide": {
+   "frames": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "times": [
+    0.08,
+    0.08,
+    0.08,
+    0.08
+   ],
+   "loop": true
+  },
+  "flyby_breath": {
+   "frames": [
+    4,
+    5,
+    6,
+    7
+   ],
+   "times": [
+    0.08,
+    0.08,
+    0.08,
+    0.08
+   ],
+   "loop": true
+  }
+ },
+ "wingbeat": "glide frame i and breath frame i are the same beat (checked pixel for pixel outside the heads and the fire)",
+ "FINAL_LEAD_EXIT": [
+  179,
+  84
+ ],
+ "FINAL_EXITS": {
+  "4": [
+   [
+    179,
+    84
+   ],
+   [
+    166,
+    84
+   ],
+   [
+    153,
+    84
+   ]
+  ],
+  "5": [
+   [
+    179,
+    83
+   ],
+   [
+    166,
+    83
+   ],
+   [
+    153,
+    83
+   ]
+  ],
+  "6": [
+   [
+    179,
+    82
+   ],
+   [
+    166,
+    82
+   ],
+   [
+    153,
+    82
+   ]
+  ],
+  "7": [
+   [
+    179,
+    83
+   ],
+   [
+    166,
+    83
+   ],
+   [
+    153,
+    83
+   ]
+  ]
+ },
+ "FINAL_EXITS_note": "keyed by sheet frame (4-7 = flyby_breath 0-3); lead exit first, then the middle head, then the near head. An exit is where the fire front leaves that maw: its column is the fire's front edge, its row the maw.",
+ "FINAL_LEAD_PX": 33,
+ "FINAL_TRAIL_PX": 495,
+ "glide_exits": {
+  "0": [
+   [
+    179,
+    84
+   ],
+   [
+    166,
+    84
+   ],
+   [
+    153,
+    84
+   ]
+  ],
+  "1": [
+   [
+    179,
+    83
+   ],
+   [
+    166,
+    83
+   ],
+   [
+    153,
+    83
+   ]
+  ],
+  "2": [
+   [
+    179,
+    82
+   ],
+   [
+    166,
+    82
+   ],
+   [
+    153,
+    82
+   ]
+  ],
+  "3": [
+   [
+    179,
+    83
+   ],
+   [
+    166,
+    83
+   ],
+   [
+    153,
+    83
+   ]
+  ]
+ },
+ "curtain": {
+  "file": "bixby_flyby_curtain.png",
+  "frame": [
+   32,
+   48
+  ],
+  "frames": 4,
+  "frame_time": 0.06,
+  "leading_column": 31,
+  "seamless_stacked": true,
+  "loop": true,
+  "top_cap": null,
+  "mirror_for_left": true
+ },
+ "palette": {
+  "measured_sheet": {
+   "opaque": 85686,
+   "colours": 41,
+   "black_pct": 21.78,
+   "semi": 0
+  },
+  "measured_glide": {
+   "opaque": 38077,
+   "colours": 39,
+   "black_pct": 24.55,
+   "semi": 0
+  },
+  "measured_breath": {
+   "opaque": 47609,
+   "colours": 41,
+   "black_pct": 19.57,
+   "semi": 0
+  },
+  "measured_curtain": {
+   "opaque": 5840,
+   "colours": 7,
+   "black_pct": 0.0,
+   "semi": 0
+  },
+  "targets": {
+   "black_pct": 24.6,
+   "colours": "38-45",
+   "semi": 0,
+   "live_sheets": {
+    "bixby_beast.png": [
+     38,
+     25.03
+    ],
+    "bixby_beast_fly.png": [
+     39,
+     24.62
+    ],
+    "bixby_beast_land.png": [
+     38,
+     25.18
+    ],
+    "bixby_beast_firebreath.png": [
+     39,
+     19.27
+    ]
+   }
+  },
+  "fire": "Inferno ramp only (bixby_inferno_fx/pal.py): r n N p P Y and white-hot #FFFFFF"
+ },
+ "hard_checks": {
+  "pass": true,
+  "lines": [
+   "glide  0  lead exit (179, 84)  exits [(166, 84), (153, 84)]  bbox (14, 0, 190, 107)",
+   "glide  1  lead exit (179, 83)  exits [(166, 83), (153, 83)]  bbox (15, 22, 190, 106)",
+   "glide  2  lead exit (179, 82)  exits [(166, 82), (153, 82)]  bbox (14, 32, 190, 114)",
+   "glide  3  lead exit (179, 83)  exits [(166, 83), (153, 83)]  bbox (14, 17, 190, 106)",
+   "breath 0  lead exit (179, 84)  exits [(166, 84), (153, 84)]  bbox (14, 0, 190, 157)",
+   "breath 1  lead exit (179, 83)  exits [(166, 83), (153, 83)]  bbox (15, 22, 190, 157)",
+   "breath 2  lead exit (179, 82)  exits [(166, 82), (153, 82)]  bbox (14, 32, 190, 157)",
+   "breath 3  lead exit (179, 83)  exits [(166, 83), (153, 83)]  bbox (14, 17, 190, 157)",
+   "palette: 85686 opaque, 41 colours, 21.78% black, 0 semi"
+  ]
+ },
+ "files": [
+  "bixby_beast_flyby.png",
+  "bixby_beast_flyby.aseprite",
+  "bixby_flyby_curtain.png",
+  "bixby_flyby_curtain.aseprite",
+  "glide_0_1x.png",
+  "glide_0_3x.png",
+  "breath_0_1x.png",
+  "breath_0_3x.png",
+  "mock_1.png",
+  "mock_2.png",
+  "contact_3x.png",
+  "flyby.gif"
+ ]
+}

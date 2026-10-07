@@ -1,0 +1,557 @@
+{
+ "contract": {
+  "spec": {
+   "spike": {
+    "frame": [
+     48,
+     24
+    ],
+    "anchor": [
+     24,
+     16
+    ],
+    "opening": [
+     36,
+     14
+    ],
+    "cards": 6,
+    "card": [
+     5,
+     7
+    ]
+   },
+   "body": {
+    "frame": [
+     112,
+     40
+    ],
+    "anchor": [
+     56,
+     26
+    ],
+    "opening": [
+     88,
+     24
+    ],
+    "cards": 12,
+    "card": [
+     7,
+     10
+    ]
+   },
+   "sword": {
+    "frame": [
+     64,
+     40
+    ],
+    "anchor": [
+     32,
+     28
+    ],
+    "opening": [
+     44,
+     14
+    ],
+    "cards": 8,
+    "card": [
+     6,
+     8
+    ]
+   }
+  },
+  "seqs": {
+   "spike": [
+    [
+     "open",
+     [
+      0.06,
+      0.06,
+      0.08,
+      0.1,
+      0.1
+     ]
+    ],
+    [
+     "burst",
+     [
+      0.03,
+      0.03
+     ]
+    ],
+    [
+     "hold",
+     [
+      0.07,
+      0.07
+     ]
+    ],
+    [
+     "suck",
+     [
+      0.06,
+      0.06
+     ]
+    ],
+    [
+     "close",
+     [
+      0.04,
+      0.04,
+      0.04
+     ]
+    ]
+   ],
+   "body": [
+    [
+     "open",
+     [
+      0.04,
+      0.04,
+      0.06,
+      0.06
+     ]
+    ],
+    [
+     "hold",
+     [
+      0.08,
+      0.08
+     ]
+    ],
+    [
+     "close",
+     [
+      0.05,
+      0.05,
+      0.05
+     ]
+    ]
+   ],
+   "sword": [
+    [
+     "open",
+     [
+      0.05,
+      0.05,
+      0.06,
+      0.07,
+      0.07
+     ]
+    ],
+    [
+     "plunge",
+     [
+      0.05,
+      0.05,
+      0.05
+     ]
+    ],
+    [
+     "loop",
+     [
+      0.1,
+      0.1,
+      0.1,
+      0.1
+     ]
+    ],
+    [
+     "close",
+     [
+      0.05,
+      0.05,
+      0.05,
+      0.05
+     ]
+    ]
+   ]
+  },
+  "loops": [
+   "body_hold",
+   "spike_hold",
+   "sword_loop"
+  ],
+  "rim": 2,
+  "spike_rise": 70,
+  "collar_rows_over_base": 10,
+  "smear": {
+   "frame": [
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ]
+  }
+ },
+ "takes": {
+  "A": {
+   "name": "Jordan's rift",
+   "audit": {
+    "spike": {
+     "opening_box": [
+      6,
+      9,
+      41,
+      22
+     ]
+    },
+    "body": {
+     "opening_box": [
+      12,
+      14,
+      99,
+      37
+     ]
+    },
+    "sword": {
+     "opening_box": [
+      10,
+      21,
+      53,
+      34
+     ]
+    }
+   },
+   "files": [
+    "takeA/portal_spike_open_back.png",
+    "takeA/portal_spike_open_front.png",
+    "takeA/portal_spike_open_glow.png",
+    "takeA/portal_spike_burst_back.png",
+    "takeA/portal_spike_burst_front.png",
+    "takeA/portal_spike_burst_glow.png",
+    "takeA/portal_spike_hold_back.png",
+    "takeA/portal_spike_hold_front.png",
+    "takeA/portal_spike_hold_glow.png",
+    "takeA/portal_spike_suck_back.png",
+    "takeA/portal_spike_suck_front.png",
+    "takeA/portal_spike_suck_glow.png",
+    "takeA/portal_spike_close_back.png",
+    "takeA/portal_spike_close_front.png",
+    "takeA/portal_spike_close_glow.png",
+    "takeA/portal_body_open_back.png",
+    "takeA/portal_body_open_front.png",
+    "takeA/portal_body_open_glow.png",
+    "takeA/portal_body_hold_back.png",
+    "takeA/portal_body_hold_front.png",
+    "takeA/portal_body_hold_glow.png",
+    "takeA/portal_body_close_back.png",
+    "takeA/portal_body_close_front.png",
+    "takeA/portal_body_close_glow.png",
+    "takeA/portal_sword_open_back.png",
+    "takeA/portal_sword_open_front.png",
+    "takeA/portal_sword_open_glow.png",
+    "takeA/portal_sword_plunge_back.png",
+    "takeA/portal_sword_plunge_front.png",
+    "takeA/portal_sword_plunge_glow.png",
+    "takeA/portal_sword_loop_back.png",
+    "takeA/portal_sword_loop_front.png",
+    "takeA/portal_sword_loop_glow.png",
+    "takeA/portal_sword_close_back.png",
+    "takeA/portal_sword_close_front.png",
+    "takeA/portal_sword_close_glow.png"
+   ],
+   "mock": {
+    "screen": {
+     "josh": [
+      693.3333333333334,
+      624.0
+     ],
+     "central": [
+      960.0,
+      618.0
+     ],
+     "player": [
+      1000.0,
+      864.0
+     ],
+     "feint": [
+      1165.3333333333333,
+      850.0
+     ]
+    },
+    "world": {
+     "josh": [
+      560,
+      930
+     ],
+     "central": [
+      960,
+      921
+     ],
+     "eric_start": [
+      1154,
+      930
+     ],
+     "first_exit": [
+      960,
+      1164
+     ],
+     "player": [
+      1020,
+      1290
+     ],
+     "feint": [
+      1268,
+      1269
+     ]
+    },
+    "spikes": [
+     {
+      "world": [
+       810,
+       1352
+      ],
+      "screen": [
+       860.0,
+       905.3333333333334
+      ],
+      "frame": "hold0"
+     },
+     {
+      "world": [
+       878,
+       1157
+      ],
+      "screen": [
+       905.3333333333334,
+       775.3333333333334
+      ],
+      "frame": "burst0"
+     },
+     {
+      "world": [
+       1035,
+       1442
+      ],
+      "screen": [
+       1010.0,
+       965.3333333333334
+      ],
+      "frame": "open1"
+     },
+     {
+      "world": [
+       1170,
+       1434
+      ],
+      "screen": [
+       1100.0,
+       960.0
+      ],
+      "frame": "suck1"
+     }
+    ],
+    "josh_hook": [
+     694.3,
+     555.0
+    ],
+    "josh_pair": [
+     2,
+     3
+    ],
+    "eric_hook": [
+     1166.3,
+     807.0
+    ],
+    "eric_pair": [
+     2,
+     3
+    ]
+   }
+  },
+  "B": {
+   "name": "Josh's card-gate",
+   "audit": {
+    "spike": {
+     "opening_box": [
+      6,
+      9,
+      41,
+      22
+     ]
+    },
+    "body": {
+     "opening_box": [
+      12,
+      14,
+      99,
+      37
+     ]
+    },
+    "sword": {
+     "opening_box": [
+      10,
+      21,
+      53,
+      34
+     ]
+    }
+   },
+   "files": [
+    "takeB/portal_spike_open_back.png",
+    "takeB/portal_spike_open_front.png",
+    "takeB/portal_spike_open_glow.png",
+    "takeB/portal_spike_burst_back.png",
+    "takeB/portal_spike_burst_front.png",
+    "takeB/portal_spike_burst_glow.png",
+    "takeB/portal_spike_hold_back.png",
+    "takeB/portal_spike_hold_front.png",
+    "takeB/portal_spike_hold_glow.png",
+    "takeB/portal_spike_suck_back.png",
+    "takeB/portal_spike_suck_front.png",
+    "takeB/portal_spike_suck_glow.png",
+    "takeB/portal_spike_close_back.png",
+    "takeB/portal_spike_close_front.png",
+    "takeB/portal_spike_close_glow.png",
+    "takeB/portal_body_open_back.png",
+    "takeB/portal_body_open_front.png",
+    "takeB/portal_body_open_glow.png",
+    "takeB/portal_body_hold_back.png",
+    "takeB/portal_body_hold_front.png",
+    "takeB/portal_body_hold_glow.png",
+    "takeB/portal_body_close_back.png",
+    "takeB/portal_body_close_front.png",
+    "takeB/portal_body_close_glow.png",
+    "takeB/portal_sword_open_back.png",
+    "takeB/portal_sword_open_front.png",
+    "takeB/portal_sword_open_glow.png",
+    "takeB/portal_sword_plunge_back.png",
+    "takeB/portal_sword_plunge_front.png",
+    "takeB/portal_sword_plunge_glow.png",
+    "takeB/portal_sword_loop_back.png",
+    "takeB/portal_sword_loop_front.png",
+    "takeB/portal_sword_loop_glow.png",
+    "takeB/portal_sword_close_back.png",
+    "takeB/portal_sword_close_front.png",
+    "takeB/portal_sword_close_glow.png"
+   ],
+   "mock": {
+    "screen": {
+     "josh": [
+      693.3333333333334,
+      624.0
+     ],
+     "central": [
+      960.0,
+      618.0
+     ],
+     "player": [
+      1000.0,
+      864.0
+     ],
+     "feint": [
+      1165.3333333333333,
+      850.0
+     ]
+    },
+    "world": {
+     "josh": [
+      560,
+      930
+     ],
+     "central": [
+      960,
+      921
+     ],
+     "eric_start": [
+      1154,
+      930
+     ],
+     "first_exit": [
+      960,
+      1164
+     ],
+     "player": [
+      1020,
+      1290
+     ],
+     "feint": [
+      1268,
+      1269
+     ]
+    },
+    "spikes": [
+     {
+      "world": [
+       810,
+       1352
+      ],
+      "screen": [
+       860.0,
+       905.3333333333334
+      ],
+      "frame": "hold0"
+     },
+     {
+      "world": [
+       878,
+       1157
+      ],
+      "screen": [
+       905.3333333333334,
+       775.3333333333334
+      ],
+      "frame": "burst0"
+     },
+     {
+      "world": [
+       1035,
+       1442
+      ],
+      "screen": [
+       1010.0,
+       965.3333333333334
+      ],
+      "frame": "open1"
+     },
+     {
+      "world": [
+       1170,
+       1434
+      ],
+      "screen": [
+       1100.0,
+       960.0
+      ],
+      "frame": "suck1"
+     }
+    ],
+    "josh_hook": [
+     694.3,
+     555.0
+    ],
+    "josh_pair": [
+     2,
+     3
+    ],
+    "eric_hook": [
+     1166.3,
+     807.0
+    ],
+    "eric_pair": [
+     2,
+     3
+    ]
+   }
+  }
+ },
+ "blade": {
+  "file": "eric_sword_spike_up.png",
+  "size": [
+   33,
+   150
+  ],
+  "point_x_edge": 17.0,
+  "from": "eric_thrown_sword_v2.png frame 6, its white spin arcs removed"
+ },
+ "planted_sword": {
+  "file": "Assets/Characters/Eric/eric_bearhug_planted_sword_v2.png",
+  "base_edge": [
+   63.0,
+   185
+  ],
+  "note": "blade centre x; the first row of its dirt (rows from here down go under the floor line)"
+ }
+}

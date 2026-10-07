@@ -45,6 +45,8 @@ var mode := ""
 var press := "a"
 # eric_mash only: keyboard | pad.
 var mash_device := "keyboard"
+# defeat_retry only: one of its cases by label (RETRY_EXTRA_CASES, or a fight's scene file name), "" for all of them.
+var retry_only := ""
 var fails := 0
 var clock := 0.0
 var frame := 0
@@ -59,6 +61,8 @@ func _initialize() -> void:
 			press = arg.substr(6)
 		elif arg.begins_with("device="):
 			mash_device = arg.substr(7)
+		elif arg.begins_with("fight="):
+			retry_only = arg.substr(6)
 	_main.call_deferred()
 
 
@@ -102,6 +106,15 @@ func _main() -> void:
 		"eric_mash": await test_eric_mash()
 		"pause_input": await test_pause_input()
 		"pause_controls": await test_pause_controls()
+		"trigger_press": await test_trigger_press()
+		"flow_prefetch": await test_flow_prefetch()
+		"parry_tap": await test_parry_tap()
+		"restart_phase": await test_restart_phase()
+		"hud_fade": await test_hud_fade()
+		"dash_punch": await test_dash_punch()
+		"outro_stale": await test_outro_stale()
+		"defeat_retry": await test_defeat_retry()
+		"ladder_order": await test_ladder_order()
 		_:
 			log_p("unknown mode " + mode)
 			fails += 1
@@ -612,7 +625,7 @@ func test_move_vector() -> void:
 	log_p("first moves at %s" % [engage])
 	var first: float = engage[0]
 	check(engage.values().all(func(push: float) -> bool: return absf(push - first) < 0.0005), "all 8 directions, and the angles between them, at the same push (%.4f)" % first)
-	check(absf(first - 0.52) < 0.0005, "which is still the old straight-across threshold: 52%%, so the first whole percent that moves is 53%% (%.4f)" % first)
+	check(absf(first - 0.30) < 0.0005, "which is 30%% of a full push (the 2026-10-04 playtest; it was 52%%, and half a push walked nowhere) (%.4f)" % first)
 	var diagonal := Vector2.from_angle(PI / 4.0) * 0.6
 	stick(diagonal.x, diagonal.y)
 	check(settings.move_vector() == Vector2(1, 1), "a 60 percent diagonal push moves diagonally; it used to read as centred")
@@ -649,9 +662,14 @@ func test_move_vector() -> void:
 	check(settings.move_vector() == Vector2.ZERO, "released -> zero")
 
 	log_p("-- the dead zone")
-	for push in [Vector2(0.1, 0.0), Vector2(0.2, 0.1), Vector2(0.3, 0.0), Vector2(0.0, -0.35), Vector2(0.25, 0.25), Vector2(0.36, 0.36)]:
+	for push in [Vector2(0.1, 0.0), Vector2(0.2, 0.1), Vector2(0.29, 0.0), Vector2(0.0, -0.29), Vector2(0.2, 0.2)]:
 		stick(push.x, push.y)
 		check(settings.move_vector() == Vector2.ZERO, "a %s push reads as centred" % push)
+	# Half a push and a little past the threshold both move, on the snapped direction: a dash pressed while
+	# the stick is still on its way out reads the same, rather than going off in place.
+	for case in [[Vector2(0.32, 0.0), Vector2(1, 0)], [Vector2(0.0, -0.35), Vector2(0, -1)], [Vector2(0.25, 0.25), Vector2(1, 1)], [Vector2(-0.5, 0.0), Vector2(-1, 0)], [Vector2(0.36, 0.36), Vector2(1, 1)]]:
+		stick(case[0].x, case[0].y)
+		check(settings.move_vector() == case[1], "a %s push moves %s (%s)" % [case[0], case[1], settings.move_vector()])
 	stick(0.0, 0.0)
 
 
@@ -1832,3 +1850,850 @@ func test_pause_controls() -> void:
 		await process_frame
 	check(not old_key, "and Q, which it used to be, does not")
 	settings.reset_to_defaults()
+
+
+# ------------------------------------------------------------------ trigger_press
+
+# A trigger reports a pull as a run of motion events past the dead zone, the way a pad does, and holds as more of
+# them while it jitters at the top.
+func pull_trigger(axis: int) -> void:
+	for value in [0.05, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1.0, 0.98, 1.0, 0.99, 1.0]:
+		send([axis_event(axis, value)])
+		await wait(1)
+
+
+func release_trigger(axis: int) -> void:
+	for value in [0.6, 0.3, 0.1, 0.0]:
+		send([axis_event(axis, value)])
+		await wait(1)
+
+
+# A press rebound to a trigger, in a fight: one pull is one press, its first report past the dead zone
+# (PlayerScript._repeat_of_held_axis). Until 2026-10-04 every report past it was another press, so one pull of a
+# trigger-bound parry was five presses: five missed parries paid, and the first press's window ended by the
+# second, so it could never parry.
+func test_trigger_press() -> void:
+	settings.rebind(&"block", axis_event(JOY_AXIS_TRIGGER_RIGHT, 1.0))
+	settings.rebind(&"punch", axis_event(JOY_AXIS_TRIGGER_LEFT, 1.0))
+	await load_quiet_fight()
+	var player: CharacterBody2D = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
+	var defense: Node = player.get_node("Defense")
+	var presses := []
+	defense.block_pressed.connect(func(credited: bool) -> void: presses.append(credited))
+
+	log_p("-- the guard on RT")
+	await pull_trigger(JOY_AXIS_TRIGGER_RIGHT)
+	await release_trigger(JOY_AXIS_TRIGGER_RIGHT)
+	await wait(10)
+	check(presses == [true], "one pull is one press, credited (%s)" % [presses])
+	check(is_equal_approx(defense.stamina, defense.max_stamina - defense.parry_whiff_cost), "and it pays one missed parry (%.1f)" % defense.stamina)
+	await wait(30)
+	await pull_trigger(JOY_AXIS_TRIGGER_RIGHT)
+	await release_trigger(JOY_AXIS_TRIGGER_RIGHT)
+	check(presses == [true, true], "a second pull, past the mash lockout, is a second credited press (%s)" % [presses])
+
+	log_p("-- a pull parries")
+	await wait(60)
+	var hit_info: GDScript = load("res://Scripts/HitInfo.gd")
+	var centre: Vector2 = player.hurtBox.get_node("CollisionShape2D").global_position
+	var result := -1
+	for value in [0.15, 0.3, 0.45, 0.6]:
+		send([axis_event(JOY_AXIS_TRIGGER_RIGHT, value)])
+		await wait(1)
+	var source := Node2D.new()
+	result = player.receive_hit(hit_info.make(&"eric_quake_wave_v2", source, centre))
+	source.free()
+	check(result == hit_info.Result.PARRIED, "a wave landing on the pull's fourth report is parried (%s)" % hit_info.Result.keys()[result])
+	await release_trigger(JOY_AXIS_TRIGGER_RIGHT)
+
+	log_p("-- attack on LT")
+	await wait(120)
+	var swings := 0
+	var was_punching := false
+	for value in [0.05, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1.0]:
+		send([axis_event(JOY_AXIS_TRIGGER_LEFT, value)])
+		await wait(1)
+	# Held for well past a swing, jittering at the top as a held trigger does.
+	for i in 60:
+		send([axis_event(JOY_AXIS_TRIGGER_LEFT, 1.0 if i % 2 == 0 else 0.99)])
+		await wait(1)
+		var now := punching(player)
+		if now and not was_punching:
+			swings += 1
+		was_punching = now
+	await release_trigger(JOY_AXIS_TRIGGER_LEFT)
+	check(swings == 1, "one pull held for a second throws one punch (%d)" % swings)
+	settings.reset_to_defaults()
+
+
+# ------------------------------------------------------------------ flow_prefetch
+
+# The screens between fights load the next scene on threads while they are up (the 2026-10-04 playtest: NEXT BOSS
+# froze the Victory screen for 0.2 to 0.8 s a fight, and Danny's intro line froze for about a second before the
+# controls room). What it must not change: where each one goes, and the fight it opens being the ladder's fight.
+func test_flow_prefetch() -> void:
+	var progress: Node = root.get_node("GameProgress")
+	log_p("-- Victory, with a next fight")
+	progress.reset_progress()
+	progress.next_boss_scene = ERIC_FIGHT
+	await load_scene(VICTORY_SCENE)
+	var status := ResourceLoader.load_threaded_get_status(ERIC_FIGHT)
+	check(status == ResourceLoader.THREAD_LOAD_IN_PROGRESS or status == ResourceLoader.THREAD_LOAD_LOADED, "the next fight is loading behind it (%d)" % status)
+	await wait(45)
+	check(focus_name() == "NextBossButton" and current_scene.next_boss_button.text == "NEXT BOSS", "NEXT BOSS has focus (%s)" % focus_name())
+	tap_key(KEY_ENTER)
+	tap_key(KEY_ENTER)
+	check(await wait_for_scene(ERIC_FIGHT), "and opens Eric's fight, once, for two presses (%s)" % current_scene.scene_file_path)
+	await wait(2)
+	check(progress.fight_index == 3, "which the ladder reads as FIGHT 04 (%d)" % progress.fight_index)
+
+	log_p("-- Victory, at the end of the ladder")
+	progress.next_boss_scene = ""
+	await load_scene(VICTORY_SCENE)
+	await wait(45)
+	check(current_scene.next_boss_button.text == "MAIN MENU", "the button says MAIN MENU")
+	tap_key(KEY_ENTER)
+	check(await wait_for_scene(MENU_SCENE), "and goes there")
+
+	log_p("-- Danny's intro line")
+	await load_scene("res://Scenes/Core/IntroScene.tscn")
+	status = ResourceLoader.load_threaded_get_status(CONTROLS_SCENE)
+	check(status == ResourceLoader.THREAD_LOAD_IN_PROGRESS or status == ResourceLoader.THREAD_LOAD_LOADED, "the controls room is loading behind it (%d)" % status)
+	var reached := false
+	for i in 1200:
+		if current_scene != null and current_scene.scene_file_path == CONTROLS_SCENE:
+			reached = true
+			break
+		if i % 20 == 10:
+			tap_key(KEY_ENTER)
+		await process_frame
+	check(reached, "reading the line opens the controls room")
+	progress.reset_progress()
+
+
+# ------------------------------------------------------------------ parry_tap
+
+# A parry TAPPED, its key let go before the hit lands, against one held through it: with blocking off the stance is
+# the press's 0.24 s window whether the key is still down or not (PlayerBlocking). Until 2026-10-04 letting go
+# dropped it, so a tap parried only while it was down - about half the window for a quick tap.
+func tap_parry_result(hold_frames: int, gap: int, player: CharacterBody2D) -> int:
+	var defense: Node = player.get_node("Defense")
+	var hit_info: GDScript = load("res://Scripts/HitInfo.gd")
+	defense._set_stamina(defense.max_stamina)
+	player.is_invincible = false
+	player.invincibility_timer.stop()
+	await wait(45)
+	send([key_event(KEY_SHIFT, true)])
+	var down := true
+	for frame in gap:
+		await physics_frame
+		if down and frame + 1 >= hold_frames:
+			send([key_event(KEY_SHIFT, false)])
+			down = false
+	var source := Node2D.new()
+	var centre: Vector2 = player.hurtBox.get_node("CollisionShape2D").global_position
+	var result: int = player.receive_hit(hit_info.make(&"eric_quake_wave_v2", source, centre))
+	source.free()
+	if down:
+		send([key_event(KEY_SHIFT, false)])
+	return result
+
+
+# A 2-frame tap, then `code` (attack or dash) pressed, and a wave on the player 10 frames after the tap.
+func tap_then(player: CharacterBody2D, code: int) -> int:
+	var defense: Node = player.get_node("Defense")
+	var hit_info: GDScript = load("res://Scripts/HitInfo.gd")
+	defense._set_stamina(defense.max_stamina)
+	player.is_invincible = false
+	player.invincibility_timer.stop()
+	await wait(70)
+	send([key_event(KEY_SHIFT, true)])
+	await wait(2)
+	send([key_event(KEY_SHIFT, false)])
+	await wait(2)
+	send([key_event(code, true), key_event(code, false)])
+	await wait(6)
+	var source := Node2D.new()
+	var result: int = player.receive_hit(hit_info.make(&"eric_quake_wave_v2", source, player.hurtBox.get_node("CollisionShape2D").global_position))
+	source.free()
+	await wait(30)
+	return result
+
+
+func test_parry_tap() -> void:
+	await load_quiet_fight()
+	var player: CharacterBody2D = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
+	# Twenty parries of his own wave would Break him, and a Break holds the player.
+	var eric: Node = current_scene.get_node("Arena/EricBossScene/CharacterBody2D")
+	if eric.break_gauge:
+		eric.break_gauge.locked = true
+		eric.break_gauge.set_physics_process(false)
+	var hit_info: GDScript = load("res://Scripts/HitInfo.gd")
+	root.get_node("GameProgress").playtest_invincible = true
+
+	log_p("-- inside the window, tapped or held")
+	var table := []
+	var all_parried := true
+	for hold in [1, 3, 6, 999]:
+		for gap in [2, 6, 10, 14]:
+			var result: int = await tap_parry_result(hold, gap, player)
+			table.append("%s/%d:%s" % ["held" if hold == 999 else str(hold), gap, hit_info.Result.keys()[result]])
+			all_parried = all_parried and result == hit_info.Result.PARRIED
+	log_p("key down/frames to the hit: %s" % [table])
+	check(all_parried, "a press parries a hit up to 14 frames later whether its key is let go after 1, 3 or 6 frames or held")
+	var late: int = await tap_parry_result(2, 17, player)
+	check(late == hit_info.Result.HIT, "and a tap's hit 17 frames on, past the window, lands (%s)" % hit_info.Result.keys()[late])
+
+	log_p("-- a tap frees the player at once, and only letting go keeps the parry")
+	await wait(70)
+	var from := player.global_position
+	send([key_event(KEY_SHIFT, true)])
+	await wait(2)
+	send([key_event(KEY_SHIFT, false), key_event(KEY_RIGHT, true)])
+	await wait(6)
+	var walked := player.global_position.x - from.x
+	var source := Node2D.new()
+	var walking: int = player.receive_hit(hit_info.make(&"eric_quake_wave_v2", source, player.hurtBox.get_node("CollisionShape2D").global_position))
+	source.free()
+	send([key_event(KEY_RIGHT, false)])
+	check(walked > 20.0 and walking == hit_info.Result.PARRIED, "after a 2-frame tap they walk on (%.0f px in 6 frames) and the press still parries 8 frames in (%s)" % [walked, hit_info.Result.keys()[walking]])
+	var after_punch := await tap_then(player, KEY_Q)
+	check(after_punch == hit_info.Result.HIT, "a punch thrown after the tap gives the parry up (%s)" % hit_info.Result.keys()[after_punch])
+	var after_dash := await tap_then(player, KEY_W)
+	check(after_dash == hit_info.Result.HIT, "and so does a dash (%s)" % hit_info.Result.keys()[after_dash])
+
+	log_p("-- with blocking on, letting go still drops the guard")
+	var defense_script: GDScript = load("res://Scripts/PlayerDefense.gd")
+	defense_script.BLOCKING_ENABLED = true
+	await wait(70)
+	send([key_event(KEY_SHIFT, true)])
+	await wait(4)
+	send([key_event(KEY_SHIFT, false)])
+	await wait(2)
+	check(player.state_machine.current_state.name != "Blocking", "the guard drops with the key (%s)" % player.state_machine.current_state.name)
+	defense_script.BLOCKING_ENABLED = false
+	root.get_node("GameProgress").playtest_invincible = false
+
+
+# ------------------------------------------------------------------ restart_phase
+
+# Pause, RESTART FIGHT and its confirmation, pressed the way a player presses them.
+func restart_from_pause() -> void:
+	var pause: Node = pause_menu()
+	pause.open()
+	await wait(2)
+	pause.restart_button.pressed.emit()
+	await wait(2)
+	pause.confirm_ok_button.pressed.emit()
+
+
+func greyson_in_fight() -> Node:
+	return current_scene.find_child("GreysonCharacterBody", true, false) if current_scene != null else null
+
+
+# FIGHT 06's restart: in Greyson's half it opens his half again, the way the menu's GREYSON row does, and in
+# Computah's half it opens Computah's fight from his intro (the 2026-10-04 playtest: a restart in Greyson's half
+# reloaded Computah's intro and his fight, already won).
+func test_restart_phase() -> void:
+	var fight := "res://Scenes/Bosses/ComputahBossFightScene.tscn"
+	var progress: Node = root.get_node("GameProgress")
+	progress.reset_progress()
+	progress.start_at_greyson = true
+	await load_scene(fight)
+	var reached := false
+	for i in 900:
+		if greyson_in_fight() != null:
+			reached = true
+			break
+		await process_frame
+	check(reached, "the GREYSON row opens his half")
+	await wait(30)
+	var scene_before := current_scene
+	await restart_from_pause()
+	for i in 600:
+		if current_scene != null and current_scene != scene_before and current_scene.scene_file_path == fight:
+			break
+		await process_frame
+	var back := false
+	for i in 900:
+		if greyson_in_fight() != null:
+			back = true
+			break
+		await process_frame
+	check(back, "RESTART FIGHT in his half opens his half again")
+	var computah: Node = current_scene.get_node("Arena/ComputahScene/ComputahCharacterBody")
+	check(computah.defeated, "with Computah already down")
+	check(not progress.start_at_greyson, "and the request spent")
+
+	log_p("-- in Computah's half")
+	await wait(30)
+	progress.reset_progress()
+	await load_scene(fight)
+	await wait(20)
+	scene_before = current_scene
+	await restart_from_pause()
+	for i in 600:
+		if current_scene != null and current_scene != scene_before and current_scene.scene_file_path == fight:
+			break
+		await process_frame
+	await wait(20)
+	var again: Node = current_scene.get_node("Arena/ComputahScene/ComputahCharacterBody")
+	check(greyson_in_fight() == null and not again.defeated and String(again.state_machine.current_state.name) == "Intro", "RESTART FIGHT in Computah's half opens his fight from the intro (%s)" % again.state_machine.current_state.name)
+	progress.reset_progress()
+
+
+# ------------------------------------------------------------------ hud_fade
+
+func fade_of(block: Control) -> float:
+	var wrapper := block.get_node_or_null(^"PlayerFade") as Control
+	return wrapper.modulate.a if wrapper != null else -1.0
+
+
+# Puts the player's origin at `at` (the ring keeps them on its floor), stands Eric well away, and waits out a fade.
+func stand_at(player: CharacterBody2D, eric: Node2D, at: Vector2) -> void:
+	eric.global_position = Vector2(960, 640)
+	player.global_position = at
+	player.velocity = Vector2.ZERO
+	await wait(30)
+
+
+# The HUD blocks fade while the player, a boss or a tell's badge is under them (HudPlayerFade): the boss bar and the
+# Break gauge at the top middle, the hearts and stamina bottom left, the hype meter bottom right (the 2026-10-04
+# playtest: a player by the top rope's middle vanished under the boss bar, and the corner panels covered their feet).
+func test_hud_fade() -> void:
+	await load_quiet_fight()
+	var player: CharacterBody2D = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
+	var eric: Node2D = current_scene.get_node("Arena/EricBossScene/CharacterBody2D")
+	var hud: CanvasLayer = current_scene.get_node("Arena/MainPlayer/CanvasLayer")
+	var bar: Control = eric.health_bar
+	var gauge: Control = null
+	for child in bar.get_parent().get_children():
+		if child.get_script() != null and str(child.get_script().resource_path).ends_with("BreakGaugeUI.gd"):
+			gauge = child
+	var hearts: Control = hud.get_node("Control")
+	var stamina: Control = hud.get_node("StaminaBar")
+	var hype: Control = hud.get_node("HypeMeter")
+	var middle: Vector2 = player.ring_origins.get_center()
+	await stand_at(player, eric, middle)
+	var blocks := {"bar": bar, "hearts": hearts, "stamina": stamina, "hype": hype}
+	if gauge != null:
+		blocks["gauge"] = gauge
+	var clear := true
+	for key in blocks:
+		clear = clear and is_equal_approx(fade_of(blocks[key]), 1.0)
+	check(clear, "mid-ring, every block is whole (%s)" % [blocks.keys().map(func(k): return "%s %.2f" % [k, fade_of(blocks[k])])])
+
+	await stand_at(player, eric, Vector2(960, player.ring_origins.position.y))
+	check(fade_of(bar) < 0.35, "by the top rope's middle the boss bar fades (%.2f)" % fade_of(bar))
+	check(gauge == null or fade_of(gauge) < 0.35, "and the Break gauge under it (%.2f)" % (fade_of(gauge) if gauge else 0.0))
+	check(is_equal_approx(fade_of(hearts), 1.0) and is_equal_approx(fade_of(hype), 1.0), "the corners stay whole")
+	check(is_equal_approx(bar.modulate.a, 1.0), "on its own wrapper: the bar's own modulate, which the fights tween, is untouched (%.2f)" % bar.modulate.a)
+
+	await stand_at(player, eric, player.ring_origins.position + Vector2(0, player.ring_origins.size.y))
+	check(fade_of(hearts) < 0.35, "in the bottom-left corner the hearts fade (%.2f; the stamina bar under them, which the feet don't reach, %.2f)" % [fade_of(hearts), fade_of(stamina)])
+	check(is_equal_approx(fade_of(bar), 1.0), "and the boss bar is whole again (%.2f)" % fade_of(bar))
+	await stand_at(player, eric, player.ring_origins.end)
+	check(fade_of(hype) < 0.35, "in the bottom-right corner the hype meter fades (%.2f)" % fade_of(hype))
+
+	log_p("-- a tell's badge under the bar, and a boss who isn't")
+	await stand_at(player, eric, middle)
+	eric.global_position = Vector2(960, 150)
+	await wait(30)
+	check(is_equal_approx(fade_of(bar), 1.0), "Eric's own body by the top rope leaves the bar to his fight (%.2f)" % fade_of(bar))
+	eric.global_position = Vector2(960, 640)
+	await wait(30)
+	var tell_script: GDScript = load("res://Scripts/ParryTell.gd")
+	tell_script.telegraph(eric, &"eric_quake_wave_v2", 5.0, func() -> Vector2: return Vector2(960, 140))
+	await wait(30)
+	check(fade_of(bar) < 0.35, "a red badge under it fades it too (%.2f)" % fade_of(bar))
+	tell_script.clear(eric)
+	await wait(60)
+	check(is_equal_approx(fade_of(bar), 1.0), "and it comes back once the badge is gone (%.2f)" % fade_of(bar))
+	var prompt: Node = hud.get_node("FinisherPrompt")
+	var stamp: CanvasItem = prompt.knight_breaker
+	stamp.visible = true
+	await wait(30)
+	check(fade_of(bar) < 0.35, "KNIGHT BREAKER!, which goes up under it, fades it too (%.2f)" % fade_of(bar))
+	stamp.visible = false
+	await wait(30)
+
+
+# ------------------------------------------------------------------ dash_punch
+
+# A punch pressed in a dash's three moving frames is dropped, as one in its landing beat is: it used to freeze the
+# dash where it was for the whole swing, still dashing, and finish it after (the 2026-10-04 playtest).
+func test_dash_punch() -> void:
+	await load_quiet_fight()
+	var player: CharacterBody2D = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
+	var defense: Node = player.get_node("Defense")
+	var clean := true
+	var table := []
+	for punch_at in [0, 1, 2]:
+		defense._set_stamina(defense.max_stamina)
+		defense.clear_dash_recovery()
+		player.global_position = player.ring_origins.position + Vector2(100, player.ring_origins.size.y - 60)
+		await wait(40)
+		var from := player.global_position
+		send([key_event(KEY_RIGHT, true), key_event(KEY_W, true), key_event(KEY_W, false)])
+		var swung := false
+		for frame in 8:
+			if frame == punch_at:
+				send([key_event(KEY_Q, true), key_event(KEY_Q, false)])
+			await physics_frame
+			swung = swung or punching(player)
+		var dashed := player.global_position.x - from.x
+		send([key_event(KEY_RIGHT, false)])
+		table.append("%d: %.0f px%s" % [punch_at, dashed, ", swung" if swung else ""])
+		clean = clean and is_equal_approx(dashed, 250.0) and not swung and not player.is_dodging
+		await wait(40)
+	check(clean, "a punch pressed 0, 1 or 2 frames into a dash leaves it its whole 250 px and throws nothing (%s)" % [table])
+	await wait(20)
+	tap_key(KEY_Q)
+	var swung_after := false
+	for i in 20:
+		swung_after = swung_after or punching(player)
+		await process_frame
+	check(swung_after, "and a punch after the dash's landing throws as ever")
+
+
+# ------------------------------------------------------------------ outro_stale
+
+# A fight lost while the last fight's outro is still alive under the root (a scene changed under it): FightOutro's
+# one-outro guard is for the fight it decided only, so this fight ends too, on its own outro, through to the Defeat
+# screen. Before 2026-10-04 the guard took any outro, and the player sat at 0 health with the boss attacking on.
+func test_outro_stale() -> void:
+	await load_quiet_fight()
+	var player: CharacterBody2D = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
+	player.playerHealth = 0
+	await wait(5)
+	var first: Node = root.get_node_or_null(^"FightOutro")
+	check(first != null and player.fight_over, "a loss puts an outro up")
+	await load_quiet_fight()
+	check(is_instance_valid(first) and first.is_inside_tree(), "and it is still alive as the next fight loads")
+	player = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
+	player.playerHealth = 0
+	await wait(5)
+	var second: Node = root.get_node_or_null(^"FightOutro")
+	check(player.fight_over and second != null and second != first and second.fight_scene == current_scene, "losing the next fight decides it, on an outro of its own")
+	check(not is_instance_valid(first) or not first.is_inside_tree(), "and the one left over is gone")
+	var reached := false
+	for i in 1800:
+		if current_scene != null and current_scene.scene_file_path == DEFEAT_SCENE:
+			reached = true
+			break
+		if i % 20 == 10:
+			tap_key(KEY_ENTER)
+		await process_frame
+	check(reached, "through to the Defeat screen")
+
+
+# ------------------------------------------------------------------ defeat_retry
+
+# The phases a retry must land in that the ladder's own scenes don't show: [label, the scene the fight is opened on, the
+# main menu's request it is opened with, what the retry must open]. Greyson's half opens his half again; Liam's half
+# opens the fight from Bixby, the way the pause screen's RESTART FIGHT does; the Puppet Master is a scene of its own.
+const RETRY_EXTRA_CASES := [
+	["greyson", "res://Scenes/Bosses/ComputahBossFightScene.tscn", &"greyson", &"greyson"],
+	["liam_half", "res://Scenes/Bosses/LiamBossFightScene.tscn", &"liam", &"bixby"],
+	["god", "res://Scenes/Bosses/JordanGodFightScene.tscn", &"", &""],
+]
+const LIAM_SCRIPT := "res://Scripts/LiamScript.gd"
+const COMPUTAH_BODY := "Arena/ComputahScene/ComputahCharacterBody"
+const COMPUTAH_FIGHT := "res://Scenes/Bosses/ComputahBossFightScene.tscn"
+# Frames the player must stay free for the fight to count as handed over: the first frames of a load, before the
+# walk-in has taken hold of them, are free too.
+const LIVE_FRAMES := 60
+
+
+func fight_player() -> CharacterBody2D:
+	return current_scene.get_node_or_null("Arena/MainPlayer/CharacterBody2D") if current_scene != null else null
+
+
+func boss_with_script(path: String) -> Node:
+	for boss in get_nodes_in_group("fight_boss"):
+		var script: Script = boss.get_script()
+		if script != null and script.resource_path == path:
+			return boss
+	return null
+
+
+func wait_frames_for(cond: Callable, max_frames: int) -> bool:
+	for i in max_frames:
+		if cond.call():
+			return true
+		await process_frame
+	return false
+
+
+# Reads whatever holds the player the way a player does - Enter every 15 frames through the walk-in, the lines and the VS
+# card - until the fight has let go of them for LIVE_FRAMES in a row. False if it never does. The pre-fight hold is
+# is_talking (BossEntrance); an action lock is a boss's own attack - Carter's barrage roots the player - so it counts as
+# the fight, as does a loss to it.
+func read_into_fight(max_frames := 6000) -> bool:
+	var free_for := 0
+	for i in max_frames:
+		var player := fight_player()
+		var card: Node = current_scene.get_node_or_null("Arena/VsCard") if current_scene != null else null
+		var free: bool = player != null and not player.is_talking and (card == null or not card.is_playing())
+		free_for = free_for + 1 if free else 0
+		if free_for >= LIVE_FRAMES:
+			log_p("the fight let go of the player %d frames in" % (i + 1 - LIVE_FRAMES))
+			return true
+		if i % 15 == 0:
+			tap_key(KEY_ENTER)
+		await process_frame
+	var held := fight_player()
+	if held != null:
+		log_p("still held: is_talking %s, action locked %s, fight over %s" % [held.is_talking, held.is_action_locked, held.fight_over])
+	return false
+
+
+# A boss's blow landing on the player, who stands still where the fight let them go, since they were last on `health`:
+# the fight is on.
+func boss_lands_hit(health: int, max_frames := 3600) -> bool:
+	var player := fight_player()
+	for i in max_frames:
+		if player.playerHealth < health:
+			return true
+		if i % 15 == 0:
+			tap_key(KEY_ENTER)
+		await process_frame
+	return false
+
+
+# The fight lost, its outro read through with Enter, up to the Defeat screen's first frame. Enter stops on the frame that
+# screen is up, so what presses it from there is the caller's. Bounded by the wall clock, not frames: each outro line
+# holds its input for 1.2 REAL seconds (FightOutro.LINE_INPUT_LOCK), and under --fixed-fps that is hundreds of frames.
+func lose_to_defeat() -> bool:
+	fight_player().playerHealth = 0
+	var until := Time.get_ticks_msec() + 60000
+	var i := 0
+	while Time.get_ticks_msec() < until:
+		if current_scene != null and current_scene.scene_file_path == DEFEAT_SCENE:
+			return true
+		if i % 20 == 10:
+			tap_key(KEY_ENTER)
+		i += 1
+		await process_frame
+	var outro := root.get_node_or_null(^"FightOutro")
+	log_p("still on %s: outro %s, leaving %s" % [current_scene.scene_file_path if current_scene else "<none>", outro != null, outro.leaving if outro else false])
+	return false
+
+
+# The Defeat screen's RETRY (2026-10-04): every fight on the ladder lost and retried through the screen, and the phases
+# whose retry isn't the fight's own start. The retry opens the same fight, in the phase the pause screen's RESTART FIGHT
+# would, with the walk-in already seen; it is clean and it goes live. On the way, the screen's guards: a mash and a held
+# press in its fade-in press nothing, RETRY then has the focus, and two presses open the fight once.
+func test_defeat_retry() -> void:
+	var progress: Node = root.get_node("GameProgress")
+	progress.playtest_invincible = false
+	var freeze: GDScript = load("res://Scripts/FightFreeze.gd")
+	var view: GDScript = load("res://Scripts/ScreenView.gd")
+	var full_health: int = load("res://Scripts/PlayerHealthArtLayout.gd").CONTAINERS * 2
+	var base_nodes := root.get_children()
+	var cases := []
+	for scene in progress.FIGHT_SCENES:
+		cases.append([scene.get_file().get_basename(), scene, &"", &""])
+	cases.append_array(RETRY_EXTRA_CASES)
+	if retry_only != "":
+		cases = cases.filter(func(c: Array) -> bool: return c[0] == retry_only)
+		check(not cases.is_empty(), "fight=%s is a case" % retry_only)
+
+	for case in cases:
+		var label: String = case[0]
+		var scene: String = case[1]
+		var request: StringName = case[2]
+		var lands_in: StringName = case[3]
+		log_p("-- %s" % label)
+		progress.reset_progress()
+		progress.start_at_greyson = request == &"greyson"
+		progress.start_at_liam = request == &"liam"
+		await load_scene(scene)
+		if request == &"greyson":
+			check(await wait_frames_for(func() -> bool: return greyson_in_fight() != null, 900), "the GREYSON row opens his half")
+		elif request == &"liam":
+			check(await wait_frames_for(func() -> bool: return boss_with_script(LIAM_SCRIPT) != null, 3000), "the LIAM row opens his half")
+		check(await read_into_fight(), "the fight lets go of the player")
+		check(await lose_to_defeat(), "losing it reads through to the Defeat screen")
+		if current_scene.scene_file_path != DEFEAT_SCENE:
+			continue
+		var screen: Control = current_scene
+		# A fight with no walk-in (Computah, Jordan, the Puppet Master) never marks one, and the GREYSON and LIAM rows
+		# skip the one the fight would have played first.
+		var walked_in: bool = progress.entrances_seen.has(scene)
+		check(progress.retry_scene == scene and progress.retry_at_greyson == (request == &"greyson"), "the loss noted the fight to retry (%s, Greyson's half %s)" % [progress.retry_scene, progress.retry_at_greyson])
+		var retry: Button = screen.retry_button
+		var menu: Button = screen.return_to_menu_button
+		check(retry != null and retry.visible and retry.text == "RETRY" and retry.get_rect().position.x < menu.get_rect().position.x, "RETRY is up, first, beside RETURN TO MAIN MENU")
+		if retry == null:
+			continue
+		check(retry.size == menu.size and retry.get_theme_stylebox("normal") == menu.get_theme_stylebox("normal") and retry.theme_type_variation == menu.theme_type_variation, "and it is that button's art and size (%s)" % retry.size)
+		var status := ResourceLoader.load_threaded_get_status(scene)
+		check(status == ResourceLoader.THREAD_LOAD_IN_PROGRESS or status == ResourceLoader.THREAD_LOAD_LOADED, "the fight is loading behind the screen (%d)" % status)
+
+		# A player still mashing, on both devices, through the screen's fade-in, then holding accept across its end.
+		for i in 6:
+			tap_key(KEY_ENTER)
+			tap_button(JOY_BUTTON_A)
+			await wait(4)
+		check(current_scene == screen and focus_owner() == null, "a mash in the fade-in presses nothing (%s)" % focus_name())
+		send([key_event(KEY_ENTER, true)])
+		await wait(15)
+		send([key_event(KEY_ENTER, false)])
+		await wait(2)
+		check(current_scene == screen, "and an accept held across its end presses nothing either")
+		check(focus_owner() == retry, "then RETRY has the focus (%s)" % focus_name())
+
+		var changes := [0]
+		var count_change := func() -> void: changes[0] += 1
+		scene_changed.connect(count_change)
+		tap_key(KEY_ENTER)
+		tap_key(KEY_ENTER)
+		var landed := await wait_for_scene(scene)
+		await wait(30)
+		scene_changed.disconnect(count_change)
+		check(landed and changes[0] == 1, "two presses open %s once (%d scene changes)" % [scene.get_file(), changes[0]])
+		if not landed:
+			continue
+
+		var player := fight_player()
+		check(player.playerHealth == full_health and not player.fight_over, "the player is on full health (%d)" % player.playerHealth)
+		var hurt := []
+		for boss in get_nodes_in_group("fight_boss"):
+			var down_by_design: bool = lands_in == &"greyson" and boss == current_scene.get_node_or_null(COMPUTAH_BODY)
+			if boss.boss_health != boss.max_health and not down_by_design:
+				hurt.append("%s %d/%d" % [boss.name, boss.boss_health, boss.max_health])
+		check(hurt.is_empty(), "every boss is on full health %s" % [hurt])
+		var left_over := root.get_children().filter(func(n: Node) -> bool: return n != current_scene and not base_nodes.has(n))
+		check(left_over.is_empty(), "no outro or anything else left over under the root %s" % [left_over.map(func(n: Node) -> String: return str(n.name))])
+		check(is_equal_approx(Engine.time_scale, 1.0) and not paused and not freeze.is_frozen(), "time scale 1 (%.3f), not paused, not frozen" % Engine.time_scale)
+		# Settled rather than level at once, and on the fight's base rather than the identity: the Puppet Master opens on a
+		# zoom-out of his own (1.47 to 1 over 75 frames, a fresh load's too), onto his whole void drawn further out.
+		var settled := await wait_frames_for(func() -> bool: return view.zoom == 1.0 and view.shake_offset == Vector2.ZERO, 120)
+		check(settled, "no zoom or shake left over: the view settles on the fight's base (zoom %.2f)" % view.zoom)
+		if walked_in:
+			check(progress.entrances_seen.has(scene), "the walk-in is still marked seen")
+			var entrance: Node = null
+			for node in current_scene.find_children("*", "Node", true, false):
+				if node.has_method(&"finish_entrance"):
+					entrance = node
+			if entrance != null:
+				check(await wait_frames_for(func() -> bool: return entrance.finished, 10), "so it doesn't play again")
+		else:
+			log_p("no walk-in was seen before the loss, so none is skipped")
+		var index: int = progress.FIGHT_SCENES.find(progress.PHASE_SCENES.get(scene, scene))
+		check(progress.fight_index == index, "which the ladder reads as FIGHT %02d (%d)" % [index + 1, progress.fight_index])
+		check(progress.retry_scene == "" and not progress.start_at_greyson and not progress.start_at_liam, "and the retry is spent")
+
+		match lands_in:
+			&"greyson":
+				check(await wait_frames_for(func() -> bool: return greyson_in_fight() != null, 900), "it opens Greyson's half again")
+				check(current_scene.get_node(COMPUTAH_BODY).defeated, "with Computah already down")
+			&"bixby":
+				check(boss_with_script(LIAM_SCRIPT) == null, "it opens the fight from Bixby, as RESTART FIGHT does")
+			_:
+				if scene == COMPUTAH_FIGHT:
+					check(greyson_in_fight() == null and not current_scene.get_node(COMPUTAH_BODY).defeated, "it opens Computah's half, with no Greyson")
+		check(await read_into_fight(), "the fight lets go of the player again")
+		check(await boss_lands_hit(full_health), "and it is on: a blow lands on them standing still")
+
+	if retry_only != "":
+		progress.reset_progress()
+		return
+	log_p("-- RETURN TO MAIN MENU, and the screen with no fight to retry")
+	progress.reset_progress()
+	await load_scene(ERIC_FIGHT)
+	await read_into_fight()
+	await lose_to_defeat()
+	await wait(40)
+	check(focus_name() == "RetryButton", "RETRY has the focus (%s)" % focus_name())
+	tap_button(JOY_BUTTON_DPAD_RIGHT)
+	await wait(1)
+	var menu_button: Button = current_scene.return_to_menu_button
+	check(focus_owner() == menu_button, "right on the d-pad moves it to RETURN TO MAIN MENU (%s)" % focus_name())
+	check(menu_button.get_theme_stylebox("focus") is StyleBoxFlat, "and on a pad the focus shows")
+	tap_button(JOY_BUTTON_DPAD_LEFT)
+	await wait(1)
+	check(focus_owner() == current_scene.retry_button, "left takes it back to RETRY (%s)" % focus_name())
+	tap_button(JOY_BUTTON_DPAD_RIGHT)
+	await wait(1)
+	tap_button(JOY_BUTTON_A)
+	check(await wait_for_scene(MENU_SCENE), "A on RETURN TO MAIN MENU goes back to the menu")
+	await load_scene(DEFEAT_SCENE)
+	check(current_scene.retry_button == null, "opened with no fight lost, the screen offers no RETRY")
+	check(current_scene.return_to_menu_button.get_rect() == Rect2(636, 915, 648, 126), "and keeps its one button where it was (%s)" % current_scene.return_to_menu_button.get_rect())
+	await wait(40)
+	check(focus_name() == "ReturnToMenuButton", "with the focus on it (%s)" % focus_name())
+	progress.reset_progress()
+
+
+# ------------------------------------------------------------------ ladder_order
+
+# The user's ladder of 2026-10-06, by difficulty, written out rather than read back from GameProgress so a wrong table
+# can't pass by agreeing with itself: [fight scene, VS card key, the name it is listed under, the rank its win pays, his
+# face on the Victory screen's ladder - a frame of rank_icons.png, a strip drawn in the order of 2026-09-17].
+const LADDER := [
+	["res://Scenes/Bosses/BurakBossFightScene.tscn", "burak", "BURAK", "@member", 0],
+	["res://Scenes/Bosses/MasonBossFightScene.tscn", "mason", "MASON", "@regular", 4],
+	["res://Scenes/Bosses/JoshBossFightScene.tscn", "josh", "JOSH", "@active", 5],
+	["res://Scenes/Bosses/EricBossFightScene.tscn", "eric", "ERIC", "@veteran", 1],
+	["res://Scenes/Bosses/DannyBossFightScene.tscn", "danny", "DANNY", "@trusted", 6],
+	["res://Scenes/Bosses/ComputahBossFightScene.tscn", "computah", "COMPUTAH", "@vip", 2],
+	["res://Scenes/Bosses/LiamBossFightScene.tscn", "liam", "LIAM & BIXBY", "@helper", 8],
+	["res://Scenes/Bosses/CarterBossFightScene.tscn", "carter", "CARTER", "@moderator", 7],
+	["res://Scenes/Bosses/MattBossFightScene.tscn", "matt", "MATT", "@admin", 3],
+	["res://Scenes/Bosses/JordanBossFightScene.tscn", "jordan", "JORDAN", "", 9],
+]
+# The strip's last frame, the goal slot's.
+const LADDER_INVITE_ICON := 10
+# The boss select's rows, in its order: each fight's own, then its halves and Jordan's finale, god fight and ending.
+const LADDER_MENU_ROWS := ["1  BURAK", "2  MASON", "3  JOSH", "4  ERIC", "5  DANNY", "6  COMPUTAH", "    GREYSON",
+	"7  LIAM & BIXBY", "    LIAM", "8  CARTER", "9  MATT", "10  JORDAN", "    FINALE", "    GOD", "    ENDING"]
+const INTRO_LINE_SCENE := "res://Scenes/Core/IntroScene.tscn"
+const GOD_FIGHT := "res://Scenes/Bosses/JordanGodFightScene.tscn"
+
+
+# The boss select's fight rows, in the panel's order: the buttons four levels under its PanelContainer.
+func boss_select_rows() -> Array:
+	var rows := []
+	for node in current_scene.find_children("*", "Button", true, false):
+		if node is CheckBox:
+			continue
+		var up: Node = node
+		for i in 4:
+			up = up.get_parent() if up != null else null
+		if up is PanelContainer:
+			rows.append(node.text)
+	return rows
+
+
+# What the fight's own VS card draws for `key`, played and skipped: the file of every plate and the text of every
+# written line.
+func vs_card_writing(key: String) -> Array:
+	var card: Node = load("res://Scripts/VsCard.gd").in_fight(self)
+	if card == null:
+		return []
+	card.play(key)
+	await wait(2)
+	var drawn := []
+	for node in card.writing.find_children("*", "", true, false):
+		if node is Sprite2D and node.texture != null:
+			drawn.append(node.texture.resource_path.get_file())
+		elif node is Label:
+			drawn.append(node.text)
+	card.skip()
+	await wait_frames_for(func() -> bool: return not card.is_playing(), 120)
+	card.grace_until_msec = 0
+	return drawn
+
+
+# The Victory screen's rank ladder, as the frames of rank_icons.png its slots show, left to right.
+func victory_icons() -> Array:
+	var icons: Texture2D = load("res://Assets/UI/Screens/rank_icons.png")
+	var shown := []
+	for sprite in current_scene.rank_ladder.get_children():
+		if sprite is Sprite2D and sprite.texture == icons:
+			shown.append([sprite.position.x, sprite.frame])
+	shown.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	return shown.map(func(entry: Array) -> int: return entry[1])
+
+
+# The ladder from NEW GAME to the top (2026-10-06: Burak, Mason, Josh, Eric, Danny, Computah and Greyson, Liam and Bixby,
+# Carter, Matt, Jordan). The boss select lists it; NEW GAME's intro, Danny's line and the controls room's READY open the
+# first fight; and in each fight its number and its place are the same everywhere: fight_index, the name, the VS card's
+# FIGHT plate and WIN plate, #arena-N on the Defeat screen, the Victory screen's rank and its ladder of faces, and NEXT
+# BOSS opening the next fight, until the last, whose Victory goes back to the menu. The wins and losses are the screens
+# reached straight from each fight, not fights played out: what is under test is the order, not the fights.
+func test_ladder_order() -> void:
+	var progress: Node = root.get_node("GameProgress")
+	var card_art: GDScript = load("res://Scripts/VsCardArtLayout.gd")
+	progress.reset_progress()
+	var order := []
+	for scene in progress.FIGHT_SCENES:
+		order.append(scene)
+	check(order == LADDER.map(func(step: Array) -> String: return step[0]), "the ladder is the order of 2026-10-06 %s" % [order.map(func(s: String) -> String: return s.get_file().get_basename())])
+	check(progress.FIGHT_SCENES.find(progress.PHASE_SCENES.get(GOD_FIGHT, GOD_FIGHT)) == LADDER.size() - 1, "and the Puppet Master is still part of the last fight, FIGHT 10")
+
+	log_p("-- the boss select")
+	await load_scene(MENU_SCENE)
+	var rows := boss_select_rows()
+	check(rows == LADDER_MENU_ROWS, "lists the fights in that order, each half under its fight %s" % [rows])
+
+	log_p("-- NEW GAME: the intro, Danny's line, the controls room and READY")
+	await wait(45)
+	check(focus_name() == "StartGameButton", "NEW GAME has the focus (%s)" % focus_name())
+	tap_key(KEY_ENTER)
+	check(await wait_for_scene(INTRO_SCENE), "it opens the intro")
+	await wait(5)
+	tap_key(KEY_ESCAPE)
+	check(await wait_for_scene(INTRO_LINE_SCENE, 600), "skipped, the intro goes on to Danny's line")
+	var reached := false
+	for i in 1200:
+		if current_scene != null and current_scene.scene_file_path == CONTROLS_SCENE:
+			reached = true
+			break
+		if i % 20 == 10:
+			tap_key(KEY_ENTER)
+		await process_frame
+	check(reached, "and his line to the controls room")
+	await wait(3)
+	root.get_node("DialogueManager").dialogue_ended.emit(null)
+	var balloon := find_balloon()
+	if balloon:
+		balloon.free()
+	await wait(3)
+	check(focus_name() == "ReadyButton", "once Danny is done READY has the focus (%s)" % focus_name())
+	tap_key(KEY_ENTER)
+	check(await wait_for_scene(LADDER[0][0], 300), "and opens the first fight, Burak's (%s)" % current_scene.scene_file_path.get_file())
+
+	for i in LADDER.size():
+		var step: Array = LADDER[i]
+		var scene: String = step[0]
+		var number := i + 1
+		var rank: String = step[3]
+		var next: String = LADDER[i + 1][0] if i + 1 < LADDER.size() else ""
+		log_p("-- FIGHT %02d, %s" % [number, step[2]])
+		if current_scene == null or current_scene.scene_file_path != scene:
+			check(false, "the ladder is in %s (%s)" % [scene.get_file(), current_scene.scene_file_path.get_file() if current_scene else "<none>"])
+			break
+		await wait(3)
+		check(progress.fight_index == i, "fight_index %d (%d)" % [i, progress.fight_index])
+		check(progress.boss_name(scene) == step[2], "named %s (%s)" % [step[2], progress.boss_name(scene)])
+		check(card_art.key_for_scene(scene) == step[1], "its VS card is %s's (%s)" % [step[1], card_art.key_for_scene(scene)])
+		var data: Dictionary = card_art.card(step[1])
+		check(int(data["number"]) == number and data["rank"] == rank, "whose table reads FIGHT %02d, WIN %s (%02d, %s)" % [number, rank, int(data["number"]), data["rank"]])
+		var drawn: Array = await vs_card_writing(step[1])
+		check(drawn.has("fight_%02d.png" % number), "the card draws the FIGHT %02d plate %s" % [number, drawn])
+		var wins := drawn.filter(func(file: String) -> bool: return file.begins_with("win_"))
+		if rank != "":
+			check(wins == ["win_%s.png" % rank.trim_prefix("@")], "and WIN %s" % rank)
+		else:
+			check(wins.is_empty(), "and no WIN plate: the last fight hands over the invite")
+
+		change_scene_to_file(DEFEAT_SCENE)
+		await wait_for_scene(DEFEAT_SCENE)
+		await wait(3)
+		var lost: String = current_scene.message_label.text
+		check(lost.contains("#arena-%d." % number), "a loss reads #arena-%d (%s)" % [number, lost])
+		check(progress.fight_index == i, "and the Defeat screen keeps fight_index %d (%d)" % [i, progress.fight_index])
+
+		progress.next_boss_scene = progress.next_fight_after(scene)
+		check(progress.next_boss_scene == next, "the fight after it is %s (%s)" % [next.get_file() if next != "" else "none", progress.next_boss_scene.get_file()])
+		await load_scene(VICTORY_SCENE)
+		var won: String = current_scene.message_label.text
+		var paid := "@newcomer ranked up to %s!" % rank if rank != "" else "@newcomer received an invite!"
+		check(won == paid, "a win: \"%s\" (%s)" % [paid, won])
+		var faces := []
+		for j in mini(number + 1, LADDER.size()):
+			faces.append(LADDER[j][4])
+		faces.append(LADDER_INVITE_ICON)
+		var shown := victory_icons()
+		check(shown == faces, "its ladder shows the faces of the fights so far, the next and the invite %s (%s)" % [faces, shown])
+		await wait(45)
+		check(current_scene.next_boss_button.text == ("NEXT BOSS" if next != "" else "MAIN MENU"), "its button says %s" % current_scene.next_boss_button.text)
+		tap_key(KEY_ENTER)
+		if next != "":
+			check(await wait_for_scene(next, 600), "NEXT BOSS opens %s" % next.get_file())
+		else:
+			check(await wait_for_scene(MENU_SCENE), "at the top of the ladder it goes back to the menu")
+	progress.reset_progress()

@@ -14,9 +14,9 @@ const FIGHT_SCENE := "res://Scenes/Bosses/MasonBossFightScene.tscn"
 
 #CONSTANTS
 # The tiered finisher's uppercuts each take a share of this, so it is what decides whether a juggle is
-# a finisher or an execute. At 48 the three tiers are worth 7, 12 and 19, a supercharged third 24, and
-# a 3-punch eat window 4.
-@export var max_health := 48
+# a finisher or an execute. At 120 (the user doubled it from 48, 2026-09-25, then raised it 25%, 2026-09-30)
+# the three tiers are worth 18, 30 and 48, a supercharged third 60, and a 3-punch eat window 4.
+@export var max_health := 120
 var boss_health := max_health
 const PHASE_TWO_RATIO := 0.5
 const MAX_HITS_PER_WINDOW := 3
@@ -31,21 +31,28 @@ const DAZE_ANCHOR_OFFSET := Vector2(0, -124)
 # than a read they fluffed, so a parry is worth less and a hit costs less. The guard break is held at
 # 1.75x a hit and the grab parry at 1.4x a parry, as Eric's are, and `broken_time` is per-phase, the
 # shape the rest of his pacing already uses.
-# Measured, not reasoned: art_source/mason_tuning/measure_mason_v2.gd run=parry and run=ceiling. A
+# Measured, not reasoned, at his 48 health before the user doubled it (2026-09-25), and not measured
+# again since: art_source/mason_tuning/measure_mason_v2.gd run=parry and run=ceiling. A
 # parrying bot breaks him twice, on cycles 1 and 3, and the fight ends in 3 cycles (65 s); one that
 # only gets the elbow drops to read (ceiling) breaks him once and finishes with the gauge at 58 of 100.
 # So: one or two Breaks a fight. A point higher on parry_gain and the second lands in cycle 2 and ends
 # the fight there, at 2 cycles, which is under the pacing this fight is meant to have.
+# Cut for the new mash and his pitches (2026-10-04, the Nugget Fastball plan's starting values): a Break now
+# pays 42 of his health (67 with full hype), and a pitched set is a run of parries of its own, so at the old
+# gains he broke nearly every cycle. Punches and perfect dodges, at the gauge's defaults before, are set here.
 const BREAK := {
-	"parry_gain": 12.0,
-	"grab_parry_gain": 17.0,
-	"hit_loss": 10.0,
-	"guard_break_loss": 18.0,
+	"parry_gain": 6.0,
+	"grab_parry_gain": 8.5,
+	"punch_gain": 4.0,
+	"charged_punch_gain": 7.0,
+	"perfect_dodge_gain": 8.0,
+	"hit_loss": 12.0,
+	"guard_break_loss": 21.0,
 	"broken_time": [3.0, 2.6],
 }
 # The attacks this fight owns, for the gauge. Deliberately a list rather than a prefix test: Carter's
 # elbow drop is Mason's attack and carries no mason_ prefix.
-const ATTACK_IDS: Array[StringName] = [&"mason_poo_blast", &"mason_poo_contact", &"mason_nugget", &"carter_elbow_drop"]
+const ATTACK_IDS: Array[StringName] = [&"mason_poo_blast", &"mason_poo_contact", &"mason_nugget", &"carter_elbow_drop", &"mason_fastball", &"mason_changeup", &"mason_quick_pitch"]
 
 #UI (BossHealthBarUI builds it at runtime)
 var health_bar: Control
@@ -123,6 +130,8 @@ func _ready() -> void:
 	add_child(finisher_stagger_timer)
 
 	sprite_base_position = sprite.position
+	if MasonArtLayout.broken().has("texture"):
+		MasonArtLayout.build_broken_animations(animation_player)
 	var player := get_tree().current_scene.get_node_or_null(FightOutro.PLAYER_PATH)
 	if player:
 		_add_break_gauge(player)
@@ -162,6 +171,9 @@ func _add_break_gauge(player: Node) -> void:
 	break_gauge.strong_parry_ids = strong
 	break_gauge.parry_gain = BREAK.parry_gain
 	break_gauge.grab_parry_gain = BREAK.grab_parry_gain
+	break_gauge.punch_gain = BREAK.punch_gain
+	break_gauge.charged_punch_gain = BREAK.charged_punch_gain
+	break_gauge.perfect_dodge_gain = BREAK.perfect_dodge_gain
 	break_gauge.hit_loss = BREAK.hit_loss
 	break_gauge.guard_break_loss = BREAK.guard_break_loss
 	add_child(break_gauge)
@@ -215,6 +227,11 @@ func frame_point(pixel: Vector2) -> Vector2:
 	return to_global(MasonArtLayout.frame_local(pixel + Vector2(0.5, 0.5)))
 
 
+# The same for a pixel on his pitch frames, which mirror when he throws to his right (MasonPitch).
+func pitch_point(pixel: Vector2, flipped: bool) -> Vector2:
+	return to_global(MasonArtLayout.pitch_local(pixel, flipped))
+
+
 # The same for a pixel on his juggle sheet, whose frames are bigger than his main sheet's and hang
 # lower to keep his feet on the same ground line.
 func juggle_point(pixel: Vector2) -> Vector2:
@@ -247,7 +264,7 @@ func set_contact_live(live: bool) -> void:
 # The group only reports a player walking into him. One already in him as a line starts, or still in
 # him as the last hit's i-frames run out, has to be looked for, and the i-frames space those hits out.
 func _touch_player() -> void:
-	if not contact_hitbox.is_in_group("enemy projectile"):
+	if not contact_hitbox.is_in_group("enemy projectile") or fight_clock < state_machine.contact_grace_until:
 		return
 	var player: Node2D = state_machine.get_player()
 	if player and player.hurtBox.overlaps_area(contact_hitbox):
@@ -268,7 +285,12 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 		last_contact_hit_time = fight_clock
 
 
+# Only in his windows, the two can_be_dazed() pays: his hurtbox shuts deferred as one ends, so a fist meeting it in that
+# same step would land with no mash for its POW (the user, 2026-10-06).
 func take_punch(amount: int) -> int:
+	var state = state_machine.current_state
+	if state != state_machine.states.get("Eat") and state != state_machine.states.get("Broken"):
+		return 0
 	var allowed := punches.allow(amount, hits_this_window, MAX_HITS_PER_WINDOW)
 	if allowed <= 0:
 		return 0
@@ -367,6 +389,12 @@ func end_recovery(stagger_time: float) -> bool:
 # Past the hit cap, which the combo that led to it has used up, but not past the phase floor.
 func take_finisher(amount: int) -> int:
 	return _apply_damage(amount)
+
+
+# A home run's chip (MasonPitch): his own nugget, batted back into his head. Past the hit cap, as the finisher is, and
+# not past the phase floor.
+func take_home_run(amount: int) -> int:
+	return _apply_damage(amount, MasonArtLayout.PITCH_SFX[&"bonk"].pitch)
 
 
 func get_max_health() -> int:
@@ -496,6 +524,32 @@ func _build_hud() -> void:
 		gauge_bar.gauge = break_gauge
 		hud_layer.add_child(gauge_bar)
 		gauge_bar.position = health_bar.break_gauge_anchor()
+
+
+# A word over the fight (FEINT!, Josh's): on the HUD layer, in view and HUD_CLEARANCE clear of the HUD blocks, and
+# one of the things the HUD fades for.
+func show_word(text: String, centre: Vector2 = MasonArtLayout.WORD.centre, spec: Dictionary = MasonArtLayout.WORD) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.theme = load("res://Assets/UI/ui_theme.tres")
+	label.add_theme_font_size_override("font_size", spec.font_size)
+	label.add_theme_color_override("font_color", spec.color)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	label.add_theme_constant_override("outline_size", spec.outline)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.size = spec.box
+	label.pivot_offset = label.size / 2.0
+	label.position = MasonArtLayout.clear_of_hud(centre, spec.box) - label.size / 2.0
+	label.scale = Vector2.ONE * spec.from_scale
+	label.add_to_group(&"hud_fade_under")
+	hud_layer.add_child(label)
+	var show := label.create_tween()
+	show.tween_property(label, "scale", Vector2.ONE * spec.to_scale, spec.grow_time).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	show.tween_interval(spec.time - spec.grow_time)
+	show.tween_property(label, "modulate:a", 0.0, 0.3)
+	show.tween_callback(label.queue_free)
+	return label
 
 
 func _hit_feedback() -> void:

@@ -1,6 +1,6 @@
 extends CharacterBody2D
 
-# Danny, boss 7 ("@helper", FIGHT 07): the training room's tiny helper, who evolves FireRed-style into an
+# Danny, boss 5 ("@trusted", FIGHT 05): the training room's tiny helper, who evolves FireRed-style into an
 # E. Honda sumo. His loop is a worm spit that leaves puddles to root the player in (DannyBossSpit), then a
 # five-slam Sumo Smash string (DannyBossSlams), then a nap that heals him and is the window to punish him in
 # (DannyBossSleep). A player his worms root gets his Sumo Headbutt (DannyBossHeadbutt), and a parried one
@@ -38,8 +38,9 @@ void fragment() {
 """
 
 #CONSTANTS
-# A knob. The single-bar finisher takes 12 and the supercharged one 19, and the juggle 7, 5 and 7.
-@export var max_health := 48
+# A knob, doubled from 48 by the user (2026-09-25), then raised 25% (2026-09-30). The single-bar finisher
+# takes 30 and the supercharged one 48, and the juggle 30, 12 and 18.
+@export var max_health := 120
 var boss_health := max_health
 # Every window's cap unless its state has its own `hit_cap` (the Sleep's is 6).
 const MAX_HITS_PER_WINDOW := 3
@@ -52,10 +53,12 @@ const CAUTION_RATIO := 0.5
 const HOT_RATIO := 0.25
 
 #THE BREAK GAUGE (BossBreakGauge)
-# The rollout's rule with N = 8: a read (a parry or a perfect dodge of a slam or a headbutt) is an eighth of
-# the gauge, a punch a quarter of a read and a charged one a half, a hit taken one read back and a guard
-# break two. He has no grab and nothing to reflect. His quake rings drain it but never fill it (BREAK_EARNS).
-# broken_time is DannyBossBroken's window. BREAK_READ is max_value over N, given as it is (BREAK_EPSILON).
+# The rollout's rule with N = 8: a read (a parry or a perfect dodge of a slam, a headbutt or a belly bump) is an
+# eighth of the gauge, a punch a quarter of a read and a charged one a half, a hit taken one read back and a guard
+# break two. He has no grab and nothing to reflect. His quake rings drain it but never fill it (BREAK_EARNS), and
+# the ropes his bump drives the player into are his bump's own hit carried on, so they don't drain it a second
+# time (owns_attack). broken_time is DannyBossBroken's window. BREAK_READ is max_value over N, given as it is
+# (BREAK_EPSILON).
 const BREAK_READS := 8
 const BREAK_READ := 100.0 / BREAK_READS
 const BREAK := {
@@ -71,7 +74,7 @@ const BREAK := {
 	"hit_loss": BREAK_READ,
 	"guard_break_loss": 2.0 * BREAK_READ,
 }
-const BREAK_EARNS: Array[StringName] = [&"danny_butt_slam", &"danny_headbutt"]
+const BREAK_EARNS: Array[StringName] = [&"danny_hop_slam", &"danny_butt_slam", &"danny_headbutt", &"danny_belly_bump"]
 # The Break's three-bar mash and juggle, on the shared BossBroken and BossJuggled (DannyBossBroken,
 # DannyBossJuggled). Off, a Break pays the plain single-bar finisher.
 const JUGGLE_ENABLED := true
@@ -191,7 +194,7 @@ func _add_break_gauge(player: Node) -> void:
 	break_gauge.name = "BreakGauge"
 	break_gauge.boss = self
 	break_gauge.player = player
-	break_gauge.owns_attack = func(id: StringName) -> bool: return str(id).begins_with("danny_")
+	break_gauge.owns_attack = func(id: StringName) -> bool: return str(id).begins_with("danny_") and id != &"danny_rope_slam"
 	break_gauge.earns_from = func(hit: RefCounted) -> bool: return BREAK_EARNS.has(hit.attack_id)
 	break_gauge.max_value = BREAK.max_value
 	break_gauge.parry_gain = BREAK.parry_gain
@@ -462,6 +465,11 @@ func contact_point(anim_name := &"slam_impact") -> Vector2:
 # The front of his head in the headbutt, which is what reaches the player.
 func head_point(anim_name := &"headbutt_fly") -> Vector2:
 	return _drawn(Layout.head(anim_name), anim_name)
+
+
+# The front of his belly in the belly bump, which is what meets the player.
+func belly_point(anim_name := &"bump_run") -> Vector2:
+	return _drawn(Layout.belly(anim_name), anim_name)
 
 
 # His hands' contact in the push.
@@ -762,10 +770,12 @@ func _apply_damage(amount: int, pitch := 1.0) -> int:
 	return dealt
 
 
-# The player's finisher (PlayerFinisher): a charged third punch in his nap or the Break dazes him, once a
-# window. Never in Staggered.
+# The player's finisher (PlayerFinisher): a charged third punch in any of his windows - his nap, his dizzy spell,
+# on his back and the Break - dazes him, once a window (the user, 2026-10-06: 3 hits always trigger the uppercut).
+# A daze whose mash fizzled or whose uppercut whiffed gives it back (exit_daze): his nap and his back after a parried
+# slam take 6 punches, room for a second POW.
 func can_be_dazed() -> bool:
-	return not defeated and boss_health > 0 and not daze_used and (state_machine.is_sleeping() or is_broken())
+	return not defeated and boss_health > 0 and not daze_used 		and (state_machine.is_sleeping() or state_machine.is_staggered() or is_broken() or state_machine.on_back_dazeable())
 
 
 # The finisher draws its own daze stars over the Break's.
@@ -776,11 +786,12 @@ func enter_daze() -> void:
 
 func exit_daze(finisher_landed: bool) -> void:
 	if not finisher_landed:
+		daze_used = false
 		_show_break_stars(true)
 
 
 func _show_break_stars(shown: bool) -> void:
-	if is_broken() and state_machine.current_state.has_method("show_stars"):
+	if (is_broken() or state_machine.is_on_back()) and state_machine.current_state.has_method("show_stars"):
 		state_machine.current_state.show_stars(shown)
 
 
@@ -795,8 +806,12 @@ func end_recovery(stagger_time: float) -> bool:
 	if is_broken():
 		state_machine.end_break(stagger_time)
 		return true
-	# The uppercut ends his nap: up, staggered, then his next attack.
-	if state_machine.is_sleeping():
+	# On his back, the uppercut rolls him up onto his feet, and then his next attack.
+	if state_machine.is_on_back():
+		state_machine.roll_up_then_start_cycle(stagger_time)
+		return true
+	# The uppercut ends his nap or his dizzy spell: up, staggered, then his next attack.
+	if state_machine.is_sleeping() or state_machine.is_staggered():
 		state_machine.stagger_then_start_cycle(stagger_time)
 		return true
 	return false
@@ -810,7 +825,14 @@ func take_finisher(amount: int) -> int:
 
 
 func get_daze_anchor() -> Vector2:
-	return crown_point(&"broken" if is_broken() else &"sleep") + Vector2(0, -Layout.DAZE_GAP)
+	var pose := &"sleep"
+	if is_broken():
+		pose = &"broken"
+	elif state_machine.is_on_back():
+		pose = &"back_daze"
+	elif state_machine.is_staggered():
+		pose = &"hit"
+	return crown_point(pose) + Vector2(0, -Layout.DAZE_GAP)
 
 
 func get_finisher_hurtbox() -> Area2D:

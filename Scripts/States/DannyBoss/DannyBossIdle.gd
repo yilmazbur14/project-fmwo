@@ -14,9 +14,10 @@ func Enter() -> void:
 	body.velocity = Vector2.ZERO
 	body.set_hurtbox_active(false)
 	body.set_body_box(&"idle")
-	# A recoil or a wake the finisher or the nap started carries on; only its own queue ends it. Out of his
-	# intro he is idling already, and restarting the loop would jump him a frame as the fight starts.
-	if not (body.current_anim in [&"hit", &"wake", &"idle"]):
+	# A recoil, a wake or a roll up off his back that the finisher, the nap or his time on his back started carries
+	# on; only its own queue ends it. Out of his intro he is idling already, and restarting the loop would jump him a
+	# frame as the fight starts.
+	if not (body.current_anim in [&"hit", &"wake", &"idle", &"back_roll"]):
 		body.play_state_anim(&"idle")
 	else:
 		body.state_anim = &"idle"

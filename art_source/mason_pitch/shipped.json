@@ -1,0 +1,100 @@
+{
+  "shipped": "2026-10-04T13:21:19",
+  "by": "coordinator",
+  "approval": "user 2026-10-04: 'approve all' (Mason full Nugget Fastball set; HOME RUN gold; own changeup trail)",
+  "source": "scratchpad/mason_fastball/full/out",
+  "contract": "art_source/mason_pitch/contract.json",
+  "note": "ball scheme = approval spin_streaks (nugget_fastball 4 frames + nugget_fastball_streaks 16); suggested hit radius 18 px",
+  "files": [
+    {
+      "file": "Assets/Characters/Mason/home_run.aseprite",
+      "sha256": "29cf0f2d057e00519543252d2006564684583e524840fe0163223ca351e50bfb",
+      "bytes": 5335
+    },
+    {
+      "file": "Assets/Characters/Mason/home_run.png",
+      "sha256": "3c8f587875b29678ca9e15c78754f029dae8677842787651a0aa743273826697",
+      "bytes": 3302
+    },
+    {
+      "file": "Assets/Characters/Mason/home_run_pips.aseprite",
+      "sha256": "beb45f38d4e9b3c0daf4241b07be8f7528ad8ae64a412f4ac570d67091d2a694",
+      "bytes": 1204
+    },
+    {
+      "file": "Assets/Characters/Mason/home_run_pips.png",
+      "sha256": "b1ded75e0b88e2b1d5c8ac52419540f0ee7f92fb28744b2a03a778fb61d2d33c",
+      "bytes": 297
+    },
+    {
+      "file": "Assets/Characters/Mason/mason_broken.aseprite",
+      "sha256": "46763fa632e27b8026faed2bbb1742ba4e07a362a0b69f7ccccb01086594d715",
+      "bytes": 7139
+    },
+    {
+      "file": "Assets/Characters/Mason/mason_broken.png",
+      "sha256": "75b9c7198b4f841cbb82be930a10acd8214067fffed31d33025491d108b0a608",
+      "bytes": 4786
+    },
+    {
+      "file": "Assets/Characters/Mason/mason_pitch.aseprite",
+      "sha256": "5292cc2aebc6f4d4783ab244060ec297be073b139e42003661ca7e75ef98f0aa",
+      "bytes": 15596
+    },
+    {
+      "file": "Assets/Characters/Mason/mason_pitch.png",
+      "sha256": "ed1eb3f1b2945e68fcfafb10b523bb4d9db7904ef7aa522c89e7d2fc6bc82c52",
+      "bytes": 10356
+    },
+    {
+      "file": "Assets/Characters/Mason/nugget_bonk.aseprite",
+      "sha256": "02f24dca0c82b6016eeb8e81e5e3e2c5b94c69c31bb20de1052188926d4d54fd",
+      "bytes": 1899
+    },
+    {
+      "file": "Assets/Characters/Mason/nugget_bonk.png",
+      "sha256": "d2b4404cc0953e4f3cbe154cb1e1fa3f6013af1f642df02f027dcabfa23a6b44",
+      "bytes": 712
+    },
+    {
+      "file": "Assets/Characters/Mason/nugget_changeup_trail.aseprite",
+      "sha256": "d2ce4a03fc954a57d105bac168ee0343f050ab8d0b4f6c3e85a6d259c1f34388",
+      "bytes": 3334
+    },
+    {
+      "file": "Assets/Characters/Mason/nugget_changeup_trail.png",
+      "sha256": "d6ed7bcedc34c0abde59e08071c9d4524eb4f5952fd4512d4e9bd22e18a89041",
+      "bytes": 776
+    },
+    {
+      "file": "Assets/Characters/Mason/nugget_fastball.aseprite",
+      "sha256": "226e5ce30fcb4bd498aab13d07f665461f2dc5c617fc9102f650064bdbcf2be9",
+      "bytes": 1744
+    },
+    {
+      "file": "Assets/Characters/Mason/nugget_fastball.png",
+      "sha256": "cfc10f8ecbcab87cab618ef3f9715281f55d9abd8e916e8d02ebc7cf2800b67d",
+      "bytes": 611
+    },
+    {
+      "file": "Assets/Characters/Mason/nugget_fastball_streaks.aseprite",
+      "sha256": "3a2b8274e696952b3bf92d5c212c62ccbb6bf51194c6a792da09e37b481a0b8e",
+      "bytes": 3897
+    },
+    {
+      "file": "Assets/Characters/Mason/nugget_fastball_streaks.png",
+      "sha256": "d3d8dd0f0b39ac76beefe454677f2878b27709e432998a765493092de7d7880f",
+      "bytes": 1268
+    },
+    {
+      "file": "Assets/Characters/Mason/nugget_puff.aseprite",
+      "sha256": "a7ff315d05d8350d5a2c5c86f1073f47805ca50421142d550f22da816ac76323",
+      "bytes": 1267
+    },
+    {
+      "file": "Assets/Characters/Mason/nugget_puff.png",
+      "sha256": "6fdf14441dd081825c7b512a1af1bddb5100dc4b9f6acc6160bcb420bf6f06cc",
+      "bytes": 167
+    }
+  ]
+}

@@ -146,7 +146,7 @@ const BOSS_BARS := {
 		"emblem": "res://Assets/UI/boss_hp_emblem_eric_3x.png",
 		"heat_ramp": [Color(0.85, 0.16, 0.16, 1), Color(0.95, 0.75, 0.1, 1), Color(1.0, 0.55, 0.0, 1)],
 	},
-	# Greyson, the second half of FIGHT 03: a double biceps for his emblem and his purple fill, the approved set
+	# Greyson, the second half of FIGHT 06: a double biceps for his emblem and his purple fill, the approved set
 	# (2026-09-24). The ramp is the fill's own two purples, for the flat fallback.
 	&"greyson": {
 		"fill": "res://Assets/UI/boss_hp_fill_greyson_3x.png",
@@ -182,7 +182,7 @@ const BOSS_BARS := {
 		"emblem": "res://Assets/UI/boss_hp_emblem_josh_3x.png",
 		"heat_ramp": [Color(0.95, 0.75, 0.15, 1), Color(0.95, 0.75, 0.1, 1), Color(1.0, 0.55, 0.0, 1)],
 	},
-	# Danny, boss 7. His set was built from vs_card/bosses.py's data before his fight existed.
+	# Danny, boss 5. His set was built from vs_card/bosses.py's data before his fight existed.
 	&"danny": {
 		"fill": "res://Assets/UI/boss_hp_fill_danny_3x.png",
 		"fill_hot": "res://Assets/UI/boss_hp_fill_hot_danny_3x.png",
@@ -236,6 +236,8 @@ const PLATE_NAMES := {
 	&"danny": "res://Assets/UI/boss_plate_name_danny_3x.png",
 	&"carter": "res://Assets/UI/boss_plate_name_carter_3x.png",
 	&"liam_pair": "res://Assets/UI/boss_plate_name_liam_pair_3x.png",
+	# Liam alone, once Bixby has coughed him up (LiamScript).
+	&"liam": "res://Assets/UI/boss_plate_name_liam_a_3x.png",
 	&"jordan": "res://Assets/UI/boss_plate_name_jordan_3x.png",
 }
 

@@ -117,9 +117,25 @@ const BEAM_HIT_THICKNESS := 26.0
 const BEAM_GROW_TIME := 0.09
 const BEAM_FADE_TIME := 0.5
 
+#SONIC LANES (BixbySonicLanesScript)
+# The spin's warning: each beam's band laid flat on the floor where it will come out (beam_band),
+# BEAM_HIT_THICKNESS across, drawn in code in the shower markers' contract, which is the nugget target's: the
+# first two looks a quarter of the warning each, then the last two flashing LANE_FLASH_TIME apart. The beams'
+# own blues, going white-hot. Each look is [fill, rim, rim width in px].
+const LANE_LOOKS := [
+	[Color("#3F3F74", 0.28), Color("#5B6EE1", 0.6), 3.0],
+	[Color("#3F3F74", 0.38), Color("#639BFF", 0.9), 3.0],
+	[Color("#5FCDE4", 0.35), Color("#FFFFFF", 1.0), 6.0],
+	[Color("#3F3F74", 0.38), Color("#5FCDE4", 1.0), 6.0],
+]
+const LANE_FLASH_TIME := 0.075
+# The beams grow out over the bands, and the bands fade out under them as they do.
+const LANE_FADE_TIME := BEAM_GROW_TIME
+
 # The beams sweep in the floor plane, which the arena camera sees at a shallow angle: this is how much
 # that squashes the sweep on screen, and how long a beam reads once foreshortened, as a multiple of
-# BEAM_REACH - longest broadside, shortest pointing at or away from the camera.
+# BEAM_REACH - longest broadside, shortest pointing at or away from the camera. They reach the ropes now
+# (beam_reach), so the length is only what a mouth outside the ropes would fall back to.
 const FLOOR_FLATTEN := 0.36
 const BEAM_LENGTH_MIN := 0.45
 const BEAM_LENGTH_SPAN := 1.55
@@ -193,6 +209,39 @@ static func beam_length(azimuth: float) -> float:
 		+ BEAM_LENGTH_SPAN * Vector2(cos(azimuth), sin(azimuth) * BEAM_LENGTH_DEPTH).length())
 
 
+# How far a beam out of a mouth at `from`, reading at screen angle `angle`, runs before it is over the
+# ropes. A mouth already outside them (he is drawn tall, and can stand right against the back rope) is
+# left to scream as far as it likes.
+static func room_to_ropes(from: Vector2, angle: float, ropes: Rect2) -> float:
+	if not ropes.has_point(from):
+		return INF
+	var along := Vector2.RIGHT.rotated(angle)
+	var room := INF
+	if absf(along.x) > 0.001:
+		room = minf(room, ((ropes.end.x if along.x > 0.0 else ropes.position.x) - from.x) / along.x)
+	if absf(along.y) > 0.001:
+		room = minf(room, ((ropes.end.y if along.y > 0.0 else ropes.position.y) - from.y) / along.y)
+	return room
+
+
+# How far a full-grown beam out of a mouth at `from`, pointing along screen angle `angle` for a head at
+# `azimuth`, runs: right up to the ropes, whichever way it points and wherever he spins (the user, 2026-09-28:
+# the spin reaches the full length of the arena). Only a mouth outside the ropes, which his bounds keep from
+# happening while he spins, falls back to the drawn length the art reads at (beam_length).
+static func beam_reach(azimuth: float, from: Vector2, angle: float, ropes: Rect2) -> float:
+	var room := room_to_ropes(from, angle, ropes)
+	return room if room < INF else BEAM_REACH * SCALE * beam_length(azimuth)
+
+
+# The full-grown beam out of `mouth`, in MOUTH_ANCHORS' form, with his feet at `feet`: [where it leaves his
+# maw, its screen angle, its length], in px. What the sweep hurts, and what the spin's warning lays down.
+static func beam_band(mouth: Array, feet: Vector2, ropes: Rect2) -> Array:
+	var azimuth := deg_to_rad(mouth[0])
+	var origin := feet + BixbyBeastArtLayout.local(Vector2(mouth[1], mouth[2]))
+	var angle := beam_angle(azimuth)
+	return [origin, angle, beam_reach(azimuth, origin, angle, ropes)]
+
+
 # His mouths `into` seconds through step `step` of the spin loop, in MOUTH_ANCHORS' form. Each head glides
 # from its maw on that frame to its maw on the next, so the beams turn as smoothly as the rate he spins
 # at, not a frame at a time.
@@ -235,11 +284,12 @@ static func ring_segments(count: int) -> Array:
 	return out
 
 
-# Whether a segment standing at `at` on screen, on sheet row `row`, is drawn (RING_GROUND_BOXES).
-static func ring_segment_shown(at: Vector2, row: int) -> bool:
+# Whether a segment standing at `at` on screen, on sheet row `row`, is drawn (RING_GROUND_BOXES), inside `rope_art`
+# (Liam's fire rings pass their own, which starts under his row).
+static func ring_segment_shown(at: Vector2, row: int, rope_art := RING_ROPE_ART) -> bool:
 	var ground: Array = RING_GROUND_BOXES[row]
-	return at.x - ground[0] >= RING_ROPE_ART.position.x and at.x + ground[0] <= RING_ROPE_ART.end.x \
-		and at.y + ground[2] <= RING_ROPE_ART.end.y and at.y + RING_CREST_TOPS[row] >= RING_ROPE_ART.position.y
+	return at.x - ground[0] >= rope_art.position.x and at.x + ground[0] <= rope_art.end.x \
+		and at.y + ground[2] <= rope_art.end.y and at.y + RING_CREST_TOPS[row] >= rope_art.position.y
 
 
 # The unit ellipse's screen perimeter, and the floor angle `length` of its screen arc on from the front centre

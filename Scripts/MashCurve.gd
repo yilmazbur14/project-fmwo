@@ -2,8 +2,9 @@ extends RefCounted
 
 # The fill curve every alternating mash in the game shares: the finisher's (PlayerFinisher: its one bar,
 # its tiered bars in FinisherTierMeter and its scripted charge), the grab escape's (PlayerGrabEscape), the
-# mine trap's (ComputahTrapped), Danny's sumo rope (DannyBossTugOfWar) and Matt's Deafening Yell
-# (MattGlassRow). Each mash keeps its own gain per press and drain per second, and this bends them by how
+# mine trap's (ComputahTrapped) and Matt's Deafening Yell (MattGlassRow). Danny's sumo rope
+# (DannyBossTugOfWar) is the one mash off it, on the user's word: the same effort wherever the rope is.
+# Each mash keeps its own gain per press and drain per second, and this bends them by how
 # full the bar already is: the first half comes in a few presses, and the last quarter is the push, each
 # press a sliver of the first ones against a drain that stays low until then and climbs hard at the top.
 # A tiered mash bends each bar on its own fill, so every bar starts easy again.
@@ -12,7 +13,7 @@ extends RefCounted
 # DRAIN_AT_FULL is 1, so a mash's own drain is what it pulls back at a full bar. Those drains are fitted
 # so every mash asks about 5.5 to 7 steady presses a second (a tiered one for its first bar), and 8 wins
 # them all. Moving any number here moves those rates, so re-measure them with it (mash_tiers, mine_mash,
-# matt_deafen, danny_sumo tier=table).
+# matt_deafen).
 
 # A press is worth GAIN_AT_EMPTY of the mash's own gain on an empty bar and GAIN_AT_FULL at the top.
 # GAIN_FALL is how soon it falls between them: higher drops it sooner.

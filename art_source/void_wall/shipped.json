@@ -1,0 +1,16 @@
+{
+  "shipped": "2026-09-28",
+  "approved_take": "B (void_wall_low), the user's pick: \"lower walls\"",
+  "copied_by": "the coordinator, at the user's request (\"copy the walls in\"), with cp -n (never overwrites)",
+  "files": {
+    "Assets/Environment/Void/void_wall.png": {
+      "from": "art_source/void_wall/approval/void_wall_low.png",
+      "sha256": "9a5149ac70eab2950d4004b0f1c294aeaf965176b7d1c073e2a3017c61b90476"
+    },
+    "Assets/Environment/Void/void_wall.aseprite": {
+      "from": "art_source/void_wall/approval/void_wall_low.aseprite",
+      "sha256": "3e5ae635c7fb36351031da0e04e328874be847c315467332685c6a32d1a04655"
+    }
+  },
+  "sheet": {"size": [256, 30], "hframes": 8, "frame": [32, 30], "anchor": [16, 29]}
+}

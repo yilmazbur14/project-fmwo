@@ -1,7 +1,7 @@
 extends Node2D
 
 # One of Matt's Mystic Shots: an icy bolt that flies on a 22.5 degree lattice, comes back off the
-# ropes five times and bursts on the sixth.
+# ropes `bounces` times (MattStateMachine.mystic_bounces) and bursts on the next contact.
 #
 # IT REPORTS ITS OWN HITS, as Josh's thrown cards do, because it needs the result: a hit bursts it, and
 # a parry, a block or a dash lets it fly on through the player, whole (AttackCatalog's
@@ -73,7 +73,7 @@ func _physics_process(delta: float) -> void:
 
 
 # A rope contact: the component that went past the rope is mirrored back inside it, and a corner that
-# took both at once is still one bounce. The sixth contact is the end of it.
+# took both at once is still one bounce. The contact after the last bounce is the end of it.
 func _off_the_ropes() -> bool:
 	var at := global_position
 	var rope := &""

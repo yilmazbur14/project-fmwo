@@ -13,139 +13,206 @@ extends Node
 
 const VsCard := preload("res://Scripts/VsCard.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
-const CARD_BOMB_SCENE := preload("res://Scenes/Bosses/JoshCardBombScene.tscn")
-const JoshArtLayout := preload("res://Scripts/JoshArtLayout.gd")
 const JoshCardsBroken := preload("res://Scripts/States/JoshCards/JoshCardsBroken.gd")
 const JoshCardsJuggled := preload("res://Scripts/States/JoshCards/JoshCardsJuggled.gd")
+const JoshCardsWildCards := preload("res://Scripts/States/JoshCards/JoshCardsWildCards.gd")
+const JoshCardsSummon := preload("res://Scripts/States/JoshCards/JoshCardsSummon.gd")
+const JoshCardsHandSlam := preload("res://Scripts/States/JoshCards/JoshCardsHandSlam.gd")
+const JoshCardsPortalMonte := preload("res://Scripts/States/JoshCards/JoshCardsPortalMonte.gd")
+const JoshHandsRig := preload("res://Scripts/JoshHandsRig.gd")
+const JoshHandsLayout := preload("res://Scripts/JoshHandsLayout.gd")
+const JoshMonteLayout := preload("res://Scripts/JoshMonteLayout.gd")
 
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/JoshPreFight.dialogue"
 const HAZARD_GROUP := "josh_cards_hazard"
 
-#THE ARENA, IN THIRDS
-# The inside edges of the ropes, as Mason's Carter call-in measures them, split into three equal
-# columns. Every giant card, its floor shadow, its hitbox and the monte's reveal lookup derive from
-# these, so what is drawn and what hurts can never drift apart. Nothing else may hardcode them.
+#THE ARENA
+# The inside edges of the ropes, as Mason's Carter call-in measures them: his clones stand inside them,
+# his cards leave the floor at them, and his own bounds (JoshCardsScript.ground_bounds) are cut from them.
 const ROPES := Rect2(113, 114, 1692, 853)
-const THIRDS := 3
-const THIRD_WIDTH := 564.0
 
-# The cycle: he mounts his card, lays three giant ones over the arena, works the crowd from the air,
-# drops off in front of the player, throws his volley and is open while he gets his breath back.
-# The phase is locked once, at the top of the cycle, so a hit landing mid-cycle never changes what
-# the rest of it does.
+# The fight opens on his Summon (JoshCardsSummon) behind the VS card: his two card-gate portals and the card
+# hands that come out of them (JoshHandsRig), there for the rest of the fight. Then the cycle, since 2026-09-29:
+# the next attack in ATTACK_ORDER, his Hand Slam (JoshCardsHandSlam), Wild Cards (JoshCardsWildCards) and his
+# Portal Monte (JoshCardsPortalMonte) in turn, each followed by his Recover, the punish window, then the next. A Break
+# carries the order on.
 
 #TUNING (seconds, px and px/s)
-# How high above the floor his feet ride. Low enough that a high pass row still leaves his whole
-# sprite on screen: JoshArtLayout.RIDE_HEADROOM is how far his riding frames reach above his feet, so
-# every pass row has to be at least glider_height + that or the top of the screen cuts his hat off.
+# How high above the floor his feet rode his card. Nothing rides it now, but his shadow's frames are
+# still scaled against it (JoshCardsScript.place).
 @export var glider_height := 140.0
-# Mounting: the card grows under him, then he rises.
-@export var mount_grow_time := 0.4
-@export var mount_rise_time := 0.5
-@export var mount_settle := 0.3
-# His passes across the arena: the row he lays the cards from, how fast he crosses, and the x he
-# turns around at, well off either side of the screen.
-# These are his floor point, and he is drawn glider_height above it, so the top rows put him behind
-# his own health bar for a moment. That is fine - the bar is on a CanvasLayer and draws over him -
-# and keeping the rows high is what stops the top of the arena becoming a bomb-free lane.
-@export var pass_y := 365.0
-@export var glide_speed := 950.0
-@export var pass_left_edge := -300.0
-@export var pass_right_edge := 2220.0
-# The rows the card storm's passes run along, in turn.
-@export var pass_rows: Array[float] = [365.0, 620.0, 460.0, 780.0]
-# How far above its resting place a laid card waits, off the top of the screen, and slides down from
-# through its warning. Three full-height cards hanging in view would hide the whole fight, so only
-# their floor shadows mark the thirds until one drops.
-@export var card_hover_height := 900.0
-# Phase two: how long he holds each card up face-out before laying it flat.
-@export var face_show_time := 0.8
-# A bomb every this many px of travel, except on the third that is warning or slamming.
-@export var bomb_spacing := 320.0
-@export var monte_bomb_spacing := 250.0
-@export var fast_bomb_spacing := 180.0
-@export var fast_bomb_time := 3.0
-@export var bomb_fuse := 1.1
-# The drawn fireball's radius: the blast hurts exactly as far as it reads, so the art is scaled to
-# match it (JoshArtLayout.FINAL_BOMB.blast_scale).
-@export var bomb_blast_radius := 112.0
-# How far each drop leans from where he is toward where the player is, and how far it then scatters.
-# A lean, never a lock: a bomb has to be walkable out of, so it must never land on the player.
-@export var bomb_player_lean := 0.6
-@export var bomb_scatter := 200.0
-# The falling cards, strictly one at a time: the warning each gets, and the beat after it lands.
-@export var card_warning := 1.4
-@export var card_gap := 0.5
-# The three-card monte. Trackability budget: raising swap_count above 6 or dropping swap_time below
-# 0.3 makes it a coin flip.
-@export var swap_count := 5
-@export var swap_arc := 90.0
-@export var swap_time_first := 0.5
-@export var swap_time_last := 0.35
-@export var swap_time_cycles := 3
-@export var swap_gap := 0.15
-@export var lock_in_time := 0.7
-# The reveal burst's own length, so the call lands on its last frame.
-@export var reveal_flip_time := 0.32
-@export var reveal_hold := 0.8
-@export var reveal_dismiss := 0.4
-@export var status_time := 6.0
-# Dropping off: where he lands relative to the player, and how fast he dives there.
-@export var throw_distance := 520.0
+# How fast a Break far from where it drives him slides him there (JoshCardsBroken).
 @export var dive_speed := 1400.0
-@export var dismount_land_time := 0.35
-# The thrown cards. throw_interval is release to release; PlayerDefense.parry_mash_lockout is
-# 0.5 s, so a player who whiffs card 1 still has a credited press in time for card 2. Do not shorten
-# it below 0.65 without re-reading PlayerDefense.on_block_pressed().
-# Four rather than three, because this volley is the fight's only parry: his bombs and his falling
-# cards can't be parried at all, and the volleys are a cycle apart, well past
-# PlayerDefense.parry_streak_timeout, so the streak always restarts at tier 1 and the hype he pays
-# is a flat 15 + 20 + 25 every time. Under the feel_v2 rates three cards leave a cycle paying 78 of
-# the meter's 100, so it no longer fills once a cycle the way it used to; the fourth card is the
-# tier-3 parry that puts it back. Its own damage is free: the cards are 0.9 s apart and the
-# i-frames are 1.0 s, so a player who eats them takes the same hits either way.
-@export var throw_tell := 0.45
-@export var throw_interval := 0.9
-@export var throw_cards := 4
-@export var card_speed := 900.0
-@export var card_hit_size := Vector2(90, 90)
-# Off: the thrown cards fly straight. Kept as a knob in case they ever need to lead the player.
-@export var card_homing_time := 0.0
-@export var throw_recovery_delay := 0.35
 # The punish window.
-@export var recover_time := 3.5
+@export var recover_time := 3.0
+# How many of his attacks run back to back before his Recover opens a window (the user, 2026-10-04; three, his whole
+# rotation, since 2026-10-06): each before the last goes straight on into the next in ATTACK_ORDER (end_attack). A
+# Portal Monte whose real him was parried opens him at once, and a window - his Recover or a Break - starts the count
+# again.
+@export var attacks_per_window := 3
 
-# How close to the turning point off-screen counts as having reached it.
-const PASS_TURN_DISTANCE := 40.0
+#WILD CARDS (JoshCardsWildCards)
+# Six clones (five until the tuning round of 2026-10-04) a hop apart, spread across the floor
+# (JoshCardsWildCards.SPOT_CHOICES) and never nearer the player than wild_player_clearance.
+@export var wild_clones := 6
+@export var wild_hop_time := 0.7
+@export var wild_player_clearance := 250.0
+# From the last clone to the volley (0.7 s until the tuning round of 2026-10-04); he gates off the screen
+# wild_exit_beat into it. Drawn out, up to the cap, when the player needs longer than the warning, less
+# wild_escape_reaction to see the last lanes, to walk clear of them all.
+@export var wild_warning := 0.5
+@export var wild_exit_beat := 0.2
+@export var wild_warning_cap := 1.4
+@export var wild_escape_reaction := 0.2
+# Three lanes a clone, this far apart; the cards' speed and the square of each that hurts.
+@export var wild_spread_degrees := 20.0
+@export var wild_card_speed := 1100.0
+@export var wild_card_size := 60.0
+# The clones scatter this long after they throw; he gates back in this long after the last card has
+# gone, this far from the player.
+@export var wild_clone_linger := 0.25
+@export var wild_return_beat := 0.3
+@export var wild_return_range := Vector2(420, 720)
 
+#HAND SLAM (JoshCardsHandSlam)
+# Six slams (four until the tuning round of 2026-10-04), the hands taking turns. Landing to landing is track + lock +
+# drop, inside the player's i-frames and a lead over the dash immunity's cooldown, and lock + drop is the red badge's
+# read (JoshHandsLayout.invariants).
+@export var hand_slams := 6
+@export var hand_command_time := 0.5
+@export var hand_fly_time := 0.5
+@export var hand_first_track := 0.6
+@export var hand_track_time := 0.45
+@export var hand_lock_time := 0.13
+@export var hand_drop_time := 0.23
+# A landed hand is pinned, then rises back to deck; a parried one shatters, then re-forms on deck: either before
+# its next turn. The last one stays down through the settle, and then both fly home.
+@export var hand_pin_time := 0.15
+@export var hand_rise_time := 0.25
+@export var hand_settle_time := 0.35
+@export var hand_home_time := 0.5
+@export var hand_shatter_time := 0.3
+@export var hand_reform_time := 0.45
+# How high they hover, how far one rears up as it locks, how fast the spot under it chases the player's feet, how
+# far beside the player the other waits, and how far over the locked spot the badge's tip stands.
+@export var hand_hover_height := 210.0
+@export var hand_lock_rise := 36.0
+@export var hand_track_speed := 1100.0
+@export var hand_deck_offset := 240.0
+@export var hand_badge_rise := 150.0
+# The lock aims where the player is heading (the user, 2026-10-04): their feet led by hand_lead_time of how fast they
+# were moving, at most hand_lead_max px on either axis, a walk's own lead, so a dash never throws it further. Walking
+# on lands under it; stopping, turning or doubling back a reaction after the lock clears it (JoshHandsLayout.invariants).
+# Only a player heading somewhere is led: one whose feet got less than hand_lead_straightness as far as they walked over
+# the last hand_lead_window - zigzagging on the spot - is locked on their feet, so a wiggle never throws it off them.
+@export var hand_lead_time := 0.42
+@export var hand_lead_max := 252.0
+@export var hand_lead_window := 0.5
+@export var hand_lead_straightness := 0.5
+# A string with every slam parried or dodged pays this, and the crowd cheers; each landing shakes the view, and a
+# parry stops the fight dead a beat.
+@export var hand_clean_hype := 10.0
+@export var hand_clean_cheer := 2.0
+@export var hand_impact_shake := 10.0
+@export var hand_parry_hit_stop := 0.06
+
+#GUN HANDS (JoshGunHands, a layer inside Wild Cards)
+# Out to the sides as finger guns, a sweep up and down, a stop and a charge under the yellow badge, one volley of two
+# beams, and home; Wild Cards holds its fifth clone until gun_clear_gap after the beams are gone. The stop is at
+# out + sweep, the volley a charge later (JoshHandsLayout.invariants).
+@export var wild_guns := true
+@export var gun_out_time := 0.40
+@export var gun_sweep_time := 1.50
+@export var gun_sweep_period := 1.00
+@export var gun_glide_time := 0.15
+@export var gun_charge_time := 1.00
+@export var gun_beam_live := 0.35
+@export var gun_beam_fade := 0.20
+@export var gun_back_time := 0.50
+@export var gun_clear_gap := 0.15
+# How far from the aimed row the other hand's row is cut off, and how hard the volley shakes the view.
+@export var gun_row_offset := 220.0
+@export var gun_fire_shake := 6.0
+
+#PORTAL MONTE (JoshCardsPortalMonte)
+# He dives up into a big gate and three small ones open round the player, each bursting in turn: the one under the red
+# badge is really him (parry it), the two under the pale X are fakes (don't). Up to monte_rounds rounds of three (five
+# since 2026-10-06, three before); each burst is monte_show under its mark, then a monte_dash lunge to its contact, the
+# next mark monte_gap after (monte_cadence). The read and the dash are held to their floors in
+# JoshMonteLayout.invariants.
+@export var monte_rounds := 5
+@export var monte_dive_time := 0.50
+@export var monte_deal_time := 0.25
+@export var monte_open_time := 0.30
+@export var monte_show := 0.36
+@export var monte_dash := 0.18
+@export var monte_gap := 0.08
+# How far out the small gates open, and never nearer than (JoshMonteLayout.place).
+@export var monte_radius := 320.0
+@export var monte_min_radius := 220.0
+# A parried real him staggers out onto the floor, knocked monte_knock px back toward his gate, and his Recover is
+# monte_parry_recover_bonus longer; with no parry he drops back out of his gate after the last round.
+@export var monte_stagger_time := 0.35
+@export var monte_knock := 150.0
+@export var monte_emerge_time := 0.50
+@export var monte_parry_recover_bonus := 1.0
+# What a bitten fake costs (Carter's).
+@export var monte_feint_stamina := 40.0
+# The user's four questions on it (2026-09-29), each on its default until they answer: the player held in place for
+# it (off: free to move, every burst homing in on them); a parried real him ends it and opens him (off: every round
+# plays out, a parried figure breaking as Carter's clones do); the hands deal the small gates (off: they just rest); a
+# bitten fake makes the next burst a punish nothing answers (off: it costs only the stamina and the streak). The user
+# answered the second on 2026-10-04: off, every round plays out (a parried real him still opens him once it is over,
+# end_attack).
+@export var monte_lock_player := true
+@export var monte_parry_ends := false
+@export var monte_hands_deal := true
+@export var monte_feint_punishes := true
+
+# His attacks in turn, one a cycle, from the first after his Summon (start_cycle).
+var ATTACK_ORDER: Array[String] = ["HandSlam", "WildCards", "PortalMonte"]
+# Each of the player wrappers' missing-method warnings, once.
+var warned := {}
 var player_defeated := false
 var cycles_started := 0
-# 0 for the card storm, 1 for the monte. Read from the body once, at the top of each cycle.
-var cycle_phase := 0
-var phase_two_cycles := 0
-var warned_no_status := false
+# His attacks since his last window.
+var attacks_since_window := 0
+# His portals and his card hands.
+var hands: Node
 # The pre-fight lines' balloon, which a held skip takes down, and whether those lines have handed
 # over to the VS card yet.
 var pre_fight_balloon: Node
 var pre_fight_over := false
 
-# The three giant cards this cycle laid, and what is under each one. Both are indexed by third, so a
-# monte swap swaps them together and the reveal can just look up where the player is standing.
-var slots: Array[int] = [0, 1, 2]
-var cards: Array = [null, null, null]
-
-# His passes across the arena, shared by the card storm and the monte.
-var pass_row := 0
-var pass_edge := 0.0
-var pass_travel := 0.0
-# Bombs he has wound up to drop, oldest first: where each will land and how long he has held it.
-var bombs_in_hand: Array[Dictionary] = []
-
 
 func _ready() -> void:
-	# The Break window and the juggle it pays out are built here rather than in his scene.
+	# The Break window, the juggle it pays out, his hands, his summon and his attacks are built here rather than in
+	# his scene.
 	_add_down_state(JoshCardsBroken.new(), "Broken")
 	_add_down_state(JoshCardsJuggled.new(), "Juggled")
+	hands = JoshHandsRig.new()
+	hands.name = "HandsRig"
+	hands.body = JoshCardsCharacterBody
+	hands.state_machine = self
+	add_child(hands)
+	var wild_cards := JoshCardsWildCards.new()
+	wild_cards.name = "WildCards"
+	wild_cards.body = JoshCardsCharacterBody
+	add_child(wild_cards)
+	var summon := JoshCardsSummon.new()
+	summon.name = "Summon"
+	summon.body = JoshCardsCharacterBody
+	add_child(summon)
+	var hand_slam := JoshCardsHandSlam.new()
+	hand_slam.name = "HandSlam"
+	hand_slam.body = JoshCardsCharacterBody
+	add_child(hand_slam)
+	var portal_monte := JoshCardsPortalMonte.new()
+	portal_monte.name = "PortalMonte"
+	portal_monte.body = JoshCardsCharacterBody
+	add_child(portal_monte)
+	JoshHandsLayout.assert_invariants(self)
+	JoshMonteLayout.assert_invariants(self)
 
 	for child in get_children():
 		if child is State:
@@ -195,20 +262,6 @@ func on_child_transition(state, new_state_name):
 	current_state = new_state
 
 
-#THE ARENA, IN THIRDS
-
-static func third_rect(index: int) -> Rect2:
-	return Rect2(ROPES.position.x + index * THIRD_WIDTH, ROPES.position.y, THIRD_WIDTH, ROPES.size.y)
-
-
-static func third_centre(index: int) -> Vector2:
-	return third_rect(index).get_center()
-
-
-static func third_at(x: float) -> int:
-	return clampi(floori((x - ROPES.position.x) / THIRD_WIDTH), 0, THIRDS - 1)
-
-
 #THE CYCLE
 
 # His lines call no beats, so the intro hands the dialogue over and waits for it to end.
@@ -238,21 +291,34 @@ func _on_dialogue_ended(_dialogue: Object) -> void:
 
 func _on_post_dialogue_pre_fight_timer_timeout() -> void:
 	JoshCardsCharacterBody.start_music()
-	start_cycle()
+	on_child_transition(current_state, "Summon")
 
 
+# His next attack in ATTACK_ORDER; a Break or a finisher carries the order on rather than starting it again. Hands
+# his Break took away form again first, which the Hand Slam waits for and Wild Cards doesn't need.
 func start_cycle() -> void:
-	cycle_phase = 1 if JoshCardsCharacterBody.phase_two else 0
+	var attack: String = ATTACK_ORDER[cycles_started % ATTACK_ORDER.size()]
 	cycles_started += 1
-	if cycle_phase == 1:
-		phase_two_cycles += 1
-	on_child_transition(current_state, "Mount")
+	hands.ensure_formed()
+	on_child_transition(current_state, attack)
 
 
-# The shuffle tightens over the phase-two cycles, up to its cap.
-func swap_time() -> float:
-	var along := clampf(float(phase_two_cycles - 1) / float(maxi(swap_time_cycles, 1)), 0.0, 1.0)
-	return lerpf(swap_time_first, swap_time_last, along)
+# An attack is over: his Recover, or the next attack until attacks_per_window have run since his last window.
+# `earned` - the real him parried in his Portal Monte - opens the window at once.
+func end_attack(state, earned := false) -> void:
+	if state != current_state:
+		return
+	attacks_since_window += 1
+	if attacks_since_window < attacks_per_window and not earned:
+		start_cycle()
+		return
+	attacks_since_window = 0
+	on_child_transition(state, "Recover")
+
+
+# The Break gauge's one read for a volley's perfect dodges (JoshCardsScript.BREAK_EARNS).
+func pay_volley_read(hit: RefCounted) -> bool:
+	return states["WildCards"].pay_read(hit)
 
 
 # His one punish window per cycle.
@@ -279,6 +345,101 @@ func _on_finisher_stagger_timer_timeout() -> void:
 	start_cycle()
 
 
+# One burst of his Portal Monte, whole: its mark, its dash and the gap to the next mark.
+func monte_cadence() -> float:
+	return monte_show + monte_dash + monte_gap
+
+
+#THE PLAYER, FOR HIS PORTAL MONTE (CarterStateMachine's, each guarded so a player without it only loses that part)
+
+# Held for a parry-only sequence: no walking, no dash, no punch, while the guard, its parry window and the streak
+# behind it all keep working. Never is_grabbed or is_talking, which PlayerScript._input returns on before the block
+# branch: the sequence would be unparryable with no error at all.
+func lock_player() -> void:
+	var player := get_player()
+	if player and player.has_method("lock_actions"):
+		player.lock_actions()
+	else:
+		_warn_once("lock", "Josh: player has no lock_actions(); the Monte can't root them")
+
+
+func unlock_player() -> void:
+	var player := get_player()
+	if player and player.has_method("unlock_actions"):
+		player.unlock_actions()
+
+
+# Turned to meet each burst as its mark comes up. It changes nothing about the parry - the hit's origin is the
+# player's own hurtbox centre - and unlock_actions() clears it.
+func face_player_at(point: Vector2) -> void:
+	var player := get_player()
+	if player and player.has_method("face_point"):
+		player.face_point(point)
+
+
+func clear_player_facing() -> void:
+	var player := get_player()
+	if player and player.has_method("clear_face_point"):
+		player.clear_face_point()
+
+
+# On the exact frame each mark comes up: a press that parried nothing counts against the next one
+# (PlayerDefense.parry_mash_lockout), so without it a whiff on one burst can leave the next unparryable. It
+# deliberately does not excuse mashing within one burst.
+func rearm_parry() -> void:
+	var defense := _defense()
+	if defense and defense.has_method("rearm_parry"):
+		defense.rearm_parry()
+	else:
+		_warn_once("rearm", "Josh: PlayerDefense has no rearm_parry(); a whiffed burst can lock out the next")
+
+
+func end_parry_streak() -> void:
+	var defense := _defense()
+	if defense and defense.has_method("end_parry_streak"):
+		defense.end_parry_streak()
+	else:
+		_warn_once("streak", "Josh: PlayerDefense has no end_parry_streak(); a bitten fake keeps the streak")
+
+
+func drain_stamina(amount: float) -> void:
+	var defense := _defense()
+	if defense and defense.has_method("drain_stamina"):
+		defense.drain_stamina(amount)
+	else:
+		_warn_once("stamina", "Josh: PlayerDefense has no drain_stamina(); a bitten fake costs nothing")
+
+
+# Whether the signal was there. When it wasn't, the caller polls the block action in Physics_Update instead - and only
+# there, since polling in both would bill one press twice.
+func connect_block_presses(handler: Callable) -> bool:
+	var defense := _defense()
+	if defense and defense.has_signal("block_pressed"):
+		if not defense.block_pressed.is_connected(handler):
+			defense.block_pressed.connect(handler)
+		return true
+	_warn_once("presses", "Josh: PlayerDefense has no block_pressed signal; fakes fall back to polling")
+	return false
+
+
+func disconnect_block_presses(handler: Callable) -> void:
+	var defense := _defense()
+	if defense and defense.has_signal("block_pressed") and defense.block_pressed.is_connected(handler):
+		defense.block_pressed.disconnect(handler)
+
+
+func _defense() -> Node:
+	var player := get_player()
+	return player.get("defense") if player else null
+
+
+func _warn_once(key: String, message: String) -> void:
+	if warned.has(key):
+		return
+	warned[key] = true
+	push_warning(message)
+
+
 func get_player() -> Node2D:
 	return get_tree().current_scene.get_node_or_null("Arena/MainPlayer/CharacterBody2D")
 
@@ -291,106 +452,20 @@ func add_hazard(hazard: Node2D, at: Vector2, layer: Node2D) -> void:
 	hazard.global_position = at.round()
 
 
-#HIS PASSES OVER THE ARENA
-
-func begin_passes() -> void:
-	pass_row = 0
-	pass_travel = 0.0
-	pass_edge = pass_right_edge if JoshCardsCharacterBody.fly_velocity.x >= 0.0 else pass_left_edge
-	bombs_in_hand.clear()
-
-
-# He keeps crossing the arena, turning around well off-screen and dropping a row each pass, and leaves
-# a bomb behind him every `spacing` px of travel. `keep_out_third` is the third that is warning or
-# slamming, which never gets a bomb; -1 when none is.
-func advance_pass(delta: float, spacing: float, keep_out_third: int) -> void:
-	var body := JoshCardsCharacterBody
-	var before: Vector2 = body.ground_position
-	var row: float = pass_rows[pass_row % pass_rows.size()]
-	var left: float = body.fly_toward(Vector2(pass_edge, row), glide_speed, delta)
-	pass_travel += before.distance_to(body.ground_position)
-	if left < PASS_TURN_DISTANCE:
-		pass_edge = pass_left_edge if pass_edge > 0.0 else pass_right_edge
-		pass_row += 1
-	while pass_travel >= spacing:
-		pass_travel -= spacing
-		drop_bomb(keep_out_third)
-	_release_bombs(delta, keep_out_third)
-
-
-# He winds up a bomb. It only leaves his hand on the release frame of his drop, so the card he is
-# still holding up is never drawn twice.
-func drop_bomb(keep_out_third: int) -> void:
-	var body := JoshCardsCharacterBody
-	# Only while he is over the arena himself: nothing appears out of an off-screen turn.
-	if not ROPES.has_point(body.ground_position):
-		return
-	var point := bomb_point(body.ground_position)
-	# The keep-out rule is judged on where it lands, not on where he was standing.
-	if third_at(point.x) == keep_out_third:
-		return
-	bombs_in_hand.append({point = point, held = 0.0})
-	body.play_anim(&"bomb", &"glide")
-
-
-# Held time counts the frame the wind-up started on, as his animation's clock does, so a bomb leaves
-# his hand on the very frame that draws it leaving.
-func _release_bombs(delta: float, keep_out_third: int) -> void:
-	var release_at := JoshArtLayout.time_to_step(&"bomb", JoshArtLayout.BOMB_RELEASE_STEP)
-	for bomb in bombs_in_hand:
-		bomb.held += delta
-	while not bombs_in_hand.is_empty() and bombs_in_hand[0].held >= release_at:
-		var point: Vector2 = bombs_in_hand.pop_front().point
-		# A third that started warning during the wind-up is kept clear all the same.
-		if third_at(point.x) != keep_out_third:
-			_spawn_bomb(point)
-
-
-func _spawn_bomb(point: Vector2) -> void:
-	var body := JoshCardsCharacterBody
-	var bomb := CARD_BOMB_SCENE.instantiate()
-	bomb.fuse = bomb_fuse
-	bomb.blast_radius = bomb_blast_radius
-	# It leaves his hand where the release frame draws it, wherever it is aimed.
-	var hand: Vector2 = body.air.global_position + JoshArtLayout.local(JoshArtLayout.HAND_BOMB, body.sprite.flip_h)
-	bomb.fall_offset = hand - point
-	add_hazard(bomb, point, body.floor_layer)
-
-
-# Where a bomb goes: leaned from him toward the player and then scattered, so the floor he is working
-# crowds up without any single bomb being aimed at the player.
-func bomb_point(from: Vector2) -> Vector2:
-	var point := from
-	var player := get_player()
-	if player:
-		point = from.lerp(player.global_position, bomb_player_lean)
-	point += Vector2(randf_range(-bomb_scatter, bomb_scatter), randf_range(-bomb_scatter, bomb_scatter))
-	return point.clamp(ROPES.position, ROPES.end)
-
-
-# The monte's prize. The defence coder owns apply_status; until it lands the reveal still reads and
-# the fight carries on.
-func apply_status(kind: StringName, seconds: float) -> void:
-	var player := get_player()
-	if player and player.has_method("apply_status"):
-		player.apply_status(kind, seconds)
-	elif not warned_no_status:
-		warned_no_status = true
-		push_warning("JoshCards: player has no apply_status(); '%s' had no effect" % kind)
-
-
 #HIS BREAK AND THE JUGGLE
 
-# A full Break gauge (BossBreakGauge): whatever he was doing stops, everything he sent out goes, and he
-# is Broken until his time is up or the finisher's uppercut ends it.
+# A full Break gauge (BossBreakGauge): whatever he was doing stops, everything he sent out goes, his hands
+# dissolve into their portals, and he is Broken until his time is up or the finisher's uppercut ends it.
 func enter_broken() -> void:
 	var body := JoshCardsCharacterBody
 	if body.defeated or body.boss_health <= 0 or player_defeated:
 		return
-	if current_state in [states.get("Intro"), states.get("Defeated"), states.get("Broken"), states.get("Juggled")]:
+	if current_state in [states.get("Intro"), states.get("Summon"), states.get("Defeated"), states.get("Broken"), states.get("Juggled")]:
 		return
 	_stop_everything()
+	attacks_since_window = 0
 	on_child_transition(current_state, "Broken")
+	hands.retract()
 
 
 # The finisher's uppercut ends the Break window instead of its own clock, as it ends his recovery.
@@ -423,12 +498,14 @@ func land_juggled(final_state_name: String) -> void:
 	current_state = final_state
 
 
-# Where his juggle's shadow lies: on his floor layer, with his bombs and his cards.
+# Where his juggle's shadow lies: on his floor layer, under his cards' lanes.
 func ground_layer() -> Node2D:
 	return JoshCardsCharacterBody.floor_layer
 
 
+# Beaten, he takes his hands and his portals with him, killed in the air or not.
 func enter_defeated() -> void:
+	hands.collapse()
 	_end_fight("Defeated")
 
 
@@ -449,12 +526,11 @@ func _end_fight(final_state_name: String) -> void:
 	on_child_transition(current_state, final_state_name)
 
 
-# Everything of his still running: his clocks, a tell over his head, everything he has sent out (the
-# monte's cards on the floor with the rest), and any bomb he has wound up but not yet let go of.
+# Everything of his still running: his clocks, a tell over his head and everything he has sent out. The
+# attack's own release() gives back the rest as it exits.
 func _stop_everything() -> void:
 	for timer in [post_dialogue_pre_fight_timer, recover_timer, finisher_stagger_timer]:
 		timer.stop()
 	ParryTell.clear(JoshCardsCharacterBody)
 	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
 		hazard.queue_free()
-	bombs_in_hand.clear()

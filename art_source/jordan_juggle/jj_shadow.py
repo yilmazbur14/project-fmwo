@@ -12,6 +12,8 @@ Re-checked for v2 (2026-09-24), and kept: what sets his footprint did not move. 
 approved maps (x 36-63 on both sprites), the hugged box still reaches x 74, and v2's sack of a tee is
 if anything wider at the hip (26 texels against v1's 23); the thin arms and legs sit inside those.
 Both sprites' silhouettes are 48 texels wide (v1 x 27-75, v2 x 29-77).
+Re-checked for the fitted tee (2026-09-28), and kept: the tee now sits well inside the sneakers'
+and the box's span, so the footprint is unchanged and this rebuilds byte-identical.
 
 He has no shadow sheet of his own.
 """

@@ -24,7 +24,6 @@ func Update(delta: float) -> void:
     
 	# A parry-only sequence roots the player: holding a direction mustn't even start the walk.
 	if input_vector.length() > speed_threshold and not player.is_action_locked:
-		print("check passed")
 		# Transition to Run state
 		# print("Transitioning to Walking State")working
 		# print("parent", get_parent())working

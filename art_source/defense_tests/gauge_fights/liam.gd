@@ -10,10 +10,13 @@ const SPEC := {
 	"body": "Arena/BixbyBeastScene/BixbyBeastCharacterBody",
 	# Below his juggle floor (about 713), so a Break leaves him where he is.
 	"home": Vector2(960, 760),
-	# His one attack that is parried, blocked and landed, and fills and drains.
-	"light": &"bixby_fire_breath",
+	# His attack that is read and landed, and fills and drains: nothing guards or parries his Flyby's curtain, so it is
+	# read by dashing through it, and a guard is broken on his shower's fireballs, the one attack of his it can take.
+	"light": &"bixby_flyby_breath",
+	"light_read": "dodge",
+	"guard_break_attack": &"bixby_fireball",
 	"strong": &"",
-	"foreign": &"josh_card_throw",
+	"foreign": &"eric_quake_wave_v2",
 	"punish_state": "Recover",
 	"broken_state": "Broken",
 	"cycle_states": ["Takeoff"],
@@ -45,26 +48,25 @@ static func park(t, home: Vector2) -> void:
 	boss.play_anim(&"recover")
 
 
-# A parry of the fire breath earlier in the run has spent that breath's one read. His fight loads the way
-# the ones whose intro is a state do, which leaves the VS card's input grace up: it is counted in real
-# time and would swallow the checks' first presses.
+# His fight loads the way the ones whose intro is a state do, which leaves the VS card's input grace up: it
+# is counted in real time and would swallow the checks' first presses.
 static func reset(t) -> void:
 	await t.skip_vs_card()
-	t.boss.breath_read = false
 	if spin_time < 0.0:
 		spin_time = t.sm.combined_spin_time
 	t.sm.combined_spin_time = spin_time
 
 
-# Only moments a read can Break him in: parrying his breath, dodging his cone, dashing through his rings or
-# beams (which roll on across the floor after the combined attack, through his dizzy spell, his takeoff and
-# his hover), and punching him in a window. The airborne ones fall to his juggle floor, the ones on the
-# ground high up the arena hop down to it, and the rest are low enough already.
+# Only moments a read can Break him in: dashing through his flyby's falling fire, dodging his cone, dashing
+# through his rings or beams (which roll on across the floor after the combined attack, through his dizzy
+# spell, his takeoff and his hover), and punching him in a window. The airborne ones fall to his juggle
+# floor, the ones on the ground high up the arena hop down to it, and the rest are low enough already.
 static func entry_cases(t) -> Array:
 	var sm = t.sm
 	var boss = t.boss
 	var combined = sm.states["Combined"]
 	var inferno = sm.states["Inferno"]
+	var flyby = sm.states["Flyby"]
 	var hover_high := func():
 		boss.height = boss.HOVER_HEIGHT_PX
 		boss.ground_position = Vector2(960, 600)
@@ -75,11 +77,12 @@ static func entry_cases(t) -> Array:
 		boss.place()
 		sm.on_child_transition(sm.current_state, "Takeoff")
 	var rising := func(): return sm.current_state.name == "Takeoff" and boss.height > 0.0
-	var breathe := func():
+	var fly_by := func():
 		boss.height = boss.HOVER_HEIGHT_PX
+		boss.ground_position = Vector2(960, 640)
 		boss.place()
 		sm.attacks = []
-		sm.on_child_transition(sm.current_state, "FireBreath")
+		sm.on_child_transition(sm.current_state, "Flyby")
 	var pound_high := func():
 		boss.ground_position = Vector2(960, 520)
 		boss.place()
@@ -102,7 +105,8 @@ static func entry_cases(t) -> Array:
 	return [
 		["hovering high over the arena", hover_high, func(): return sm.current_state.name == "Hover"],
 		["taking off", take_off, rising],
-		["the fire breath's stream", breathe, func(): return sm.current_state.name == "FireBreath" and boss.current_anim == &"stream"],
+		["the flyby's first pass, its fire falling", fly_by, func(): return sm.current_state == flyby and flyby.pass_index == 0 and flyby.beat == flyby.Beat.SWEEP and flyby.curtain_live()],
+		["the flyby between its passes, off the screen", fly_by, func(): return sm.current_state == flyby and flyby.pass_index == 1 and flyby.beat == flyby.Beat.TELEGRAPH],
 		["the combined attack's pounds, high up the arena", pound_high, pounding],
 		["the combined attack's spin, high up the arena", pound_high, spinning],
 		["the dizzy spell his spin ends on", spin_short, func(): return sm.current_state == combined and combined.is_dizzy()],
@@ -116,6 +120,8 @@ static func before_kill(t) -> void:
 	var boss = t.boss
 	var sm = t.sm
 	var juggled = sm.states["Juggled"]
+	# His own defeat ends the fight here, as it did before Liam took the rest of it over (liam_takeover plays that).
+	boss.liam_follows = false
 	kill_trace.clear()
 	kill_watch = func():
 		kill_trace.append({"t": t.defense.clock, "state": str(sm.current_state.name), "anim": boss.current_anim,
@@ -159,26 +165,17 @@ static func extra(t) -> void:
 
 	t.log_p("-- what fills it, and what only drains it")
 	var source: Node2D = t.dummy_source()
-	var earning: Array = [&"bixby_fire_breath", &"bixby_sonic_beam", &"bixby_quake_ring", &"bixby_inferno"]
-	var draining: Array = [&"bixby_fireball", &"bixby_ember", &"bixby_quake_burst"]
+	var earning: Array = [&"bixby_flyby_breath", &"bixby_sonic_beam", &"bixby_quake_ring", &"bixby_inferno"]
+	var draining: Array = [&"bixby_flyby_fire", &"bixby_fireball", &"bixby_ember", &"bixby_quake_burst"]
 	t.check(earning.all(func(id): return gauge.earns_from.call(HitInfo.make(id, source, Vector2.ZERO))), "a read of any of %s fills it" % [earning])
 	t.check(draining.all(func(id): return not gauge.earns_from.call(HitInfo.make(id, source, Vector2.ZERO)) and gauge.owns_attack.call(id)), "%s never fill it, but land and drain it" % [draining])
-	t.check(not gauge.earns_from.call(HitInfo.make(&"josh_card_throw", source, Vector2.ZERO)) and not gauge.owns_attack.call(&"josh_card_throw"), "and someone else's attack does neither")
+	t.check(not gauge.earns_from.call(HitInfo.make(&"eric_quake_wave_v2", source, Vector2.ZERO)) and not gauge.owns_attack.call(&"eric_quake_wave_v2"), "and someone else's attack does neither")
 
-	t.log_p("-- a fire breath is one read, however often its stream is parried")
+	t.log_p("-- a close dash through his flyby's falling fire is a read; its burning floor never is")
 	await t.reset_gauged(home)
 	await t.settle_player(Vector2(640, 700))
-	t.check(await t.parry_once(&"bixby_fire_breath") == 3 and is_equal_approx(gauge.value, gauge.parry_gain), "a breath's first parry: %.3f" % gauge.value)
-	t.clear_iframes()
-	await t.wait(40)
-	t.check(await t.parry_once(&"bixby_fire_breath") == 3 and is_equal_approx(gauge.value, gauge.parry_gain), "a second parry of the same breath adds nothing (%.3f)" % gauge.value)
-	t.clear_iframes()
-	sm.on_child_transition(sm.current_state, "FireBreath")
-	await t.wait(2)
-	sm.on_child_transition(sm.current_state, "Idle")
-	park(t, home)
-	await t.wait(40)
-	t.check(await t.parry_once(&"bixby_fire_breath") == 3 and is_equal_approx(gauge.value, 2.0 * gauge.parry_gain), "the next breath's is a read again (%.3f)" % gauge.value)
+	t.check(await t.perfect_dodge_once(&"bixby_flyby_breath") and is_equal_approx(gauge.value, gauge.perfect_dodge_gain), "a dash through the curtain is a read: %.3f" % gauge.value)
+	t.check(not await t.perfect_dodge_once(&"bixby_flyby_fire") and is_equal_approx(gauge.value, gauge.perfect_dodge_gain), "a dash across the burning floor pays nothing (%.3f)" % gauge.value)
 	t.clear_iframes()
 
 	t.log_p("-- Broken in the air, he falls onto his juggle floor on his landing's curve")

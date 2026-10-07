@@ -1,0 +1,937 @@
+{
+ "about": "Greyson's full-meter beam in Jordan's dark maze (JordanComboMaze / JordanPathBeam): the redesign's approval pass. Two takes, a (HELLBOLT) and b (SOUL TORRENT), with the same sizes, frame counts, times and pivots, so either drops into the same code. Every size is in texels; every texel is 3 world px (Sprite2D scale 3, Line2D width = texture height x 3), which the god fight's 2/3 view shows as 2 screen px. Texture filter nearest (the project default). Glow sheets are opaque dark tones for CanvasItemMaterial BLEND_MODE_ADD, drawn under their sprite.",
+ "files": "approval/beam_<take>_<sheet>.png (horizontal strips, frame 0 leftmost) + .aseprite beside each",
+ "texel_world_px": 3,
+ "view_zoom": 0.6666666666666666,
+ "palettes": {
+  "a": {
+   "colours": {
+    "k": "#000000",
+    "v": "#17111D",
+    "m": "#36091C",
+    "d": "#661127",
+    "c": "#9F1C2E",
+    "r": "#D2403A",
+    "s": "#FF4A57",
+    "p": "#FF9EA0",
+    "h": "#FFE4E4",
+    "w": "#FFFFFF"
+   },
+   "glow_add": {
+    "1": "#1E050E",
+    "2": "#3A0A19",
+    "3": "#5E1126"
+   },
+   "measured_from_puppets": [
+    "#17111D",
+    "#36091C",
+    "#661127",
+    "#9F1C2E",
+    "#D2403A"
+   ],
+   "new": [
+    "#FF4A57",
+    "#FF9EA0",
+    "#FFE4E4",
+    "#FFFFFF",
+    "#000000"
+   ]
+  },
+  "b": {
+   "colours": {
+    "k": "#000000",
+    "v": "#17111D",
+    "u": "#2C2434",
+    "a": "#4A4356",
+    "g": "#6E6A80",
+    "l": "#9893A5",
+    "b": "#CFC6B2",
+    "e": "#F1EAD4",
+    "w": "#FFFFFF",
+    "r": "#D2403A",
+    "c": "#9F1C2E",
+    "d": "#661127"
+   },
+   "glow_add": {
+    "1": "#15121A",
+    "2": "#2A2531",
+    "3": "#46404F"
+   },
+   "measured_from_puppets": [
+    "#17111D",
+    "#2C2434",
+    "#4A4356",
+    "#6E6A80",
+    "#9893A5",
+    "#CFC6B2",
+    "#F1EAD4",
+    "#D2403A",
+    "#9F1C2E",
+    "#661127"
+   ],
+   "new": [
+    "#FFFFFF",
+    "#000000"
+   ]
+  }
+ },
+ "timeline_s": {
+  "charge": 0.72,
+  "charge_stages": [
+   0.24,
+   0.24,
+   0.24
+  ],
+  "trace": 0.18,
+  "trace_speed": "constant along the line (its length / trace)",
+  "hitstop_suggested": 0.067,
+  "flash_suggested": {
+   "time": 0.05,
+   "white_alpha": 0.45
+  },
+  "hold": 0.3,
+  "dissipate": 0.4,
+  "lights_up": 0.4,
+  "scorch_frame_starts_from_dissipate": [
+   0.0,
+   0.15,
+   0.35,
+   0.6
+  ],
+  "order": "charge (0.72) -> release + trace (0.18) -> hit: impact + ring + hit-stop + flash + shake -> hold (0.30, body keeps looping) -> dissipate (0.40, line texture -> dissipate frames, particles, scorch appears) -> lights up (0.40, scorch cools on and fades with the dark)"
+ },
+ "line": {
+  "body": {
+   "sheet": "body",
+   "frame": [
+    96,
+    32
+   ],
+   "frames": 8,
+   "frame_time": 0.04,
+   "loop": true,
+   "width_world_px": 96,
+   "tile_world_px": 288,
+   "centre_row": "between rows 15 and 16 (the line runs through the texture's middle)",
+   "flow": "content moves +x (from the muzzle towards the player) 12 texels a frame; frame 8 = frame 0",
+   "godot": "Line2D, texture_mode LINE_TEXTURE_TILE, texture_repeat ENABLED, joint_mode SHARP, no caps; swap line.texture per frame (cut each frame out of the strip, as JordanPathBeam does now)",
+   "note": "a Line2D puts the texture's top row on the line's left, so runs going left show it upside down and vertical runs sideways; take a is near-symmetric, take b's souls tumble (use per-run Line2Ds with a V-flipped texture on left-going runs if they should stay upright)"
+  },
+  "body_glow": {
+   "sheet": "body_glow",
+   "frame": [
+    96,
+    48
+   ],
+   "frames": 8,
+   "frame_time": 0.04,
+   "width_world_px": 144,
+   "tile_world_px": 288,
+   "blend": "add",
+   "godot": "a second Line2D on the same points, drawn first, frame in step with the body"
+  },
+  "dissipate": {
+   "sheet": "dissipate",
+   "frame": [
+    96,
+    32
+   ],
+   "frames": 8,
+   "frame_time": 0.05,
+   "loop": false,
+   "width_world_px": 96,
+   "tile_world_px": 288,
+   "godot": "the body Line2D, its texture swapped to these frames; the glow line off"
+  },
+  "scorch": {
+   "sheet": "scorch",
+   "frame": [
+    96,
+    16
+   ],
+   "frames": 4,
+   "frame_starts_s": [
+    0.0,
+    0.15,
+    0.35,
+    0.6
+   ],
+   "width_world_px": 48,
+   "tile_world_px": 288,
+   "points": "the beam line's points but the first (the muzzle), each moved BEAM_HEIGHT (40) down onto the floor line",
+   "godot": "a Line2D on the floor layer, lifted over the dark while it is down (its glowing seam is what shows); fade its alpha with the lights coming up, or keep it to the wrap"
+  }
+ },
+ "head": {
+  "sheet": "head",
+  "frame": [
+   64,
+   48
+  ],
+  "frames": 6,
+  "frame_time": 0.03,
+  "loop": true,
+  "attach_texel": [
+   34,
+   24
+  ],
+  "faces": "right (+x)",
+  "godot": "Sprite2D, offset so the attach texel is on the line's end (centered=false, offset = -attach); rotation = the current run's angle; flip_v when cos(angle) < 0 so it never goes upside down on runs going left",
+  "glow": "head_glow, same size, attach and transform, additive"
+ },
+ "corner": {
+  "sheet": "corner",
+  "frame": [
+   64,
+   64
+  ],
+  "frames": 6,
+  "frame_time": 0.03,
+  "loop": false,
+  "pivot_texel": [
+   32,
+   32
+  ],
+  "at": "each joint of the line (every point but the first and last), when the head passes it",
+  "drawn_for": "the turn running right then down: its splash thrown to the outer corner, up-right",
+  "flip_rule": "outer = incoming unit - outgoing unit; flip_h if outer.x < 0, flip_v if outer.y > 0",
+  "glow": "corner_glow, same pivot and flips, additive"
+ },
+ "impact": {
+  "sheet": "impact",
+  "frame": [
+   112,
+   112
+  ],
+  "frames": 10,
+  "frame_time": 0.04,
+  "loop": false,
+  "pivot_texel": [
+   56,
+   56
+  ],
+  "at": "the line's end (the player's middle) as the head arrives",
+  "glow": "impact_glow, same pivot, additive"
+ },
+ "ring": {
+  "sheet": "ring",
+  "frame": [
+   128,
+   48
+  ],
+  "frames": 8,
+  "frame_time": 0.035,
+  "loop": false,
+  "pivot_texel": [
+   64,
+   24
+  ],
+  "at": "the player's soles: the line's end + (0, BEAM_HEIGHT)",
+  "z": "under the impact (it runs along the floor)"
+ },
+ "charge": {
+  "sheet": "charge",
+  "frame": [
+   80,
+   80
+  ],
+  "frames": 12,
+  "frame_time": 0.04,
+  "stages": {
+   "1": [
+    0,
+    3
+   ],
+   "2": [
+    4,
+    7
+   ],
+   "3": [
+    8,
+    11
+   ]
+  },
+  "stage_starts_s": [
+   0.0,
+   0.24,
+   0.48
+  ],
+  "pivot_texel": [
+   40,
+   40
+  ],
+  "at": "GreysonArtLayout.muzzle(&\"spirit\", frame): (82, 7) on his sheet, world (846, 555) in the capture",
+  "glow": "charge_glow, same frames and pivot, additive",
+  "note": "it covers the right end of his meter (the raised muzzle sits on it)"
+ },
+ "release": {
+  "sheet": "release",
+  "frame": [
+   80,
+   80
+  ],
+  "frames": 6,
+  "frame_time": 0.03,
+  "loop": false,
+  "pivot_texel": [
+   40,
+   40
+  ],
+  "at": "the spirit_throw muzzle (66, 70) on his sheet, world (798, 744), as the trace starts",
+  "drawn_for": "firing down (+y); the first run from his muzzle to the goal is always near straight down",
+  "glow": "release_glow, additive"
+ },
+ "particles": {
+  "ember": {
+   "sheet": "ember",
+   "frame": [
+    8,
+    8
+   ],
+   "frames": 6,
+   "pivot_texel": [
+    4,
+    4
+   ],
+   "emit": "from the dissipate start, 2 per 26 world px of line, within 30 px of it, spread over 0.25 s",
+   "velocity_world_px_s": {
+    "x": [
+     -40,
+     40
+    ],
+    "y": [
+     -200,
+     -90
+    ]
+   },
+   "life_s": [
+    0.3,
+    0.55
+   ],
+   "frames_over_life": true
+  },
+  "smoke": {
+   "sheet": "smoke",
+   "frame": [
+    16,
+    16
+   ],
+   "frames": 6,
+   "pivot_texel": [
+    8,
+    8
+   ],
+   "emit": "from the dissipate start, 1 per 47 world px of line (55% of every 26), within 24 px",
+   "velocity_world_px_s": {
+    "x": [
+     -15,
+     15
+    ],
+    "y": [
+     -80,
+     -40
+    ]
+   },
+   "life_s": [
+    0.45,
+    0.7
+   ],
+   "frames_over_life": true
+  }
+ },
+ "overlay": {
+  "sheet": "overlay",
+  "frame": [
+   112,
+   112
+  ],
+  "frames": 8,
+  "over": "Assets/Characters/Jordan/Puppets/greyson/greyson_spirit.png, texel for texel",
+  "godot": "a child Sprite2D of the puppet's sprite with the same centring, offset and flip_h, drawn above it",
+  "frames_map": {
+   "spirit frame 0": [
+    0,
+    1,
+    2
+   ],
+   "spirit frame 1": [
+    3,
+    4,
+    5
+   ],
+   "spirit frame 3 (throw)": [
+    6,
+    7
+   ]
+  },
+  "pick": "during the charge: 3 x (his spirit frame) + charge stage (0-2); through the trace and hold: 6 and 7 alternating every 0.05 s; off at the dissipate",
+  "optional": true
+ },
+ "sheets": {
+  "charge": {
+   "file": "beam_<take>_charge.png",
+   "frame": [
+    80,
+    80
+   ],
+   "frames": 12,
+   "frame_times_s": [
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04
+   ],
+   "strip_px": [
+    960,
+    80
+   ],
+   "pivot_texel": [
+    40,
+    40
+   ],
+   "tags": [
+    {
+     "name": "stage1",
+     "from": 0,
+     "to": 3
+    },
+    {
+     "name": "stage2",
+     "from": 4,
+     "to": 7
+    },
+    {
+     "name": "stage3",
+     "from": 8,
+     "to": 11
+    }
+   ],
+   "plays": "each stage loops; stage by the charge clock",
+   "at": "the spirit pose muzzle",
+   "blend": "mix"
+  },
+  "charge_glow": {
+   "file": "beam_<take>_charge_glow.png",
+   "frame": [
+    80,
+    80
+   ],
+   "frames": 12,
+   "frame_times_s": [
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04
+   ],
+   "strip_px": [
+    960,
+    80
+   ],
+   "pivot_texel": [
+    40,
+    40
+   ],
+   "tags": [
+    {
+     "name": "stage1",
+     "from": 0,
+     "to": 3
+    },
+    {
+     "name": "stage2",
+     "from": 4,
+     "to": 7
+    },
+    {
+     "name": "stage3",
+     "from": 8,
+     "to": 11
+    }
+   ],
+   "plays": "with charge, additive",
+   "at": "the spirit pose muzzle",
+   "blend": "add"
+  },
+  "release": {
+   "file": "beam_<take>_release.png",
+   "frame": [
+    80,
+    80
+   ],
+   "frames": 6,
+   "frame_times_s": [
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03
+   ],
+   "strip_px": [
+    480,
+    80
+   ],
+   "pivot_texel": [
+    40,
+    40
+   ],
+   "tags": [],
+   "plays": "once",
+   "at": "the throw pose muzzle, as the trace starts",
+   "blend": "mix"
+  },
+  "release_glow": {
+   "file": "beam_<take>_release_glow.png",
+   "frame": [
+    80,
+    80
+   ],
+   "frames": 6,
+   "frame_times_s": [
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03
+   ],
+   "strip_px": [
+    480,
+    80
+   ],
+   "pivot_texel": [
+    40,
+    40
+   ],
+   "tags": [],
+   "plays": "with release, additive",
+   "at": "the throw pose muzzle",
+   "blend": "add"
+  },
+  "body": {
+   "file": "beam_<take>_body.png",
+   "frame": [
+    96,
+    32
+   ],
+   "frames": 8,
+   "frame_times_s": [
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04
+   ],
+   "strip_px": [
+    768,
+    32
+   ],
+   "pivot_texel": null,
+   "tags": [],
+   "plays": "loops (Line2D texture)",
+   "at": "the beam line",
+   "blend": "mix"
+  },
+  "body_glow": {
+   "file": "beam_<take>_body_glow.png",
+   "frame": [
+    96,
+    48
+   ],
+   "frames": 8,
+   "frame_times_s": [
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04
+   ],
+   "strip_px": [
+    768,
+    48
+   ],
+   "pivot_texel": null,
+   "tags": [],
+   "plays": "loops with body (a second Line2D, additive)",
+   "at": "the beam line",
+   "blend": "add"
+  },
+  "head": {
+   "file": "beam_<take>_head.png",
+   "frame": [
+    64,
+    48
+   ],
+   "frames": 6,
+   "frame_times_s": [
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03
+   ],
+   "strip_px": [
+    384,
+    48
+   ],
+   "pivot_texel": [
+    34,
+    24
+   ],
+   "tags": [],
+   "plays": "loops",
+   "at": "the line's end while it traces",
+   "blend": "mix"
+  },
+  "head_glow": {
+   "file": "beam_<take>_head_glow.png",
+   "frame": [
+    64,
+    48
+   ],
+   "frames": 6,
+   "frame_times_s": [
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03
+   ],
+   "strip_px": [
+    384,
+    48
+   ],
+   "pivot_texel": [
+    34,
+    24
+   ],
+   "tags": [],
+   "plays": "with head, additive",
+   "at": "the line's end",
+   "blend": "add"
+  },
+  "corner": {
+   "file": "beam_<take>_corner.png",
+   "frame": [
+    64,
+    64
+   ],
+   "frames": 6,
+   "frame_times_s": [
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03
+   ],
+   "strip_px": [
+    384,
+    64
+   ],
+   "pivot_texel": [
+    32,
+    32
+   ],
+   "tags": [],
+   "plays": "once per joint",
+   "at": "each joint, as the head passes it",
+   "blend": "mix"
+  },
+  "corner_glow": {
+   "file": "beam_<take>_corner_glow.png",
+   "frame": [
+    64,
+    64
+   ],
+   "frames": 6,
+   "frame_times_s": [
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03
+   ],
+   "strip_px": [
+    384,
+    64
+   ],
+   "pivot_texel": [
+    32,
+    32
+   ],
+   "tags": [],
+   "plays": "with corner, additive",
+   "at": "each joint",
+   "blend": "add"
+  },
+  "impact": {
+   "file": "beam_<take>_impact.png",
+   "frame": [
+    112,
+    112
+   ],
+   "frames": 10,
+   "frame_times_s": [
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04
+   ],
+   "strip_px": [
+    1120,
+    112
+   ],
+   "pivot_texel": [
+    56,
+    56
+   ],
+   "tags": [],
+   "plays": "once",
+   "at": "the line's end (the player's middle) on the hit",
+   "blend": "mix"
+  },
+  "impact_glow": {
+   "file": "beam_<take>_impact_glow.png",
+   "frame": [
+    112,
+    112
+   ],
+   "frames": 10,
+   "frame_times_s": [
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04
+   ],
+   "strip_px": [
+    1120,
+    112
+   ],
+   "pivot_texel": [
+    56,
+    56
+   ],
+   "tags": [],
+   "plays": "with impact, additive",
+   "at": "the line's end",
+   "blend": "add"
+  },
+  "ring": {
+   "file": "beam_<take>_ring.png",
+   "frame": [
+    128,
+    48
+   ],
+   "frames": 8,
+   "frame_times_s": [
+    0.035,
+    0.035,
+    0.035,
+    0.035,
+    0.035,
+    0.035,
+    0.035,
+    0.035
+   ],
+   "strip_px": [
+    1024,
+    48
+   ],
+   "pivot_texel": [
+    64,
+    24
+   ],
+   "tags": [],
+   "plays": "once, with impact",
+   "at": "the player's soles (the line's end + BEAM_HEIGHT down)",
+   "blend": "mix"
+  },
+  "dissipate": {
+   "file": "beam_<take>_dissipate.png",
+   "frame": [
+    96,
+    32
+   ],
+   "frames": 8,
+   "frame_times_s": [
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "strip_px": [
+    768,
+    32
+   ],
+   "pivot_texel": null,
+   "tags": [],
+   "plays": "once (swap the line texture to it)",
+   "at": "the beam line",
+   "blend": "mix"
+  },
+  "ember": {
+   "file": "beam_<take>_ember.png",
+   "frame": [
+    8,
+    8
+   ],
+   "frames": 6,
+   "frame_times_s": [
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08
+   ],
+   "strip_px": [
+    48,
+    8
+   ],
+   "pivot_texel": [
+    4,
+    4
+   ],
+   "tags": [],
+   "plays": "once over each particle's life",
+   "at": "particles off the line",
+   "blend": "mix"
+  },
+  "smoke": {
+   "file": "beam_<take>_smoke.png",
+   "frame": [
+    16,
+    16
+   ],
+   "frames": 6,
+   "frame_times_s": [
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "strip_px": [
+    96,
+    16
+   ],
+   "pivot_texel": [
+    8,
+    8
+   ],
+   "tags": [],
+   "plays": "once over each particle's life",
+   "at": "particles off the line",
+   "blend": "mix"
+  },
+  "scorch": {
+   "file": "beam_<take>_scorch.png",
+   "frame": [
+    96,
+    16
+   ],
+   "frames": 4,
+   "frame_times_s": [
+    0.15,
+    0.2,
+    0.25,
+    0.4
+   ],
+   "strip_px": [
+    384,
+    16
+   ],
+   "pivot_texel": null,
+   "tags": [],
+   "plays": "once, the last frame held until the lights are up",
+   "at": "the floor line",
+   "blend": "mix"
+  },
+  "overlay": {
+   "file": "beam_<take>_overlay.png",
+   "frame": [
+    112,
+    112
+   ],
+   "frames": 8,
+   "frame_times_s": [
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06
+   ],
+   "strip_px": [
+    896,
+    112
+   ],
+   "pivot_texel": "the puppet sprite's own",
+   "tags": [
+    {
+     "name": "spirit_f0",
+     "from": 0,
+     "to": 2
+    },
+    {
+     "name": "spirit_f1",
+     "from": 3,
+     "to": 5
+    },
+    {
+     "name": "throw",
+     "from": 6,
+     "to": 7
+    }
+   ],
+   "plays": "frame by his pose and the charge stage",
+   "at": "over Greyson's sprite",
+   "blend": "mix"
+  }
+ }
+}

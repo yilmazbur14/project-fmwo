@@ -29,9 +29,16 @@ var stars: Sprite2D
 var stun_clock := 0.0
 # Only the newest zoom punch pulls the view back out.
 var zoom_punch := 0
+# The refused press's breath has a voice of its own, so it never cuts off the sound of whatever emptied
+# the bar.
+var tired_sfx_player: AudioStreamPlayer
 
 
 func _ready() -> void:
+	tired_sfx_player = AudioStreamPlayer.new()
+	tired_sfx_player.name = "TiredSfxPlayer"
+	add_child(tired_sfx_player)
+	defense.stamina_refused.connect(_on_stamina_refused)
 	# Loaded up front: the local sound is an MP3, and the first parry of a fight must not wait on a
 	# decoder to warm up.
 	var parry_sound := DefenseHypeArtLayout.parry_hit_sfx()
@@ -71,6 +78,12 @@ func _on_punch_refused(target: Node) -> void:
 		at = player.punch_fx.contact_point(target)
 	_spawn_burst(DefenseHypeArtLayout.deflect_spark(), at)
 	_play(DefenseHypeArtLayout.DEFLECT_SFX)
+
+
+# One breath at a time, as TIRED! holds one word: mashing on an empty bar would restart it into a stutter.
+func _on_stamina_refused() -> void:
+	if not tired_sfx_player.playing:
+		_play_on(tired_sfx_player, DefenseHypeArtLayout.TIRED_SFX)
 
 
 func _on_blocked(hit: RefCounted, point: Vector2) -> void:

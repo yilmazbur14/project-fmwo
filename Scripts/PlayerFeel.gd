@@ -8,10 +8,11 @@ extends RefCounted
 # hurtbox reports it after the swing: a hit needs his hurtbox open 0.27 s after the press, not 0.40 s.
 
 const TABLE := {
-	# PlayerCombo: seconds of game time after a swing ends before the beat window opens, and how long
-	# it stays open.
-	"combo_window_offset": [0.05, 0.04],
-	"combo_window_length": [0.35, 0.25],
+	# PlayerPunching's visual chain, and only the drawing: seconds of game time after a swing ends that
+	# the next may start in and still take the chain's next place (PlayerPunching.quick_gap). The combo
+	# has had no timing since 2026-09-30; these are where its beat window used to close, 0.05 + 0.35 s
+	# and 0.04 + 0.25 s after a swing.
+	"punch_chain_gap": [0.40, 0.29],
 	# PlayerHype's gains. The charged punch pays instead of the plain one, not on top of it. The parry's
 	# go by streak tier: the first parry, the second, then the third and up.
 	"hype_punch_gain": [5.0, 4.0],

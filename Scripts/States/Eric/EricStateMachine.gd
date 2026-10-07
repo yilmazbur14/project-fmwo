@@ -128,6 +128,13 @@ func start_chain(delay: float) -> void:
 	if bag[0] == last_attack:
 		bag.push_back(bag.pop_front())
 	chain = bag.slice(0, count)
+	# A chain longer than his four attacks goes round again, reshuffled, never the same attack twice running.
+	while chain.size() < count:
+		var more := ATTACKS.duplicate()
+		more.shuffle()
+		if more[0] == chain[-1]:
+			more.push_back(more.pop_front())
+		chain.append_array(more.slice(0, count - chain.size()))
 	_next_attack(delay)
 
 
@@ -190,7 +197,7 @@ func enter_player_defeated() -> void:
 
 # Called by the boss after a parry: his attack stops and he's open to punches for `duration`, then he
 # picks himself up at `home`, where the attack started. `from_reflect` marks the one his own sword
-# leaves him in, which is the only stagger the finisher can daze.
+# leaves him in, which is the only stagger the finisher can daze without EricScript.daze_in_windows.
 func parry_stagger(duration: float, home: Vector2, from_reflect := false) -> void:
 	states["ParryStaggered"].duration = duration
 	states["ParryStaggered"].home = home
@@ -223,6 +230,11 @@ func enter_juggled() -> void:
 		return
 	if current_state == states.get("Broken"):
 		current_state.keep_sword = true
+	# Caught in his hug's stumble, away from his planted sword: it stays planted, and is the one he gets up
+	# for, before _stop_everything frees the hug's own drawing of it.
+	var hug = states.get("BearHug")
+	if current_state == hug and hug.sword_planted():
+		drop_planted_sword(hug.plant_spot, hug.planted_sword)
 	_stop_everything()
 	chain = []
 	on_child_transition(current_state, "Juggled")
@@ -252,6 +264,15 @@ func drop_sword() -> void:
 		return
 	dropped_sword = DROPPED_SWORD.new()
 	dropped_sword.plant(boss, self)
+
+
+# His bear hug's planted sword, standing where he planted it, made the one that's out: an uppercut that
+# catches him away from it has nothing in his hands to knock loose, so he gets up for it where it is.
+func drop_planted_sword(at: Vector2, planted: Sprite2D) -> void:
+	if is_instance_valid(dropped_sword):
+		return
+	dropped_sword = DROPPED_SWORD.new()
+	dropped_sword.plant_standing(boss, self, at, planted)
 
 
 func clear_dropped_sword() -> void:

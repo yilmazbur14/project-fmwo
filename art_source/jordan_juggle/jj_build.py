@@ -33,11 +33,29 @@ def seal_sneakers(body, owner):
     return len(set(add))
 
 
+def seal_hands(body, owner):
+    """A hand map's corner texel left touching open air gets the keyline the rest of him has. Until
+    2026-09-28 the sack tee always lay under the hands' edges; the fitted tee leaves one open, on the
+    hug's grip in the second lying frame."""
+    add = []
+    for (x, y), k in body.items():
+        if k == 'k' or not str(owner.get((x, y), '')).startswith('hand'):
+            continue
+        for q in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if q not in body:
+                add.append(q)
+    for q in add:
+        body[q] = 'k'
+        owner[q] = 'hand_seal'
+    return len(set(add))
+
+
 def frame(i, effects=True):
     spec = MP.FRAMES[i]()
     body, owner = MP.render(spec)
     body = {p: k for p, k in body.items() if 0 <= p[0] < J.W and 0 <= p[1] < J.H}
     seal_sneakers(body, owner)
+    seal_hands(body, owner)
     px = dict(body)
     fx = set()
     if effects:

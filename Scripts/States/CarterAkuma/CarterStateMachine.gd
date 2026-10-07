@@ -2,9 +2,11 @@ extends Node
 
 # Carter's fight, boss 5. Intro once, then attack -> Recover -> Idle -> attack for as long as he is
 # standing. He has three attacks and they come round in a fixed rotation (next_attack): the Raging
-# Demon barrage, the Beam Rush, the Messatsu, then the barrage again.
+# Demon barrage, the Beam Rush twice, the Messatsu, then the barrage again - as one combo since
+# 2026-10-05, the barrage straight into the Beam Rush and that straight on, with his punish window after
+# the Messatsu (chain_attacks).
 #
-# THE BARRAGE'S DIFFICULTY AXIS IS THE NUMBER OF YELLOWS, AND NOTHING ELSE. Fifteen clones,
+# THE BARRAGE'S DIFFICULTY AXIS IS THE NUMBER OF YELLOWS, AND NOTHING ELSE. Eighteen clones,
 # identical rhythm, every round forever - that is what makes the fight learnable. To make it harder,
 # raise what yellow_count() returns. Never shorten clone_show: 0.36 s is a red/yellow DISCRIMINATION
 # reaction (~0.35-0.40 s), which is slower than a simple one, and cutting it makes the move a coin
@@ -77,7 +79,12 @@ const BREAK_PLAYER_GAP := 250.0
 # One clone lives clone_show + clone_dash = 0.54 s against that 0.62 s cadence, so two lights are
 # never up at once and the player always knows which clone a press is answering. CLONE_LIGHT_OUT is
 # what keeps a feint's light from being the second one on screen; it has 0.08 s to work in.
-@export var clone_count := 15
+# The first barrage's, all red: it teaches the rhythm. Fifteen until 2026-10-05, eighteen since.
+@export var clone_count := 18
+# Every barrage after the first (2026-10-06): longer, and PALE_X_ROUND of it lies. The reds stay about
+# what they were - every parried red is a read toward his Break, which pays as fast as it costs - and the
+# lies are what is added: a pale X answered right pays nothing, and one bitten costs a heart.
+@export var pale_x_clone_count := 24
 @export var clone_show := 0.36
 @export var clone_dash := 0.18
 @export var clone_gap := 0.08
@@ -88,11 +95,23 @@ const BREAK_PLAYER_GAP := 250.0
 # Beat 5: the punish window, longer for a barrage read well and shorter for one blown. The per-parry
 # numbers are small because there are fifteen clones to earn them on, not five; the cap is what a
 # perfect barrage is worth.
-@export var recover_base := 3.0
+# 1.5 s since 2026-10-05 (3.0 before): with his window only after the Messatsu, a string read well -
+# 2.9 s for all seven parried, 2.45 s for six - leaves time to reach him for the finisher, and one
+# blown - 2.0 s for five, the 1.5 s floor below that - mostly doesn't. He kneels at least
+# messatsu_min_range from where the player stood.
+@export var recover_base := 1.5
 @export var recover_parry_bonus := 0.2
 @export var recover_miss_penalty := 0.25
 @export var recover_min := 1.5
 @export var recover_max := 6.0
+# HIS ATTACKS ARE ONE COMBO (tuning 2026-10-05). Each attack in CHAINED_ATTACKS that didn't break him
+# hands straight on to the next one in the rotation (chain_on), and only the Messatsu ends in his punish
+# window. Every finisher pays a share of his health, so his length is how many windows he hands out: a
+# window after every attack killed him in about 45 s at any max_health once the 2026-10-04 mash made a
+# Break worth 56%, and the user wants the difficulty from his move set (2026-10-05). His Break is still
+# his punish window, in any of them.
+@export var chain_attacks := true
+const CHAINED_ATTACKS := ["RagingDemon", "BeamRush"]
 # The banked damage a barrage earns: one half-heart per this many reds parried, plus the bonus for a
 # barrage with every red parried and no feint bitten. Scaled to fifteen clones, so a barrage read
 # well is worth proportionally what the five-clone version was.
@@ -128,7 +147,8 @@ const BREAK_PLAYER_GAP := 250.0
 @export var beam_summon := 0.70
 # Each volley's charge, as long as his own Messatsu's.
 @export var beam_charge := 1.20
-# From the lines locking to the four firing. Its last messatsu_tell is the tell, as the Messatsu's is.
+# From the lines locking to the four firing, all of it under the yellow badge: the badge goes up on the
+# lock (CarterBeamRush._lock).
 @export var beam_escape := 0.80
 # How long each volley's beams hurt, from the heads landing to their fade. Against the player's 1 s of
 # i-frames, a player who stays in them takes two hits a volley.
@@ -142,15 +162,23 @@ const BREAK_PLAYER_GAP := 250.0
 @export var strike_y_jitter := 40.0
 # Half-width of the box around the latched point the player has to still be in for it to connect.
 @export var strike_reach := 120.0
-@export var strike_from := 0.15
+# NOT UNDER 0.30. A beam hurts up to its volley's last frame, and his strike doesn't pass the
+# i-frames, so his blow has to land more than the player's 1.0 s of them after it: messatsu_fade +
+# strike_from + strike_show + strike_dash is 1.04 s at 0.30. At 0.15 it was 0.89 s, and a beam hit
+# in a volley's last 0.11 s swallowed an on-time parry of the strike whole (the defence suite's
+# carter_strike_iframes).
+@export var strike_from := 0.30
 @export var strike_clear := 0.30
 @export var beam_end := 0.40
 # The punish window: at least his body's BREAK.broken_time for a Break - that number and no other -
-# and a second and a half for a rush simply sat through. His Break IS his punish window, which is why
-# the gauge unlocks 0.5 s after it rather than Eric's 3.
+# and recover_spent for a rush simply sat through. His Break IS his punish window, which is why the
+# gauge unlocks 0.5 s after it rather than Eric's 3.
 var recover_break: float:
 	get:
 		return CarterAkumaCharacterBody.BREAK.broken_time
+# A breath, not a window to plan on: he is typically 400-800 px off, and in 1.5 s a player reaches him
+# for a punch or two and rarely the POW. At 2.5 s every rush sat through paid the POW and the finisher
+# (measured 2026-10-05), which made the attack that is all escape worth a third of his health.
 @export var recover_spent := 1.5
 
 #THE MESSATSU (CarterMessatsu, seconds and px)
@@ -175,7 +203,9 @@ var recover_break: float:
 @export var messatsu_tell := 0.30
 @export var messatsu_travel := 0.10
 @export var messatsu_tick := 0.50
-@export var messatsu_hits := 6
+# 7 since 2026-10-05 (6 before), and no more: a player who never moves takes all of them, and at 8 the
+# string alone would kill one from full health, which the Beam Rush's 2026-09-30 rule forbids for it.
+@export var messatsu_hits := 7
 @export var messatsu_rearm_delay := 0.08
 @export var messatsu_pulse_travel := 0.30
 @export var messatsu_end_hold := 0.20
@@ -193,8 +223,9 @@ var cycle_yellows := 0
 # over to the VS card yet.
 var pre_fight_balloon: Node
 var pre_fight_over := false
-# His gauge broke in the middle of an attack that plays on to its end (the Demon, the Messatsu): the
-# Break is banked, and the attack's hand-over cashes it as a Break window (take_break_owed).
+# His gauge broke with no attack running to end - which only the defence suite ever does, parrying
+# between attacks: the Break is owed, and the next hand-over cashes it as a Break window
+# (take_break_owed).
 var break_owed := false
 
 var warned := {}
@@ -285,30 +316,54 @@ func start_cycle() -> void:
 	on_child_transition(current_state, next_attack())
 
 
+# Whether `attack`, ending without a Break, hands straight on to the next attack (chain_attacks). The
+# attack asks with what it is about to hand his window - `recover` already prepared - so the bank its
+# parries earned decides it: one that would kill him goes to the window, where his defeat is handled.
+func chains_on(attack: State, recover: State) -> bool:
+	return chain_attacks and CHAINED_ATTACKS.has(str(attack.name)) and not recover.from_break \
+		and recover.banked_damage() < CarterAkumaCharacterBody.boss_health
+
+
+# The hand-on itself: the lights are coming up or the four are gone, what the attack's parries banked is
+# cashed - as his window would cash it - and the next attack starts at once.
+func chain_on(recover: State) -> void:
+	var banked: int = recover.banked_damage()
+	recover.prepare(0, 0, 0, 0)
+	if banked > 0:
+		CarterAkumaCharacterBody._apply_damage(banked)
+	start_cycle()
+
+
 # A strict rotation, never a random pick, and never gated on his health. Cycle 1 is always the
 # barrage: it is the teaching round, and the Beam Rush and the Messatsu both assume the player already
-# knows what a red badge on Carter means. A fight is about three attacks long, so the rotation shows
-# each of them once, where a random picker serves the same one three times often enough to matter.
-const ATTACK_ROTATION := ["RagingDemon", "BeamRush", "Messatsu"]
+# knows what a red badge on Carter means. The Beam Rush comes twice running since 2026-10-06: the four
+# dissolve and gather again for a second set, which is three more volleys to walk out of and a second
+# strike - beams that cost when they catch and pay nothing when escaped. With the attacks chained
+# (chain_attacks) the rotation is his combo: barrage, Beam Rush, Beam Rush, Messatsu, then his window.
+const ATTACK_ROTATION := ["RagingDemon", "BeamRush", "BeamRush", "Messatsu"]
 
 
 func next_attack() -> String:
 	return ATTACK_ROTATION[maxi(cycles_started - 1, 0) % ATTACK_ROTATION.size()]
 
 
-# The one difficulty dial. Cycle 1 is all red - it teaches the rhythm - and after that it is his
-# health that decides how many of the fifteen lie. The cap is 6 rather than the proportional 9: no
-# two feints may be adjacent (CarterRagingDemon._build_pattern), and above 6 in fourteen slots the
-# only arrangements left are near-forced ones the player would learn as a fixed pattern.
+# The one difficulty dial. Cycle 1 is all red - it teaches the rhythm - and every barrage after it
+# has PALE_X_ROUND lies in pale_x_clone_count clones (3/5/6 of 15 by his health until 2026-10-05, 6 of
+# 18 then, 10 of 24 since 2026-10-06). No two feints may be adjacent (CarterRagingDemon._build_pattern):
+# 10 of 23 slots still leaves 1001 arrangements, where a lie in every other slot would be one fixed
+# pattern the player learns rather than reads.
+const PALE_X_ROUND := 10
+
+
 func yellow_count() -> int:
 	if cycles_started <= 1:
 		return 0
-	var ratio: float = CarterAkumaCharacterBody.get_health_ratio()
-	if ratio > 0.66:
-		return 3
-	if ratio > 0.33:
-		return 5
-	return 6
+	return PALE_X_ROUND
+
+
+# How many clones this cycle's barrage throws.
+func barrage_clones() -> int:
+	return clone_count if cycles_started <= 1 else pale_x_clone_count
 
 
 # Light to light. At 0.62 s this is inside PlayerDefense.parry_mash_lockout's reach, so a press that
@@ -336,6 +391,22 @@ func recover_window(reds_parried: int, reds_missed: int) -> float:
 		recover_min, recover_max)
 
 
+# EVERY WINDOW HE OPENS IS AT LEAST THIS LONG (the user, 2026-10-06: every opening long enough to walk in
+# and land three punches, and three punches always the uppercut). From `distance` px off his feet,
+# walking alone: measured, the third punch lands 0.8-1.1 s + distance / 600 s after the walk starts,
+# depending on the line in, and a reaction to his window opening comes on top. The Messatsu kneels him
+# at least messatsu_min_range away and as far as the ring is wide, where a read-earned 1.5 s left
+# nothing to walk in on.
+const WALK_IN_BASE := 1.2
+const WALK_IN_REACTION := 0.30
+
+
+func walk_in_time(distance: float) -> float:
+	var player := get_player()
+	var speed: float = player.get_script().SPEED if player else 600.0
+	return WALK_IN_BASE + distance / speed + WALK_IN_REACTION
+
+
 # His one punish window per cycle.
 func is_recovering() -> bool:
 	return current_state == states.get("Recover")
@@ -347,15 +418,14 @@ func flinch() -> void:
 
 
 # His Break gauge filled. Called deferred from CarterAkumaScript._on_break: the gauge fills inside a
-# physics flush, where states can't switch. The Beam Rush ends on the spot, as it always has. Anything
-# else plays on to its end and its hand-over cashes the Break then: the Demon's string runs on in the
-# dark with the player locked, so nothing may resolve in the middle of it - the same rule its banked
-# parries keep. The sting and the gauge's own BREAK! go off now either way.
+# physics flush, where states can't switch. Whichever attack is running ends on the spot and hands him
+# to his Break's window, open, by the user's call (2026-09-27): "the attack should immediately stop and
+# Carter should be hittable". Each one's on_broke() takes everything of it with it. The sting and the
+# gauge's own BREAK! go off now either way.
 func on_break() -> void:
 	CarterAkumaCharacterBody.play_break_sting()
-	var rush: State = states.get("BeamRush")
-	if rush and current_state == rush:
-		rush.on_broke()
+	if ATTACK_ROTATION.has(str(current_state.name)):
+		current_state.on_broke()
 		return
 	break_owed = true
 
@@ -480,7 +550,7 @@ func player_stage_z() -> int:
 	return stage.z_index if stage is CanvasItem else 0
 
 
-# Called on the exact frame each clone's light comes up, all fifteen, every round. PlayerDefense counts
+# Called on the exact frame each clone's light comes up, every one of them, every round. PlayerDefense counts
 # a press that didn't parry against the next one for parry_mash_lockout (0.5 s), and every further
 # press inside that pushes the clock forward, so without this a player who whiffs on clone N can be
 # mathematically unable to parry clone N+1.

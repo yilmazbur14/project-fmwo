@@ -72,4 +72,9 @@ func Physics_Update(delta: float) -> void:
 
 func _open_window() -> void:
 	waited = beat_clock
+	# Chained (MattStateMachine.echo_after_ezreal): the Echo Roars come before the window, which their outro opens.
+	if state_machine.echo_after_ezreal:
+		state_machine.plan_echo(state_machine.in_phase_two())
+		state_machine.on_child_transition(self, "EchoRoars")
+		return
 	state_machine.on_child_transition(self, "Recover")

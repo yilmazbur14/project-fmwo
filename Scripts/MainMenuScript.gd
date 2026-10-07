@@ -13,11 +13,29 @@ const BOSS_SELECT_COLUMNS := 3
 # Pixelify Sans is only crisp at multiples of its 11 px design size.
 const BOSS_SELECT_FONT_SIZE := 22
 const BOSS_SELECT_BUTTON_HEIGHT := 34
-# FIGHT 03's second half has a row of its own, right after the fight's and indented under it so it reads as part
+# FIGHT 06's second half has a row of its own, right after the fight's and indented under it so it reads as part
 # of that fight rather than another one: it opens the fight on Greyson's takeover (GameProgress.start_at_greyson).
 const GREYSON_ROW_FIGHT := "res://Scenes/Bosses/ComputahBossFightScene.tscn"
 const GREYSON_ROW := "    GREYSON"
 const GREYSON_SCENE := "res://Scenes/Bosses/GreysonScene.tscn"
+# FIGHT 10's finale has one too, the same way: it opens the fight at Jordan's KO (GameProgress.start_at_finale), and
+# needs his room's scene built.
+const FINALE_ROW_FIGHT := "res://Scenes/Bosses/JordanBossFightScene.tscn"
+const FINALE_ROW := "    FINALE"
+const FINALE_SCENE := "res://Scenes/Core/JordanFinaleScene.tscn"
+# And his last phase, the Puppet Master, after the FINALE row: straight into that fight, with no finale before it.
+const GOD_ROW := "    GOD"
+const GOD_SCENE := "res://Scenes/Bosses/JordanGodFightScene.tscn"
+# And the game's ending after his last phase, the champion cutscene and its credits, straight in, whatever its switch
+# (ChampionEndingLayout.USE_CHAMPION_ENDING) says. Fifteen rows in three columns is the panel's limit: a sixteenth would
+# run it past BOSS_SELECT_RECT.
+const ENDING_ROW := "    ENDING"
+const ENDING_SCENE := "res://Scenes/Core/ChampionEndingScene.tscn"
+# FIGHT 07's second half has one as well, the way FIGHT 06's does: it opens the fight on Liam's takeover
+# (GameProgress.start_at_liam), and needs his scene built.
+const LIAM_ROW_FIGHT := "res://Scenes/Bosses/LiamBossFightScene.tscn"
+const LIAM_ROW := "    LIAM"
+const LIAM_SCENE := "res://Scenes/Bosses/LiamScene.tscn"
 # The INVINCIBLE toggle's box, drawn for this panel: the theme's default empty box barely shows on it.
 const INVINCIBLE_ICONS := {
 	"unchecked": preload("res://Assets/UI/checkbox_off_2x.png"),
@@ -115,8 +133,8 @@ func _show_focus() -> void:
 
 
 # One button per fight in GameProgress' order, so the panel can't drift out of step with the
-# ladder, and the GREYSON row after FIGHT 03's. A fight whose scene hasn't been built yet shows as a
-# disabled row rather than vanishing.
+# ladder, the GREYSON row after FIGHT 06's, the LIAM row after FIGHT 07's and the FINALE and GOD rows after FIGHT 10's. A fight
+# whose scene hasn't been built yet shows as a disabled row rather than vanishing.
 func _build_boss_select() -> void:
 	var panel := PanelContainer.new()
 	panel.position = BOSS_SELECT_RECT.position
@@ -168,14 +186,21 @@ func _build_boss_select() -> void:
 	columns.add_theme_constant_override("separation", 8)
 	rows.add_child(columns)
 
-	# The rows in order, and the columns are filled by rows rather than by fights, so the GREYSON row takes a
-	# place like any other: [text, the scene it loads, whether it is the GREYSON row].
+	# The rows in order, and the columns are filled by rows rather than by fights, so the GREYSON, LIAM, FINALE and GOD
+	# rows take a place like any other: [text, the scene it loads, its kind - &"" a fight, &"greyson", &"liam", &"finale"
+	# or &"god"].
 	var entries: Array[Array] = []
 	for i in GameProgress.BOSSES.size():
 		var boss: Dictionary = GameProgress.BOSSES[i]
-		entries.append(["%d  %s" % [i + 1, boss["name"]], boss["scene"], false])
+		entries.append(["%d  %s" % [i + 1, boss["name"]], boss["scene"], &""])
 		if boss["scene"] == GREYSON_ROW_FIGHT:
-			entries.append([GREYSON_ROW, boss["scene"], true])
+			entries.append([GREYSON_ROW, boss["scene"], &"greyson"])
+		if boss["scene"] == LIAM_ROW_FIGHT:
+			entries.append([LIAM_ROW, boss["scene"], &"liam"])
+		if boss["scene"] == FINALE_ROW_FIGHT:
+			entries.append([FINALE_ROW, boss["scene"], &"finale"])
+			entries.append([GOD_ROW, GOD_SCENE, &"god"])
+			entries.append([ENDING_ROW, ENDING_SCENE, &"ending"])
 	var per_column := ceili(float(entries.size()) / BOSS_SELECT_COLUMNS)
 	var column: VBoxContainer = null
 	# CheckBox is a Button, so the toggle rides the same hand-wired chain as the fights and keyboard
@@ -188,14 +213,15 @@ func _build_boss_select() -> void:
 			column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			columns.add_child(column)
 		var scene: String = entries[i][1]
-		var greyson_row: bool = entries[i][2]
-		var needs: String = GREYSON_SCENE if greyson_row else scene
+		var kind: StringName = entries[i][2]
+		var needs: String = {&"greyson": GREYSON_SCENE, &"liam": LIAM_SCENE, &"finale": FINALE_SCENE, &"ending": ENDING_SCENE}.get(kind, scene)
 		var built: bool = ResourceLoader.exists(scene) and ResourceLoader.exists(needs)
 		var button := _boss_select_button(entries[i][0])
 		button.disabled = not built
 		button.focus_mode = Control.FOCUS_ALL if built else Control.FOCUS_NONE
 		if built:
-			button.pressed.connect((_on_greyson_select_pressed if greyson_row else _on_boss_select_pressed).bind(scene))
+			var pressed: Callable = {&"greyson": _on_greyson_select_pressed, &"liam": _on_liam_select_pressed, &"finale": _on_finale_select_pressed, &"ending": _on_ending_select_pressed}.get(kind, _on_boss_select_pressed)
+			button.pressed.connect(pressed.bind(scene))
 			chain.append(button)
 		else:
 			button.tooltip_text = "%s hasn't been built yet" % (needs if ResourceLoader.exists(scene) else scene)
@@ -266,13 +292,35 @@ func _on_boss_select_pressed(scene_path: String) -> void:
 	get_tree().change_scene_to_file(scene_path)
 
 
-# FIGHT 03 from Greyson's takeover. It ASKS rather than setting anything up itself: the fight takes the request
+# FIGHT 06 from Greyson's takeover. It ASKS rather than setting anything up itself: the fight takes the request
 # as it loads (ComputahStateMachine._ready) and puts Computah down with no fight of his first, so what plays is
 # the takeover the real fight plays, hold-to-skip and all, then Greyson's fight, won and lost the way the real
-# one is: the same Victory and Defeat, Matt next, and the pause screen's restart starting FIGHT 03 over.
+# one is: the same Victory and Defeat, Liam & Bixby next, and the pause screen's restart starting FIGHT 06 over.
 func _on_greyson_select_pressed(scene_path: String) -> void:
 	GameProgress.reset_progress()
 	GameProgress.start_at_greyson = true
+	get_tree().change_scene_to_file(scene_path)
+
+
+# FIGHT 07 from Liam's takeover: Bixby already down, then Liam's own phase. It asks, as the GREYSON row does, and the
+# fight takes the request as it loads (BixbyBeastStateMachine._ready).
+func _on_liam_select_pressed(scene_path: String) -> void:
+	GameProgress.reset_progress()
+	GameProgress.start_at_liam = true
+	get_tree().change_scene_to_file(scene_path)
+
+
+# FIGHT 10 from Jordan's KO: the whole finale a win plays - the walk-out, his room, the collapse and the card. It asks,
+# as the GREYSON row does, and the fight takes the request as it loads (JordanStateMachine._ready).
+func _on_finale_select_pressed(scene_path: String) -> void:
+	GameProgress.reset_progress()
+	GameProgress.start_at_finale = true
+	get_tree().change_scene_to_file(scene_path)
+
+
+# The ending on its own, from a fresh run.
+func _on_ending_select_pressed(scene_path: String) -> void:
+	GameProgress.reset_progress()
 	get_tree().change_scene_to_file(scene_path)
 
 

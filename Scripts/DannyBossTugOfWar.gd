@@ -4,49 +4,53 @@ extends RefCounted
 # tests step the same model: the Sumo state calls press() for every press MashInput counts and advance()
 # every physics step, and stands both fighters off `rope`.
 # `rope` runs from -1 to +1 from the tachiai line at 0. At +1 Danny's feet are out past the top rope and the
-# player has won; at -1 the player's are out past the bottom one. The ground the player has won off the line
-# is their bar, and MashCurve bends it the way it bends every mash in the game: the first presses off the
-# line come easy and the last ones before the rope are work. Danny pushes back the whole time, harder every
-# second once push_grace is up, and `bulldoze` times as hard while the rope is on the player's side of the
-# line, so a player who stops is out in about three seconds. At sumo_max he surges and wins wherever the rope
-# is, unless the player already has.
+# player has won; at -1 the player's are out past the bottom one.
+#
+# THE ONE MASH OFF MashCurve, on the user's word (2026-09-27): the effort it takes is the same wherever the
+# rope stands, and it is a back-and-forth. So nothing here reads the rope: a press is worth press_gain from
+# anywhere, and Danny pushes the same from anywhere. Every press queues its worth, and the queue feeds the
+# rope at up to press_speed, so mashing faster than press_speed / press_gain presses a second wins no sooner:
+# the demand is a steady rate, not a sprint. At most BACKLOG_PRESSES presses' worth waits, so a quick pair
+# between slower presses still counts whole. Danny pushes danny_push all the time and surges on a beat: from
+# surge_first, every surge_every, a surge_time heave (a sin^2 bump) peaking surge_push harder, which takes
+# ground back from even the fastest masher, so the rope swings both ways. From sumo_max he surges for good,
+# his push climbing final_surge more every second, and a bout still going that long is his in a second or
+# two, wherever the rope is.
 #
 # THE FIT (table(): steady alternating presses, the first as the clinch lands, stepped 60 times a second).
-# The plan's rows: 0 a second loses in 2.5-3.5 s, 4 and 5 lose inside 10 and 12 s, it takes 6 a second
-# (+-10%), 7 wins in 3.0-4.5 s, 9 inside 3.0 s, 11 inside 2.3 s.
+# 7 a second, the target, wins in about 9.4 s; 7.5 or faster in 6.3 s; 5 loses in about 11 s:
 #   presses/s   0     1     2     3     4     5     6     7     8     9     10    11
 #   result      loss  loss  loss  loss  loss  loss  loss  win   win   win   win   win
-#   seconds     3.33  7.53  8.40  9.08  9.70  10.35 11.08 4.00  3.00  2.45  2.10  1.83
-#   the rate it takes: 6.45 a second
-# Every row holds with the first press up to a whole interval late, and at 120 steps a second.
-# The plan's starting knobs (gain 0.085, grace 4.0, ramp 0.17) won at 7 a second in 2.87 s. The smaller
-# gain slows every win; the later grace gives that time back at the rate it takes, so it stays at 6; the
-# steeper ramp brings the losses the later grace put off back inside their bounds. push_drain is small
-# because Danny's own push is what fights back at the rope, and MashCurve's drain climbs hard at the top:
-# any more of it and 7 a second stops winning inside the plan's 4.5 s. Re-run table() whenever a knob here
-# or in MashCurve moves.
-
-const MashCurve := preload("res://Scripts/MashCurve.gd")
+#   seconds     1.72  1.85  2.25  4.00  4.80  10.68 31.53 9.37  6.30  6.30  6.30  6.30
+#   the rate it takes: 6.26 a second, winning at about 30 s; 6.5 wins in 16 s and 6.75 in 10 s
+# Every row holds with the first press up to a whole interval late, and at 120 steps a second. At 7 a second
+# each surge takes a third of the rope back, and a stop of a second at 4 s, which loses the lead, is won back
+# by 15.4 s. Re-run table() whenever a knob here moves.
 
 # Every knob fresh() copies. The Sumo state exports its own and writes them in.
-const KNOBS: Array[StringName] = [&"push_gain", &"push_drain", &"push_base", &"push_grace", &"push_ramp",
-	&"bulldoze", &"sumo_max"]
+const KNOBS: Array[StringName] = [&"press_gain", &"press_speed", &"danny_push", &"surge_push", &"surge_time",
+	&"surge_every", &"surge_first", &"sumo_max", &"final_surge"]
+const BACKLOG_PRESSES := 2.0
 # table()'s steps a second (the fight's physics rate) and its rates, 0 to 11 a second.
 const TABLE_STEPS := 60
 const TABLE_RATES := 12
 
-# A press's worth off the line, and the bar's own drain a second, before MashCurve bends them.
-var push_gain := 0.08
-var push_drain := 0.02
-# Danny's push, rope a second: push_base until push_grace seconds after the clinch, then push_ramp more for
-# every second after that.
-var push_base := 0.10
-var push_grace := 5.0
-var push_ramp := 0.22
-var bulldoze := 3.0
-var sumo_max := 15.0
+# A press's worth of rope, and the most rope a second the presses move it.
+var press_gain := 0.1
+var press_speed := 0.75
+# His push, rope a second, and his surges' extra at their peak, their length and their beat, in seconds from
+# the clinch.
+var danny_push := 0.40
+var surge_push := 1.2
+var surge_time := 1.0
+var surge_every := 3.0
+var surge_first := 1.2
+var sumo_max := 30.0
+var final_surge := 1.0
 
 var rope := 0.0
+# Pressed rope on its way into the rope.
+var pending := 0.0
 var clock := 0.0
 var presses := 0
 # &"" while the bout is on, then &"win" or &"loss".
@@ -57,29 +61,44 @@ func fill() -> float:
 	return clampf(rope, 0.0, 1.0)
 
 
-func danny_push() -> float:
-	return push_base + push_ramp * maxf(clock - push_grace, 0.0)
+# How far into a surge he is, 0 between surges and 1 at a surge's peak.
+func surge() -> float:
+	if clock < surge_first:
+		return 0.0
+	var into := fmod(clock - surge_first, surge_every)
+	if into >= surge_time:
+		return 0.0
+	return pow(sin(PI * into / surge_time), 2.0)
+
+
+func surging() -> bool:
+	return surge() > 0.0 or clock >= sumo_max
+
+
+# His push now, rope a second.
+func push() -> float:
+	return danny_push + surge_push * surge() + final_surge * maxf(clock - sumo_max, 0.0)
 
 
 func press() -> void:
 	if result != &"":
 		return
 	presses += 1
-	rope += MashCurve.gain(push_gain, fill())
-	if rope >= 1.0:
-		rope = 1.0
-		result = &"win"
+	pending = minf(pending + press_gain, press_gain * BACKLOG_PRESSES)
 
 
 func advance(delta: float) -> void:
 	if result != &"":
 		return
 	clock += delta
-	rope -= (MashCurve.drain(push_drain, fill()) + danny_push() * (bulldoze if rope < 0.0 else 1.0)) * delta
-	if rope <= -1.0:
+	var moved := minf(pending, press_speed * delta)
+	pending -= moved
+	rope += moved - push() * delta
+	if rope >= 1.0:
+		rope = 1.0
+		result = &"win"
+	elif rope <= -1.0:
 		rope = -1.0
-		result = &"loss"
-	elif clock >= sumo_max:
 		result = &"loss"
 
 

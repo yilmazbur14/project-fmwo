@@ -1,41 +1,47 @@
 extends State
 
-# Greyson's slams (plan sections 3.2 and 3.3), the second link of attack 1, while his plates are still out: five
-# teleports to the spot furthest from the player, each with a barbell slam that plants an eruption zone, then a
-# teleport home. The zones wait in the state machine's queue, all five, for the poses after (GreysonPose) to set
-# them off one by one; first_eruption_before can have one go off during the slams instead.
-#   0.00  out, then in at the furthest spot
-#   0.50  the wind-up: the barbell overhead
-#   0.90  SLAM 1 on the sheet's impact frame: zone 1 on the player's feet
-#   1.30  out and in again; SLAM 2 at 2.20: zone 2
-#   2.60  again; SLAM 3 at 3.50: zone 3
-#   3.90  again; SLAM 4 at 4.80: zone 4
-#   5.20  again; SLAM 5 at 6.10: zone 5
-#   6.50  out, and in at HOME
-#   7.00  done: the barbell planted and the turn to the crowd are GreysonPose's opening beat
+# Greyson's slams (plan sections 3.2 and 3.3), the second link of attack 1, while his plates are still out: four
+# teleports to the spot furthest from the player, each with a barbell slam that plants two eruption zones
+# (zones_per_slam), then a teleport home. The zones wait in the state machine's queue, all eight, and go off one by
+# one on its eruption clock (GreysonPose.eruptions), which starts here; first_eruption_before can have one go off
+# during the slams instead. With the 2026-09-30 pace (the user: "the setup before the posing takes far too long",
+# "shave off 2 explosions", and a setup of five seconds):
+#   0.00  out, then in at the furthest spot at 0.12
+#   0.24  the wind-up: the barbell overhead, the sheet sped up
+#   0.50  SLAM 1 on the sheet's impact frame: zone 1 on the player's feet, zone 2 beside it
+#   0.62  out and in again; SLAM 2 at 1.12: zones 3 and 4
+#   1.24  again; SLAM 3 at 1.74; 1.86 again, SLAM 4 at 2.36: zones 5-8
+#   2.48  out, and in at HOME
+#   2.72  done: the turn to the crowd is GreysonPose's opening beat
 # Each beat carries whatever its last step ran over into the next, so the slams stay on these times to the frame.
 # He can't be hit here: every teleport_out() turns his hurtbox off.
 #
 # THE FENCE (zone_spot): every zone goes on the player's feet, unless they are standing in a zone still waiting
 # and a zone on them would share more than fence_overlap of its area with one - standing still would stack the
-# five into one burst to step out of once. Then it goes beside the waiting ones instead, touching them or lightly
+# zones into one burst to step out of once. Then it goes beside the waiting ones instead, touching them or lightly
 # over them, wherever it keeps the most of the player's floor blocked until later: the floor round them, where
-# they'd step out to, and their way to him. A player who stands still is boxed in by bursts that go off one at a
-# time, so reaching him mid-pose means weaving through them. A player who has walked clear of every waiting zone is
-# aimed at as ever.
+# they'd step out to, and their way to him. A slam's second zone always goes beside, the first having just landed
+# on the player. A player who stands still is boxed in by bursts that go off one at a time, so reaching him
+# mid-pose means weaving through them. A player who has walked clear of every waiting zone is aimed at as ever.
 
 const ZONE_SCRIPT := preload("res://Scripts/GreysonEruptionScript.gd")
 const Layout := preload("res://Scripts/GreysonArtLayout.gd")
+# Where the slam sheet's impact frame, f3, falls at the sheet's own pace.
+const SLAM_SHEET_IMPACT := 0.40
 
 @export var body : CharacterBody2D
 
 #KNOBS (seconds, px)
-@export var slams := 5
-# Out, then in: each.
-@export var teleport_time := 0.25
-# The slam sheet's impact frame, f3, is this far in.
-@export var windup_time := 0.40
-@export var recover_time := 0.40
+@export var slams := 4
+# Zones each slam plants: two, since the user's 2026-09-30 "double the ground explosions" (then "shave off 2
+# explosions": four slams of two, eight a cycle).
+@export var zones_per_slam := 2
+# Out, then in: each. The in sheet shows him from its f3, 0.15 s in; the wind-up shows him if that comes sooner.
+@export var teleport_time := 0.12
+# How far into the slam sheet its impact frame, f3, lands: the sheet is played faster or slower to put it there. The
+# slam hurts nothing - its zones only go off in the poses - so this is no read.
+@export var windup_time := 0.26
+@export var recover_time := 0.12
 # Zone centres are kept this far inside the ropes. None, so zone 1 is right on the feet and walking out of it is
 # never longer than its ry; the art is cut to the floor anyway.
 @export var zone_inset := 0.0
@@ -101,6 +107,9 @@ func Enter() -> void:
 	beat_clock = 0.0
 	body.velocity = Vector2.ZERO
 	body.set_hurtbox_active(false)
+	# The poses' first strike comes a turn after he lands home: the eruptions are timed from it.
+	var pose = state_machine.states.get("Pose")
+	state_machine.start_eruption_clock(duration() + (pose.turn_time if pose else 0.0))
 	_teleport_out()
 
 
@@ -174,32 +183,41 @@ func _wind_up() -> void:
 	var player: Node2D = state_machine.get_player()
 	if player:
 		body.face_toward(player.global_position)
-	body.play_anim(&"slam")
+	# The sheet sped up (or slowed) so its impact frame lands on windup_time.
+	var pace := windup_time / SLAM_SHEET_IMPACT
+	body.play_anim(&"slam", &"", 0.0 if is_equal_approx(pace, 1.0) else Layout.loop_length(Layout.anim(&"slam")) * pace)
 	body.play_sfx(&"slam_windup")
 
 
-# The barbell meets the mat: its burst where it hits, and a zone where zone_spot puts it for the player's feet as
-# they are now.
+# The barbell meets the mat: its burst where it hits, and zones_per_slam zones, each where zone_spot puts it for the
+# player's feet as they are now and the zones already down, this slam's first among them.
 func _slam() -> void:
 	beat = Beat.RECOVER
 	body.play_fx(&"slam", body.impact_point(&"slam"))
 	body.play_sfx(&"barbell_slam")
 	var feet: Vector2 = state_machine.player_feet()
-	var waiting: Array[Vector2] = []
-	for pending in state_machine.live_zones():
-		waiting.append(pending.global_position)
-	var placed := zone_spot(feet, waiting)
-	var zone: Node2D = ZONE_SCRIPT.new()
-	zone.player = state_machine.get_player()
-	zone.body = body
-	state_machine.add_hazard(zone, placed.centre, body.floor_layer)
-	state_machine.add_pending_zone(zone)
-	zones.append(zone)
-	zone_centres.append(zone.global_position)
-	slam_feet.append(feet)
-	placements.append(placed.kind)
+	for n in zones_per_slam:
+		var waiting: Array[Vector2] = []
+		for pending in state_machine.live_zones():
+			waiting.append(pending.global_position)
+		var placed := zone_spot(feet, waiting)
+		var zone: Node2D = ZONE_SCRIPT.new()
+		zone.player = state_machine.get_player()
+		zone.body = body
+		state_machine.add_hazard(zone, placed.centre, body.floor_layer)
+		state_machine.add_pending_zone(zone)
+		zones.append(zone)
+		zone_centres.append(zone.global_position)
+		slam_feet.append(feet)
+		placements.append(placed.kind)
 	slam_clocks.append(body.fight_clock)
 	slammed += 1
+
+
+# From Enter to his landing home, on the beats' clock: each slam's out, in, wind-up and recover, and the teleport
+# home.
+func duration() -> float:
+	return slams * (2.0 * teleport_time + windup_time + recover_time) + 2.0 * teleport_time
 
 
 # Where a zone goes, with the player's feet and the zones still waiting where they are: {centre, kind}. On the

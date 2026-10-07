@@ -17,7 +17,10 @@ extends Node
 #     get_max_health() -> int
 #     get_daze_anchor() -> Vector2       where the stars circle, about 34 px above the head
 #     get_finisher_hurtbox() -> Area2D   with its shape in a child named CollisionShape2D
-# besides the `sprite` and get_health_ratio() every boss has.
+# besides the `sprite` and get_health_ratio() every boss has. From the POW to the daze his window is held: his Timers
+# and his `state_machine`'s steps stop (_hold_window). Optionally:
+#     hold_window(on: bool)              any other clock of his that can end a punish window, held and let go
+#                                        with them
 # Against a boss that can also be juggled, in a fight on the player's feel_v2, the mash is tiered
 # instead: three bars (FinisherTierMeter), then an uppercut for each bar banked, each one throwing him
 # higher, until he crashes. Such a boss also implements:
@@ -74,11 +77,9 @@ enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE, JUGGLE_FALL, CHARGE
 @export var zoom_out_time := 0.3
 # The zoom centres on the player, pulled this far toward the daze anchor.
 @export var focus_boss_weight := 0.35
-# Of the boss's max health, at least 1.
+# Of the boss's max health, at least 1. A full hype meter multiplies it (SUPERCHARGE_MULTIPLIER).
 @export var finisher_damage_ratio := 0.25
-# The same, for an uppercut supercharged by a full hype meter (PlayerHype). Every dial on the
-# supercharged contact is bigger than the normal one: that gap is the point.
-@export var supercharged_damage_ratio := 0.40
+# Every dial on the supercharged contact is bigger than the normal one: that gap is the point.
 @export var super_impact_hit_stop := 0.35
 @export var super_impact_shake := 34.0
 @export var super_impact_shake_steps := 10
@@ -118,16 +119,16 @@ enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE, JUGGLE_FALL, CHARGE
 # the key the player was last hammering doesn't walk them off or raise their guard.
 @export var mash_release_latch := 1.0
 
-# The tiered mash (FinisherTierMeter). At about 7.0, 9.4 and 11.0 alternating presses a second each bar
-# fills inside its window: presses every 8, 6 and 5 frames reach tiers 1, 2 and 3, at least 1.8 press
-# intervals inside their windows, and every 9, 7 and 6 don't, stalling short of the bar's top or banking
-# 2.8 intervals late (mash_tiers). The drains and windows are fitted together: MashCurve makes each bar's
-# top a grind, so a window has to leave room for it. Window 3 is still the shortest because the drain
-# can't take the meter back under a bar that has just banked, so each bar after the first fills a press
-# sooner than its own numbers suggest.
+# The tiered mash (FinisherTierMeter), to the user's 6, 8 and 10 a second (2026-10-04): at about 5.8, 8.0
+# and 9.7 alternating presses a second each bar fills inside its window. Presses every 10, 7 and 6 frames
+# reach tiers 1, 2 and 3, at least 1.4 press intervals inside their windows, and every 11, 8 and 7 don't
+# (mash_tiers, mash_rates). Each bar's drain is what sets its rate: a steady mash under it is held short of
+# the bar's top for good by MashCurve's grind, and the window only has to leave room for the slow fill
+# just over it. Bar 1 asks no more than the single-bar finisher does with a reaction to its prompt, so a
+# Break never pays a slow masher less.
 @export var tier_gain := 0.20
-@export var tier_drains: Array[float] = [0.42, 0.58, 0.59]
-@export var tier_windows: Array[float] = [1.30, 1.18, 0.82]
+@export var tier_drains: Array[float] = [0.355, 0.49, 0.58]
+@export var tier_windows: Array[float] = [1.75, 1.40, 1.14]
 @export var tier_start_grace := 1.0
 @export var tier_idle_stop := 0.5
 # The charge builds with m_s: the banked bars, or the meter smoothed over meter_smoothing if higher.
@@ -142,10 +143,10 @@ enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE, JUGGLE_FALL, CHARGE
 @export var bank_kicks: Array[float] = [8.0, 12.0, 16.0]
 @export var bank_kick_steps := 6
 @export var bank_cheers: Array[float] = [1.0, 1.5, 2.5]
-# The juggle: each uppercut a share of max health, at least 1, the last one supercharge_bonus more with
-# a full hype meter at the daze.
-@export var juggle_shares: Array[float] = [0.15, 0.10, 0.15]
-@export var supercharge_bonus := 0.10
+# The juggle: each uppercut a share of max health, at least 1, so 1, 2 and 3 bars pay 25%, 35% and 50%.
+# With a full hype meter at the daze the last one also carries SUPERCHARGE_MULTIPLIER - 1 of every bar
+# banked, so the juggle pays SUPERCHARGE_MULTIPLIER times as much in all.
+@export var juggle_shares: Array[float] = [0.25, 0.10, 0.15]
 # Into the land frame before the next uppercut launches, so they connect 0.55 s apart.
 @export var relaunch_delay := 0.08
 # The boss's flight, px/s up and px/s/s down: for an uppercut more follow, by uppercut, and for the last
@@ -167,6 +168,11 @@ enum Phase { OFF, SETTLE, DAZED, CHARGING, UPPERCUT, FIZZLE, JUGGLE_FALL, CHARGE
 @export var juggle_recovery := 1.5
 @export var long_juggle_recovery := 2.0
 
+# A full hype meter (PlayerHype) at the daze: what the uppercut pays is multiplied by this, the single-bar
+# one's 25% to 40% and a juggle's bars alike. A boss that counts uppercuts rather than taking health
+# takes SUPERCHARGE_UPPERCUTS more instead (uppercut_count).
+const SUPERCHARGE_MULTIPLIER := 1.6
+const SUPERCHARGE_UPPERCUTS := 1
 # What a scripted charge takes when its caller doesn't say (begin_scripted_charge).
 const SCRIPTED_PRESS_GAIN := 0.12
 const SCRIPTED_FLOOR_TIME := 6.0
@@ -267,6 +273,12 @@ var scripted_filled := false
 var scripted_hold_left := 0.0
 # Which word FinisherPromptUI shows. &"mash" everywhere else; the caller sets it.
 var prompt_key := &"mash"
+# The boss whose window is held from a POW to the daze (_hold_window), and what was stopped to hold it: [Timer, its
+# own paused] pairs, and his state machine with whether it was processing and physics processing.
+var held_boss: Node
+var held_timers: Array = []
+var held_machine: Node
+var held_machine_flags := [false, false]
 
 
 func _ready() -> void:
@@ -317,6 +329,7 @@ func charge_time_left() -> float:
 
 # The freeze and the zoom are static, so they'd outlive the fight scene.
 func _exit_tree() -> void:
+	_release_window()
 	if phase != Phase.OFF:
 		FightFreeze.unfreeze(get_tree())
 		ScreenView.reset(get_tree())
@@ -346,17 +359,29 @@ func _mash_keys_held() -> bool:
 	return MashInput.keys_held(player)
 
 
-# The hit is reported inside a physics flush, where collision can't be taken out of physics.
+# The hit is reported inside a physics flush, where collision can't be taken out of physics. His window is held at
+# once, though: a clock running out between the POW and the deferred start would leave it no mash. Only a POW's: a
+# finisher a fight hands out (begin_auto, begin) is timed by the fight, which may still be moving things in its beat
+# (Eric's reflect drives the player in beside him).
 func _on_charged_hit_landed(target: Node) -> void:
+	if phase == Phase.OFF and _can_begin(target):
+		_hold_window(target)
 	_try_begin.call_deferred(target)
 
 
-func _try_begin(target: Node) -> void:
-	if phase != Phase.OFF or not is_instance_valid(target) or not target.has_method("can_be_dazed"):
-		return
+func _can_begin(target: Node) -> bool:
+	if not is_instance_valid(target) or not target.has_method("can_be_dazed"):
+		return false
 	if player.fight_over or player.playerHealth <= 0 or player.is_grabbed or player.is_talking:
+		return false
+	return target.can_be_dazed()
+
+
+func _try_begin(target: Node) -> void:
+	if phase != Phase.OFF:
 		return
-	if not target.can_be_dazed():
+	if not _can_begin(target):
+		_release_window()
 		return
 	boss = target
 	dazed = false
@@ -550,19 +575,57 @@ func _set_phase(new_phase: Phase) -> void:
 	phase_time = 0.0
 
 
+# From the POW to the daze his punish window holds where it is: the settle beat runs between them, and a window that
+# ran out inside it left the POW with no mash (the user, 2026-10-06: 3 hits always trigger the uppercut). His Timers and
+# his state machine's steps stop - every window clock in the game is one of them - and a boss with a clock of his own
+# besides holds that too (hold_window). His body, his animation and his hit flash play on, and the fight freezes whole
+# at the daze anyway. Safe inside a physics flush: nothing here touches collision.
+func _hold_window(target: Node) -> void:
+	if held_boss == target:
+		return
+	_release_window()
+	held_boss = target
+	for timer: Timer in target.find_children("*", "Timer", true, false):
+		held_timers.append([timer, timer.paused])
+		timer.paused = true
+	var machine = target.get("state_machine")
+	if machine is Node:
+		held_machine = machine
+		held_machine_flags = [machine.is_processing(), machine.is_physics_processing()]
+		machine.set_process(false)
+		machine.set_physics_process(false)
+	if target.has_method("hold_window"):
+		target.hold_window(true)
+
+
+# Idempotent: whatever _hold_window stopped goes back as it was.
+func _release_window() -> void:
+	for pair in held_timers:
+		if is_instance_valid(pair[0]):
+			pair[0].paused = pair[1]
+	held_timers.clear()
+	if is_instance_valid(held_machine):
+		held_machine.set_process(held_machine_flags[0])
+		held_machine.set_physics_process(held_machine_flags[1])
+	held_machine = null
+	if is_instance_valid(held_boss) and held_boss.has_method("hold_window"):
+		held_boss.hold_window(false)
+	held_boss = null
+
+
 func _begin_daze() -> void:
-	# The window can close during the beat.
+	# The window is held through the beat (_hold_window), but he can still be killed or changed out of it.
 	if not boss.can_be_dazed():
 		player.end_finisher(false)
 		_finish()
 		return
+	_release_window()
 	boss.enter_daze()
 	dazed = true
 	supercharged = player.hype.is_full()
 	tiered = player.feel_v2 and boss.has_method("can_be_juggled") and boss.can_be_juggled()
 	if tiered:
-		# A full hype meter banks bar 1 before the first press.
-		tier_meter = FinisherTierMeter.new(tier_gain, tier_drains, tier_windows, tier_start_grace, tier_idle_stop, 1 if supercharged else 0)
+		tier_meter = FinisherTierMeter.new(tier_gain, tier_drains, tier_windows, tier_start_grace, tier_idle_stop)
 		smoothed_meter = tier_meter.meter
 		charge_level = tier_meter.meter
 	FightFreeze.freeze(get_tree(), [player.get_parent()])
@@ -741,7 +804,7 @@ func _contact() -> void:
 	if landed:
 		var max_health: int = boss.get_max_health()
 		var normal := maxi(1, roundi(max_health * finisher_damage_ratio))
-		var dealt: int = boss.take_finisher(maxi(1, roundi(max_health * supercharged_damage_ratio)) if supercharged else normal)
+		var dealt: int = boss.take_finisher(maxi(1, roundi(max_health * finisher_damage_ratio * SUPERCHARGE_MULTIPLIER)) if supercharged else normal)
 		# A phase floor or a nearly dead boss can clip it: hype is only spent for damage it added.
 		super_applied = supercharged and dealt > normal
 		if super_applied:
@@ -805,7 +868,7 @@ func _juggle_contact() -> void:
 	var share: float = juggle_shares[juggle_index]
 	var max_health: int = boss.get_max_health()
 	var normal := maxi(1, roundi(max_health * share))
-	var amount := maxi(1, roundi(max_health * (share + supercharge_bonus))) if last and supercharged else normal
+	var amount := maxi(1, roundi(max_health * (share + (SUPERCHARGE_MULTIPLIER - 1.0) * _banked_share()))) if last and supercharged else normal
 	var dealt: int = boss.take_juggle_hit(amount, FinisherArtLayout.JUGGLE_HIT_PITCHES[juggle_index])
 	# A nearly dead boss can clip it: hype is only spent for damage it added.
 	var super_applied := last and supercharged and dealt > normal
@@ -837,6 +900,22 @@ func _juggle_contact() -> void:
 	_flash(boss.sprite, super_impact_flash if last_hit_big else impact_flash)
 	get_tree().call_group("arena_crowd", "cheer", super_impact_cheer if last_hit_big else impact_cheer)
 	juggle_hit.emit(juggle_index, last)
+
+
+# The share of his max health every bar banked pays in all.
+func _banked_share() -> float:
+	var total := 0.0
+	for k in juggle_tiers:
+		total += juggle_shares[k]
+	return total
+
+
+# What the uppercut landing now is worth to a boss that counts uppercuts rather than taking health (Jordan's
+# god, Greyson's brawl): 1, and SUPERCHARGE_UPPERCUTS more for the one a full hype meter boosts, the
+# single-bar uppercut or a juggle's last.
+func uppercut_count() -> int:
+	var boosted := supercharged and (not tiered or juggle_index == juggle_tiers - 1)
+	return 1 + SUPERCHARGE_UPPERCUTS if boosted else 1
 
 
 # The highest a juggle of `tiers` uppercuts would throw him, each catching him where the one before left
@@ -1103,6 +1182,7 @@ func _abort() -> void:
 func _finish() -> void:
 	if mashed and player.feel_v2 and _mash_keys_held():
 		latch_left = mash_release_latch
+	_release_window()
 	mashed = false
 	phase = Phase.OFF
 	boss = null

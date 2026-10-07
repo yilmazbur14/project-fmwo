@@ -28,9 +28,146 @@ const FEET_PIXEL := Vector2(32, FEET_ROW)
 # (frame pixels just above his head, where the daze stars circle) once the frames are known. It has no
 # "sword": Mason has nothing to drop.
 # The placeholder loops his defeated frames 13-14, where he is already down and beaten.
-const USE_FINAL_BROKEN := false
-const FINAL_BROKEN := {}
+# mason_broken.png (the Nugget Fastball plan, section 3D; shipped 2026-10-04, art_source/mason_pitch/contract.json):
+# 7 frames on mason_sheet's canvas. The knockdown 0-3 (reel, totter, sit, bounce) once, then sitting dazed 4-5 in a
+# loop; 6 is a twitch the loop doesn't use. It is every Break's pose, the home run's knockdown or not. "heads" are the
+# contract's points just over his comb, each less half a texel: MasonBroken reads them through frame_point, which
+# adds the half back.
+const USE_FINAL_BROKEN := true
+const FINAL_BROKEN := {
+	"texture": "res://Assets/Characters/Mason/mason_broken.png",
+	"hframes": 7,
+	"intro": &"broken_knockdown_final",
+	"loop": &"broken_dazed_final",
+	"intro_frames": [0, 1, 2, 3],
+	"intro_times": [0.10, 0.12, 0.14, 0.12],
+	"loop_frames": [4, 5],
+	"loop_time": 0.35,
+	"heads": {0: Vector2(36.0, -2.5), 1: Vector2(26.0, -2.5), 2: Vector2(31.0, 10.5), 3: Vector2(31.0, 6.5),
+		4: Vector2(27.0, 10.5), 5: Vector2(35.0, 10.5), 6: Vector2(31.0, 9.5)},
+}
 const PLACEHOLDER_BROKEN := {"intro": &"", "loop": &"broken"}
+
+#THE PITCH (MasonPitch, the Nugget Fastball)
+# mason_pitch.png (shipped 2026-10-04; art_source/mason_pitch/contract.json is the source of truth): 15 frames on
+# mason_sheet's canvas (64x64, feet on row 63 at x 32), drawn throwing toward screen-left; the code mirrors it for a
+# player on his right. "frames" names the pose each beat shows, "bonk" the three frames a home run's bonk steps
+# through on "bonk_times" (they draw no nugget: the bonk's own burst is it breaking up). Anchors are the contract's
+# points on an unflipped frame (pitch_local mirrors them, x to 64 - x), one for every frame or a {frame: point}:
+# "tell" the badge's and the X's bottom tip, beside him at body +(150, 10) (over his comb it would sit under the boss
+# bar at his home spot); "release_hand" where the ball spawns; "hand" the cocked nugget the bite's glow sits on;
+# "head_hit" the forehead a home run strikes.
+const USE_FINAL_PITCH := true
+const FINAL_PITCH := {
+	"texture": "res://Assets/Characters/Mason/mason_pitch.png",
+	"hframes": 15,
+	"frames": {&"ready": 0, &"stretch": 1, &"kick": 2, &"set": 3, &"release": 4, &"follow": 5, &"pump": 6,
+		&"pump_hold": 7, &"change_a": 8, &"change_b": 9, &"change_set": 10, &"change_release": 11},
+	"bonk": [12, 13, 14],
+	"bonk_times": [0.12, 0.15, 0.18],
+	"tell": Vector2(82.0, 35.0 + 1.0 / 3.0),
+	"release_hand": {4: Vector2(10.5, 56.5), 11: Vector2(11.5, 36.5)},
+	"hand": {3: Vector2(53.5, 7.0), 6: Vector2(23.5, 51.5), 7: Vector2(54.5, 27.0)},
+	"head_hit": {0: Vector2(32.5, 11.0), 1: Vector2(31.5, 11.0), 2: Vector2(33.5, 11.0), 3: Vector2(34.5, 11.0),
+		4: Vector2(26.5, 16.0), 5: Vector2(23.5, 19.0), 6: Vector2(26.5, 16.0), 7: Vector2(32.5, 11.0),
+		8: Vector2(38.5, 11.0), 9: Vector2(25.5, 12.0), 10: Vector2(33.5, 11.0), 11: Vector2(29.5, 13.0),
+		12: Vector2(37.5, 12.0), 13: Vector2(26.5, 14.0), 14: Vector2(31.5, 11.0)},
+}
+# On mason_sheet's own frames. Its frames face the viewer, so the changeup's rock reads as a light-blue pulse on
+# him instead of a silhouette, and the badge stands on the daze anchor (no "tell").
+const PLACEHOLDER_PITCH := {
+	"frames": {&"ready": 0, &"stretch": 1, &"kick": 16, &"set": 17, &"release": 18, &"follow": 0, &"pump": 17,
+		&"pump_hold": 17, &"change_a": 0, &"change_b": 1, &"change_set": 16, &"change_release": 18},
+	"bonk": [12, 12, 12],
+	"bonk_times": [0.12, 0.15, 0.18],
+	"release_hand": Vector2(10.5, 56.5),
+	"hand": Vector2(56.5, 12.5),
+	"head_hit": Vector2(32.5, 14.5),
+	"changeup_pulse": {"color": Color(0.65, 0.85, 1.4), "time": 0.20},
+}
+# The badge's top stays this far inside the view: the strong badge stands 108 px over its tip.
+const TELL_TOP_MARGIN := 4.0
+const TELL_BADGE_HEIGHT := 108.0
+const VIEW_RECT := Rect2(0, 0, 1920, 1080)
+
+# The ball (MasonPitchBall), drawn at SCALE and never rotated, on the scheme that shipped ("spin_streaks"): the
+# nugget's own spin on nugget_fastball.png, centred, and under it a streak sheet of `directions` headings (e, se, s,
+# sw, w, nw, n, ne), frame = direction * 2 + flicker. The changeup is the same nugget at half the spin rate over its own
+# trail. The hit radius is the drawn nugget's half-size (6.5 texels, 19.5 px; the artist's 18), on any art.
+const BALL_RADIUS := 18.0
+const USE_FINAL_BALL := true
+const FINAL_BALL := {
+	&"fastball": {"scheme": &"spin_streaks", "texture": "res://Assets/Characters/Mason/nugget_fastball.png", "hframes": 4,
+		"frame_time": 0.05, "streaks": "res://Assets/Characters/Mason/nugget_fastball_streaks.png",
+		"directions": 8, "frames_per_direction": 2, "streak_time": 0.06},
+	&"changeup": {"scheme": &"spin_streaks", "texture": "res://Assets/Characters/Mason/nugget_fastball.png", "hframes": 4,
+		"frame_time": 0.10, "streaks": "res://Assets/Characters/Mason/nugget_changeup_trail.png",
+		"directions": 8, "frames_per_direction": 2, "streak_time": 0.11},
+}
+# Cream puffs left behind the changeup as it floats, one every PUFF_EVERY, each played once where it was left.
+const USE_FINAL_PUFF := true
+const FINAL_PUFF := {"texture": "res://Assets/Characters/Mason/nugget_puff.png", "hframes": 3, "scale": SCALE, "frame_time": 0.07}
+const PUFF_EVERY := 0.06
+const PLACEHOLDER_BALL := {"scheme": &"placeholder", "body": Vector2(11, 8) * SCALE / 2.0,
+	"fill": Color(0.83, 0.6, 0.25), "rim": Color(0.25, 0.13, 0.05), "rim_width": 3.0,
+	"streak": Color(1.0, 0.95, 0.7, 0.85), "streak_length": 60.0, "streak_width": 8.0,
+	"trail": Color(1.0, 0.92, 0.6, 0.55), "trail_width": 6.0, "trail_fade": 0.15}
+# The quick pitch is the fastball's art, white-hot; the home run's return is the fastball's, parry-tinted
+# (DefenseHypeArtLayout.PARRY_FLASH[0], Eric's reflected sword).
+const QUICK_TINT := Color(2.2, 2.1, 1.9)
+# How long a missed ball flies on before it is gone, fading.
+const BALL_FADE := 0.15
+
+# HOME RUN! (gold, the KNIGHT BREAKER! recipe; the user's pick 2026-10-04) beside his head on the ring-centre side,
+# with three streak pips under it. Pivot at its bottom centre; the placeholder is the word in the HUD font.
+const USE_FINAL_HOME_RUN := true
+const FINAL_HOME_RUN := {"texture": "res://Assets/Characters/Mason/home_run.png", "hframes": 6, "scale": SCALE,
+	"frame_size": Vector2(128, 40), "frame_times": [0.05, 0.06, 0.06, 0.30, 0.06, 0.06]}
+const PLACEHOLDER_HOME_RUN := {"text": "HOME RUN!", "font_size": 66, "color": Color(1.0, 0.82, 0.2), "outline": 10,
+	"box": Vector2(400, 90)}
+const HOME_RUN_TIME := 0.9
+# A word's near edge stands this far from his middle: his drawn half-width (93 px) and a gap, so it never covers him.
+const WORD_BESIDE := 113.0
+const USE_FINAL_HOME_RUN_PIPS := true
+const FINAL_HOME_RUN_PIPS := {"texture": "res://Assets/Characters/Mason/home_run_pips.png", "hframes": 2, "scale": SCALE}
+const PLACEHOLDER_HOME_RUN_PIPS := {"radius": 10.0, "gap": 30.0, "empty": Color(0.2, 0.2, 0.2, 0.8),
+	"filled": Color(1.0, 1.0, 1.0), "rim": Color(0, 0, 0)}
+
+# The bonk on HEAD_HIT: the returned nugget bursting into crumbs, a flash star and two cartoon stars. The placeholder
+# is a code-drawn star.
+const USE_FINAL_BONK := true
+const FINAL_BONK := {"texture": "res://Assets/Characters/Mason/nugget_bonk.png", "hframes": 5, "scale": SCALE,
+	"frame_time": 0.06}
+const PLACEHOLDER_BONK := {"points": 8, "outer": 34.0, "inner": 14.0, "color": Color(1.0, 0.95, 0.55), "time": 0.3}
+
+# A hesitation's pale X: Carter's demon_feint.png as it ships, stepped through ignite and peak to its hold, never
+# pulsing or tinted (copied from JoshMonteLayout, with no dependency on Josh's file).
+const FEINT_MARK := {texture = "res://Assets/Characters/Carter/Demon/demon_feint.png", hframes = 4,
+	frame_size = Vector2(24, 24), pivot = Vector2(12, 12), scale = 3.0, steps = {ignite = 0, peak = 1, hold = 2, fade = 3},
+	ignite_time = 0.05, peak_time = 0.04}
+const FEINT_RING := {radius = 46.0, width = 11.0, points = 20, color = Color(1.0, 0.85, 0.15)}
+const MARK_OUT := 0.05
+# A bitten hesitation: his hand burns white, beating (Josh's punish look), until the quick pitch leaves it.
+const QUICK_GLOW := {glow = Color(1.0, 1.0, 1.0, 0.55), glow_radius = 36.0, points = 24, beat = [0.82, 1.18],
+	beat_time = 0.07}
+# FEINT! (Josh's), and HOME RUN!'s placement rules: in view and HUD_CLEARANCE clear of the HUD blocks
+# (CarterArtLayout.HUD_KEEP_OUT's rects).
+const WORD := {centre = Vector2(960, 300), time = 0.9, font_size = 92, color = Color(1.0, 0.36, 0.3), outline = 10,
+	from_scale = 0.7, to_scale = 1.0, grow_time = 0.16, box = Vector2(300, 100)}
+const HUD_KEEP_OUT: Array[Rect2] = [
+	Rect2(720, 33, 480, 148),
+	Rect2(10, 842, 406, 229),
+	Rect2(1371, 946, 537, 126),
+]
+const HUD_CLEARANCE := 12.0
+
+# Stand-ins on the fight's existing streams until the sound pass.
+const PITCH_SFX := {
+	&"windup": {"stream": "res://Assets/Audio/SFX/wrestler_charge.ogg", "pitch": 1.2, "volume_db": -12.0},
+	&"release": {"stream": "res://Assets/Audio/SFX/whirlwind_whoosh.ogg", "pitch": 1.4, "volume_db": -4.0},
+	&"changeup": {"stream": "res://Assets/Audio/SFX/whirlwind_whoosh.ogg", "pitch": 0.7, "volume_db": -4.0},
+	&"bonk": {"stream": "res://Assets/Audio/SFX/hit_impact.ogg", "pitch": 1.3, "volume_db": 0.0},
+}
 
 #JUGGLED (MasonJuggled, under the tiered finisher's uppercuts)
 # mason_juggle.png: 12 frames of 128x96, feet at (64, 95). The hit 0-1; a tumble looping 2-6 that opens
@@ -181,7 +318,107 @@ const INTRO_SFX := {
 
 
 static func broken() -> Dictionary:
-	return FINAL_BROKEN if USE_FINAL_BROKEN else PLACEHOLDER_BROKEN
+	return FINAL_BROKEN if USE_FINAL_BROKEN and ResourceLoader.exists(FINAL_BROKEN.texture) else PLACEHOLDER_BROKEN
+
+
+# His knockdown and dazed loop on mason_broken.png, added to his library once (PlayerPunching's pattern) when the
+# sheet is there: MasonBroken plays whatever broken() names and needs nothing else.
+static func build_broken_animations(ap: AnimationPlayer) -> void:
+	var library := ap.get_animation_library(&"")
+	var art: Dictionary = FINAL_BROKEN
+	if not library.has_animation(art.intro):
+		var times: Array = art.intro_times
+		var intro := Animation.new()
+		var track := intro.add_track(Animation.TYPE_VALUE)
+		intro.track_set_path(track, ^"Sprite2D:frame")
+		intro.value_track_set_update_mode(track, Animation.UPDATE_DISCRETE)
+		var at := 0.0
+		for i in art.intro_frames.size():
+			intro.track_insert_key(track, at, art.intro_frames[i])
+			at += times[i]
+		intro.length = at
+		library.add_animation(art.intro, intro)
+	if not library.has_animation(art.loop):
+		var loop := Animation.new()
+		var track := loop.add_track(Animation.TYPE_VALUE)
+		loop.track_set_path(track, ^"Sprite2D:frame")
+		loop.value_track_set_update_mode(track, Animation.UPDATE_DISCRETE)
+		for i in art.loop_frames.size():
+			loop.track_insert_key(track, i * art.loop_time, art.loop_frames[i])
+		loop.length = art.loop_frames.size() * art.loop_time
+		loop.loop_mode = Animation.LOOP_LINEAR
+		library.add_animation(art.loop, loop)
+
+
+static func pitch() -> Dictionary:
+	return FINAL_PITCH if USE_FINAL_PITCH and ResourceLoader.exists(FINAL_PITCH.texture) else PLACEHOLDER_PITCH
+
+
+# The texel an anchor of pitch() names on `frame`, or null when that art has none.
+static func pitch_anchor(anchor: String, frame: int) -> Variant:
+	var spot: Variant = pitch().get(anchor)
+	if spot is Dictionary:
+		return spot.get(frame)
+	return spot
+
+
+# Body-local px of a point on a pitch frame (the contract's points, not texel indices), mirrored for a sheet drawn
+# flipped: a point at x is at 64 - x on the mirrored frame.
+static func pitch_local(point: Vector2, flipped: bool) -> Vector2:
+	if flipped:
+		point.x = FRAME_SIZE.x - point.x
+	return frame_local(point)
+
+
+# What draws a ball of `kind` (&"fastball", &"changeup"; the quick pitch is the fastball's): its nugget and its
+# streak sheet once both are in, else the code-drawn stand-in.
+static func ball(kind: StringName) -> Dictionary:
+	var art: Dictionary = FINAL_BALL[&"changeup" if kind == &"changeup" else &"fastball"]
+	if USE_FINAL_BALL and ResourceLoader.exists(art.streaks) and ResourceLoader.exists(art.texture):
+		return art
+	return PLACEHOLDER_BALL
+
+
+static func puff() -> Dictionary:
+	return FINAL_PUFF if USE_FINAL_PUFF and ResourceLoader.exists(FINAL_PUFF.texture) else {}
+
+
+# The streak sheet's streak direction for `heading`: 0 e, 1 se, 2 s ... 7 ne, clockwise on screen.
+static func streak_direction(heading: Vector2, directions: int) -> int:
+	return posmod(roundi(heading.angle() / (TAU / directions)), directions)
+
+
+static func home_run() -> Dictionary:
+	return FINAL_HOME_RUN if USE_FINAL_HOME_RUN and ResourceLoader.exists(FINAL_HOME_RUN.texture) else PLACEHOLDER_HOME_RUN
+
+
+static func home_run_pips() -> Dictionary:
+	return FINAL_HOME_RUN_PIPS if USE_FINAL_HOME_RUN_PIPS and ResourceLoader.exists(FINAL_HOME_RUN_PIPS.texture) else PLACEHOLDER_HOME_RUN_PIPS
+
+
+static func bonk() -> Dictionary:
+	return FINAL_BONK if USE_FINAL_BONK and ResourceLoader.exists(FINAL_BONK.texture) else PLACEHOLDER_BONK
+
+
+# The X once it is there; empty for the ring.
+static func feint_mark() -> Dictionary:
+	return FEINT_MARK if ResourceLoader.exists(FEINT_MARK.texture) else {}
+
+
+# `box` centred on `centre`, moved the least way into the view and HUD_CLEARANCE clear of every HUD block: down
+# out of the boss bar, up out of the bottom corners.
+static func clear_of_hud(centre: Vector2, box: Vector2) -> Vector2:
+	var view := VIEW_RECT.grow(-HUD_CLEARANCE)
+	var at := centre.clamp(view.position + box / 2.0, view.end - box / 2.0)
+	for block in HUD_KEEP_OUT:
+		var grown := block.grow(HUD_CLEARANCE)
+		if not grown.intersects(Rect2(at - box / 2.0, box)):
+			continue
+		if grown.get_center().y < VIEW_RECT.get_center().y:
+			at.y = grown.end.y + box.y / 2.0
+		else:
+			at.y = grown.position.y - box.y / 2.0
+	return at
 
 
 static func juggle() -> Dictionary:

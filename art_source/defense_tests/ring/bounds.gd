@@ -265,7 +265,8 @@ static func opt_out(t, ring: Rect2, origins: Rect2) -> void:
 #HIS OWN DRIVES
 
 # His string from Idle with the player standing in its footprint by the left rope. His landings track their feet
-# as far as his WALK_RECT lets him, so the fifth comes down beside the rope with them in it.
+# as far as his WALK_RECT lets him, so the big last one comes down beside the rope with them in it. The string draws
+# its own number of hops (DannyBossSlams.hop_counts), so the big one is whichever landing came last.
 static func danny_nudge(t, ring: Rect2, origins: Rect2) -> void:
 	wake(t)
 	t.boss = t.current_scene.get_node(DANNY_BODY)
@@ -280,14 +281,14 @@ static func danny_nudge(t, ring: Rect2, origins: Rect2) -> void:
 	t.sm.on_child_transition(t.sm.current_state, "Slams")
 	await t.wait_until(func(): return t.sm.current_state != slams or slams.beat == slams.Beat.SETTLE, 900)
 	var box: Rect2 = t.boss.body_box_rect(&"sleep")
-	var inside: bool = slams.results.size() == 5 and slams.results[4].feet_inside
+	var inside: bool = slams.results.size() == slams.slams and slams.results[-1].feet_inside
 	await t.wait_until(func(): return t.sm.current_state != slams, 120)
 	await t.wait_until(func(): return not t.sm.is_driving_player(), 60)
 	await t.wait(2)
 	var feet: Vector2 = t.sm.player_feet()
 	var clear: bool = feet.x <= box.position.x or feet.x >= box.end.x
-	t.log_p("danny: the fifth landing found them in his footprint %s, his nap's box %s, driven to %s, feet %s" % [inside, box, t.sm.drive_to, feet])
-	t.check(inside and slams.nudged, "his fifth landing by the left rope found the player in his footprint, and slid them out")
+	t.log_p("danny: the big landing (%d of %d) found them in his footprint %s, his nap's box %s, driven to %s, feet %s" % [slams.results.size(), slams.slams, inside, box, t.sm.drive_to, feet])
+	t.check(inside and slams.nudged, "his big landing by the left rope found the player in his footprint, and slid them out")
 	t.check(origins.grow(SLACK).has_point(t.sm.drive_to) and clear and on_floor(t, ring),
 		"out beside him on the side there is floor for, never past the rope (to %s, feet %s, his box %s)" % [t.sm.drive_to, feet, box])
 	t.sm.on_child_transition(t.sm.current_state, "Idle")

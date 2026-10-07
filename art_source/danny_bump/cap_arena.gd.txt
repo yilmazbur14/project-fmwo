@@ -1,0 +1,66 @@
+extends SceneTree
+
+# A clean 1920x1080 still of Danny's real fight arena for the belly-bump approval mock: the fight scene with
+# its HUD, Danny's and the player's sprites hidden (the mock composites the new art in their place).
+# Writes nothing into the project; windowed at --position 100,100.
+
+const SCENE := "res://Scenes/Bosses/DannyBossFightScene.tscn"
+const OUT := "C:/Users/theyi/AppData/Local/Temp/claude/C--Users-theyi-OneDrive-Documents-new-game-project/a7fc2846-afef-472d-979b-e17143793a0f/scratchpad/danny_bump/"
+
+
+func _initialize() -> void:
+	_go.call_deferred()
+
+
+func frames(n: int) -> void:
+	for i in n:
+		await process_frame
+
+
+func until(cond: Callable, limit := 1200) -> bool:
+	for i in limit:
+		if cond.call():
+			return true
+		await process_frame
+	return false
+
+
+func shot(name: String) -> void:
+	await RenderingServer.frame_post_draw
+	var image := root.get_texture().get_image()
+	image.save_png(OUT + name)
+	print("saved %s %s" % [name, image.get_size()])
+
+
+func _go() -> void:
+	change_scene_to_file(SCENE)
+	await until(func(): return current_scene != null and current_scene.scene_file_path == SCENE)
+	await frames(5)
+	var body: Node = current_scene.get_node("Arena/DannyBossScene/DannyBossCharacterBody")
+	var sm: Node = body.state_machine
+	var intro: Node = sm.states["Intro"]
+	await until(func(): return intro.entered, 120)
+	if not intro.finished:
+		intro.skip()
+	await frames(3)
+	for child in current_scene.get_children():
+		if child is CanvasLayer:
+			child.queue_free()
+	root.get_node("DialogueManager").dialogue_ended.emit(null)
+	await frames(2)
+	var card: Node = current_scene.get_node_or_null("Arena/VsCard")
+	if card != null and card.is_playing():
+		card.skip()
+	await frames(40)
+	sm.on_child_transition(sm.current_state, "Idle")
+	for timer in body.find_children("*", "Timer", true, false):
+		timer.stop()
+	var player: Node2D = current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
+	player.playerHealth = 100
+	await frames(20)
+	await shot("cap_arena_with_danny.png")
+	body.get_node("Sprite2D").visible = false
+	player.get_node("Sprite2D").visible = false
+	await frames(4)
+	await shot("cap_arena_clean.png")
+	quit()

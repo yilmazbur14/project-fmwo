@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://cy0a4p3od7a3u"
+path="res://.godot/imported/LiamTakeover.dialogue-470084211b648916a50c110f0d38634b.tres"
+
+[deps]
+
+source_file="res://Dialogue/LiamTakeover.dialogue"
+dest_files=["res://.godot/imported/LiamTakeover.dialogue-470084211b648916a50c110f0d38634b.tres"]
+
+[params]
+
+defaults=true

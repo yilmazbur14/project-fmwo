@@ -1,0 +1,22 @@
+{
+  "champion_confetti_pop.wav": {
+    "bytes": 97064,
+    "path": "Assets/Audio/SFX/champion_confetti_pop.wav",
+    "sha256": "3b315c75f1faa708bdff0ae3eb85bd222c67d06a6fbafdb4e15a9882078b9ddc"
+  },
+  "champion_crowd_loop.wav": {
+    "bytes": 529314,
+    "path": "Assets/Audio/SFX/champion_crowd_loop.wav",
+    "sha256": "a313d4d0d71a40bb64cfd81a113bf8e9aa348c3f3b23821ff247abe53e33780b"
+  },
+  "champion_murmur_loop.wav": {
+    "bytes": 529314,
+    "path": "Assets/Audio/SFX/champion_murmur_loop.wav",
+    "sha256": "dad117b203fef75649456c2c5f9ebdeef1d007239425a4da1e29a1c4bf7f4616"
+  },
+  "champion_roar.wav": {
+    "bytes": 485144,
+    "path": "Assets/Audio/SFX/champion_roar.wav",
+    "sha256": "31f69f89c06cb27a19c8218eebb8e5aa1a148ab95cd06b5a54f35ffa7e4f6c67"
+  }
+}

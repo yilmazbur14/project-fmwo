@@ -6,6 +6,8 @@ const LINK_TEXTURE := preload("res://Assets/UI/Screens/rank_link.png")
 const ART_SCALE := 3
 const SLOT_FRAME_WIDTH := 40
 const LINK_FRAME_WIDTH := 8
+# rank_icons.png's last frame, after the ten bosses' faces.
+const INVITE_ICON := 10
 const LADDER_CENTER_X := 960.0
 const LADDER_TOP := 702.0
 const SLOT_SIZE := 120.0
@@ -22,6 +24,12 @@ enum LinkFrame { LOCKED, CLEARED, NEXT }
 @export var fade_in_time := 0.5
 
 var _current_slot: Sprite2D
+# The next fight, loading on threads behind this screen: NEXT BOSS froze it for that load, 0.2 to 0.8 s a
+# fight (the 2026-10-04 playtest).
+var _prefetching := false
+# The path it was requested under, for _exit_tree: GameProgress.next_boss_scene can be changed under the screen.
+var _prefetch_path := ""
+var _leaving := false
 
 func _ready() -> void:
 	if next_boss_button:
@@ -30,6 +38,9 @@ func _ready() -> void:
 			next_boss_button.text = "MAIN MENU"
 		else:
 			next_boss_button.text = "NEXT BOSS"
+	if GameProgress.next_boss_scene != "":
+		_prefetch_path = GameProgress.next_boss_scene
+		_prefetching = ResourceLoader.load_threaded_request(_prefetch_path) == OK
 
 	var cleared := GameProgress.record_victory()
 	timestamp_label.text = _chat_timestamp()
@@ -38,16 +49,30 @@ func _ready() -> void:
 	_fade_in()
 
 func _on_next_boss_button_pressed() -> void:
-	if GameProgress.next_boss_scene != "":
-		get_tree().change_scene_to_file(GameProgress.next_boss_scene)
-	else:
+	if _leaving:
+		return
+	_leaving = true
+	if GameProgress.next_boss_scene == "":
 		get_tree().change_scene_to_file("res://Scenes/Core/MainMenuScene.tscn")
+		return
+	var fight: PackedScene = ResourceLoader.load_threaded_get(GameProgress.next_boss_scene) if _prefetching else null
+	if fight != null:
+		get_tree().change_scene_to_packed(fight)
+	else:
+		get_tree().change_scene_to_file(GameProgress.next_boss_scene)
+
+
+# Quitting on this screen with the prefetch still loading tears the engine down under the loader's threads, and the
+# half-loaded fight prints parse errors at exit: waiting for it here closes it first. NEXT BOSS has taken it already.
+func _exit_tree() -> void:
+	if _prefetching and not _leaving:
+		ResourceLoader.load_threaded_get(_prefetch_path)
 
 
 func _rank_message(cleared: int) -> String:
 	if GameProgress.fight_index < 0:
 		return "@newcomer won the fight!"
-	var rank: String = GameProgress.BOSSES[cleared - 1]["rank"]
+	var rank: String = GameProgress.RANKS[cleared - 1]
 	# The last fight on the ladder hands over the invite instead of a rank.
 	if rank == "":
 		return "@newcomer received an invite!"
@@ -62,7 +87,7 @@ func _build_rank_ladder(cleared: int) -> void:
 		var state := _slot_frame(i, cleared, boss_count)
 		# Locked slot art is opaque, so its icon would never show.
 		if state != SlotFrame.LOCKED:
-			_add_ladder_sprite(ICON_TEXTURE, SLOT_FRAME_WIDTH, i, x)
+			_add_ladder_sprite(ICON_TEXTURE, SLOT_FRAME_WIDTH, _icon_frame(i, boss_count), x)
 		var slot := _add_ladder_sprite(SLOT_TEXTURE, SLOT_FRAME_WIDTH, state, x)
 		if state == SlotFrame.CURRENT:
 			_current_slot = slot
@@ -75,6 +100,11 @@ func _build_rank_ladder(cleared: int) -> void:
 	pulse_timer.timeout.connect(_on_pulse_timer_timeout)
 	add_child(pulse_timer)
 	pulse_timer.start()
+
+
+# A fight's slot shows that boss's own face, wherever the ladder puts him; the goal slot after them shows the invite.
+func _icon_frame(index: int, boss_count: int) -> int:
+	return GameProgress.BOSSES[index]["icon"] if index < boss_count else INVITE_ICON
 
 
 func _slot_frame(index: int, cleared: int, boss_count: int) -> SlotFrame:

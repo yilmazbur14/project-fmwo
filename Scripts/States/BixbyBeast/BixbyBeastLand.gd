@@ -7,7 +7,7 @@ const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
 
 @onready var state_machine = get_parent()
 
-# Off a breath at a rope he first flies back to where his whole landed sprite fits on screen, until he's
+# Anywhere his whole landed sprite wouldn't fit on screen he first flies back to where it does, until he's
 # this close or for this long.
 const LANDING_ALIGN_DISTANCE := 8.0
 const LANDING_GLIDE_TIME := 0.6
@@ -40,7 +40,7 @@ func Physics_Update(delta: float) -> void:
 	elapsed += delta
 	match phase:
 		Phase.GLIDE:
-			if body.fly_toward(landing_point, state_machine.breath_approach_speed, delta) <= LANDING_ALIGN_DISTANCE or elapsed >= LANDING_GLIDE_TIME:
+			if body.fly_toward(landing_point, state_machine.glide_speed, delta) <= LANDING_ALIGN_DISTANCE or elapsed >= LANDING_GLIDE_TIME:
 				_descend()
 		# Frame 0 lasts as long as the fall.
 		Phase.DESCENT:

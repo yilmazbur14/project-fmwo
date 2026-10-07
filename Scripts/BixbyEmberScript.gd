@@ -1,23 +1,22 @@
 extends Node2D
 
 # A spot of floor left burning by beast Bixby's Inferno (BixbyBeastInferno): it catches, burns for
-# burn_time and burns out to a scorch mark, on the fire trail's frames. Unlike the trail's patches it is no
-# wall, it hurts: from the frame it catches until it is burning out, standing in it costs a hit whenever the
+# burn_time and burns out to a scorch mark, on the fire trail's frames (BixbyInfernoArtLayout's EMBERS). It is
+# no wall, it hurts: from the frame it catches until it is burning out, standing in it costs a hit whenever the
 # player's invincibility runs out, and a dash through it is safe (AttackCatalog: bixby_ember). His landing
 # burns out any that would stand between the player and his punish window
 # (BixbyBeastStateMachine.clear_fire_for_landing). Its timing all runs in _physics_process, so a freeze
 # holds it.
 
-const FirePatch := preload("res://Scripts/BixbyFirePatchScript.gd")
+const InfernoLayout := preload("res://Scripts/BixbyInfernoArtLayout.gd")
 const HitInfo := preload("res://Scripts/HitInfo.gd")
 
 enum Phase { IGNITE, BURNING, BURN_OUT, SCORCH }
 
-# What hurts, centred on the ember: the fire trail's burning bed.
-const SIZE := FirePatch.SIZE
-# Hurts from ignite frame 1 until burn-out frame 2 starts: the frames the trail's patches are solid on.
-const HURTS_FROM_IGNITE_STEP := FirePatch.SOLID_FROM_IGNITE_STEP
-const HURTS_UNTIL_BURN_OUT_STEP := FirePatch.SOLID_UNTIL_BURN_OUT_STEP
+# What hurts, centred on the ember: the burning bed.
+const SIZE := InfernoLayout.EMBER_SIZE
+const HURTS_FROM_IGNITE_STEP := InfernoLayout.EMBER_HURTS_FROM_IGNITE_STEP
+const HURTS_UNTIL_BURN_OUT_STEP := InfernoLayout.EMBER_HURTS_UNTIL_BURN_OUT_STEP
 
 # Set by the attack before the ember enters the tree.
 var burn_time := 10.0
@@ -39,7 +38,7 @@ var hurting := false
 func _ready() -> void:
 	hitbox.set_meta(HitInfo.META_ATTACK, &"bixby_ember")
 	sprite.flip_h = posmod(slot, 2) == 1
-	sprite.frame = FirePatch.IGNITE_FRAMES[0]
+	sprite.frame = InfernoLayout.EMBER_IGNITE_FRAMES[0]
 
 
 # What hurts, in px.
@@ -60,7 +59,7 @@ func burn_out() -> void:
 	if not is_active():
 		return
 	_start(Phase.BURN_OUT, 0)
-	sprite.frame = FirePatch.BURN_OUT_FRAMES[0]
+	sprite.frame = InfernoLayout.EMBER_BURN_OUT_FRAMES[0]
 
 
 func _physics_process(delta: float) -> void:
@@ -68,40 +67,40 @@ func _physics_process(delta: float) -> void:
 	phase_clock += delta
 	match phase:
 		Phase.IGNITE:
-			while phase == Phase.IGNITE and frame_clock >= FirePatch.IGNITE_TIMES[step]:
-				frame_clock -= FirePatch.IGNITE_TIMES[step]
-				if step + 1 < FirePatch.IGNITE_FRAMES.size():
+			while phase == Phase.IGNITE and frame_clock >= InfernoLayout.EMBER_IGNITE_TIMES[step]:
+				frame_clock -= InfernoLayout.EMBER_IGNITE_TIMES[step]
+				if step + 1 < InfernoLayout.EMBER_IGNITE_FRAMES.size():
 					step += 1
-					sprite.frame = FirePatch.IGNITE_FRAMES[step]
+					sprite.frame = InfernoLayout.EMBER_IGNITE_FRAMES[step]
 				else:
-					_start(Phase.BURNING, posmod(3 * slot, FirePatch.BURN_LOOP_FRAMES.size()))
-					sprite.frame = FirePatch.BURN_LOOP_FRAMES[step]
+					_start(Phase.BURNING, posmod(3 * slot, InfernoLayout.EMBER_BURN_LOOP_FRAMES.size()))
+					sprite.frame = InfernoLayout.EMBER_BURN_LOOP_FRAMES[step]
 		Phase.BURNING:
 			if phase_clock >= burn_time:
 				burn_out()
 			else:
-				while frame_clock >= FirePatch.BURN_LOOP_TIME:
-					frame_clock -= FirePatch.BURN_LOOP_TIME
-					step = (step + 1) % FirePatch.BURN_LOOP_FRAMES.size()
-					sprite.frame = FirePatch.BURN_LOOP_FRAMES[step]
+				while frame_clock >= InfernoLayout.EMBER_BURN_LOOP_TIME:
+					frame_clock -= InfernoLayout.EMBER_BURN_LOOP_TIME
+					step = (step + 1) % InfernoLayout.EMBER_BURN_LOOP_FRAMES.size()
+					sprite.frame = InfernoLayout.EMBER_BURN_LOOP_FRAMES[step]
 		Phase.BURN_OUT:
-			while phase == Phase.BURN_OUT and frame_clock >= FirePatch.BURN_OUT_TIMES[step]:
-				frame_clock -= FirePatch.BURN_OUT_TIMES[step]
-				if step + 1 < FirePatch.BURN_OUT_FRAMES.size():
+			while phase == Phase.BURN_OUT and frame_clock >= InfernoLayout.EMBER_BURN_OUT_TIMES[step]:
+				frame_clock -= InfernoLayout.EMBER_BURN_OUT_TIMES[step]
+				if step + 1 < InfernoLayout.EMBER_BURN_OUT_FRAMES.size():
 					step += 1
-					sprite.frame = FirePatch.BURN_OUT_FRAMES[step]
+					sprite.frame = InfernoLayout.EMBER_BURN_OUT_FRAMES[step]
 				else:
 					_start(Phase.SCORCH, 0)
-					sprite.texture = FirePatch.SCORCH_SHEET
-					sprite.hframes = roundi(FirePatch.SCORCH_SHEET.get_width() / float(FirePatch.FRAME_WIDTH))
+					sprite.texture = InfernoLayout.EMBER_SCORCH_SHEET
+					sprite.hframes = roundi(InfernoLayout.EMBER_SCORCH_SHEET.get_width() / float(InfernoLayout.EMBER_FRAME_WIDTH))
 					sprite.frame = 0
 		Phase.SCORCH:
-			if phase_clock >= FirePatch.SCORCH_SMOULDER_TIME + FirePatch.SCORCH_FADE_TIME:
+			if phase_clock >= InfernoLayout.EMBER_SCORCH_SMOULDER_TIME + InfernoLayout.EMBER_SCORCH_FADE_TIME:
 				queue_free()
 				return
-			elif phase_clock >= FirePatch.SCORCH_SMOULDER_TIME:
+			elif phase_clock >= InfernoLayout.EMBER_SCORCH_SMOULDER_TIME:
 				sprite.frame = 1
-				sprite.modulate.a = 1.0 - (phase_clock - FirePatch.SCORCH_SMOULDER_TIME) / FirePatch.SCORCH_FADE_TIME
+				sprite.modulate.a = 1.0 - (phase_clock - InfernoLayout.EMBER_SCORCH_SMOULDER_TIME) / InfernoLayout.EMBER_SCORCH_FADE_TIME
 	_update_hurting()
 	_touch_player()
 

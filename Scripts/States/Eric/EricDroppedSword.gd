@@ -27,6 +27,33 @@ func plant(body: CharacterBody2D, state_machine: Node) -> void:
 	remove_from_group(state_machine.HAZARD_GROUP)
 
 
+# Already standing in the mat where the bear hug's own drawing of his planted sword stands (`planted`, for
+# his origin at `at`), which an uppercut caught him away from (EricStateMachine.drop_planted_sword). No
+# plunge: it was never in his hands. The two sheets draw the blade in different columns of his frame, so
+# it moves across by the difference between them and stands where that one stood.
+func plant_standing(body: CharacterBody2D, state_machine: Node, at: Vector2, planted: Sprite2D) -> void:
+	plant(body, state_machine)
+	flip_h = planted.flip_h
+	for time in EricArtLayout.broken().sword.frame_times:
+		clock += time
+	clock += 1.0
+	_physics_process(0.0)
+	spot = at + Vector2((drawn_centre_x(planted) - drawn_centre_x(self)) * scale.x, 0.0)
+	global_position = spot + EricArtLayout.SORT_POINT * body.scale
+
+
+# The middle of the opaque columns of `sprite`'s frame, in its own texels from its origin.
+static func drawn_centre_x(sprite: Sprite2D) -> float:
+	var image: Image = sprite.texture.get_image()
+	var width: int = image.get_width() / sprite.hframes
+	var height: int = image.get_height() / sprite.vframes
+	var used := image.get_region(Rect2i((sprite.frame % sprite.hframes) * width, (sprite.frame / sprite.hframes) * height, width, height)).get_used_rect()
+	var middle := used.position.x + used.size.x / 2.0
+	if sprite.flip_h:
+		middle = width - middle
+	return middle - (width / 2.0 if sprite.centered else 0.0) + sprite.offset.x
+
+
 # It plunges, wobbles and stands, then holds its last frame.
 func _physics_process(delta: float) -> void:
 	clock += delta

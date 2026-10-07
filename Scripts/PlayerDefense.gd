@@ -1,8 +1,8 @@
 extends Node
 
-# The player's defence. One stamina bar pays for dashing and blocking, and refills after a short
-# pause. Every attack reaches the player through player.receive_hit(), which asks resolve_hit() for
-# the outcome: ignored, dodged by a dash, absorbed by the guard, or a hit.
+# The player's defence. One stamina bar pays for dashing, missed parries and blocking, and refills
+# slowly after a pause. Every attack reaches the player through player.receive_hit(), which asks
+# resolve_hit() for the outcome: ignored, dodged by a dash, absorbed by the guard, or a hit.
 # Blocking: the guard covers the sides around the auto-aimed facing (sky attacks from any facing).
 # A blocked source is absorbed for blocked_rehit_interval, so a continuous attack costs stamina once
 # a second.
@@ -10,6 +10,11 @@ extends Node
 # within parry_mash_lockout of an earlier press that didn't parry gets no parry credit, so mashing
 # block can't parry; a parry re-arms the next press at once. A `parryable` attack, like Eric's grab,
 # can only be answered this way: a held guard doesn't stop it.
+# Missed parry: a press that parries nothing costs parry_whiff_share of the bar (the user's playtest,
+# 2026-09-27: "right now they can kind of just spam it"). It is owed from the press and paid as its
+# window closes, or as the next press ends it, so a parry that lands never touches the bar. A press
+# the bar can't pay that for is refused, as a dash is. Blocking off only: with it on, a missed press
+# buys a block, and the block's cost is its price.
 # Pass-through attacks (AttackCatalog's parry_pass_through, Matt's bolts and waves) fly on through the
 # player after a parry or a block, and rely on the per-source absorbed_until that _parry and _block
 # already set to keep that same pass from landing a moment later.
@@ -46,7 +51,7 @@ extends Node
 # on a block either. The parry is untouched. Everything blocking was is still here, behind it.
 
 signal stamina_changed(stamina: float, max_stamina: float)
-# A dash was pressed without the stamina for it.
+# A dash or a parry press was refused for want of the stamina to pay for it.
 signal stamina_refused
 signal blocked(hit: RefCounted, contact_point: Vector2)
 # `streak` counts this parry: 1 for the first, then up while they keep landing.
@@ -72,13 +77,16 @@ static var LOG_HITS := false
 static var BLOCKING_ENABLED := false
 
 @export var max_stamina := 100.0
-@export var stamina_regen_per_second := 35.0
 # Seconds of game time after any spend before the bar starts refilling.
 @export var stamina_regen_delay := 0.6
+# Then empty to full in this many seconds: slowly, the user's call (2026-09-27).
+@export var stamina_refill_time := 4.5
 # The refill rate while the guard is up; 0 pauses it without draining.
 @export var block_hold_regen_multiplier := 0.0
-# A dash is refused below this.
-@export var dash_stamina_cost := 15.0
+# Shares of max_stamina. A dash takes a third of the bar (the user, 2026-09-27) and a missed parry
+# press parry_whiff_share, and each is refused below its own.
+@export var dash_stamina_share := 1.0 / 3.0
+@export var parry_whiff_share := 0.2
 @export var light_block_cost := 20.0
 @export var heavy_block_cost := 35.0
 # Either side of the facing.
@@ -149,11 +157,29 @@ const MAX_SOURCES := 32
 
 @onready var player: CharacterBody2D = get_parent()
 
+# What the shares come to.
+var dash_stamina_cost: float:
+	get:
+		return max_stamina * dash_stamina_share
+var parry_whiff_cost: float:
+	get:
+		return max_stamina * parry_whiff_share
+
 # Game time, so hit-stop slows every window with the fight.
 var clock := 0.0
 var stamina := 0.0
 var last_spend_time := -INF
+# The last press's whiff: owed from the press, and paid once its window is over unless it parried.
+var whiff_owed := false
+# While block_pressed is out for a press. A fight that charges for that press itself in its answer to
+# it (Carter's bitten feint drains its own 40) has priced the whiff, so the ordinary one isn't owed on
+# top.
+var pricing_press := false
 var guard_up := false
+# With blocking off: the press's stance went up and was dropped only because its key was let go, so the press still
+# parries for the rest of its window while the player walks on (PlayerBlocking). A tap let go before the hit landed
+# used to lose its parry, which halved the window for anyone who taps (the 2026-10-04 playtest).
+var released_stance := false
 var is_guard_broken := false
 var last_press_time := -INF
 var press_credited := false
@@ -191,6 +217,10 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	clock += delta
+	# The parry window's own test, negated, so a press can never both parry and pay on the boundary frame. A
+	# rearm_parry() ends the window early, and with it the press's chance.
+	if whiff_owed and clock - last_press_time > parry_window:
+		_settle_whiff()
 	_regen(delta)
 	if parry_streak > 0 and clock - last_parry_time > parry_streak_timeout:
 		end_parry_streak()
@@ -207,7 +237,7 @@ func resolve_hit(hit: RefCounted) -> int:
 	record.contact = clock
 	if player.is_invincible and not hit.bypass_invincibility:
 		return HitInfo.Result.IGNORED
-	if hit.dash_through and DashImmunity.is_immune(player, AttackCatalog.DASH_IMMUNITY_TIME, AttackCatalog.DASH_IMMUNITY_COOLDOWN):
+	if hit.dash_through and DashImmunity.is_immune(player, hit.dash_immunity if hit.dash_immunity > 0.0 else AttackCatalog.DASH_IMMUNITY_TIME, AttackCatalog.DASH_IMMUNITY_COOLDOWN):
 		if not hit.no_perfect_dodge:
 			_try_award_perfect_dodge(hit)
 		return HitInfo.Result.DODGED
@@ -251,11 +281,16 @@ func log_hit(hit: RefCounted, result: int) -> void:
 
 
 func try_spend_dash() -> bool:
-	if stamina < dash_stamina_cost:
+	if not can_afford(dash_stamina_cost):
 		stamina_refused.emit()
 		return false
 	_spend(dash_stamina_cost)
 	return true
+
+
+# Three dashes' thirds of the bar leave float dust either side of zero, so this reads to a thousandth.
+func can_afford(cost: float) -> bool:
+	return stamina >= cost - 0.001
 
 
 func refund(amount: float) -> void:
@@ -267,8 +302,12 @@ func refund(amount: float) -> void:
 func drain_stamina(amount: float) -> void:
 	if amount <= 0.0 or is_guard_broken or player.fight_over or player.is_finishing:
 		return
+	if pricing_press:
+		whiff_owed = false
 	_spend(amount)
-	if stamina <= 0.0 and is_guarding():
+	# guard_holds(): with blocking off the stance can outlive its window by a frame, the one a whiff that
+	# empties the bar is paid on, and a drain landing on that frame mustn't stun the player for it.
+	if stamina <= 0.0 and is_guarding() and guard_holds():
 		_start_guard_break()
 
 
@@ -300,11 +339,33 @@ func on_guard_lowered() -> void:
 	guard_up = false
 
 
-func on_block_pressed() -> void:
+func on_stance_released() -> void:
+	released_stance = true
+
+
+# Not through a dash, a swing or anything else that takes the guard away: only a press's stance that the key alone let go.
+func _released_stance() -> bool:
+	return released_stance and not BLOCKING_ENABLED and not player.is_dodging and can_raise_guard()
+
+
+# Whether the press was taken. With blocking off it has to be able to pay for its whiff, and one that
+# can't is refused: it opens no window and PlayerScript raises no guard for it.
+func on_block_pressed() -> bool:
+	if not BLOCKING_ENABLED:
+		# It ends the last press's window, so whatever that one still owes comes due with it.
+		if not can_afford(parry_whiff_cost * (2.0 if whiff_owed else 1.0)):
+			stamina_refused.emit()
+			return false
+		_settle_whiff()
+		whiff_owed = true
 	press_credited = last_press_parried or clock - last_press_time >= parry_mash_lockout
 	last_press_time = clock
 	last_press_parried = false
+	released_stance = false
+	pricing_press = true
 	block_pressed.emit(press_credited)
+	pricing_press = false
+	return true
 
 
 # The next press counts toward a parry however recently the last one was made. A fight calls it as
@@ -320,6 +381,7 @@ func clear_guard_break() -> void:
 
 
 func on_fight_over() -> void:
+	whiff_owed = false
 	end_parry_streak()
 	clear_guard_break()
 	clear_dodge_ghost()
@@ -335,6 +397,7 @@ func on_dash_started() -> void:
 	dash_start_time = clock
 	dash_ready_at = clock + (dash_cooldown_v2 if player.feel_v2 else dash_cooldown)
 	dash_start_position = player.global_position
+	released_stance = false
 	dash_refundable = true
 	hit_during_window = false
 	dash_overlaps.clear()
@@ -401,7 +464,7 @@ func _block(hit: RefCounted, record: Dictionary) -> int:
 func _can_parry(hit: RefCounted) -> bool:
 	if not hit.blockable and not hit.parryable:
 		return false
-	return (is_guarding() or _posed_guard()) and _from_guarded_side(hit) and _parry_ready()
+	return (is_guarding() or _posed_guard() or _released_stance()) and _from_guarded_side(hit) and _parry_ready()
 
 
 # A fight holding the player in its own poses, unsealed (Greyson's brawl), draws the guard itself, since
@@ -425,6 +488,7 @@ func is_parry_ready() -> bool:
 func _parry(hit: RefCounted, record: Dictionary) -> int:
 	record.absorbed_until = clock + blocked_rehit_interval
 	last_press_parried = true
+	whiff_owed = false
 	# The reward for reading the attack: a parry cancels a dash's recovery frames. A dash ended by a
 	# block press (PlayerScript.dash_parry) never reached them, and handing back the wait for the next
 	# dash on top of that would make dash, cancel, parry, dash a loop with no downtime in it at all,
@@ -491,7 +555,7 @@ func _start_guard_break() -> void:
 	end_parry_streak()
 	_set_stamina(0.0)
 	guard_break_timer.start(guard_break_time)
-	player.combo.reset()
+	player.combo.reset_unless_kept()
 	player.punch_buffered = false
 	# Blocks resolve inside physics flushes, where the stun's state can't switch safely.
 	_enter_guard_broken_state.call_deferred()
@@ -558,9 +622,16 @@ func _prune_sources() -> void:
 func _regen(delta: float) -> void:
 	if stamina >= max_stamina or is_guard_broken or clock - last_spend_time < stamina_regen_delay:
 		return
-	var rate := stamina_regen_per_second * (block_hold_regen_multiplier if guard_up and BLOCKING_ENABLED else 1.0)
+	var rate := max_stamina / stamina_refill_time * (block_hold_regen_multiplier if guard_up and BLOCKING_ENABLED else 1.0)
 	if rate > 0.0:
 		_set_stamina(minf(stamina + rate * delta, max_stamina))
+
+
+func _settle_whiff() -> void:
+	if not whiff_owed:
+		return
+	whiff_owed = false
+	_spend(parry_whiff_cost)
 
 
 func _spend(amount: float) -> void:

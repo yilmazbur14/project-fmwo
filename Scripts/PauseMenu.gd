@@ -194,7 +194,7 @@ func can_open() -> bool:
 	var tree := get_tree()
 	if tree == null or tree.current_scene == null:
 		return false
-	if not GameProgress.FIGHT_SCENES.has(tree.current_scene.scene_file_path):
+	if not GameProgress.is_fight_scene(tree.current_scene.scene_file_path):
 		return false
 	if tree.root.has_node(OUTRO_NODE):
 		return false
@@ -301,7 +301,11 @@ func _take_pending() -> void:
 		pending.call()
 
 
+# Where the Defeat screen's RETRY would start it (GameProgress.note_retry): in Greyson's half of FIGHT 06, that half
+# again.
 func _restart() -> void:
+	GameProgress.note_retry(get_tree())
+	GameProgress.arm_retry()
 	_leave("")
 
 

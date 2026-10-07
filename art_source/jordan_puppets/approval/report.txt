@@ -1,0 +1,106 @@
+PALETTE (16 colours per take)
+  K   A #000000  B #000000  keyline: pure black, the silhouette and every interior separation
+  P1  A #17111D  B #17111D  pitch deep: black cloth in shadow, iron deep, the deepest skin crease
+  D2  A #2C2434  B #2C2434  pitch base: black cloth and hair; ash deep; the eye sockets
+  A2  A #4A4356  B #4A4356  pitch lit / ash shadow: the sheen on black cloth and hair, dead skin in shadow
+  A3  A #6E6A80  B #6E6A80  ash mid: dead skin turning from the light; bone in shadow
+  A4  A #9893A5  B #9893A5  ash base: dead skin; old bone
+  A5  A #CFC6B2  B #CFC6B2  ash lit / bone base: lit dead skin, bone, linen, teeth
+  B1  A #F1EAD4  B #F1EAD4  bone highlight: the whitest whites (bone, specular hits)
+  R1  A #36091C  B #36091C  blood deep: red cloth in deep shadow, wounds, mouths
+  R2  A #661127  B #661127  blood shadow; the raw line of a stitched cut
+  R3  A #9F1C2E  B #9F1C2E  blood base: the red garments; red hair
+  R4  A #D2403A  B #D2403A  blood lit
+  I2  A #3A4153  B #3A4153  iron base: blades, plates, the string rings
+  I3  A #68718A  B #68718A  iron lit
+  G1  A #FFD55C  B #66C6EC  glow core: the pupils (the only light the scene does not light)
+  G2  A #FF7A2E  B #2B6C99  glow halo: the ring round a pupil
+  HG  A #F1EAD4  B #66C6EC  alias: a string ring's glint (A: bone B1, B: rune G1)
+  ST  A #000000  B #2B6C99  alias: stitch thread (A: black K, B: rune G2)
+
+captain_burak  take A: 96x96, feet (48, 95) | black 26.6% (source 24.8%), colours 16 (source 38), semi 0
+captain_burak  take B: 96x96, feet (48, 95) | black 26.4% (source 24.8%), colours 16 (source 38), semi 0
+   f0 hooks {'head': (48, 3), 'back': (48, 58), 'wrist_l': (26, 61), 'wrist_r': (73, 66), 'knee_l': (41, 87), 'knee_r': (54, 87)} | tatter cuts [12] | interior black recoloured 9 {'sockets': 2, 'rings': 7} | source pinholes kept 0, specks kept 0
+   f1 hooks {'head': (48, 4), 'back': (48, 59), 'wrist_l': (26, 62), 'wrist_r': (73, 67), 'knee_l': (41, 87), 'knee_r': (54, 87)} | tatter cuts [10] | interior black recoloured 9 {'sockets': 2, 'rings': 7} | source pinholes kept 0, specks kept 0
+   f2 hooks {'head': (48, 4), 'back': (48, 59), 'wrist_l': (26, 62), 'wrist_r': (73, 67), 'knee_l': (41, 87), 'knee_r': (54, 87)} | tatter cuts [10] | interior black recoloured 16 {'sockets': 9, 'rings': 7} | source pinholes kept 0, specks kept 0
+   f3 hooks {'head': (48, 3), 'back': (48, 58), 'wrist_l': (26, 61), 'wrist_r': (73, 66), 'knee_l': (41, 87), 'knee_r': (54, 87)} | tatter cuts [12] | interior black recoloured 9 {'sockets': 2, 'rings': 7} | source pinholes kept 0, specks kept 0
+   carry: BurakBoss/burak_throw.png: 4 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 4/4, jaw 4/4, scar 4/4; hooks found head 4/4, back 4/4, wrist_l 4/4, wrist_r 0/4, knee_l 4/4, knee_r 4/4
+   carry: BurakBoss/burak_fire.png: 3 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 3/3, jaw 3/3, scar 3/3; hooks found head 3/3, back 3/3, wrist_l 3/3, wrist_r 0/3, knee_l 3/3, knee_r 3/3
+   carry: BurakBoss/burak_broken.png: 4 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 4/4, jaw 4/4, scar 4/4; hooks found head 4/4, back 4/4, wrist_l 0/4, wrist_r 4/4, knee_l 3/4, knee_r 3/4
+   carry: BurakBoss/burak_hit.png: 2 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 2/2, jaw 2/2, scar 2/2; hooks found head 2/2, back 2/2, wrist_l 2/2, wrist_r 2/2, knee_l 2/2, knee_r 2/2
+   carry: BurakBoss/burak_boss_juggle.png: 12 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 0/12, jaw 0/12, scar 0/12; hooks found head 0/12, back 0/12, wrist_l 0/12, wrist_r 0/12, knee_l 0/12, knee_r 0/12
+   carry: BurakBoss/FX/burak_barrel.png: 7 frames, every colour mapped, twin rule clean on every frame
+
+eric           take A: 256x192, feet (128, 191) | black 29.9% (source 28.0%), colours 16 (source 38), semi 0
+eric           take B: 256x192, feet (128, 191) | black 29.9% (source 28.0%), colours 16 (source 38), semi 0
+   f3 hooks {'head': (131, 122), 'back': (131, 160), 'wrist_l': (98, 177), 'wrist_r': (163, 176), 'knee_l': (114, 185), 'knee_r': (148, 185)} | tatter cuts [12] | interior black recoloured 12 {'rings': 12} | source pinholes kept 5, specks kept 0
+   carry: Eric/eric_sheet_v2.png: 40 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 33/40, jaw 33/40; hooks found head 33/40, back 32/40, wrist_l 2/40, wrist_r 2/40, knee_l 0/40, knee_r 27/40
+
+greyson        take A: 112x112, feet (56, 111) | black 19.5% (source 17.8%), colours 16 (source 30), semi 0
+greyson        take B: 112x112, feet (56, 111) | black 19.0% (source 17.8%), colours 16 (source 30), semi 0
+   f0 hooks {'head': (56, 28), 'back': (57, 57), 'wrist_l': (39, 53), 'wrist_r': (100, 88), 'knee_l': (47, 95), 'knee_r': (66, 95)} | tatter cuts [13] | interior black recoloured 23 {'tatter (the hem keyline moved up)': 13, 'rings': 10} | source pinholes kept 0, specks kept 0
+   f1 hooks {'head': (56, 27), 'back': (57, 56), 'wrist_l': (39, 51), 'wrist_r': (100, 87), 'knee_l': (47, 95), 'knee_r': (66, 95)} | tatter cuts [11] | interior black recoloured 21 {'tatter (the hem keyline moved up)': 11, 'rings': 10} | source pinholes kept 0, specks kept 0
+   f2 hooks {'head': (56, 27), 'back': (57, 56), 'wrist_l': (39, 50), 'wrist_r': (101, 87), 'knee_l': (47, 95), 'knee_r': (66, 95)} | tatter cuts [11] | interior black recoloured 21 {'tatter (the hem keyline moved up)': 11, 'rings': 10} | source pinholes kept 0, specks kept 0
+   f3 hooks {'head': (56, 28), 'back': (57, 57), 'wrist_l': (39, 52), 'wrist_r': (101, 88), 'knee_l': (47, 95), 'knee_r': (66, 95)} | tatter cuts [13] | interior black recoloured 23 {'tatter (the hem keyline moved up)': 13, 'rings': 10} | source pinholes kept 0, specks kept 0
+   carry: Greyson/greyson_pose_a.png: 3 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 0/3, jaw 0/3, seam 0/3, ribs 0/3; hooks found head 0/3, back 0/3, wrist_l 0/3, wrist_r 0/3, knee_l 0/3, knee_r 0/3
+   carry: Greyson/greyson_pose_b.png: 3 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 3/3, jaw 3/3, seam 3/3, ribs 3/3; hooks found head 3/3, back 3/3, wrist_l 0/3, wrist_r 0/3, knee_l 3/3, knee_r 3/3
+   carry: Greyson/greyson_pose_c.png: 3 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 0/3, jaw 0/3, seam 0/3, ribs 0/3; hooks found head 0/3, back 0/3, wrist_l 0/3, wrist_r 0/3, knee_l 0/3, knee_r 0/3
+   carry: Greyson/greyson_pose_hit.png: 2 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 2/2, jaw 2/2, seam 2/2, ribs 2/2; hooks found head 2/2, back 2/2, wrist_l 1/2, wrist_r 2/2, knee_l 2/2, knee_r 2/2
+   carry: Greyson/greyson_spirit.png: 4 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 4/4, jaw 4/4, seam 3/4, ribs 3/4; hooks found head 4/4, back 3/4, wrist_l 0/4, wrist_r 0/4, knee_l 4/4, knee_r 4/4
+   carry: Greyson/greyson_hit.png: 2 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 2/2, jaw 2/2, seam 2/2, ribs 2/2; hooks found head 2/2, back 2/2, wrist_l 1/2, wrist_r 1/2, knee_l 2/2, knee_r 2/2
+   carry: Greyson/greyson_juggle.png: 12 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 0/12, jaw 0/12, seam 0/12, ribs 0/12; hooks found head 0/12, back 0/12, wrist_l 0/12, wrist_r 0/12, knee_l 0/12, knee_r 0/12
+
+matt           take A: 96x96, feet (48, 95) | black 27.0% (source 25.0%), colours 16 (source 33), semi 0
+matt           take B: 96x96, feet (48, 95) | black 27.0% (source 25.0%), colours 16 (source 33), semi 0
+   f0 hooks {'head': (48, 12), 'back': (48, 58), 'wrist_l': (14, 72), 'wrist_r': (82, 72), 'knee_l': (38, 80), 'knee_r': (58, 80)} | tatter cuts [21] | interior black recoloured 23 {'tatter (the hem keyline moved up)': 17, 'rings': 6} | source pinholes kept 0, specks kept 0
+   f1 hooks {'head': (47, 12), 'back': (48, 58), 'wrist_l': (14, 71), 'wrist_r': (82, 71), 'knee_l': (38, 80), 'knee_r': (58, 80)} | tatter cuts [21] | interior black recoloured 23 {'tatter (the hem keyline moved up)': 17, 'rings': 6} | source pinholes kept 0, specks kept 0
+   f2 hooks {'head': (48, 13), 'back': (48, 58), 'wrist_l': (14, 72), 'wrist_r': (82, 72), 'knee_l': (38, 80), 'knee_r': (58, 80)} | tatter cuts [21] | interior black recoloured 23 {'tatter (the hem keyline moved up)': 17, 'rings': 6} | source pinholes kept 0, specks kept 0
+   f3 hooks {'head': (49, 12), 'back': (48, 58), 'wrist_l': (14, 72), 'wrist_r': (82, 72), 'knee_l': (38, 80), 'knee_r': (58, 80)} | tatter cuts [21] | interior black recoloured 23 {'tatter (the hem keyline moved up)': 17, 'rings': 6} | source pinholes kept 0, specks kept 0
+   carry: Matt/matt_yell_tell.png: 2 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 2/2, jaw 2/2, rip 2/2; hooks found head 2/2, back 2/2, wrist_l 2/2, wrist_r 2/2, knee_l 2/2, knee_r 2/2
+   carry: Matt/matt_yell_up.png: 5 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 1/5, jaw 1/5, rip 5/5; hooks found head 1/5, back 5/5, wrist_l 5/5, wrist_r 5/5, knee_l 5/5, knee_r 5/5
+   carry: Matt/matt_roar.png: 4 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 1/4, jaw 1/4, rip 1/4; hooks found head 4/4, back 1/4, wrist_l 4/4, wrist_r 4/4, knee_l 4/4, knee_r 4/4
+
+mason          take A: 64x64, feet (32, 63) | black 25.4% (source 22.6%), colours 15 (source 15), semi 0
+mason          take B: 64x64, feet (32, 63) | black 24.7% (source 22.6%), colours 15 (source 15), semi 0
+   f0 hooks {'head': (32, 5), 'back': (32, 40), 'wrist_l': (7, 44), 'wrist_r': (56, 44), 'knee_l': (24, 55), 'knee_r': (39, 55)} | tatter cuts [28] | interior black recoloured 4 {'sockets': 4} | source pinholes kept 0, specks kept 0
+   f1 hooks {'head': (32, 6), 'back': (32, 41), 'wrist_l': (7, 45), 'wrist_r': (56, 45), 'knee_l': (24, 55), 'knee_r': (39, 56)} | tatter cuts [28] | interior black recoloured 4 {'sockets': 4} | source pinholes kept 0, specks kept 0
+   carry: Mason/mason_sheet.png: 19 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 18/19, seam 17/19; hooks found head 18/19, back 17/19, wrist_l 10/19, wrist_r 8/19, knee_l 11/19, knee_r 11/19
+   carry: Mason/mason_juggle.png: 12 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 0/12, seam 0/12; hooks found head 0/12, back 0/12, wrist_l 0/12, wrist_r 0/12, knee_l 0/12, knee_r 0/12
+
+josh           take A: 80x80, feet (40, 79) | black 29.3% (source 28.3%), colours 16 (source 35), semi 0
+josh           take B: 80x80, feet (40, 79) | black 29.2% (source 28.3%), colours 16 (source 35), semi 0
+   f0 hooks {'head': (48, 10), 'back': (42, 45), 'wrist_l': (22, 46), 'wrist_r': (50, 51), 'knee_l': (38, 64), 'knee_r': (46, 64)} | tatter cuts [10] | interior black recoloured 9 {'sockets': 2, 'rings': 7} | source pinholes kept 2, specks kept 0
+   f1 hooks {'head': (48, 10), 'back': (42, 44), 'wrist_l': (22, 46), 'wrist_r': (50, 50), 'knee_l': (38, 64), 'knee_r': (46, 64)} | tatter cuts [10] | interior black recoloured 9 {'sockets': 2, 'rings': 7} | source pinholes kept 2, specks kept 0
+   f2 hooks {'head': (48, 9), 'back': (42, 44), 'wrist_l': (22, 45), 'wrist_r': (50, 50), 'knee_l': (38, 64), 'knee_r': (46, 64)} | tatter cuts [9] | interior black recoloured 9 {'sockets': 2, 'rings': 7} | source pinholes kept 2, specks kept 0
+   f3 hooks {'head': (48, 9), 'back': (42, 45), 'wrist_l': (22, 45), 'wrist_r': (50, 51), 'knee_l': (38, 64), 'knee_r': (46, 64)} | tatter cuts [10] | interior black recoloured 9 {'sockets': 2, 'rings': 7} | source pinholes kept 2, specks kept 0
+   carry: Josh/josh_throw.png: 4 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 4/4, jaw 4/4, seam 4/4; hooks found head 3/4, back 2/4, wrist_l 4/4, wrist_r 0/4, knee_l 4/4, knee_r 4/4
+   carry: Josh/josh_cards.png: 2 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 2/2, jaw 2/2, seam 2/2; hooks found head 2/2, back 2/2, wrist_l 2/2, wrist_r 1/2, knee_l 2/2, knee_r 2/2
+
+danny          take A: 64x64, feet (32, 63) | black 27.3% (source 26.3%), colours 16 (source 15), semi 0
+danny          take B: 64x64, feet (32, 63) | black 26.6% (source 26.3%), colours 16 (source 15), semi 0
+   f1 hooks {'head': (32, 3), 'back': (32, 32), 'wrist_l': (12, 45), 'wrist_r': (51, 45), 'knee_l': (25, 52), 'knee_r': (38, 52)} | tatter cuts [10, 6] | interior black recoloured 24 {'tatter (the hem keyline moved up)': 14, 'sockets': 8, 'rings': 8} | source pinholes kept 0, specks kept 0
+   carry: Danny/danny_walk.png: 4 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 4/4, jaw 4/4, belly 4/4; hooks found head 4/4, back 4/4, wrist_l 2/4, wrist_r 2/4, knee_l 4/4, knee_r 4/4
+
+carter         take A: 96x96, feet (48, 95) | black 33.3% (source 25.3%), colours 16 (source 49), semi 0
+carter         take B: 96x96, feet (48, 95) | black 32.9% (source 25.3%), colours 16 (source 49), semi 0
+   f0 hooks {'head': (48, 27), 'back': (48, 58), 'wrist_l': (20, 72), 'wrist_r': (75, 72), 'knee_l': (39, 79), 'knee_r': (57, 79)} | tatter cuts [12] | interior black recoloured 15 {'tatter (the hem keyline moved up)': 8, 'rings': 7} | source pinholes kept 11, specks kept 0
+   f1 hooks {'head': (48, 26), 'back': (48, 57), 'wrist_l': (20, 72), 'wrist_r': (75, 72), 'knee_l': (39, 79), 'knee_r': (57, 79)} | tatter cuts [12] | interior black recoloured 15 {'tatter (the hem keyline moved up)': 8, 'rings': 7} | source pinholes kept 9, specks kept 0
+   f2 hooks {'head': (48, 26), 'back': (48, 57), 'wrist_l': (20, 72), 'wrist_r': (75, 72), 'knee_l': (39, 79), 'knee_r': (57, 79)} | tatter cuts [12] | interior black recoloured 15 {'tatter (the hem keyline moved up)': 8, 'rings': 7} | source pinholes kept 9, specks kept 0
+   f3 hooks {'head': (48, 27), 'back': (48, 58), 'wrist_l': (20, 72), 'wrist_r': (75, 72), 'knee_l': (39, 79), 'knee_r': (57, 79)} | tatter cuts [12] | interior black recoloured 15 {'tatter (the hem keyline moved up)': 8, 'rings': 7} | source pinholes kept 11, specks kept 0
+   carry: Carter/carter_rush.png: 4 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 4/4, scalp 4/4, jaw 4/4; hooks found head 4/4, back 0/4, wrist_l 0/4, wrist_r 0/4, knee_l 0/4, knee_r 0/4
+   carry: Carter/carter_messatsu_charge.png: 4 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 0/4, scalp 4/4, jaw 0/4; hooks found head 4/4, back 0/4, wrist_l 0/4, wrist_r 0/4, knee_l 0/4, knee_r 0/4
+
+liam           take A: 64x64, feet (32, 63) | black 28.7% (source 28.2%), colours 16 (source 35), semi 0
+liam           take B: 64x64, feet (32, 63) | black 28.7% (source 28.2%), colours 16 (source 35), semi 0
+   f0 hooks {'head': (30, 4), 'back': (31, 36), 'wrist_l': (7, 45), 'wrist_r': (54, 42), 'knee_l': (18, 52), 'knee_r': (40, 52)} | tatter cuts [18] | interior black recoloured 16 {'tatter (the hem keyline moved up)': 16} | source pinholes kept 2, specks kept 0
+   carry: Liam/liam_glasses_push.png: 9 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 7/9, jaw 7/9; hooks found head 9/9, back 9/9, wrist_l 2/9, wrist_r 9/9, knee_l 9/9, knee_r 9/9
+
+danny_sumo     take A: 176x144, feet (88, 143) | black 17.3% (source 16.8%), colours 15 (source 26), semi 0
+danny_sumo     take B: 176x144, feet (88, 143) | black 17.1% (source 16.8%), colours 15 (source 26), semi 0
+   f0 hooks {'head': (88, 7), 'back': (88, 60), 'wrist_l': (24, 89), 'wrist_r': (136, 89), 'knee_l': (26, 114), 'knee_r': (150, 114)} | tatter cuts [] | interior black recoloured 20 {'sockets': 14, 'rings': 6} | source pinholes kept 0, specks kept 0
+   f1 hooks {'head': (88, 8), 'back': (88, 60), 'wrist_l': (24, 89), 'wrist_r': (136, 89), 'knee_l': (26, 114), 'knee_r': (150, 114)} | tatter cuts [] | interior black recoloured 20 {'sockets': 14, 'rings': 6} | source pinholes kept 0, specks kept 0
+   f2 hooks {'head': (88, 9), 'back': (88, 60), 'wrist_l': (24, 89), 'wrist_r': (136, 89), 'knee_l': (26, 114), 'knee_r': (150, 114)} | tatter cuts [] | interior black recoloured 20 {'sockets': 14, 'rings': 6} | source pinholes kept 0, specks kept 0
+   f3 hooks {'head': (88, 8), 'back': (88, 60), 'wrist_l': (24, 89), 'wrist_r': (136, 89), 'knee_l': (26, 114), 'knee_r': (150, 114)} | tatter cuts [] | interior black recoloured 20 {'sockets': 14, 'rings': 6} | source pinholes kept 0, specks kept 0
+   carry: Danny/Sumo/danny_sumo_jump.png: 3 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 1/3, jaw 1/3, belly 1/3; hooks found head 1/3, back 1/3, wrist_l 0/3, wrist_r 0/3, knee_l 1/3, knee_r 0/3
+   carry: Danny/Sumo/danny_sumo_air.png: 4 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 4/4, jaw 4/4, belly 0/4; hooks found head 4/4, back 0/4, wrist_l 0/4, wrist_r 0/4, knee_l 0/4, knee_r 0/4
+   carry: Danny/Sumo/danny_sumo_slam.png: 3 frames, every colour mapped, twin rule clean on every frame; overlays placed sockets 2/3, jaw 2/3, belly 0/3; hooks found head 2/3, back 0/3, wrist_l 0/3, wrist_r 1/3, knee_l 0/3, knee_r 0/3

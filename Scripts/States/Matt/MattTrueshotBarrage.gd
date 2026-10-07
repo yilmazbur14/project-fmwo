@@ -88,12 +88,14 @@ func release() -> void:
 		ParryTell.clear(body)
 		body.stop_sfx(&"trueshot_charge")
 		body.restore_hud()
+		body.sprite.self_modulate.a = 1.0
 	_drop_aim()
 
 
 func Physics_Update(delta: float) -> void:
 	beat_clock += delta
 	fx_clock += delta
+	_step_see_through(delta)
 	match beat:
 		Beat.OUT:
 			if beat_clock >= state_machine.teleport_out:
@@ -124,6 +126,23 @@ func Physics_Update(delta: float) -> void:
 
 func _station() -> Dictionary:
 	return state_machine.STATIONS[station_index]
+
+
+# MattArtLayout.STATION_SEE_THROUGH: he eases see-through while the player's sprite overlaps his and draws
+# under him.
+func _step_see_through(delta: float) -> void:
+	var target := MattArtLayout.STATION_SEE_THROUGH if covers_player() else 1.0
+	var step := delta / MattArtLayout.STATION_SEE_THROUGH_TIME
+	body.sprite.self_modulate.a = move_toward(body.sprite.self_modulate.a, target, step)
+
+
+func covers_player() -> bool:
+	var player: Node2D = state_machine.get_player()
+	if player == null or not is_instance_valid(player):
+		return false
+	var seen: Rect2 = player.sprite.get_global_transform() * player.sprite.get_rect()
+	var drawn: Rect2 = body.sprite.get_global_transform() * body.sprite.get_rect()
+	return player.sprite.global_position.y < body.global_position.y and drawn.intersects(seen)
 
 
 # The station's own view: the front from the top, the back from the bottom, the side from either side.

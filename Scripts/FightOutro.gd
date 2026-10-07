@@ -34,6 +34,11 @@ const SILENT_DB := -60.0
 # from the fight being decided to its first line. It is asked after on_player_defeated(), since that
 # is what starts the pose. It can only lengthen the wait: a boss without it, or one asking for less,
 # gets LINE_DELAY exactly as before.
+# A boss whose win plays out a sequence of its own rather than lines and the Victory screen - Jordan
+# storming out of the arena into his finale - has take_won_outro(outro, line_delay), and is handed
+# this outro on a win instead of the lines. It ends it with leave_to(), this outro's own fade and
+# scene change to wherever it goes. Everything else here still holds for it: the first call decided
+# the fight, the pause screen stays shut, and the player has been stopped.
 const BOSS_GROUP := "fight_boss"
 
 const PLAYER_PATH := "Arena/MainPlayer/CharacterBody2D"
@@ -43,16 +48,28 @@ const DEFEAT_SCENE := "res://Scenes/Core/DefeatScene.tscn"
 const FADE_LAYER := 128
 
 var player_won := false
+# The fight scene this outro decided.
+var fight_scene: Node
 var fade: ColorRect
+# The fade to the next screen has started, and where it goes (leave_to).
+var leaving := false
+var destination := ""
 
 
-# The first call decides the fight; later ones are ignored.
+# The first call decides the fight; later ones are ignored. Only for the fight it decided: an outro left over from a
+# scene changed under it would otherwise keep every later fight from ever ending - the player at 0 health and the
+# boss still attacking (the 2026-10-04 playtest; no path in the game is known to leave one, the outro frees itself).
 static func finish_fight(tree: SceneTree, won: bool) -> void:
-	if tree.root.has_node(^"FightOutro"):
-		return
+	var existing := tree.root.get_node_or_null(^"FightOutro")
+	if existing != null:
+		if existing.fight_scene == tree.current_scene:
+			return
+		existing.name = "FightOutroLeftOver"
+		existing.queue_free()
 	var outro = new()
 	outro.name = "FightOutro"
 	outro.player_won = won
+	outro.fight_scene = tree.current_scene
 	tree.root.add_child(outro)
 
 
@@ -67,8 +84,12 @@ func _ready() -> void:
 	# The outro's dialogue balloon is added to the fight scene, which mustn't still be frozen by a finisher.
 	FightFreeze.unfreeze(get_tree())
 	get_tree().current_scene.get_node(PLAYER_PATH).end_fight()
+	# Before on_player_defeated(), while the bosses still say which half of the fight this was.
+	if not player_won:
+		GameProgress.note_retry(get_tree())
 	var dialogue: DialogueResource
 	var line_delay := LINE_DELAY
+	var taker: Node
 	for boss in get_tree().get_nodes_in_group(BOSS_GROUP):
 		if not player_won:
 			boss.on_player_defeated()
@@ -76,6 +97,11 @@ func _ready() -> void:
 			dialogue = load(boss.OUTRO_DIALOGUE)
 		if boss.has_method("outro_line_delay"):
 			line_delay = maxf(line_delay, boss.outro_line_delay(player_won))
+		if player_won and boss.has_method("take_won_outro"):
+			taker = boss
+	if taker != null:
+		taker.take_won_outro(self, line_delay)
+		return
 	_play(dialogue, line_delay)
 
 
@@ -86,19 +112,28 @@ func _play(dialogue: DialogueResource, line_delay: float) -> void:
 		var balloon = DialogueManager.show_dialogue_balloon(dialogue, "player_won" if player_won else "player_lost")
 		balloon.input_lock_time = LINE_INPUT_LOCK
 		await DialogueManager.dialogue_ended
+	leave_to(VICTORY_SCENE if player_won else DEFEAT_SCENE)
 
+
+# The fade to black, every sound fading with it, and the change to `scene_path`. Once: a second call
+# while it fades only changes where it goes, so a skip made mid-fade still lands where the skip goes.
+func leave_to(scene_path: String, fade_time := FADE_TIME) -> void:
+	destination = scene_path
+	if leaving:
+		return
+	leaving = true
 	var tween := create_tween().set_ignore_time_scale()
-	tween.tween_property(fade, "color:a", 1.0, FADE_TIME)
+	tween.tween_property(fade, "color:a", 1.0, fade_time)
 	var sounds: Array = _playing_sounds() if FADE_MUSIC else []
 	for sound in sounds:
-		tween.parallel().tween_property(sound, "volume_db", SILENT_DB, FADE_TIME)
+		tween.parallel().tween_property(sound, "volume_db", SILENT_DB, fade_time)
 	await tween.finished
 	for sound in sounds:
 		# The dialogue balloon frees itself once the lines end, along with any blip still sounding in it.
 		if is_instance_valid(sound):
 			sound.stop()
 	_settle_screen()
-	get_tree().change_scene_to_file(VICTORY_SCENE if player_won else DEFEAT_SCENE)
+	get_tree().change_scene_to_file(destination)
 	await get_tree().scene_changed
 	# The next screen's first frame is drawn in the same frame it's added, before its own fade-in
 	# has had a frame to run, so that one stays black too.

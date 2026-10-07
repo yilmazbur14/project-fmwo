@@ -166,17 +166,21 @@ static func spared(t) -> void:
 	var bomb: Node = fire(t)
 	var always_seen := true
 	var ended := false
+	# Where the bomb hands him on to, as it does: his breath in Idle is short enough (idle_beat) to be over by the
+	# checks below.
+	var handed := {"state": null, "at": Vector2.INF}
 	for i in 900:
 		await t.wait(1)
 		always_seen = always_seen and t.player.sprite.visible
 		ended = ended or bomb.ended_at >= 0.0
 		if ended and t.sm.current_state != bomb:
+			handed = {"state": t.sm.current_state, "at": t.boss.global_position}
 			break
 	await t.wait(20)
 	var hud: float = t.boss.health_bar.modulate.a
 	t.log_p("the player always seen %s; hype %.1f; HUD %.2f; he is at %s in %s; talking %s; outros %d" % [always_seen, t.boss.hype, hud, t.boss.global_position, t.sm.current_state.name, t.player.is_talking, outros(t).size()])
 	t.check(always_seen, "the bomb spares the player: their sprite never hidden")
 	t.check(is_zero_approx(t.boss.hype) and is_equal_approx(hud, 1.0), "his meter empty and his HUD back")
-	t.check(t.boss.global_position == t.sm.HOME and t.sm.current_state == t.sm.states["Idle"], "him home, and the fight on from Idle")
+	t.check(handed.at == t.sm.HOME and handed.state == t.sm.states["Idle"], "him home, and the fight on from Idle (%s)" % [handed])
 	t.check(not t.player.is_talking and outros(t).is_empty(), "the player free, and no outro")
 	progress.playtest_invincible = was

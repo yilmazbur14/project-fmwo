@@ -83,4 +83,7 @@ func _time_of(index: int) -> float:
 
 
 func _show() -> void:
-	player.sprite.frame_coords = Vector2i(int(frames[step]), player.facing)
+	var sprite: Sprite2D = player.sprite
+	# A sheet swapped in place (hold_pose) is drawn before its caller's play_pose(): until then the columns are the
+	# last pose's, which can run past the new sheet's edge (the god fight's 10-column base pose onto the 8-column combo).
+	sprite.frame_coords = Vector2i(clampi(int(frames[step]), 0, sprite.hframes - 1), clampi(player.facing, 0, sprite.vframes - 1))

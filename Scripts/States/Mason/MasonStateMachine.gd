@@ -15,6 +15,9 @@ extends Node
 
 const VsCard := preload("res://Scripts/VsCard.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
+# The Nugget Fastball's state, built here rather than in his scene (_add_state), so nothing an open editor saves can
+# write over it.
+const MasonPitch := preload("res://Scripts/States/Mason/MasonPitch.gd")
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/MasonPreFight.dialogue"
 const POO_BOMB_SCENE := "res://Scenes/Bosses/PooBombScene.tscn"
 const LINE_START_SCENE := "res://Scenes/Bosses/PooLineStartScene.tscn"
@@ -48,10 +51,12 @@ const RUN_SEGMENT := 2
 
 # The attacks run after a cycle's bomb lines, before the delivery. Each cycle takes the next entry of
 # its phase's list, wrapping around, so phase 1 takes turns between Carter and the nuggets. Phase 2 has
-# the one, the shower with Carter called in under it (carter_in_shower).
+# the one, the shower with Carter called in under it (carter_in_shower). Every cycle's attack is followed
+# by his pitches. An entry is a state's name or an alias (resolve_attack): "CarterRain" is Carter with
+# the light rain (carter_rain), "Pitch" the Nugget Fastball (pitch_enabled), skipped while it is off.
 const FINISHERS := [
-	[["CallCarter"], ["NuggetShower"]],
-	[["NuggetShower"]],
+	[["CarterRain", "Pitch"], ["NuggetShower", "Pitch"]],
+	[["NuggetShower", "Pitch"]],
 ]
 
 # Every number the fight is paced on is a knob, so it can be retuned without code edits. The
@@ -80,7 +85,8 @@ const FINISHERS := [
 # being laid, so two lines cover the mat rather than one, and a bomb waits longer to go off, not less.
 @export var fuse_delay: Array[float] = [1.17, 0.99]
 @export var detonate_interval: Array[float] = [0.09, 0.07]
-@export var lines_per_cycle: Array[int] = [5, 4]
+# Cut from [5, 4] for his pitches (the user's approval, 2026-10-04): a cycle keeps about the length it had.
+@export var lines_per_cycle: Array[int] = [3, 3]
 # How far along the line the start telegraph draws its path preview, so its direction reads while
 # Mason is still squatting on the spot it begins at.
 @export var line_preview_length := 700.0
@@ -121,6 +127,27 @@ const FINISHERS := [
 # of it at the last moment.
 @export var slam_clear_before := 0.25
 @export var slam_clear_after := 0.1
+# The Nugget Fastball (MasonPitch): a FINISHERS entry "Pitch" runs it, after the cycle's attack. Off, the entry is
+# skipped and the cycle is the one before it.
+@export var pitch_enabled := true
+# Phase one's Carter call comes with a light nugget rain (FINISHERS' "CarterRain": the shower with Carter called in
+# under it, at these numbers), so walking loops no longer dodge it. Off, "CarterRain" is his plain call.
+@export var carter_rain := true
+@export var rain_count := 60
+@export var rain_time := 7.0
+@export var rain_warning := 0.9
+@export var rain_spread := 8
+@export var rain_target_every := 3
+# An aimed nugget of the rain lands where the player is heading: their velocity, capped at RAIN_LEAD_CAP, times its
+# warning and this.
+@export var rain_lead := 1.0
+# A player still standing in him as a cycle's first squat starts (eating ends with them punching him) isn't hit by
+# the contact for this long; one walking into him is (MasonScript._touch_player).
+@export var cycle_contact_grace := 0.45
+
+# What a FINISHERS entry that isn't a state's own name runs, and with which variant (attack_variant).
+const ATTACK_ALIASES := {"CarterRain": "NuggetShower"}
+const RAIN_LEAD_CAP := 600.0
 
 var cycle_phase := 0
 var lines_done := 0
@@ -131,6 +158,12 @@ var player_defeated := false
 # over to the VS card yet.
 var pre_fight_balloon: Node
 var pre_fight_over := false
+# Until this on his fight_clock, the contact's poll leaves a player already in him alone (cycle_contact_grace).
+var contact_grace_until := -INF
+# Which alias the attack being entered was run as ("CarterRain"), read and cleared by the attack's Enter().
+var attack_variant := ""
+# How many pitch sets have started this fight: the first one teaches (MasonPitch).
+var pitch_sets_started := 0
 
 # Bomb-space path of the current line: start, turn onto the player's height, far wall column,
 # and optionally the reveal step down. Mason walks it minus BOMB_SPAWN_OFFSET, clamped to his limits.
@@ -150,6 +183,8 @@ var line_start: Node2D = null
 
 
 func _ready() -> void:
+	# Before the children are gathered, which takes it in with them.
+	_add_state(MasonPitch.new(), "Pitch")
 	for child in get_children():
 		if child is State:
 			states[child.name] = child
@@ -161,6 +196,13 @@ func _ready() -> void:
 		# Deferred until the scene is up: his entrance moves him, the player and the gates, and
 		# reads all three off the fight scene.
 		current_state.Enter.call_deferred()
+
+
+# `body` is set before the state is ready, which needs it; the state finds this node as its parent itself.
+func _add_state(state: State, state_name: String) -> void:
+	state.name = state_name
+	state.body = MasonCharacterBody
+	add_child(state)
 
 
 # His entrance opens the lines once it has walked him in and shut the ring behind him.
@@ -228,6 +270,7 @@ func _on_post_dialogue_pre_fight_timer_timeout() -> void:
 func start_cycle() -> void:
 	cycle_phase = 1 if MasonCharacterBody.phase_two else 0
 	lines_done = 0
+	contact_grace_until = MasonCharacterBody.fight_clock + cycle_contact_grace
 	var turns: Array = FINISHERS[cycle_phase]
 	finishers = turns[cycles_started % turns.size()].duplicate()
 	cycles_started += 1
@@ -382,12 +425,35 @@ func finish_line() -> void:
 		next_attack(waddle)
 
 
-# Runs the cycle's next finisher, or the delivery once they're all done.
+# Runs the cycle's next finisher, or the delivery once they're all done. An entry its knob has off is skipped.
 func next_attack(state: State) -> void:
 	# Checked before popping, so a late call from an attack that's already over can't skip the next one.
 	if state != current_state:
 		return
-	on_child_transition(state, "AwaitDelivery" if finishers.is_empty() else finishers.pop_front())
+	while not finishers.is_empty():
+		if run_attack(finishers.pop_front()):
+			return
+	on_child_transition(state, "AwaitDelivery")
+
+
+# The state a FINISHERS entry runs, or "" when its knob has it off.
+func resolve_attack(entry: String) -> String:
+	match entry:
+		"CarterRain":
+			return ATTACK_ALIASES[entry] if carter_rain else "CallCarter"
+		"Pitch":
+			return entry if pitch_enabled else ""
+	return entry
+
+
+# Runs `entry` from whatever he is doing now; false when it is off. Tests run an attack this way too.
+func run_attack(entry: String) -> bool:
+	var state_name := resolve_attack(entry)
+	if state_name.is_empty() or not states.has(state_name):
+		return false
+	attack_variant = entry if ATTACK_ALIASES.get(entry, "") == state_name else ""
+	on_child_transition(current_state, state_name)
+	return true
 
 
 # The fight's floor layer (Arena/GroundFx, which the finisher's ground effects use too), or his scene
@@ -469,6 +535,7 @@ func _end_fight(final_state_name: String) -> void:
 # squat_timer fires an unguarded drop_bomb(), so a Break taken out of the squat lays a bomb after he is
 # already down unless the timers stop here.
 func _stop_everything() -> void:
+	states["Pitch"].release()
 	ParryTell.clear(MasonCharacterBody)
 	for timer in [post_dialogue_pre_fight_timer, squat_timer, release_timer, phone_timer, eat_timer]:
 		timer.stop()

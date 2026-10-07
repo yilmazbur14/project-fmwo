@@ -1,0 +1,226 @@
+{
+ "frames": [
+  {
+   "frame": 0,
+   "name": "f0 echo_inhale",
+   "approval": true,
+   "black_pct": 24.81,
+   "colours": 29,
+   "opaque": 3975,
+   "bbox": [
+    16,
+    1,
+    80,
+    95
+   ],
+   "crest_top": [
+    48,
+    1
+   ],
+   "dome_crown": [
+    48,
+    14
+   ],
+   "mouth": [
+    48,
+    43
+   ],
+   "soles": [
+    [
+     33.0,
+     95
+    ],
+    [
+     63.0,
+     95
+    ]
+   ]
+  },
+  {
+   "frame": 1,
+   "name": "f1 echo_psych",
+   "approval": true,
+   "black_pct": 25.23,
+   "colours": 35,
+   "opaque": 3955,
+   "bbox": [
+    15,
+    1,
+    81,
+    95
+   ],
+   "crest_top": [
+    48,
+    1
+   ],
+   "dome_crown": [
+    48,
+    15
+   ],
+   "mouth": [
+    48,
+    50
+   ],
+   "soles": [
+    [
+     33.0,
+     95
+    ],
+    [
+     63.0,
+     95
+    ]
+   ]
+  },
+  {
+   "frame": 2,
+   "name": "f2 psych laugh",
+   "approval": false,
+   "black_pct": 25.36,
+   "colours": 35,
+   "opaque": 4136,
+   "bbox": [
+    10,
+    2,
+    86,
+    95
+   ],
+   "crest_top": [
+    48,
+    2
+   ],
+   "dome_crown": [
+    48,
+    17
+   ],
+   "mouth": [
+    48,
+    50
+   ],
+   "soles": [
+    [
+     33.0,
+     95
+    ],
+    [
+     63.0,
+     95
+    ]
+   ]
+  },
+  {
+   "frame": 3,
+   "name": "f3 boomburst_windup",
+   "approval": false,
+   "black_pct": 24.73,
+   "colours": 29,
+   "opaque": 4307,
+   "bbox": [
+    8,
+    1,
+    88,
+    95
+   ],
+   "crest_top": [
+    48,
+    1
+   ],
+   "dome_crown": [
+    48,
+    14
+   ],
+   "mouth": [
+    48,
+    43
+   ],
+   "soles": [
+    [
+     28.0,
+     95
+    ],
+    [
+     68.0,
+     95
+    ]
+   ]
+  },
+  {
+   "frame": 4,
+   "name": "f4 boomburst_blast",
+   "approval": true,
+   "black_pct": 25.19,
+   "colours": 39,
+   "opaque": 4526,
+   "bbox": [
+    3,
+    8,
+    94,
+    95
+   ],
+   "crest_top": [
+    48,
+    8
+   ],
+   "dome_crown": [
+    48,
+    17
+   ],
+   "mouth": [
+    48,
+    52
+   ],
+   "soles": [
+    [
+     28.0,
+     95
+    ],
+    [
+     68.0,
+     95
+    ]
+   ]
+  },
+  {
+   "frame": 5,
+   "name": "f5 blast hold",
+   "approval": false,
+   "black_pct": 25.38,
+   "colours": 39,
+   "opaque": 4243,
+   "bbox": [
+    7,
+    5,
+    89,
+    95
+   ],
+   "crest_top": [
+    48,
+    5
+   ],
+   "dome_crown": [
+    48,
+    17
+   ],
+   "mouth": [
+    48,
+    50
+   ],
+   "soles": [
+    [
+     28.0,
+     95
+    ],
+    [
+     68.0,
+     95
+    ]
+   ]
+  }
+ ],
+ "sheet": {
+  "sheet_black_pct": 25.12,
+  "sheet_colours": 39
+ },
+ "aseprite_round_trip": "identical",
+ "png_on_disk": "identical"
+}

@@ -22,6 +22,26 @@ const KNOCKBACK_AREA := Rect2(240, 200, 1440, 570)
 @export var max_health := 24
 var boss_health := max_health
 
+#THE BREAK GAUGE (BossBreakGauge, V2 only)
+# His own numbers since the 2026-10-04 mash, which made a Break's juggle pay 35% of his health at the
+# model's mash rate instead of 15%: a Break now takes about two and a half times the reads it did (the
+# gauge's defaults, which he was first tuned on, were parry 15, red grab 20, reflect 35, perfect dodge 12,
+# punches 8 and 14). The sword flung back keeps the biggest share, since it no longer fires an uppercut of
+# its own (EricPacing's reflect_auto_uppercut). The drains are the defaults, so a hit sets a Break back
+# further than before. Measured with the experienced-player model bot (tuning round 2026-10-04).
+const BREAK := {
+	"max_value": 100.0,
+	"parry_gain": 5.0,
+	"grab_parry_gain": 7.0,
+	"reflect_gain": 18.0,
+	"perfect_dodge_gain": 4.0,
+	"punch_gain": 2.0,
+	"charged_punch_gain": 5.0,
+	"hit_loss": 20.0,
+	"guard_break_loss": 35.0,
+	"unlock_delay": 3.0,
+}
+
 #UI (BossHealthBarUI builds it at runtime)
 var health_bar: Control
 
@@ -41,13 +61,24 @@ const THEME_DB := -7.0
 @onready var victory_sfx_player: AudioStreamPlayer = $VictorySfxPlayer
 @onready var downed_sfx_player: AudioStreamPlayer = $DownedSfxPlayer
 var defeated := false
-# One finisher daze per Downed or Broken window, which clear it.
+# One finisher daze per window (Downed, Broken, Winded, a parry stagger, the hug's stumble), each of which
+# clears it as it opens.
 var daze_used := false
-# Punches that can land while a parry has him staggered.
-const PARRY_STAGGER_HIT_CAP := 2
+# V2's earned punish windows - Winded at the end of a chain, a parry stagger (the sword's or the bear hug's)
+# and the bear hug's stumble - take a POW's uppercut mash again (the user, 2026-10-05; the hug's, 2026-10-06).
+# Off puts V2's finisher back on the Break alone. Caught in the stumble, away from the sword he planted, he
+# gets up for it where it stands (EricStateMachine.enter_juggled).
+@export var daze_in_windows := true
+# Punches that can land while a parry has him staggered: two, or three - a whole POW, like every other window -
+# while a stagger's daze is on (daze_in_windows, V2), the parried bear hug's and his own sword's alike (the user,
+# 2026-10-06). window_hit_cap() says which applies.
+const STAGGER_HIT_CAP := 2
+const WINDOW_STAGGER_HIT_CAP := 3
 var parry_stagger_hits := 0
-# The parry stagger takes the damage of a clean chain of PARRY_STAGGER_HIT_CAP punches (PunchAllowance).
+# The parry stagger takes the damage of a clean chain of window_hit_cap() punches (PunchAllowance).
 var punches := PunchAllowance.new()
+# His AnimationPlayer's own process mode while the finisher holds his window on it (hold_window), or -1.
+var held_animation_mode := -1
 # The reworked fight's Break gauge (EricPacing V2); null in V1.
 var break_gauge: Node
 var hud_layer: CanvasLayer
@@ -102,6 +133,8 @@ func _add_break_gauge(player: Node) -> void:
 	break_gauge.owns_attack = func(id: StringName) -> bool: return str(id).begins_with("eric_")
 	var strong: Array[StringName] = [&"eric_bear_hug_grab_v2"]
 	break_gauge.strong_parry_ids = strong
+	for key in BREAK:
+		break_gauge.set(key, BREAK[key])
 	add_child(break_gauge)
 	break_gauge.broke.connect(_on_break)
 	for sting in EricArtLayout.BREAK_STING_SFX:
@@ -202,9 +235,15 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 		area.get_parent().combo.resolve_punch(self)
 
 
+# The punches a parry stagger takes, in a clean chain (PunchAllowance).
+func window_hit_cap() -> int:
+	return WINDOW_STAGGER_HIT_CAP if daze_in_windows and EricPacing.is_v2() else STAGGER_HIT_CAP
+
+
 func take_punch(amount: int) -> int:
-	if state_machine.current_state == state_machine.states.get("ParryStaggered"):
-		var allowed := punches.allow(amount, parry_stagger_hits, PARRY_STAGGER_HIT_CAP)
+	var stagger = state_machine.states.get("ParryStaggered")
+	if state_machine.current_state == stagger:
+		var allowed := punches.allow(amount, parry_stagger_hits, window_hit_cap())
 		if allowed <= 0:
 			return 0
 		parry_stagger_hits += 1
@@ -256,6 +295,10 @@ func parry_stagger(duration: float) -> void:
 # The player's finisher (PlayerFinisher). The Downed window, a Break until he gets up, and the stagger
 # his own sword leaves him in when a parry sends it back through him: that one fires the uppercut on
 # its own. A parried bear hug isn't one, its stumble is too short.
+# With daze_in_windows every opening his punches land in takes the daze (the user, 2026-10-06: 3 hits always
+# trigger the uppercut), the whirlwind's throw too while the sword is out of his hands (EricSwordThrow). A daze
+# whose mash fizzled or whose uppercut whiffed gives it back (exit_daze): those openings have no punch cap, so a
+# second POW can follow.
 func can_be_dazed() -> bool:
 	if defeated or boss_health <= 0 or daze_used:
 		return false
@@ -265,6 +308,13 @@ func can_be_dazed() -> bool:
 	# Getting his sword back, he's up and no longer open.
 	if state == state_machine.states.get("Broken"):
 		return not state.retrieving
+	if daze_in_windows and EricPacing.is_v2():
+		if state == state_machine.states.get("Winded") or state == state_machine.states.get("ParryStaggered"):
+			return true
+		if state == state_machine.states.get("BearHug"):
+			return state.phase == state.Phase.STUMBLE
+		if state == state_machine.states.get("SwordThrow"):
+			return state.from_whirlwind and get_finisher_hurtbox().monitorable
 	return state == state_machine.states.get("ParryStaggered") and state.from_reflect
 
 
@@ -281,8 +331,27 @@ func enter_daze() -> void:
 
 
 func exit_daze(finisher_landed: bool) -> void:
+	if not finisher_landed:
+		daze_used = false
 	if is_broken() and not finisher_landed:
 		state_machine.current_state.show_stars(true)
+
+
+# PlayerFinisher holds his window from a POW to the daze on his Timers and his state machine. Two of his end on his
+# AnimationPlayer instead - the hug's stumble on its held frame, the whirlwind throw on the sword's catch - so in
+# those it holds too.
+func hold_window(on: bool) -> void:
+	if not on:
+		if held_animation_mode >= 0:
+			animationPlayer.process_mode = held_animation_mode
+		held_animation_mode = -1
+		return
+	var state = state_machine.current_state
+	var hug = state_machine.states.get("BearHug")
+	var throw = state_machine.states.get("SwordThrow")
+	if (state == hug and hug.phase == hug.Phase.STUMBLE) or (state == throw and throw.from_whirlwind):
+		held_animation_mode = animationPlayer.process_mode
+		animationPlayer.process_mode = Node.PROCESS_MODE_DISABLED
 
 
 func end_recovery(stagger_time: float) -> bool:

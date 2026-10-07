@@ -30,6 +30,11 @@ const SETTLE_FRAMES := 40
 const MASH_CLONE := 1
 const PARRY_CLONE := 2
 const PARRY_PRESS_LEAD := 0.02
+# A press that parries nothing costs stamina (PlayerDefense.parry_whiff_share) and one the bar can't pay
+# for is refused, so the mash is what a full bar pays for with the parry still left in it: this many
+# presses this far apart, the last on clone 2's last frame.
+const MASH_PRESSES := 3
+const MASH_GAP := 0.2
 
 var scene: Node
 var boss: Node
@@ -52,7 +57,6 @@ var notes: Array[String] = []
 var done := false
 
 var mashes := 0
-var mash_clock := 0.0
 var parry_pressed := false
 var parried := false
 
@@ -326,13 +330,13 @@ func _watch_mash() -> void:
 		return
 	var index: int = demon.clone_index
 	var at: float = demon.clone_clock
-	# The whole of clone 2, its dark gap included, so the last whiffed press is as close to the next
-	# clone's light as a player could physically get it.
+	# Ending on clone 2's last frame, its dark gap included, so the last whiffed press is as close to the
+	# next clone's light as a player could physically get it: well inside parry_mash_lockout of the
+	# press on clone 3, which it would lock out if nothing re-armed the parry.
 	if index == MASH_CLONE:
 		player.defense.on_guard_raised()
-		mash_clock += 1.0 / 60.0
-		if mash_clock >= 0.06:
-			mash_clock = 0.0
+		var last_frame: float = state_machine.clone_interval() - 1.0 / 60.0
+		if mashes < MASH_PRESSES and at >= last_frame - (MASH_PRESSES - 1 - mashes) * MASH_GAP:
 			mashes += 1
 			player.defense.on_block_pressed()
 	# And the press on clone 3 goes in at the very start of its window rather than the easy end of it.

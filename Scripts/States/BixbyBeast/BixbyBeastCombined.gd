@@ -1,21 +1,24 @@
 extends State
 
 # His combined attack: he comes down and rears back, pounds the floor three times, each pound sending a
-# quake ring rolling out from under him, then clamps his wings in and spins slowly on the spot while his
-# three heads scream sonic beams across the arena, sending another ring out on every beat of the spin. The
-# rings are slow, so they are still rolling out across the floor while the beams sweep it: the answer is
-# to circle with the beams and dash through each ring as it reaches you. He wobbles to a stop dizzy at the
+# quake ring rolling out from under him, then crouches and charges while the bands his three heads will
+# scream sonic beams along light up on the floor, and clamps his wings in and spins slowly on the spot, the
+# beams sweeping the arena and another ring going out on every beat of the spin. The rings are slow, so they
+# are still rolling out across the floor while the beams sweep it: the answer is to step off the bands,
+# circle with the beams and dash through each ring as it reaches you. He wobbles to a stop dizzy at the
 # end, open to punishment like his landing recovery.
 
 const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
 const CombinedLayout := preload("res://Scripts/BixbyCombinedArtLayout.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
 const SWEEP_SCENE := preload("res://Scenes/Bosses/BixbySonicSweepScene.tscn")
+const LANES_SCENE := preload("res://Scenes/Bosses/BixbySonicLanesScene.tscn")
 
 @export var body : CharacterBody2D
 @export var pound_sfx_player : AudioStreamPlayer
 @export var scream_sfx_player : AudioStreamPlayer
 @export var dizzy_sfx_player : AudioStreamPlayer
+@export var windup_sfx_player : AudioStreamPlayer
 
 @onready var state_machine = get_parent()
 
@@ -36,6 +39,9 @@ var start_height := 0.0
 var pounds_done := 0
 var impact_done := false
 var sweep: Node2D
+# The step of the spin loop his beams come out on, picked as the warning goes up, and the bands it lays.
+var entry_step := 0
+var lanes: Node2D
 # Seconds since the spin started or last sent a ring out.
 var ring_clock := 0.0
 # Once the beams stop he turns on through the loop until his heads reach the wobble's first frame: the
@@ -64,6 +70,9 @@ func Exit() -> void:
 	if is_instance_valid(sweep):
 		sweep.queue_free()
 	sweep = null
+	if is_instance_valid(lanes):
+		lanes.queue_free()
+	lanes = null
 
 
 func Physics_Update(delta: float) -> void:
@@ -88,16 +97,14 @@ func Physics_Update(delta: float) -> void:
 				if pounds_done < state_machine.combined_pounds:
 					_pound()
 				else:
-					_start(Phase.SPIN_UP)
-					body.play_anim(&"spin_up")
-					_tell_the_scream()
+					_warn_the_spin()
+		# The warning, with the lead-in played out of its crouch so that it ends as the warning does.
 		Phase.SPIN_UP:
-			if sweep == null and elapsed >= BixbyBeastArtLayout.time_to_step(&"spin_up", BixbyBeastArtLayout.SPIN_BEAMS_STEP):
-				_start_beams()
-			if elapsed >= BixbyBeastArtLayout.anim_time(&"spin_up"):
-				_start(Phase.SPIN)
-				ring_clock = 0.0
-				body.play_anim(&"spin", &"", _widest_gap_step())
+			var tell: float = state_machine.combined_spin_tell
+			if body.current_anim == &"spin_charge" and elapsed >= tell - BixbyBeastArtLayout.anim_time(&"spin_up"):
+				body.play_anim(&"spin_up")
+			if elapsed >= tell:
+				_start_spin()
 		Phase.SPIN:
 			ring_clock += delta
 			if ring_clock >= state_machine.combined_spin_ring_interval:
@@ -163,14 +170,42 @@ func _spin_ring() -> void:
 	state_machine.send_quake_ring(body.ground_position)
 
 
-# The yellow ring, from his maws lighting up to the last sweep. Unlike a wind-up warning it stays up
-# while the beams are out: they sweep for the whole spin and cross any one spot several times over, so
-# the read is not "it is coming" but "this one is dashed, not parried", and it has to hold for as long
-# as that is true. Nothing else can carry it: the beams come off him and reach the whole floor, so
-# there is no one place they land to stand it on. The spin can run up to a loop past combined_spin_time
-# (_spun_round), so it is booked for that long and _stop_spin takes it down.
+# The spin's warning, for combined_spin_tell: he crouches and charges, the yellow ring goes up, and the bands
+# his beams will come out along light up on the floor. Which loop step they come out on is decided here, so
+# the bands lie exactly where the beams will be on the frame they come out, and nothing hurts until then.
+func _warn_the_spin() -> void:
+	_start(Phase.SPIN_UP)
+	entry_step = _widest_gap_step()
+	body.play_anim(&"spin_charge")
+	windup_sfx_player.play()
+	_tell_the_scream()
+	var loop: Dictionary = BixbyBeastArtLayout.SPIN_LOOP
+	lanes = LANES_SCENE.instantiate()
+	lanes.bands = CombinedLayout.LOOP_MOUTH_ANCHORS[loop.frames[entry_step]].map(func(mouth: Array) -> Array:
+		return CombinedLayout.beam_band(mouth, body.feet_position(), state_machine.ROPES))
+	lanes.arena = state_machine.ROPES
+	lanes.lead = state_machine.combined_spin_tell
+	state_machine.ground_layer().add_child(lanes)
+
+
+# The warning is over: he spins, and his maws scream the beams out along the bands.
+func _start_spin() -> void:
+	_start(Phase.SPIN)
+	ring_clock = 0.0
+	body.play_anim(&"spin", &"", entry_step)
+	_start_beams()
+	if is_instance_valid(lanes):
+		lanes.fade_out()
+
+
+# The yellow ring, from the warning to the last sweep. Unlike a wind-up warning it stays up while the beams
+# are out: they sweep for the whole spin and cross any one spot several times over, so the read is not "it
+# is coming" but "this one is dashed, not parried", and it has to hold for as long as that is true. Nothing
+# else can carry it: the beams come off him and reach the whole floor, so there is no one place they land to
+# stand it on. The spin can run up to a loop past combined_spin_time (_spun_round), so it is booked for that
+# long and _stop_spin takes it down.
 func _tell_the_scream() -> void:
-	ParryTell.telegraph(body, &"bixby_sonic_beam", BixbyBeastArtLayout.anim_time(&"spin_up")
+	ParryTell.telegraph(body, &"bixby_sonic_beam", state_machine.combined_spin_tell
 		+ state_machine.combined_spin_time + BixbyBeastArtLayout.anim_time(&"spin"), _spin_centre)
 
 
@@ -192,11 +227,9 @@ func _start_beams() -> void:
 	get_tree().current_scene.add_child(sweep)
 
 
-# Which step of the spin loop to start screaming on, of those spin_up's last frame runs on into
+# Which step of the spin loop his beams come out on, of those spin_up's last frame runs on into
 # (SPIN_LOOP.entry_steps). Each has his heads a third of a turn apart, so the one that leaves the player
-# furthest from a beam buys them the longest run-up before the first one sweeps over them. A step his heads
-# jump to across the player leaves them none: the beams are already lit on spin_up's last frame, and the
-# sweep's hit test covers the jump.
+# furthest from a beam buys them the longest run-up before the first one sweeps over them.
 func _widest_gap_step() -> int:
 	var loop: Dictionary = BixbyBeastArtLayout.SPIN_LOOP
 	var steps: Array = loop.entry_steps
@@ -208,36 +241,20 @@ func _widest_gap_step() -> int:
 	if to_player.length() < 1.0:
 		return steps[0]
 	var azimuth := CombinedLayout.floor_azimuth(to_player.angle())
-	var lit: Array = CombinedLayout.MOUTH_ANCHORS[BixbyBeastArtLayout.ANIMS[&"spin_up"].frames[-1]]
 	var best: int = steps[0]
 	var widest := -1.0
 	for step in steps:
-		var anchors: Array = CombinedLayout.LOOP_MOUTH_ANCHORS[loop.frames[step]]
 		var gap := INF
-		for anchor in anchors:
+		for anchor in CombinedLayout.LOOP_MOUTH_ANCHORS[loop.frames[step]]:
 			gap = minf(gap, absf(wrapf(azimuth - deg_to_rad(anchor[0]), -PI, PI)))
-		if _jump_crosses(lit, anchors, rad_to_deg(azimuth)):
-			gap = 0.0
 		if gap > widest:
 			widest = gap
 			best = step
 	return best
 
 
-# Whether a head turning on from its maw on `from` to the nearest one ahead of it on `to` passes the
-# azimuth, in degrees, on the way.
-func _jump_crosses(from: Array, to: Array, azimuth: float) -> bool:
-	for head in from:
-		var turn := 360.0
-		for other in to:
-			turn = minf(turn, fposmod(other[0] - head[0], 360.0))
-		if fposmod(azimuth - head[0], 360.0) <= turn:
-			return true
-	return false
-
-
-# He spins for combined_spin_time, then on until his heads come round to a frame the wobble he stops on
-# is drawn to follow (SPIN_LOOP.exit_frames), so they never jump backwards into it: at most one more loop.
+# He spins for combined_spin_time, then on until his heads come round to a frame the wobble he stops on is
+# drawn to follow (SPIN_LOOP.exit_frames), so they never jump backwards into it: at most one more loop.
 # He stops screaming halfway through that frame, which a frame's drift between his drawn clock and this one
 # can't carry past.
 func _spun_round() -> bool:

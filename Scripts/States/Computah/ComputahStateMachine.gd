@@ -3,7 +3,7 @@ extends Node
 # Computah's machine. ONE body, ONE cycle: an attack, then the window it leaves open, then a beat.
 #
 # TODAY THE CYCLE HAS ONE ATTACK IN IT - the cannon beam (live_attacks). The user took the mine field and
-# the overload out of the rotation (2026-09-24): FIGHT 03's first half is meant to be easy, so that Greyson's
+# the overload out of the rotation (2026-09-24): FIGHT 06's first half is meant to be easy, so that Greyson's
 # half lands as the surprise. Both are still here, wired and working - the mine field, its chase, the trap and
 # the catch, and the overload - and come back by name in live_attacks, with his health back up with them
 # (ComputahScript.FULL_ROTATION_HEALTH). start_cycle() is the picker, and nothing else starts any of them.
@@ -143,18 +143,22 @@ const COMPUTAH_HOME := Vector2(960, 560)
 # to have learned the number. Only overload_every_cycles, how often it comes round, may ever move.
 @export var overload_time := 3.4
 @export var overload_threshold := 6
-# WELL ABOVE THE ~6 PUNCHES THE THRESHOLD NEEDS, and it exists only so nothing is unbounded: THE
+# WELL ABOVE THE 5 PUNCHES THE THRESHOLD NEEDS, and it exists only so nothing is unbounded: THE
 # THRESHOLD ENDS THE CHARGE, NEVER THE CAP. ComputahScript.take_punch() returns 0 past the window cap,
-# and a punch that returns 0 makes PlayerCombo.resolve_punch() call reset() - so a cap anywhere near
-# the threshold would leave the player punching a boss that has stopped reacting with a combo that
-# silently died.
+# and a punch that returns 0 is refused (PlayerCombo.punch_refused) - so a cap anywhere near the
+# threshold would leave the player punching a boss that has stopped taking anything while the charge
+# runs on.
 @export var overload_hit_cap := 12
 # HOW FAR AWAY HE MAY START IT, AND THIS IS THE LOAD-BEARING NUMBER, NOT THE DURATION. Measured in the
 # suite (computah_overload, REACHABILITY) rather than assumed: a punch first reaches him at 123 px and
-# the player walks 600 px/s, so from 700 px the run-in costs 0.98 s. The threshold then takes five
-# on-beat punches, clearing at 2.90 s, or six mashed, clearing at 3.11 s - 0.50 s and 0.29 s of the
-# charge to spare. That puts the unwinnable ceiling at about 885 px, so THIS, not the duration, is
-# what makes the check winnable at all, and ANY CHANGE TO overload_time MUST MOVE IT WITH THEM.
+# the player walks 600 px/s, so from 700 px the run-in costs 0.98 s. The combo has no timing since
+# 2026-09-30, so from a fresh count the threshold takes five punches however they are pressed, the
+# third the POW (four, with a count carried in): mashed, they clear at 2.75 s, 0.65 s of the charge to
+# spare; pressed a tenth of a second after each swing ends, at 3.13 s, 0.27 s to spare. The slowest
+# steady player that still clears leaves 0.14 s between a swing and the next press. The masher's spare
+# puts the unwinnable ceiling at about 1090 px, past anywhere the ring lets him be from HOME, so THIS,
+# not the duration, is what makes the check winnable at all, and ANY CHANGE TO overload_time MUST MOVE
+# IT WITH THEM.
 @export var overload_start_range := 700.0
 # Only if break_now() falls back - a build with no Break gauge, or one that refuses.
 @export var overload_break_window := 3.2

@@ -2,13 +2,14 @@ extends State
 
 # Matt's Attack 2, the Glass Row, and with cycle_deafen on, Attack 3: the Deafening Yell inside it.
 # He teleports to the top of the ring over the lane, stamps the player to the floor and drags them into
-# row F under him, and brings glass down on the last two rows with a furious jig. Then he roars sonic
-# booms down the lane one at a time, each carrying an arrow: the first direction pressed while it is
-# live decides it. Answered, it breaks on the braced player; failed, it knocks them a row nearer the
-# glass. The knock that reaches the glass costs a whole heart, ends the barrage and bounces them back to
-# the row in front of it; from row F that is the fourth. Then he is winded, lets them go, and the window
-# opens over them. In phase two the booms come in sets, and between each two he stomps again and one more
-# row turns to glass, nearer the player (G11).
+# row F under him, and brings glass down on the last rows with a furious jig: two, three or four of them by
+# his health (MattStateMachine.glass_rows_for). Then he roars sonic booms down the lane one at a time, each
+# carrying an arrow: the first direction pressed while it is live decides it. Answered, it breaks on the
+# braced player; failed, it knocks them a row nearer the glass. The knock that reaches the glass costs a
+# whole heart, ends the barrage and bounces them back to the row in front of it; from row F that is the
+# fourth over two rows of glass, the third over three and the second over four. Then he is winded, lets them
+# go, and the window opens over them. In phase two the booms come in sets, and between each two he stomps
+# again and brings more shards down onto the glass (G11).
 #
 # THE BEATS (seconds):
 #   OUT 0.15, IN 0.15   he teleports to the station over the lane.
@@ -17,15 +18,16 @@ extends State
 #   SLAM    (one step)  sealed, posed, turned to face him, the root clamped on their feet (G1).
 #   ROOT    0.15        the clamp.
 #   DRAG    0.25 + 0.10 pulled into row F along a line, leaving lavender ghosts (Carter's yank).
-#   FURY    1.40        he stamps; 18 shards fall from the ceiling onto rows B and A, their shadows first,
-#                       and the glass is whole by the end of it.
+#   FURY    1.40        he stamps; 18 shards fall from the ceiling onto the glass's bed, rows B and A, and
+#                       9 onto each row of glass in front of it, their shadows first, and the glass is
+#                       whole by the end of it.
 #   [DEAFEN_TELL 0.50, DEAFEN 3.00, DEAFEN_AFTER 0.40: phase two only]
 #   INHALE  0.35        the roar's breath in.
 #   BOOMS               per boom: CHARGE at his mouth (sinking and growing), FLIGHT down the lane, the
 #                       IMPACT step, a KNOCK on a fail (the glass's BOUNCE on the one that reaches it),
 #                       then a GAP. In phase two a STOMP follows the last GAP of every set but the last:
-#                       the knee up 0.20, the slam, which shoves a player on the row turning to glass a
-#                       row forward, and 0.65 of stamping while that row's shards fall, shadows first.
+#                       the knee up 0.20, the slam, and 0.65 of stamping while 9 shards fall onto the
+#                       glass's front row, shadows first. It lays no glass.
 #   WINDED  0.50        the player is let go on its first step, the glass clears and he is spent.
 # Then Recover opens where he stands, straight over the player (recover_spot), glass_clean_bonus longer
 # if nothing failed.
@@ -124,12 +126,11 @@ var row := 0
 # The glass's first row, and whether the knock under way reaches it.
 var glass_top := 0
 var into_glass := false
-# Phase two: how many booms have gone before each stomp, whether the stomp under way has slammed, whether
-# its shove is carrying the player, and how many shoves there have been.
+# Phase two: how many booms have gone before each stomp, whether the stomp under way has slammed, and how
+# many stomps there have been, for a test.
 var stomp_after: Array[int] = []
 var stomp_slammed := false
-var shoving := false
-var shoves := 0
+var stomps := 0
 var glass_hit := false
 var deafen_on := false
 var deafen_passed := false
@@ -207,14 +208,13 @@ func Enter() -> void:
 	windows.clear()
 	fails = 0
 	row = state_machine.GLASS_ROW.start_row
-	glass_top = state_machine.GLASS_ROW.glass_rows[0]
+	glass_top = state_machine.glass_top_row()
 	into_glass = false
 	stomp_after.clear()
 	var sets: int = maxi(state_machine.cycle_sets, 1)
 	for k in range(1, sets):
 		stomp_after.append(roundi(float(booms_total) * k / sets))
-	shoving = false
-	shoves = 0
+	stomps = 0
 	glass_hit = false
 	deafen_passed = false
 	dizzy = false
@@ -467,12 +467,23 @@ func _begin_fury() -> void:
 	glass_floor = FLOOR_SCRIPT.new()
 	glass_floor.name = "GlassFloor"
 	state_machine.add_hazard(glass_floor, Vector2.ZERO, body.floor_layer)
-	glass_floor.build(state_machine.glass_band(), state_machine.glass_segments, body.projectile_layer, body,
+	var bed_top: int = state_machine.bed_top_row()
+	glass_floor.build(state_machine.rows_band(bed_top), state_machine.glass_segments, body.projectile_layer, body,
 		state_machine.HAZARD_GROUP)
+	var bed: Array = glass_floor.segment_rects().duplicate()
+	# Glass past the bed grows on in front of it at once, a row at a time, each with its own edge: a bed drawn
+	# taller would show its tile's edge again inside it. Each of those rows gets a stomp's shards.
+	var grown: Array = []
+	for k in range(bed_top - 1, glass_top - 1, -1):
+		grown.append_array(glass_floor.grow(state_machine.row_band(k), state_machine.glass_segments))
 	glass_floor.show_guides(true, MattArtLayout.GLASS_GUIDES.show_time, state_machine.GLASS_ROW, station.y,
 		state_machine.ROPES)
-	shard_plan = _plan_shards(glass_floor.segment_rects(), state_machine.glass_shards_per_segment,
-		state_machine.glass_shard_spawn, state_machine.glass_fury_time)
+	shard_plan = _plan_shards(bed, state_machine.glass_shards_per_segment, state_machine.glass_shard_spawn,
+		state_machine.glass_fury_time)
+	if not grown.is_empty():
+		shard_plan.append_array(_plan_shards(grown, state_machine.glass_spread_shards_per_segment,
+			state_machine.glass_shard_spawn, state_machine.glass_fury_time))
+		shard_plan.sort_custom(func(a, b): return a.t < b.t)
 
 
 # `per_segment` shards on each of `rects`, the order shuffled, spread evenly over the `span` shares of
@@ -775,7 +786,8 @@ func _run_booms(delta: float) -> void:
 
 
 func _charge_time() -> float:
-	return state_machine.boom_charge_wobble if dizzy else state_machine.boom_charge
+	var charge: float = state_machine.boom_charge_wobble if dizzy else state_machine.boom_charge
+	return charge + state_machine.cycle_boom_charge_extra
 
 
 func _boom_spawn() -> Vector2:
@@ -836,7 +848,6 @@ func _begin_spread() -> void:
 	boom_phase = BoomPhase.STOMP
 	boom_clock = 0.0
 	stomp_slammed = false
-	shoving = false
 	_hide_hint()
 	body.play_anim(&"stomp_tell")
 	ScreenView.shake(get_tree(), TELL_RUMBLE, ceili(state_machine.glass_spread_tell / RUMBLE_STEP), RUMBLE_STEP)
@@ -847,8 +858,6 @@ func _run_spread() -> void:
 		if boom_clock >= state_machine.glass_spread_tell:
 			_spread_slam()
 		return
-	if shoving and _move_player(state_machine.glass_shove_time):
-		shoving = false
 	if body.current_anim == &"stomp_slam" and boom_clock >= state_machine.glass_spread_slam:
 		body.play_anim(&"fury")
 		last_fury_step = -1
@@ -857,29 +866,22 @@ func _run_spread() -> void:
 		glass_floor.drop_shard(shard.land, state_machine.glass_shard_fall, shard.drift, shard.shape)
 		body.play_sfx(&"glass_fall")
 	_stamp()
-	if boom_clock >= state_machine.glass_spread_time and not shoving:
-		glass_floor.reveal_all()
+	if boom_clock >= state_machine.glass_spread_time:
 		_next_boom()
 
 
-# One more row turns to glass, nearer the player: its shards start falling now, their shadows first. Never
-# under the player: one standing on it is shoved a row forward by the slam, unhurt, before any lands.
+# The slam, and more shards on their way down onto the glass's front row, their shadows first. It lays no
+# glass (the user, 2026-09-27): his fury laid all of it, so nothing moves the player.
 func _spread_slam() -> void:
 	stomp_slammed = true
+	stomps += 1
 	boom_clock = 0.0
 	body.play_anim(&"stomp_slam")
 	body.play_sfx(&"stomp")
 	ScreenView.shake(get_tree(), state_machine.stomp_shake, SLAM_SHAKE_STEPS, SLAM_SHAKE_STEP)
 	_puff(&"stomp_dust", _foot_point(&"stomp_slam", 0))
-	glass_top -= 1
-	if row >= glass_top:
-		row = glass_top - 1
-		move_from = _player_point()
-		move_to = state_machine.row_body_point(row)
-		shoving = true
-		shoves += 1
-		_play_pose(&"brace")
-	var rects: Array = glass_floor.grow(state_machine.row_band(glass_top), state_machine.glass_segments)
+	var front: float = state_machine.row_band(glass_top).position.y
+	var rects: Array = glass_floor.segment_rects().filter(func(r: Rect2) -> bool: return is_equal_approx(r.position.y, front))
 	var fall_by := maxf(state_machine.glass_spread_time - state_machine.glass_shard_fall - SPREAD_LAND_MARGIN, 0.0)
 	shard_plan = _plan_shards(rects, state_machine.glass_spread_shards_per_segment, Vector2(0.0, 1.0), fall_by)
 

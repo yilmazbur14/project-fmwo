@@ -47,8 +47,13 @@ func Update(delta: float) -> void:
 	_show_pose()
 
 
-func Physics_Update(_delta: float) -> void:
-	player.velocity = Vector2.ZERO
+func Physics_Update(delta: float) -> void:
+	# PlayerScript doesn't move a stunned player, so on ice the slide is moved here.
+	if player.on_ice:
+		player.ice_coast(delta)
+		player.move_and_slide()
+	else:
+		player.velocity = Vector2.ZERO
 
 
 # The offset rather than the position: the hurt shake tweens the sprite's position.

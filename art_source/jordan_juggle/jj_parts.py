@@ -1,8 +1,9 @@
 """Jordan v2's juggle parts, in the rig's BUILD coordinates, every one lit for the turn it will get.
 
-v2 (art_source/jordan_v2) is thin and frail: stick arms about 3 texels wide with bony elbows, stick
-legs with bony knees, the tee hanging off him in drooping sleeves. So an arm here is jv2_body.limb (a
-capsule chain with bony knobs) and its sleeve jv2_body.sleeve, both through jj_light so their lit
+v2 (art_source/jordan_v2) is thin and frail, SKINNY since 2026-09-28 (art_source/jordan_fit/skinny):
+stick arms about 2 texels wide with bony elbows, stick legs with bony knees, the tee tight on him (the
+fitted tee made tighter the same day; until then it hung off him in drooping sleeves). So an arm here is jv2_body.limb (a capsule chain with bony knobs) and its sleeve v2's fitted
+short sleeve on that arm (jj_light.fitted_sleeve), both through jj_light so their lit
 edges face the key light; the legs are jv2_body.legs' jeans rules on thin leg polygons (standing,
 leaning, dangling) or, drawn up level in the tuck, thin capsule legs with bony knee knobs and the
 denim bunched at the ankles. The hands, the sneakers and the box are the approved maps (the
@@ -39,46 +40,38 @@ def leaning(back):
     return f
 
 
-def _bend(pts, knee_y=77.0, knee_dx=0.0, foot_dx=0.0, top=71.0, foot_y=84.0):
-    """A leg outline bent at the knee: points between the hip and the ankle pushed sideways by a bump
-    that peaks at the knee, the ankle and the hem below it shifted by foot_dx."""
-    out = []
-    for (x, y) in pts:
-        if y >= foot_y:
-            dx = foot_dx
-        elif y > top:
-            t = (y - top) / (foot_y - top)
-            bump = 1.0 - abs(y - knee_y) / max(1.0, (foot_y - top) / 2.0)
-            dx = knee_dx * max(0.0, bump) + foot_dx * t
-        else:
-            dx = 0.0
-        out.append((x + dx, y))
-    return out
+def _bend_dx(y, knee_y=77.0, knee_dx=0.0, foot_dx=0.0, top=71.0, foot_y=84.0):
+    """How far a leg row is pushed sideways when the leg bends at the knee: a bump that peaks at the
+    knee, the ankle and the hem below it shifted by foot_dx."""
+    if y >= foot_y:
+        return foot_dx
+    if y > top:
+        t = (y - top) / (foot_y - top)
+        bump = 1.0 - abs(y - knee_y) / max(1.0, (foot_y - top) / 2.0)
+        return knee_dx * max(0.0, bump) + foot_dx * t
+    return 0.0
+
+
+def _bend(px, **kw):
+    """A leg (pixel set, the rig's row spans) bent at the knee: each row moved by _bend_dx."""
+    return {(x + int(round(_bend_dx(y, **kw))), y) for (x, y) in px}
 
 
 def dangling(knee_dx=2.5, foot_dx=-1.0):
     """Legs let go at the top of the arc: the thin legs bent a little at their bony knees, the feet
-    trailing back, the denim still bunched at the ankles. v2's own jeans rules and drawing."""
-    near = _bend(V2.NEAR_LEG, knee_dx=knee_dx, foot_dx=foot_dx)
-    far = _bend(V2.FAR_LEG, knee_dx=knee_dx, foot_dx=foot_dx)
-    near_hem = [(x + foot_dx, y) for (x, y) in V2.NEAR_HEM]
-    far_hem = [(x + foot_dx, y) for (x, y) in V2.FAR_HEM]
+    trailing back, the denim still bunched at the ankles. v2's own jeans rules and drawing (the skinny
+    jeans' row spans since 2026-09-28; the fitted jeans' polygons were bent the same way)."""
+    near_px, far_px, hips_px = V2.leg_pixels()
+    near = _bend(near_px, knee_dx=knee_dx, foot_dx=foot_dx)
+    far = _bend(far_px, knee_dx=knee_dx, foot_dx=foot_dx)
     kx = int(round(knee_dx))
     fx = int(round(foot_dx))
-    details = (
-        ('stroke', [(50, 66), (50, 71)], 'n', None),
-        ('pix', [(46 + kx, 76), (47 + kx, 77), (46 + kx, 77), (47 + kx, 78)], 's', None),
-        ('pix', [(51 + kx, 76), (50 + kx, 77), (51 + kx, 77), (51 + kx, 78)], 's', None),
-        ('stroke', [(44 + kx, 80), (46 + kx, 81)], 'n', 'N'),
-        ('stroke', [(53 + kx, 80), (55 + kx, 81)], 'n', 'N'),
-        ('stroke', [(40 + fx, 85), (42 + fx, 86), (45 + fx, 85)], 'n', 'NsS'),
-        ('stroke', [(40 + fx, 87), (43 + fx, 87), (45 + fx, 86)], 's', 'N'),
-        ('stroke', [(53 + fx, 85), (55 + fx, 86), (58 + fx, 85)], 'n', 'Ns'),
-        ('stroke', [(54 + fx, 87), (57 + fx, 87)], 's', 'N'),
-    )
+    fly, cap_n, cap_f, fold_n, fold_f, _drag_n, _drag_f, st1, st2, st3, st4 = V2.LEG_DETAILS
+    details = (fly,) + tuple((kind, [(x + kx, y) for (x, y) in pts], key, only)
+                             for kind, pts, key, only in (cap_n, cap_f, fold_n, fold_f))         + tuple((kind, [(x + fx, y) for (x, y) in pts], key, only) for kind, pts, key, only in (st1, st2, st3, st4))
 
     def f(light):
-        part = L.jeans(near, far, V2.HIPS, near_hem, far_hem, details, light)
+        part = L.jeans(near, far, hips_px, None, None, details, light, split_y=V2.LEG_SPLIT_Y)
         return [(part, True, 'legs')] + shoes(fx, 0, fx, 0)
     return f
 
@@ -94,7 +87,7 @@ def tucked(near=((44, 68), (63, 70), (54, 82)), far=((54, 67), (66, 65.5), (59, 
         kx, ky = knee
         ax, ay = ankle
         mx, my = ax + (kx - ax) * 0.18, ay + (ky - ay) * 0.18
-        return [((mx, my), (ax, ay), 2.9, 2.7)]
+        return [((mx, my), (ax, ay), 2.4, 2.2)]
 
     def crease(knee, ankle):
         kx, ky = knee
@@ -106,14 +99,16 @@ def tucked(near=((44, 68), (63, 70), (54, 82)), far=((54, 67), (66, 65.5), (59, 
 
     def f(light):
         (h0, k0, a0), (h1, k1, a1) = near, far
-        far_leg = L.denim_limb([(h1, k1, 2.4, 2.1), (k1, a1, 1.9, 1.8)] + ankle_stack(k1, a1), light,
-                               near=False, knobs=((k1[0], k1[1], 2.5),))
+        # skinny (2026-09-28): every leg radius 0.5 thinner (a pixel off the width, as the standing jeans
+        # lost), the seat the skinny waist's width (x 43-55, its fly on column 49)
+        far_leg = L.denim_limb([(h1, k1, 1.9, 1.6), (k1, a1, 1.4, 1.3)] + ankle_stack(k1, a1), light,
+                               near=False, knobs=((k1[0], k1[1], 2.0),))
         L.denim_details(far_leg, crease(k1, a1))
-        near_leg = L.denim_limb([(h0, k0, 2.6, 2.3), (k0, a0, 2.0, 1.9)] + ankle_stack(k0, a0), light,
-                                near=True, knobs=((k0[0], k0[1], 2.7),))
+        near_leg = L.denim_limb([(h0, k0, 2.1, 1.8), (k0, a0, 1.5, 1.4)] + ankle_stack(k0, a0), light,
+                                near=True, knobs=((k0[0], k0[1], 2.2),))
         L.denim_details(near_leg, crease(k0, a0))
-        hips = L.denim_limb([((42.5, 67), (55.5, 67), 3.4, 3.4)], light, near=True)
-        L.denim_details(hips, [([(50, 64), (50, 70)], 'n', None)])
+        hips = L.denim_limb([((46.0, 67), (52.0, 67), 3.4, 3.4)], light, near=True)
+        L.denim_details(hips, [([(49, 64), (49, 70)], 'n', None)])
         front = dict(hips)
         front.update(near_leg)
         far_s, near_s = V2.shoes()
@@ -123,13 +118,10 @@ def tucked(near=((44, 68), (63, 70), (54, 82)), far=((54, 67), (66, 65.5), (59, 
 
 
 # ------------------------------------------------------------------------------ arms
-FAR_SHOULDER = (57.8, 48.5)        # jv2_body's far arm root, inside the drooping sleeve
+FAR_SHOULDER = (57.8, 48.5)        # jv2_body's far arm root, inside the fitted sleeve
 NEAR_SHOULDER = (40.6, 49.2)       # jv2_body's near arm root
-# jv2_body's drooping sleeves: the near one reaching almost to the elbow, the far one in shade
-NEAR_SLEEVE = ([(44.2, 43.4), (41.4, 44.6), (38.6, 47.2), (35.4, 51.6), (33.6, 54.0), (37.6, 57.8),
-                (41.2, 55.2), (42.6, 51.6), (43.4, 47.6)], [(34, 54), (37, 57)])
-FAR_SLEEVE = ([(55.6, 43.4), (58.4, 44.8), (60.8, 47.6), (62.4, 51.2), (63, 53.8), (58.8, 55.4),
-               (57.4, 51), (57, 47)], [(59, 55), (62, 54)])
+# (until 2026-09-28 the arms here wore v2's drooping sleeves, NEAR_SLEEVE / FAR_SLEEVE; each arm now
+# wears v2's fitted short sleeve on its own upper arm, jj_light.fitted_sleeve)
 # v2's thin wrist under the far hand: jv2_body.far_arm_box ends its forearm at (64.4, 49.8) under
 # FAR_HAND_BOX placed at (61, 44), so the stick runs into the hand's wrist texel. The shipped taunt
 # puts its wrist in the same place (BOX_TOP_LEFT + (1.4, 22.8), the hand at BOX_TOP_LEFT + (-2, 17)).
@@ -172,11 +164,11 @@ def box_high(box_dy=0, light=L.RIG, theta=0.0):
 
 def near_arm_flung(dx=0, light=L.RIG):
     """The fight rig's flung arm on v2's stick arm: knocked off his hip and out behind him, a bony
-    elbow, the drooping sleeve, the fingers splayed."""
+    elbow, the fitted sleeve, the fingers splayed."""
     arm = L.limb([((NEAR_SHOULDER[0] + dx, NEAR_SHOULDER[1]), (32.4 + dx, 54), 1.55, 1.45),
                   ((32.4 + dx, 54), (26.4 + dx, 56.6), 1.45, 1.3)],
                  knobs=((32.4 + dx, 54.2, 1.9),), light=light)
-    sl = L.sleeve(_moved_pts(NEAR_SLEEVE[0], dx), _moved_pts(NEAR_SLEEVE[1], dx), light=light)
+    sl = L.fitted_sleeve((NEAR_SHOULDER[0] + dx, NEAR_SHOULDER[1]), (32.4 + dx, 54), near=True, light=light)
     hand = S.amap(S.HAND_OPEN, 19 + dx, 52)
     return [(arm, True, 'arm_near'), (sl, True, 'sleeve_near'), (hand, False, 'hand_near')]
 
@@ -209,16 +201,16 @@ HAND_UNDER = S.rows_of([
 
 
 def hug(light=L.RIG, theta=0.0, box_at=HUG_BOX):
-    """(back, front) lists: the far stick arm behind the box with its drooping sleeve; then the box,
+    """(back, front) lists: the far stick arm behind the box with its fitted sleeve; then the box,
     the far hand under it, the near stick arm across his belly, its sleeve and its hand."""
     bx, by = box_at
     far_arm = L.limb([(FAR_SHOULDER, (62.6, 57), 1.5, 1.4), ((62.6, 57), (bx + 10.5, by + 21), 1.4, 1.3)],
                      knobs=((62.6, 57.2, 1.8),), base='c', lit='d', shade='b', light=light)
-    far_sl = L.sleeve(FAR_SLEEVE[0], FAR_SLEEVE[1], lit=False, light=light)
+    far_sl = L.fitted_sleeve(FAR_SHOULDER, (62.6, 57), near=False, light=light)
     box = L.box_part((bx, by), theta)
     near_arm = L.limb([(NEAR_SHOULDER, (37.6, 57.8), 1.55, 1.45), ((37.6, 57.8), (bx - 1.5, by + 12.5), 1.45, 1.3)],
                       knobs=((37.6, 58.0, 1.9),), light=light)
-    near_sl = L.sleeve(NEAR_SLEEVE[0], NEAR_SLEEVE[1], light=light)
+    near_sl = L.fitted_sleeve(NEAR_SHOULDER, (37.6, 57.8), near=True, light=light)
     grip = S.amap(HAND_GRIP, bx - 3, by + 9)
     under = S.amap(HAND_UNDER, bx + 5, by + 19)
     back = [(far_arm, True, 'arm_far'), (far_sl, True, 'sleeve_far')]

@@ -1,0 +1,259 @@
+{
+  "shipped": "2026-10-04T13:21:19",
+  "by": "coordinator",
+  "approval": "user 2026-10-04: 'approve all' (kaiju wave 1)",
+  "source": "scratchpad/jordan_kaiju/wave1",
+  "contract": "art_source/jordan_kaiju/contract_wave1.json",
+  "files": [
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_beam_body.aseprite",
+      "sha256": "867e7cd41d177e1056ed1e289875f0c20d39d8da21c7f45560504b768ee235a4",
+      "bytes": 1833
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_beam_body.png",
+      "sha256": "780d9ae3fbd1d49a4c232d2c50170bf731fc8b148c3db43445741ae65d57844e",
+      "bytes": 641
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_beam_end.aseprite",
+      "sha256": "045b64f93cb1efb83528a5f52778cb2cee3c3df4ff5a867eb704e3f092d85e5c",
+      "bytes": 2224
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_beam_end.png",
+      "sha256": "9028131adaaae654044053adfc7d2223184a9845a9ed97b922db5156ba744a7a",
+      "bytes": 1127
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_beam_mouth.aseprite",
+      "sha256": "06f80f4ed474b83eda18de189051cc35221c999117c1d9a0a79627ba859c21c8",
+      "bytes": 2376
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_beam_mouth.png",
+      "sha256": "4fa75453eec5c183a6648c2c7bf5cd7b410348704c8267436d02654c2222a3b6",
+      "bytes": 1379
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_burn_flame.aseprite",
+      "sha256": "6d38bf98e45ff0a22a054efb523175972636faf40c64d9d8db0b39a947ca3aaf",
+      "bytes": 1817
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_burn_flame.png",
+      "sha256": "98e60932cf9a88d52a7815b788140b97cee557bbb5e68dd66b9fca51060e955f",
+      "bytes": 462
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_burn_out.aseprite",
+      "sha256": "edcedcccec7166a4508816376b20bfd9ae96ea91a4b6f9ca9ae16fb95d4710ed",
+      "bytes": 1360
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_burn_out.png",
+      "sha256": "b85509b1e6d9345d4652b579a92e9248729005d3c86ee579171baa2ad1c48311",
+      "bytes": 322
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_charge.aseprite",
+      "sha256": "b3642a2275b39d4fb45802989bd211de79281082813e78a2a1f50b8302292482",
+      "bytes": 15222
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_charge.png",
+      "sha256": "cf1890a919cb049d02eaf85ce7b16a1b18910600405faa4630744a83e9e8ca5a",
+      "bytes": 12317
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_drop.aseprite",
+      "sha256": "31c00bbb7ea176f1d7ea41a2768694d7a7e3a89a3af444a8273df34ca0327ba1",
+      "bytes": 16982
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_drop.png",
+      "sha256": "d989e0b5861032edd7715ac6c15d42ada7a2f869cd7cac14321899d50d84c9a5",
+      "bytes": 20869
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_grow.aseprite",
+      "sha256": "a81f86bfb11c6b2a04305020f768403c5dc8b8e98270a5d432ea88185d5ab6ff",
+      "bytes": 46145
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_grow.png",
+      "sha256": "b8196bae9f277428bcd69b3c6f42fff07ccd3ff1294c1406af2eb9a842d0e193",
+      "bytes": 56969
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_head_aim.aseprite",
+      "sha256": "4ec7da79b85ca7ba89d87b2ba1461d4bc23f96c59b49c2c6d7bcb1048c78cf45",
+      "bytes": 16504
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_head_aim.png",
+      "sha256": "dca6325a97c1d0603e90fbe6d6905a963b637d8680eeceabf00eadaadea72e15",
+      "bytes": 18914
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_head_fire.aseprite",
+      "sha256": "d80af02bdd2d4daacf94d5b55975b0e1f83da9d72716c5bb68c96685faa2a9a7",
+      "bytes": 17551
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_head_fire.png",
+      "sha256": "935c5606523cb5545c8f24d76cf9e71d6b2c32401348eccc1847f801eb1084c9",
+      "bytes": 19814
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_idle.aseprite",
+      "sha256": "147233a03e219969dde657f144813acb2f10a8d502901e4db9acb5fa4636d95b",
+      "bytes": 48887
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_idle.png",
+      "sha256": "9de9458e8a810e41ff54f3a2d8f9df033c1ce6612a5f204303d49298ae3f33da",
+      "bytes": 23244
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_kneel.aseprite",
+      "sha256": "6d8fff8314cc3f836ae2ef3f99152b7f1a137d0f81e0261a65c3557b550cae78",
+      "bytes": 17174
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_kneel.png",
+      "sha256": "b74bcca276f3e82e88633cc76377c372d229273cd2d172454992b1e83b056b4d",
+      "bytes": 16976
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_land.aseprite",
+      "sha256": "afe536f17098fe8347d1bec81e6eac48ee7919ff11dda736e3b301acf760e5f1",
+      "bytes": 24366
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_land.png",
+      "sha256": "29b7b9c073148ac15176aa41862c6687a25fe80f57f0a895505bbf5cdcd08bef",
+      "bytes": 28942
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_leap.aseprite",
+      "sha256": "ed0733bdaf3e10eec790a6eb5830e7217aebc524cd9e6093586a4c780679a8fe",
+      "bytes": 25527
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_leap.png",
+      "sha256": "d750ae88a1f71de56e92f4595e4693f04783e5a36da368f00ca096b2f8b99f14",
+      "bytes": 29762
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_mouth_charge.aseprite",
+      "sha256": "c86c556de04d9237b3b95e6952373d865ae7f2723b85d91245ba8e06f0bdeb8a",
+      "bytes": 1987
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_mouth_charge.png",
+      "sha256": "e56cb364f04b2651e399ba177e6ff53fb9203d7640f7ccc6482e65fb91e4c3a2",
+      "bytes": 865
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_rear.aseprite",
+      "sha256": "fda0d212c68fc7b05ebdc1593f5bbefe8a211d4528138e60a12bd379a1783ff6",
+      "bytes": 31967
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_rear.png",
+      "sha256": "a24241a789480f1681b52a41fe2b25476f5261c12493fb6373cb060e6ffd8ed5",
+      "bytes": 37476
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_shadow.aseprite",
+      "sha256": "456662686e22a52c35878d3cbcd37e8989b753a1429dd4ef3ddd1d4fb5e90d38",
+      "bytes": 1163
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_shadow.png",
+      "sha256": "c871f8e03ff48a57f85541f8ddeef480c0cef04c56a42a91cb9d198b066c3773",
+      "bytes": 260
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_shrink.aseprite",
+      "sha256": "9c842cc0962d280449695b5b8b927f55531ba577191c6237f3bf9b5c725fbf23",
+      "bytes": 29605
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_shrink.png",
+      "sha256": "e573bc1e6048f8948696aebeb17861f8af5e0a43911b833507e35f7c7648a795",
+      "bytes": 36199
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_spines.aseprite",
+      "sha256": "f338967a7890282e46d06cc1ceef48e1041696d5fb4e990d5fe345ae062e61c8",
+      "bytes": 11012
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_spines.png",
+      "sha256": "2b9538d5670940e090ecee14d650ea8a4210aa5d115d686ab8cf2f12e8741de1",
+      "bytes": 6943
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_stand.aseprite",
+      "sha256": "4d75e8a63cc48d356e07b4cf1118e4d27e4e1b06c591beb1fe5f22db5599f8c6",
+      "bytes": 24177
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_stand.png",
+      "sha256": "690f24cdc4ac4717874384c2780ce9cf7fb34f56683952b784e352ba077b715b",
+      "bytes": 27397
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_stomp.aseprite",
+      "sha256": "67470a54b4710cf816310836f21d0205adeae0518ca202b2b557d2710fe9f963",
+      "bytes": 24776
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_stomp.png",
+      "sha256": "cee74cc1a29ae15080a802ff4b7ab276fa485a3f84d0a52db4a12c9fe83b466a",
+      "bytes": 28290
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_stomp_impact.aseprite",
+      "sha256": "66f2fb063c2dab36fff33e97643a039c22e6604339848f9e6d2f1e1b85731a10",
+      "bytes": 6453
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_stomp_impact.png",
+      "sha256": "8df6a3b5f20dfc75b9a48ca2af53d24b6d51fb83b9ef0ef0bb9e9e1ee5446ad3",
+      "bytes": 6338
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_stomp_mark.aseprite",
+      "sha256": "242aa8f31d889ea0eade33e9e0e22e09aaa41f9ed0c2963104367b53ccca602b",
+      "bytes": 4926
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_stomp_mark.png",
+      "sha256": "4137cc86174f7e798f3967c12cbbcf087ec0c0fa2aee816ff4356fe98fb8fe84",
+      "bytes": 3014
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_stumble.aseprite",
+      "sha256": "28a91b1313127a1c3dd8f50ae1da9ecfe405e2a4b6718ca25afa31f94de2a8e0",
+      "bytes": 40506
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_stumble.png",
+      "sha256": "6da1f87d29ce43d377dc9e47ee9a2edd01d93f36ec1ce0246c4f37f6aa54b90a",
+      "bytes": 45605
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_toy.aseprite",
+      "sha256": "a5048eec58cc098c082f1d8bf502be255bed3860cea553565581001f155e827a",
+      "bytes": 2875
+    },
+    {
+      "file": "Assets/Characters/Jordan/Kaiju/kaiju_toy.png",
+      "sha256": "762eeb0a90c1ab0fa1bf792fc1a7d6b2fc605a54110cf88367d767d26a4a6487",
+      "bytes": 2017
+    }
+  ]
+}

@@ -5,8 +5,10 @@ The reference is his approved v2 art: the approval sprite (jordan_redesign_v2.pn
 v2 cascade (idle, summon, taunt, hit, defeat): 22 frames, the quiff standing and knocked flat.
 
 Per frame:
-  black     keyline share of all drawn pixels. The approved v2 frames run 28.2-29.3%; a juggle frame
-            may sit BLACK_PAD either side of that and no further.
+  black     keyline share of all drawn pixels. The approved v2 frames run 30.7-31.9% in the skinny
+            build (29.4-31.0% in the fitted tee and 28.2-29.3% before it, both earlier on 2026-09-28),
+            so the band is 28.7-33.9%; a juggle frame may sit BLACK_PAD either side of the reference
+            and no further. The band is measured off the shipped sheets every run, never typed in.
             'body' is him alone; 'all' includes the effects.
   colours   distinct colours; every one must be one of the approved 40, black pure #000000.
   ramps     the tone shares of his big ramps (shirt red, dress pink, denim, skin, hair, gold). A
@@ -76,6 +78,9 @@ REASONS = {
                      "on the same edges, so a different bar shows"),
 }
 JUSTIFIED = {(i, r): why for r, (frames, why) in REASONS.items() for i in frames}
+# (The fitted tee, earlier on 2026-09-28, needed JUSTIFIED[(7, 'denim')] for the crash's jeans hips
+# showing under its hem; the skinny build's crash sits inside the approved denim range, so that
+# allowance is gone: git history has it.)
 
 
 def source_counts():
@@ -191,9 +196,14 @@ def part_check(i):
 # RotSprite moves a handful of texels of a one-texel bar between its tones at 20-40 degrees, which on
 # the box's ~90 gold texels is six points by itself. A wrecked ramp (the contract's 31% deep against
 # 14%) is many times either allowance.
+# ROT_PX was 6 until 2026-09-28. The fitted tee made the shirt's red a small ramp too (about 145
+# texels on the turned frames, half the sack's): RotSprite at 40 degrees folds 7 of its one-texel lit
+# and shade edges into the base (6.8 points on the hang), and the crash's row removal takes 12 more
+# texels of the jeans' lit edge now that more jeans show under the shorter hem (6.7 points). Ten
+# texels' worth covers both; a wrecked ramp is still many times it.
 ROT_TOL = 5.0
 ROT_DEEP_TOL = 4.0
-ROT_PX = 6
+ROT_PX = 10
 
 
 def rot_check(i, b):

@@ -107,6 +107,10 @@ func Exit() -> void:
 #THE WALK-IN
 
 func _play() -> void:
+	# His bar comes up with the gates, as Captain Burak's does: up from the start, it drew over him for the
+	# first steps of his walk in from the top gate (playtest 2026-10-04).
+	if character_body.hud_layer != null:
+		character_body.hud_layer.hide()
 	var gates := _gates()
 	if gates != null:
 		gates.open()
@@ -135,6 +139,8 @@ func _play() -> void:
 		await gates.close()
 	if finished:
 		return
+	if character_body.hud_layer != null:
+		character_body.hud_layer.show()
 	await _beat(EricEntranceLayout.SETTLE_BEAT)
 	if finished:
 		return
@@ -265,6 +271,8 @@ func finish_entrance() -> void:
 	character_body.global_position = home
 	_show_pose("point")
 	_hide_planted()
+	if character_body.hud_layer != null:
+		character_body.hud_layer.show()
 	var gates := _gates()
 	if gates != null:
 		gates.shut_now()
