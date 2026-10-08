@@ -64,6 +64,9 @@ const SAVE_VERSION := 1
 # Whether the fights beaten stay beaten through NEW GAME and START OVER: a record of what the player has done, apart from
 # the run's checkpoint. False makes a new run lock them again.
 const UNLOCKS_SURVIVE_NEW_GAME := true
+# The master volume with none kept yet - a first run, or a save that can't be read (the user, 2026-10-08: "lets lower
+# the default volume, maybe start it at half by default"). A volume the player has set always wins.
+const DEFAULT_VOLUME := 0.5
 # A fight's second half that is taken over inside the fight's own scene, and that scene: CONTINUE opens it with the
 # request the boss select's row of the same name makes (start_at_greyson, start_at_liam).
 const PHASE_GREYSON := "greyson"
@@ -143,10 +146,19 @@ var beaten: Array[String] = []
 
 
 func _ready() -> void:
+	# Borderless full screen rather than exclusive, so alt-tab behaves.
+	if wants_fullscreen():
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	load_save()
 	get_tree().scene_changed.connect(_on_scene_changed)
 	# scene_changed doesn't fire for the scene the game boots into.
 	_on_scene_changed.call_deferred()
+
+
+# An exported build opens full screen (the user, 2026-10-08: "lets have the game start in full screen"); the editor, where
+# the playtest runs and every check and capture window is opened, keeps the window the project gives it.
+func wants_fullscreen() -> bool:
+	return not playtest_build
 
 
 func reset_progress() -> void:
@@ -304,16 +316,21 @@ func volume() -> float:
 	return 0.0 if AudioServer.is_bus_mute(bus) else db_to_linear(AudioServer.get_bus_volume_db(bus))
 
 
-# Reads the save into saved_* and puts its volume on the Master bus. Missing is a first run. A file that won't parse, or
-# was written by a version this doesn't know, is no save at all, and is written over by the next checkpoint; a
-# checkpoint this build can't open - a scene renamed since, a phase it doesn't know - is no run to continue.
+# Reads the save into saved_* and puts its volume on the Master bus, DEFAULT_VOLUME when it keeps none. Missing is a
+# first run. A file that won't parse, or was written by a version this doesn't know, is no save at all, and is written
+# over by the next checkpoint; a checkpoint this build can't open - a scene renamed since, a phase it doesn't know - is
+# no run to continue.
 func load_save() -> void:
 	saved_checkpoint = ""
 	saved_phase = ""
 	saved_cleared = 0
 	saved_finished = false
 	beaten.clear()
-	if not _save_reachable() or not FileAccess.file_exists(save_path):
+	# A check that never reads a save leaves the bus as it found it.
+	if not _save_reachable():
+		return
+	_apply_volume(DEFAULT_VOLUME)
+	if not FileAccess.file_exists(save_path):
 		return
 	var cfg := ConfigFile.new()
 	var version = cfg.get_value("meta", "version", -1) if cfg.load(save_path) == OK else -1

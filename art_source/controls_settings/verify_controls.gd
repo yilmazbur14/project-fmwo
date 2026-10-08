@@ -127,6 +127,8 @@ func _main() -> void:
 		"balloon_accept": await test_balloon_accept()
 		"playtest_panel": await test_playtest_panel()
 		"unlock_panel": await test_unlock_panel()
+		"exit_button": await test_exit_button()
+		"fresh_start": await test_fresh_start()
 		"victory_menu": await test_victory_menu()
 		"menu_music": await test_menu_music()
 		_:
@@ -3643,7 +3645,7 @@ func win_story_fight(scene: String) -> bool:
 
 # An exported build's boss select (the user, 2026-10-08: "only if theyve beat the boss. They shouldnt be able to see the
 # name of the next boss in this menu and should only show bosses theyve already beat"), seen by turning
-# GameProgress.playtest_build off. With nothing beaten there is no panel and the menu's column ends at VOLUME; INVINCIBLE
+# GameProgress.playtest_build off. With nothing beaten there is no panel and VOLUME hands down to EXIT; INVINCIBLE
 # can't be had, set or not, and no fight wears the badge. Fights 1 to 3 won in a story run, each through FightOutro to
 # its Victory screen and on with NEXT BOSS, are beaten, in the save too, and the panel - titled BOSS SELECT, with no
 # toggle - lists exactly those three, no unbeaten name anywhere in it, chained from VOLUME on the d-pad. A row opens its
@@ -3664,7 +3666,7 @@ func test_unlock_panel() -> void:
 	slider.grab_focus()
 	tap_button(JOY_BUTTON_DPAD_DOWN)
 	await wait(1)
-	check(slider.focus_neighbor_bottom.is_empty() and focus_owner() == slider, "and its column ends at VOLUME (%s)" % focus_name())
+	check(focus_owner() == menu.exit_button, "and VOLUME hands down straight to EXIT TO DESKTOP (%s)" % focus_name())
 
 	log_p("-- INVINCIBLE can't be had")
 	progress.playtest_invincible = true
@@ -3895,4 +3897,149 @@ func test_menu_music() -> void:
 	await load_scene(VICTORY_SCENE)
 	await wait(2)
 	check(progress.carried_music == null and not is_instance_valid(carried), "stops it")
+	progress.reset_progress()
+
+
+# ------------------------------------------------------------------ exit_button
+
+const EXIT_RECT := Rect2(1496, 958, 400, 113)
+
+
+# Every control drawn on the menu that EXIT TO DESKTOP's rect overlaps, but the full-screen ones (the backdrop, the
+# fade) and its own pieces.
+func overlapping_exit(menu: Control) -> Array[String]:
+	var exit: Button = menu.exit_button
+	var rect := exit.get_global_rect()
+	var hits: Array[String] = []
+	for node in menu.find_children("*", "Control", true, false):
+		if node == exit or exit.is_ancestor_of(node) or not node.is_visible_in_tree():
+			continue
+		var other: Rect2 = node.get_global_rect()
+		if other.size == Vector2.ZERO or other.encloses(Rect2(0, 0, 1920, 1080)):
+			continue
+		if other.intersects(rect):
+			hits.append("%s %s" % [node.name, other])
+	return hits
+
+
+# EXIT TO DESKTOP (the user, 2026-10-08: "lets give the user an exit to desktop button to quit out of the game in the main
+# menu") in every layout of the menu: the playtest build's whole boss select with and without a run to continue, and an
+# exported build's beaten-only one with nothing, 3 fights and everything beaten. In each it is a copy of NEW GAME (its art
+# and theme) at EXIT_RECT, its words fitting inside, overlapping nothing else on the menu; last in the focus chain, under
+# the boss select's last row (or VOLUME with no boss select), the d-pad going down onto it and back up, its focus ring
+# showing on a pad. A on it quits the game: the tree's quit, swapped here for a stand-in.
+func test_exit_button() -> void:
+	var progress: Node = root.get_node("GameProgress")
+	var all_beaten: Array = progress.FIGHT_SCENES.duplicate()
+	all_beaten.append(GOD_FIGHT)
+	var layouts := [
+		["the playtest build", true, [], false],
+		["the playtest build with a run to continue", true, [], true],
+		["an exported build with nothing beaten", false, [], false],
+		["an exported build with 3 fights beaten and a run to continue", false, progress.FIGHT_SCENES.slice(0, 3), true],
+		["an exported build with everything beaten and a run to continue", false, all_beaten, true],
+	]
+	for layout in layouts:
+		log_p("-- %s" % layout[0])
+		progress.playtest_build = layout[1]
+		set_beaten(progress, layout[2])
+		progress.saved_finished = layout[2].size() == all_beaten.size()
+		progress.saved_checkpoint = CARTER_FIGHT if layout[3] else ""
+		var menu := await open_menu()
+		var exit: Button = menu.exit_button
+		var start: Button = menu.start_game_button
+		check(exit != null and exit.visible and exit.text == "EXIT TO DESKTOP" and exit.get_global_rect() == EXIT_RECT, "EXIT TO DESKTOP is up at %s" % (exit.get_global_rect() if exit else Rect2()))
+		if exit == null:
+			continue
+		var fits: bool = exit.get_combined_minimum_size().x <= exit.size.x and exit.get_combined_minimum_size().y <= exit.size.y
+		check(fits and exit.theme_type_variation == start.theme_type_variation and (exit.get_theme_stylebox("normal") as StyleBoxTexture).texture == (start.get_theme_stylebox("normal") as StyleBoxTexture).texture, "in NEW GAME's art and theme, its words fitting (%s in %s)" % [exit.get_combined_minimum_size(), exit.size])
+		check((menu.continue_button != null) == layout[3] and overlapping_exit(menu).is_empty(), "overlapping nothing else on the menu %s" % [overlapping_exit(menu)])
+		var rows := boss_select_rows()
+		var last: Control = menu.volume_slider
+		for button in menu.find_children("*", "Button", true, false):
+			if button.text == (rows[-1] if not rows.is_empty() else "<none>"):
+				last = button
+		check(menu.get_node_or_null(last.focus_neighbor_bottom) == exit and menu.get_node_or_null(exit.focus_neighbor_top) == last and exit.focus_neighbor_bottom.is_empty(), "last in the focus chain, under %s" % (last.text if last is Button else "VOLUME"))
+		last.grab_focus()
+		tap_button(JOY_BUTTON_DPAD_DOWN)
+		await wait(1)
+		check(focus_owner() == exit and exit.get_theme_stylebox("focus") is StyleBoxFlat, "the d-pad goes down onto it, its focus ring showing on a pad (%s)" % focus_name())
+		tap_button(JOY_BUTTON_DPAD_UP)
+		await wait(1)
+		check(focus_owner() == last, "and back up (%s)" % focus_name())
+
+	log_p("-- pressed")
+	var quits := [0]
+	var menu: Control = current_scene
+	menu.quit_game = func() -> void: quits[0] += 1
+	menu.exit_button.grab_focus()
+	tap_button(JOY_BUTTON_A)
+	await wait(2)
+	check(quits[0] == 1, "A on it quits the game (%d)" % quits[0])
+	progress.playtest_build = true
+	progress.saved_finished = false
+	progress.saved_checkpoint = ""
+	progress.beaten.clear()
+	progress.reset_progress()
+
+
+# ------------------------------------------------------------------ fresh_start
+
+# How a game starts (the user, 2026-10-08: "lets lower the default volume, maybe start it at half by default and lets have
+# the game start in full screen"). With no save the master volume starts at half, and the menu's and the pause screen's
+# sliders show it, nothing written for it; a volume the save keeps wins, 0.3 and muted alike; a save that can't be read
+# starts at half. This run, from the editor, is the playtest build: it keeps its window and asks for no full screen,
+# and an exported build (the flag turned off, never applied here) asks for it.
+func test_fresh_start() -> void:
+	var progress: Node = root.get_node("GameProgress")
+	var bus := AudioServer.get_bus_index("Master")
+
+	log_p("-- no save")
+	AudioServer.set_bus_volume_db(bus, 0.0)
+	progress.load_save()
+	check(absf(progress.volume() - 0.5) < 0.001 and not AudioServer.is_bus_mute(bus), "a first run starts the master volume at half (%.3f)" % progress.volume())
+	var menu := await open_menu()
+	check(absf(menu.volume_slider.value - 0.5) < 0.001, "the menu's slider shows it (%.3f)" % menu.volume_slider.value)
+	await load_quiet_fight()
+	var pause: Node = pause_menu()
+	pause.open()
+	await wait(2)
+	check(absf(pause.volume_slider.value - 0.5) < 0.001, "so does the pause screen's (%.3f)" % pause.volume_slider.value)
+	pause.close()
+	await past_resume_grace(pause)
+	check(saved_file().is_empty(), "and nothing is written for it")
+
+	log_p("-- a kept volume wins")
+	for kept in [1.0, 0.3, 0.0]:
+		write_progress({})
+		var cfg := ConfigFile.new()
+		cfg.load(TEST_PROGRESS_PATH)
+		cfg.set_value("settings", "volume", kept)
+		cfg.save(TEST_PROGRESS_PATH)
+		AudioServer.set_bus_mute(bus, false)
+		AudioServer.set_bus_volume_db(bus, linear_to_db(0.5))
+		progress.load_save()
+		var got: float = progress.volume()
+		check(absf(got - kept) < 0.001 and AudioServer.is_bus_mute(bus) == (kept == 0.0), "a save keeping %.1f starts at %.1f (%.3f)" % [kept, kept, got])
+	menu = await open_menu()
+	check(menu.volume_slider.value == 0.0, "the menu's slider shows the muted one at 0")
+	AudioServer.set_bus_mute(bus, false)
+
+	log_p("-- a save that can't be read")
+	var garbled := FileAccess.open(TEST_PROGRESS_PATH, FileAccess.WRITE)
+	garbled.store_string("[meta\nversion=1\n[settings]\nvolume=0.")
+	garbled.close()
+	AudioServer.set_bus_volume_db(bus, 0.0)
+	progress.load_save()
+	check(absf(progress.volume() - 0.5) < 0.001, "starts at half too (%.3f)" % progress.volume())
+
+	log_p("-- full screen")
+	var mode := DisplayServer.window_get_mode()
+	check(progress.playtest_build and not progress.wants_fullscreen() and mode != DisplayServer.WINDOW_MODE_FULLSCREEN and mode != DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN, "run from the editor it keeps its window (mode %d)" % mode)
+	progress.playtest_build = false
+	check(progress.wants_fullscreen(), "an exported build asks for full screen")
+	progress.playtest_build = true
+
+	AudioServer.set_bus_mute(bus, false)
+	AudioServer.set_bus_volume_db(bus, 0.0)
 	progress.reset_progress()

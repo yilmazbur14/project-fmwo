@@ -58,6 +58,12 @@ const CAPTION_FONT_SIZE := 22
 # NEW GAME over a run CONTINUE could pick up asks first, in the pause screen's question box, with the menu's buttons.
 const CONFIRM_NEW_GAME := "START OVER?\nYOUR PROGRESS WILL BE LOST."
 const CONFIRM_BUTTON_SIZE := Vector2(400, 126)
+# EXIT TO DESKTOP (the user, 2026-10-08: "lets give the user an exit to desktop button to quit out of the game in the main
+# menu"): a copy of NEW GAME, smaller, in the bottom right corner on the floor in front of the tower - the one place the
+# column, either boss select and the tower art leave room for a button. 44 is the largest of the font's crisp sizes that
+# fits the words in the art's frame at this size. It asks nothing first: the run is saved as it goes.
+const EXIT_RECT := Rect2(1496, 958, 400, 113)
+const EXIT_FONT_SIZE := 44
 
 const ControlsArtLayout := preload("res://Scripts/ControlsArtLayout.gd")
 const PauseArtLayout := preload("res://Scripts/PauseArtLayout.gd")
@@ -82,6 +88,9 @@ var continue_caption: Label
 var confirm: Control
 var confirm_back_button: Button
 var confirm_ok_button: Button
+var exit_button: Button
+# What EXIT TO DESKTOP calls, the tree's quit: a check swaps in a stand-in so it can press the button and carry on.
+var quit_game: Callable
 
 
 # Called when the node enters the scene tree for the first time.
@@ -114,10 +123,10 @@ func _ready() -> void:
 
 	if GameProgress.has_resume():
 		_build_continue()
+	_build_exit()
 	_link_menu_focus()
 	var entries := _boss_select_entries()
-	if not entries.is_empty():
-		_build_boss_select(entries)
+	_link_exit(_build_boss_select(entries) if not entries.is_empty() else volume_slider)
 	# Last, so the question is drawn over the boss select too.
 	if continue_button:
 		_build_confirm()
@@ -186,6 +195,31 @@ func _build_continue() -> void:
 	continue_button.add_child(continue_caption)
 
 	$TitleLogo.position.y -= TITLE_RISE
+
+
+# A copy of NEW GAME made before the menu's focus is chained, so it carries none of that button's neighbours.
+func _build_exit() -> void:
+	exit_button = start_game_button.duplicate(0) as Button
+	exit_button.name = "ExitButton"
+	exit_button.text = "EXIT TO DESKTOP"
+	exit_button.add_theme_font_size_override("font_size", EXIT_FONT_SIZE)
+	add_child(exit_button)
+	exit_button.position = EXIT_RECT.position
+	exit_button.size = EXIT_RECT.size
+	quit_game = get_tree().quit
+	exit_button.pressed.connect(_on_exit_button_pressed)
+
+
+# Last in the menu's focus chain, under `above`: the boss select's last row, or VOLUME without one.
+func _link_exit(above: Control) -> void:
+	above.focus_neighbor_bottom = exit_button.get_path()
+	above.focus_next = exit_button.get_path()
+	exit_button.focus_neighbor_top = above.get_path()
+	exit_button.focus_previous = above.get_path()
+
+
+func _on_exit_button_pressed() -> void:
+	quit_game.call()
 
 
 # The pause screen's question box (its art, sizes and dim), with two of the menu's own buttons. BACK has the focus when it
@@ -277,7 +311,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # Geometric navigation can't be trusted across the gap the menu art leaves, so the column is chained
 # by hand: CONTINUE when there is a run to continue, NEW GAME, CONTROLS, VOLUME, and on into the boss
-# select when it's built.
+# select when it's built, then EXIT TO DESKTOP (_link_exit).
 func _link_menu_focus() -> void:
 	var column: Array[Control] = [start_game_button, controls_button, volume_slider]
 	if continue_button:
@@ -295,7 +329,7 @@ func _link_menu_focus() -> void:
 # are. A slider can't draw a focus box at all, so it shows focus through its highlight art instead.
 func _show_focus() -> void:
 	var on_pad := InputSettings.device == InputSettings.Device.GAMEPAD
-	for button in [continue_button, start_game_button, controls_button, confirm_back_button, confirm_ok_button]:
+	for button in [continue_button, start_game_button, controls_button, exit_button, confirm_back_button, confirm_ok_button]:
 		if button:
 			button.add_theme_stylebox_override("focus", ControlsArtLayout.focus_ring() if on_pad else menu_focus_style)
 	volume_slider.add_theme_stylebox_override("grabber_area_highlight", pad_slider_highlight if on_pad else menu_slider_highlight)
@@ -332,8 +366,9 @@ func _boss_select_entries() -> Array[Array]:
 
 # One button per row of `entries`, three columns filled by rows rather than by fights, so the GREYSON, LIAM, FINALE, GOD
 # and ENDING rows take a place like any other. A fight whose scene hasn't been built yet shows as a disabled row rather
-# than vanishing. The playtest build's panel has the INVINCIBLE toggle by its title.
-func _build_boss_select(entries: Array[Array]) -> void:
+# than vanishing. The playtest build's panel has the INVINCIBLE toggle by its title. Returns the last control the focus
+# chain reaches.
+func _build_boss_select(entries: Array[Array]) -> Control:
 	var playtest: bool = GameProgress.playtest_build
 	var panel := PanelContainer.new()
 	panel.position = BOSS_SELECT_RECT.position
@@ -403,9 +438,11 @@ func _build_boss_select(entries: Array[Array]) -> void:
 		chain[i].focus_neighbor_bottom = next
 
 	# The menu column hands down into the panel from the volume slider.
-	if not chain.is_empty():
-		volume_slider.focus_neighbor_bottom = chain[0].get_path()
-		volume_slider.focus_next = chain[0].get_path()
+	if chain.is_empty():
+		return volume_slider
+	volume_slider.focus_neighbor_bottom = chain[0].get_path()
+	volume_slider.focus_next = chain[0].get_path()
+	return chain[-1]
 
 
 # The player takes no damage, so a whole fight can be watched without dying. It sits above the
