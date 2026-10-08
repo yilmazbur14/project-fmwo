@@ -71,8 +71,8 @@ func _show_focus() -> void:
 		button.add_theme_stylebox_override("focus", ControlsArtLayout.focus_ring() if on_pad else menu_focus_style)
 
 
-# The fight just lost, from where the pause screen's RESTART FIGHT would start it, its walk-in already seen. Once:
-# a second press while it loads would open it twice.
+# The fight just lost, from where the pause screen's RESTART FIGHT would start it, straight to the fight: its walk-in,
+# lines and VS card skipped (GameProgress.arm_retry). Once: a second press while it loads would open it twice.
 func _on_retry_button_pressed() -> void:
 	if _leaving:
 		return

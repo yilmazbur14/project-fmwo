@@ -1,5 +1,7 @@
 extends Control
 
+const ControlsArtLayout := preload("res://Scripts/ControlsArtLayout.gd")
+
 const SLOT_TEXTURE := preload("res://Assets/UI/Screens/rank_slot.png")
 const ICON_TEXTURE := preload("res://Assets/UI/Screens/rank_icons.png")
 const LINK_TEXTURE := preload("res://Assets/UI/Screens/rank_link.png")
@@ -13,6 +15,14 @@ const LADDER_TOP := 702.0
 const SLOT_SIZE := 120.0
 const SLOT_GAP := 24.0
 const PULSE_TIME := 0.4
+# NEXT BOSS and MAIN MENU side by side, centred where the one button was, as RETRY and RETURN TO MAIN MENU are on the
+# Defeat screen.
+const BUTTON_GAP := 24.0
+# The screen's celebration, once as it comes up (the 2026-10-07 playtest: it was silent). The crowd rather than the
+# fanfare, which every fight plays on its KO a few seconds before. Modest: a few dB under the fight music, whose themes
+# play at -4 dB and are as loud as this or louder.
+const CHEER := "res://Assets/Audio/SFX/crowd_cheer.wav"
+const CHEER_VOLUME_DB := -6.0
 
 enum SlotFrame { LOCKED, CLEARED, CURRENT, CURRENT_PULSE, GOAL }
 enum LinkFrame { LOCKED, CLEARED, NEXT }
@@ -24,6 +34,9 @@ enum LinkFrame { LOCKED, CLEARED, NEXT }
 @export var fade_in_time := 0.5
 
 var _current_slot: Sprite2D
+# Only beside NEXT BOSS: with no next fight that one button already says MAIN MENU.
+var main_menu_button: Button
+var menu_focus_style: StyleBox
 # The next fight, loading on threads behind this screen: NEXT BOSS froze it for that load, 0.2 to 0.8 s a
 # fight (the 2026-10-04 playtest).
 var _prefetching := false
@@ -38,6 +51,7 @@ func _ready() -> void:
 			next_boss_button.text = "MAIN MENU"
 		else:
 			next_boss_button.text = "NEXT BOSS"
+			_build_main_menu_button()
 	if GameProgress.next_boss_scene != "":
 		_prefetch_path = GameProgress.next_boss_scene
 		_prefetching = ResourceLoader.load_threaded_request(_prefetch_path) == OK
@@ -46,7 +60,58 @@ func _ready() -> void:
 	timestamp_label.text = _chat_timestamp()
 	message_label.text = _rank_message(cleared)
 	_build_rank_ladder(cleared)
+	_play_cheer()
 	_fade_in()
+
+
+# A copy of NEXT BOSS, so it is that button exactly - art, font, colours and size - on its right (the 2026-10-07 playtest:
+# the screen only ever went on). The win has already saved the next fight (GameProgress.record_victory), so the menu's
+# CONTINUE picks the run up there.
+func _build_main_menu_button() -> void:
+	main_menu_button = next_boss_button.duplicate(0) as Button
+	main_menu_button.name = "MainMenuButton"
+	main_menu_button.text = "MAIN MENU"
+	add_child(main_menu_button)
+	var width := next_boss_button.size.x
+	var left := next_boss_button.position.x + width / 2.0 - width - BUTTON_GAP / 2.0
+	next_boss_button.position.x = left
+	main_menu_button.position.x = left + width + BUTTON_GAP
+	main_menu_button.pressed.connect(_on_main_menu_button_pressed)
+
+	next_boss_button.focus_neighbor_right = main_menu_button.get_path()
+	next_boss_button.focus_next = main_menu_button.get_path()
+	main_menu_button.focus_neighbor_left = next_boss_button.get_path()
+	main_menu_button.focus_previous = next_boss_button.get_path()
+
+	menu_focus_style = next_boss_button.get_theme_stylebox("focus")
+	_show_focus()
+	InputSettings.device_changed.connect(_show_focus.unbind(1))
+
+
+# The screen draws no focus, which suited one button; with two, a pad needs to see which one A presses, the way the
+# Defeat screen shows it.
+func _show_focus() -> void:
+	var on_pad := InputSettings.device == InputSettings.Device.GAMEPAD
+	for button in [next_boss_button, main_menu_button]:
+		button.add_theme_stylebox_override("focus", ControlsArtLayout.focus_ring() if on_pad else menu_focus_style)
+
+
+func _play_cheer() -> void:
+	var cheer := AudioStreamPlayer.new()
+	cheer.name = "CheerPlayer"
+	cheer.stream = load(CHEER)
+	cheer.volume_db = CHEER_VOLUME_DB
+	add_child(cheer)
+	cheer.play()
+
+
+# Once, as NEXT BOSS is. The fight loading behind the screen is left to finish behind the menu rather than stall the press.
+func _on_main_menu_button_pressed() -> void:
+	if _leaving:
+		return
+	_leaving = true
+	get_tree().change_scene_to_file("res://Scenes/Core/MainMenuScene.tscn")
+
 
 func _on_next_boss_button_pressed() -> void:
 	if _leaving:
@@ -160,8 +225,8 @@ func _fade_in() -> void:
 	var tween := create_tween()
 	tween.tween_property(fade, "color:a", 0.0, fade_in_time)
 	tween.tween_callback(fade.queue_free)
-	# The only button, and nothing takes focus by itself: without this a pad can't press it. Not
-	# before the screen is up, though: A punches too, and a player still mashing it as the fight
+	# NEXT BOSS first, MAIN MENU beside it, and nothing takes focus by itself: without this a pad can't press
+	# either. Not before the screen is up, though: A punches too, and a player still mashing it as the fight
 	# ended would press NEXT BOSS before ever seeing this screen.
 	if next_boss_button:
 		tween.tween_callback(next_boss_button.grab_focus)

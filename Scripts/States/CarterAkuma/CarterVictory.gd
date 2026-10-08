@@ -104,6 +104,28 @@ func pose_length() -> float:
 		+ CarterArtLayout.KO_LOOK_DELAY + _anim_time(&"look_back"))
 
 
+# The player pressed through the wait for his line (CarterAkumaScript.skip_outro_pose; the user, 2026-10-07: "make
+# carters pose skippable"): the pose's end at once - in the middle of the ring, back turned, the arena black, the mark
+# lit with its bell if it hadn't taken yet, the light up on him and his head round - for the line to land on.
+func finish_pose() -> void:
+	if beat == Beat.LOOK:
+		return
+	if beat == Beat.VANISH:
+		_reappear()
+	if not darkening:
+		darkening = true
+		body.ko_blackout(0.0)
+	if not ignited:
+		_ignite()
+	if not lit:
+		lit = true
+		body.ko_light_up(0.0)
+	beat = Beat.LOOK
+	clock = 0.0
+	looked = true
+	body.play_anim(&"look_back_hold")
+
+
 # Gone from where he was, and standing in the middle of the ring.
 func _reappear() -> void:
 	beat = Beat.REAPPEAR

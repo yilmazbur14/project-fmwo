@@ -10,7 +10,8 @@ extends RefCounted
 #            second wins >= 85%, 7.5 <= 15%, 9.5 >= 99%; after three failed beams bar 5 asks <= 6.8 a second
 #   win      a real three-bar punch-out kills him: the beam entered once, the KO over before it moves on, no puppets or
 #            strings left, the player on the staging's mark facing its way and sealed, the HUD down; a press every 6
-#            frames: after each bar the view settles at 2/3 x ZOOMS[bar], the ball grows and the shout builds; he
+#            frames: after each bar the view settles at 2/3 x the staging's zooms[bar], the ball grows and the shout
+#            builds; at bar 0's view and every bar's his head (HEAD) and the player's cell are whole on screen; he
 #            dissolves all the way and his body is gone; one won FightOutro, his defeat's beats "", beam, leaving, the
 #            scene the outro went to, and on it a still, level view at 1 and normal speed
 #   fail     a press every 9 frames, two bars: the beam at FAIL_WIDTH[2], him coming apart to about FAIL_DISSOLVE[2] and
@@ -36,6 +37,13 @@ const TARGETS := [5.5, 6.25, 7.0, 7.5, 8.0]
 const HIT_SILENT := 2
 const FINISHER_DAZED := 2
 const BASE_ORIGIN := Vector2(320, 4)
+# His head on his hit frames, the crown's flames to his chin, in his frame's texels: the charge's camera holds it.
+const HEAD := Rect2(128, 46, 62, 62)
+const SCREEN := Rect2(0, 0, 1920, 1080)
+# His shout as the beam takes him apart, the user's line (2026-10-08).
+const SHOUT_LINE := "NOOOOO! IMPOSSIBLE!"
+const FRAME := 1.0 / 60.0
+const DialogueVoices := preload("res://Scripts/DialogueVoices.gd")
 
 
 static func run(t) -> void:
@@ -188,10 +196,30 @@ static func watcher(t, seen: Dictionary) -> Callable:
 			return
 		if seen.beats.is_empty() or seen.beats[-1] != beam.beat:
 			seen.beats.append(beam.beat)
+			if is_instance_valid(beam.fx):
+				seen.beat_clocks[beam.beat] = beam.fx.clock
 			if beam.beat == &"collapse":
 				var finisher: Node = t.player.finisher
 				seen.ko_over = seen.ko_over and not finisher.is_active() \
 					and not god.defeat_puppets.any(func(puppet) -> bool: return is_instance_valid(puppet) and puppet.is_juggled())
+		var balloon: Node = beam.shout_balloon
+		if is_instance_valid(balloon) and balloon.is_inside_tree() and not balloon.is_queued_for_deletion() \
+				and balloon.dialogue_line != null and is_instance_valid(beam.fx):
+			var shout: Dictionary = seen.shout
+			var into: float = beam.fx.clock - seen.beat_clocks.get(&"dissolve", beam.fx.clock)
+			if shout.is_empty():
+				shout.merge({"from": beam.beat, "at": into, "typed": &"", "typed_at": -1.0, "beats": [], "arrow_frames": 0})
+			shout.text = balloon.dialogue_label.get_parsed_text()
+			shout.character = balloon.dialogue_line.character
+			shout.portrait = balloon.portrait.texture.resource_path if balloon.portrait.texture != null else ""
+			shout.voiced = balloon._voice == DialogueVoices.for_character("Jordan")
+			if shout.typed == &"" and not balloon.dialogue_label.is_typing:
+				shout.typed = beam.beat
+				shout.typed_at = into
+			if not shout.beats.has(beam.beat):
+				shout.beats.append(beam.beat)
+			if balloon.progress.is_visible_in_tree() and balloon.progress.modulate.a > 0.0:
+				shout.arrow_frames += 1
 		if god.current_anim == &"laugh":
 			seen.laughed = true
 		if is_instance_valid(beam.fx):
@@ -205,18 +233,20 @@ static func watcher(t, seen: Dictionary) -> Callable:
 
 static func new_seen() -> Dictionary:
 	return {"beats": [], "defeated": [], "ko_over": true, "progress": 0.0, "length": 0.0, "width": 0.0, "laughed": false,
-		"body_hidden": false, "won": false, "destination": "", "arrival": {}}
+		"body_hidden": false, "won": false, "destination": "", "arrival": {}, "beat_clocks": {}, "shout": {}}
 
 
 # A press every `every` physics frames, alternating, until the mash resolves; at most `want` bars. What it saw at each
-# bar: the view's scale settled just before the next bar (or the release), the ball's size and the shout.
+# bar: the view's scale and framing settled just before the next bar (or the release), the ball's size and the shout;
+# and the framing the mash opened on, bar 0's.
 static func mash(t, beam: Node, every: int, want := Layout.BARS) -> Dictionary:
 	beam.min_press_interval = 0.0
 	var pair: Array = MashInput.actions(t.player)
-	var out := {"presses": 0, "banks": []}
+	var out := {"presses": 0, "banks": [], "first": framing(t, beam)}
 	var i := 0
 	var last_bars := 0
 	var last_scale: float = t.root.canvas_transform.x.x
+	var last_framing: Dictionary = out.first
 	var shout := {}
 	while is_instance_valid(beam) and beam.mashing:
 		if beam.bars < want and i % every == 0:
@@ -228,13 +258,26 @@ static func mash(t, beam: Node, every: int, want := Layout.BARS) -> Dictionary:
 			break
 		if beam.bars != last_bars:
 			if last_bars > 0:
-				out.banks.append({"bar": last_bars, "scale": last_scale, "ball": shout.ball, "shout": shout.shown})
+				out.banks.append({"bar": last_bars, "scale": last_scale, "ball": shout.ball, "shout": shout.shown,
+					"framing": last_framing})
 			last_bars = beam.bars
 			shout = {"ball": beam.fx.ball_size, "shown": shout_shown(beam.ui)}
 		last_scale = t.root.canvas_transform.x.x
+		last_framing = framing(t, beam)
 	if last_bars > 0 and last_bars < Layout.BARS:
-		out.banks.append({"bar": last_bars, "scale": last_scale, "ball": shout.ball, "shout": shout.shown})
+		out.banks.append({"bar": last_bars, "scale": last_scale, "ball": shout.ball, "shout": shout.shown,
+			"framing": last_framing})
 	return out
+
+
+# On screen this frame: his head (HEAD, on his body's frame) and the player's cell round their origin, and whether
+# each is whole on the screen.
+static func framing(t, beam: Node) -> Dictionary:
+	var body: Sprite2D = beam.god.body
+	var head: Rect2 = body.get_global_transform_with_canvas() * Rect2(body.get_rect().position + HEAD.position, HEAD.size)
+	var size: Vector2 = Layout.FINAL_PLAYER_CELL * Layout.TEXEL
+	var cell: Rect2 = t.root.canvas_transform * Rect2(t.player.global_position - size / 2.0, size)
+	return {"head": head, "cell": cell, "whole": SCREEN.encloses(head) and SCREEN.encloses(cell)}
 
 
 # What the shout shows: the drawn word's index, or the text line.
@@ -287,10 +330,15 @@ static func tier_win(t, label: String) -> void:
 	var mashed: Dictionary = await mash(t, beam, 6)
 	t.log_p("%s: %d presses; at each bar %s" % [label, mashed.presses, mashed.banks])
 	var bars_ok: bool = mashed.banks.size() == Layout.BARS - 1
+	var framed: Array = [mashed.first]
 	for bank in mashed.banks:
-		var want: float = GodLayout.VIEW_ZOOM * Layout.ZOOMS[bank.bar]
+		var want: float = GodLayout.VIEW_ZOOM * spec.zooms[bank.bar]
 		bars_ok = bars_ok and absf(bank.scale - want) <= 0.01 and bank.ball == bank.bar and bank.shout == shout_wanted(beam.ui, bank.bar)
-	t.check(bars_ok and beam.result == &"won", "%s: five bars; after each the view settles at 2/3 x ZOOMS, the ball grows and the shout builds" % label)
+		framed.append(bank.framing)
+	t.check(bars_ok and beam.result == &"won", "%s: five bars; after each the view settles at 2/3 x the staging's zooms, the ball grows and the shout builds" % label)
+	t.log_p("%s: framing at bars 0-4: %s" % [label, framed.map(func(f: Dictionary) -> String: return "head %s, cell %s" % [f.head, f.cell])])
+	t.check(framed.size() == Layout.BARS and framed.all(func(f: Dictionary) -> bool: return f.whole),
+		"%s: at every bar's step his head and the player are whole on screen (%s)" % [label, framed.map(func(f: Dictionary) -> bool: return f.whole)])
 	var arrived: bool = await t.wait_until(func(): return seen.destination != "" and God.scene_is(t, seen.destination), 60 * 20)
 	await God.idle_frames(t, 3)
 	t.process_frame.disconnect(watch.step)
@@ -299,6 +347,7 @@ static func tier_win(t, label: String) -> void:
 		seen.beats, seen.defeated, seen.progress, seen.body_hidden, watch.outros.size(), seen.destination.get_file(), seen.arrival])
 	t.check(seen.beats.slice(-5) == [&"release", &"dissolve", &"fade", &"settle", &"won"] and is_equal_approx(seen.progress, 1.0)
 		and seen.body_hidden, "%s: the beam fires and he dissolves all the way, his body gone" % label)
+	check_shout(t, seen, label)
 	t.check(watch.outros.size() == 1 and seen.won and seen.defeated == [&"", &"beam", &"leaving"],
 		"%s: one won FightOutro, and his defeat goes straight out (%s)" % [label, seen.defeated])
 	var arrival: Dictionary = seen.arrival
@@ -306,6 +355,28 @@ static func tier_win(t, label: String) -> void:
 		and arrival.base == 1.0 and arrival.zoom == 1.0 and arrival.shake == Vector2.ZERO,
 		"%s: on to %s, the outro's own destination, with nothing of the view or the time scale carried over" % [label,
 			seen.destination.get_file()])
+
+
+# His shout over the disintegration: the user's line verbatim, his, in his demon portrait and voice, up as it starts,
+# typed out inside it and gone as it ends, nothing pressed and no press-on arrow; and the disintegration and the fade after it on the beam's
+# clock as before (2.41 s and 0.82 s measured without the shout, 2026-10-08).
+static func check_shout(t, seen: Dictionary, label: String) -> void:
+	var shout: Dictionary = seen.shout
+	var clocks: Dictionary = seen.beat_clocks
+	var dissolve: float = clocks.get(&"fade", 0.0) - clocks.get(&"dissolve", 0.0)
+	var fade: float = clocks.get(&"settle", 0.0) - clocks.get(&"fade", 0.0)
+	t.log_p("%s: his shout %s; the disintegration %.3f s, the fade %.3f s, the settle %.3f s" % [label, shout, dissolve, fade,
+		clocks.get(&"won", 0.0) - clocks.get(&"settle", 0.0)])
+	t.check(not shout.is_empty() and shout.text == SHOUT_LINE and shout.character == "Jordan" and shout.portrait.ends_with("portrait_demon.png")
+		and shout.voiced, "%s: \"%s\" in his demon portrait and his voice" % [label, SHOUT_LINE])
+	t.check(not shout.is_empty() and shout.from == &"dissolve" and shout.at <= 2.0 * FRAME and shout.typed == &"dissolve"
+		and shout.beats == [&"dissolve"], "%s: up as the disintegration starts, typed out inside it (by %.2f s) with nothing pressed, and gone as it ends" % [
+			label, shout.get("typed_at", -1.0)])
+	# No press moves it on, so the balloon never shows its press-on arrow over it (balloon.gd: not while the input lock holds).
+	t.check(not shout.is_empty() and shout.arrow_frames == 0, "%s: no press-on arrow on any frame it is up (%d)" % [label, shout.get("arrow_frames", -1)])
+	t.check(absf(dissolve - Layout.DISSOLVE_TIME) <= 2.0 * FRAME and absf(fade - (Layout.PUNCH_THROUGH.time + Layout.BODY_FADE)) <= 2.0 * FRAME,
+		"%s: the disintegration still %.2f s and the fade after it %.2f s on the beam's clock (%.3f, %.3f)" % [label,
+			Layout.DISSOLVE_TIME, Layout.PUNCH_THROUGH.time + Layout.BODY_FADE, dissolve, fade])
 
 
 #FAIL
@@ -332,6 +403,7 @@ static func tier_fail(t, drawn := true) -> void:
 	t.check(beam.bars == 2 and beam.result == &"weak" and beam.fails == 1 and is_equal_approx(seen.width, Layout.FAIL_WIDTH[2])
 		and absf(seen.progress - reached) <= 0.05,
 		"%s: two bars, a weak beam at %.2f of its width, him coming apart to about %.2f" % [label, Layout.FAIL_WIDTH[2], reached])
+	t.check(seen.shout.is_empty(), "%s: and no shout from him (%s)" % [label, seen.shout])
 	var aura_back: bool = god.aura == null or (god.aura.visible and is_equal_approx(god.aura.modulate.a, 1.0))
 	t.check(revived and god.body.material == null and god.body.visible and aura_back and god.body.position == Vector2.ZERO,
 		"%s: and back whole: his body drawn, no material on it, his aura back" % label)
@@ -376,8 +448,8 @@ static func tier_fizzle(t) -> void:
 	t.process_frame.disconnect(track)
 	t.log_p("fizzle: beats %s, beam length %.0f, laughed %s, him %d" % [seen.beats, seen.length, seen.laughed, god.boss_health])
 	t.check(revived and beam.result == &"fizzle" and beam.bars == 0 and seen.length == 0.0 and seen.laughed
-		and god.boss_health == GodLayout.REVIVE_HEALTH and not t.player.is_action_locked,
-		"fizzle: no presses, no beam; he laughs and is back on %d" % GodLayout.REVIVE_HEALTH)
+		and god.boss_health == GodLayout.REVIVE_HEALTH and not t.player.is_action_locked and seen.shout.is_empty(),
+		"fizzle: no presses, no beam, no shout; he laughs and is back on %d" % GodLayout.REVIVE_HEALTH)
 
 
 #OFF
@@ -430,11 +502,16 @@ static func tier_pause(t) -> void:
 	await t.wait(20)
 	await t.tap_pause()
 	var progress: float = beam.fx.progress
+	var typed: int = beam.shout_balloon.dialogue_label.visible_characters if is_instance_valid(beam.shout_balloon) else -1
 	await t.wait(60)
 	var still: float = beam.fx.progress
+	var still_typed: int = beam.shout_balloon.dialogue_label.visible_characters if is_instance_valid(beam.shout_balloon) else -1
 	await t.tap_pause()
 	t.check(beam.result == &"won" and progress > 0.0 and progress < 1.0 and still == progress,
 		"paused mid-dissolve it holds (%.3f, then %.3f), after the mash finished (%d presses)" % [progress, still, mashed.presses])
+	t.check(typed > 0 and typed < SHOUT_LINE.length() and still_typed == typed,
+		"and his shout holds where it had typed to (%d letters, then %d)" % [typed, still_typed])
 	var arrived: bool = await t.wait_until(func(): return seen.destination != "" and God.scene_is(t, seen.destination), 60 * 20)
 	t.process_frame.disconnect(track)
 	t.check(arrived, "and it finishes, on to %s" % seen.destination.get_file())
+	check_shout(t, seen, "pause")

@@ -301,8 +301,8 @@ func _take_pending() -> void:
 		pending.call()
 
 
-# Where the Defeat screen's RETRY would start it (GameProgress.note_retry): in Greyson's half of FIGHT 06, that half
-# again.
+# Where the Defeat screen's RETRY would start it (GameProgress.note_retry): in Greyson's half of FIGHT 06 or Liam's of
+# FIGHT 07, that half again, and straight to the fight, its intro or its takeover skipped.
 func _restart() -> void:
 	GameProgress.note_retry(get_tree())
 	GameProgress.arm_retry()
@@ -394,7 +394,7 @@ func _style_confirm() -> void:
 		button.custom_minimum_size = PauseArtLayout.CONFIRM_BUTTON_MIN_SIZE
 
 
-# Volume is session-only here, exactly as it is on the main menu: nothing is written to disk.
+# The same master volume the main menu sets, kept in the save (GameProgress.set_volume).
 func _setup_volume() -> void:
 	volume_label.add_theme_font_size_override("font_size", PauseArtLayout.LABEL_FONT_SIZE)
 	volume_label.add_theme_color_override("font_color", PauseArtLayout.LABEL_COLOR)
@@ -416,11 +416,7 @@ func _read_volume() -> void:
 
 
 func _on_volume_changed(value: float) -> void:
-	if value <= 0.001:
-		AudioServer.set_bus_mute(master_bus_index, true)
-	else:
-		AudioServer.set_bus_mute(master_bus_index, false)
-		AudioServer.set_bus_volume_db(master_bus_index, linear_to_db(value))
+	GameProgress.set_volume(value)
 
 
 func _show_focus() -> void:

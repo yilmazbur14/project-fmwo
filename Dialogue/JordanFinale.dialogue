@@ -1,6 +1,11 @@
 # Jordan's finale: walk_out plays in the arena (JordanWalkOut), room in his room (JordanFinaleScript). The user's
 # lines (2026-09-28) exactly as written, missing apostrophes added; two speeches split into two balloons at a
 # sentence break, words unchanged. Never [wait=N] or "do wait(N)": the hold-to-skip can't run those out.
+# player_lost is the god's, when his last phase beats the player (JordanGodScript's OUTRO_DIALOGUE, said through
+# FightOutro before the fade to Defeat): a draft of 2026-10-07 for the user to review.
+# disintegrated is his shout as the final beam takes him apart (JordanGodFinalBeam), the user's line (2026-10-08)
+# exactly as written: it types out slowly over the disintegration, no press moves it on, and the beam takes it down as
+# the disintegration ends.
 
 ~ walk_out
 do storms_off()
@@ -31,4 +36,14 @@ Jordan: [shake rate=20.0 level=6 connected=1]The only person in this server.... 
 do room_comes_apart()
 do ascend()
 Jordan: Welcome to my world, Burak. [#portrait=demon, #jordan=god]
+=> END
+
+~ player_lost
+Jordan: Kneel, Burak. In my world you don't even get a role. [#portrait=demon, #jordan=god]
+Jordan: Banned. Permanently. No appeals. [#portrait=demon, #jordan=god]
+Jordan: ...And I'm deleting all your messages. [#portrait=demon, #jordan=god]
+=> END
+
+~ disintegrated
+Jordan: [shake rate=20.0 level=6 connected=1][speed=0.15]NOOOOO![/speed][speed=0.35] IMPOSSIBLE![/speed][/shake] [#portrait=demon, #jordan=god]
 => END

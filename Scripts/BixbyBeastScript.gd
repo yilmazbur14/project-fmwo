@@ -663,6 +663,7 @@ func _hand_to_liam() -> void:
 	var scene: Node = load(LIAM_SCENE).instantiate()
 	scene.get_node("LiamCharacterBody").bixby = self
 	get_parent().add_sibling(scene)
+	GameProgress.reach_phase(GameProgress.PHASE_LIAM)
 
 
 # The main menu's LIAM row (GameProgress.start_at_liam, taken by BixbyBeastStateMachine._ready): the fight opens with

@@ -282,8 +282,9 @@ const ATTACKS := {
 	# His Sumo Headbutt at a player his worms have rooted. Parry-only: a guard held through
 	# the wind-up must not beat the read. A whole heart; a parry bonks him dizzy. The root took the dash away.
 	&"danny_headbutt": {"damage": 2, "parryable": true, "parry_stagger": true, "tell": true},
-	# Danny's hop slams, the first four of his Sumo Smash string: yellow, dodge them. Each throws his worms out round
-	# where it lands (DannyBossSplash), so a step off the mark isn't enough: clear the splash, or dash through.
+	# Danny's hop slams, all but the last of his Sumo Smash string: yellow, dodge them. Each throws his worms out round
+	# where it lands (DannyBossSplash), so a step off the mark isn't enough: clear the splash, or dash through. From the
+	# second on they home in on the player until he has all but landed (2026-10-07): those only a dash as he lands beats.
 	&"danny_hop_slam": {"dash_through": true, "dodge_tell": true},
 	# His ring-out belly bump: a charge along the player's line. A fresh press as the belly meets them holds their
 	# ground (he rebounds, dizzy); a dash timed to it goes through. A hit carries them into the ropes.

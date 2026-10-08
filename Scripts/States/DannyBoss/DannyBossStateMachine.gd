@@ -6,9 +6,9 @@ extends Node
 #   BellyBump  a charge along the player's line under a red badge (Addendum 1): a hit carries them into the ropes,
 #              a parry holds their ground and leaves him dizzy in Staggered, and his run can slip on his own worms
 #              onto his back.
-#   Slams      the Sumo Smash string from the air: seven to nine hops that splash worms round where they land, then the big
-#              one, the only quake ring. Parried, the big one bounces him onto his back (OnBack); anything else
-#              ends in
+#   Slams      the Sumo Smash string from the air: nine to eleven hops that splash worms round where they land, all
+#              but the first homing in on the player until he has all but landed, then the big one, the only quake
+#              ring. Parried, the big one bounces him onto his back (OnBack); anything else ends in
 #   Sleep      his nap: he heals, and it is the window to punish him in.
 # A root in Idle, Spit or Sleep turns into his Headbutt (on_player_rooted); a parried one leaves him in
 # Staggered, a window of its own. The windows are Sleep, Staggered, OnBack's and the Break's.

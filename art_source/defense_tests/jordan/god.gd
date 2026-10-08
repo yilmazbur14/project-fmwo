@@ -22,7 +22,9 @@ extends RefCounted
 #             one more (PlayerFinisher.uppercut_count); at 1 left one
 #             uppercut: exactly one FightOutro (won), his defeat played out (strings snapped, puppets gone), then
 #             the card and the menu
-#   lost      the player at 0 health: the Defeat screen reading #arena-10
+#   lost      his player_lost lines verbatim, his and in the demon portrait; the player at 0 health: the first in that
+#             portrait and his voice, held until a press, then a press a line, all three shown, the third's press into
+#             the Defeat screen reading #arena-10
 #   release   the stub held mid-attack (sealed and posed, lights out, the player lifted over the dark, the HUD down,
 #             an arrow, a hint, a hazard, both puppets on their strings), cut by the player's death and again by his
 #             defeat: no lock, no Posed state, no darkness, no rifts or hazards, the player's z back and the HUD at
@@ -66,6 +68,9 @@ const PAIRINGS := [
 const UP := 1
 const HIT_SILENT := 2
 const LAST_LINE := "Welcome to my world, Burak."
+const LOST_LINES := ["Kneel, Burak. In my world you don't even get a role.", "Banned. Permanently. No appeals.",
+	"...And I'm deleting all your messages."]
+const DialogueVoices := preload("res://Scripts/DialogueVoices.gd")
 
 
 static func run(t) -> void:
@@ -498,18 +503,54 @@ static func tier_damage(t) -> void:
 
 #THE LOSS
 
+# His player_lost (JordanFinale.dialogue, through his OUTRO_DIALOGUE): every line his, in the demon portrait. FightOutro
+# holds each of a loss's lines 0.3 s, then a press moves on one line, so a player sees all three.
 static func tier_lost(t) -> void:
 	var god: Node = await open_god(t, [] as Array[String])
 	await t.wait_until(func(): return god.state_machine.current_state.name == "Idle", 120)
+	var manager: Node = t.root.get_node("DialogueManager")
+	var dialogue: Resource = load(god.OUTRO_DIALOGUE)
+	var titled: Array = []
+	var line = await manager.get_next_dialogue_line(dialogue, "player_lost")
+	while line != null:
+		titled.append({"character": line.character, "text": line.text, "portrait": line.get_tag_value("portrait")})
+		line = await manager.get_next_dialogue_line(dialogue, line.next_id)
+	t.log_p("lost: player_lost %s" % [titled])
+	t.check(titled.map(func(entry: Dictionary) -> String: return entry.text) == LOST_LINES
+		and titled.all(func(entry: Dictionary) -> bool: return entry.character == "Jordan" and entry.portrait == "demon"),
+		"his player_lost lines verbatim, every one his in the demon portrait")
 	var watch = Finale.Watch.new(t)
 	t.process_frame.connect(watch.step)
 	t.player.playerHealth = 0
+	var shown: bool = await t.wait_until(func(): return not watch.lines.is_empty(), 60 * 5)
+	var balloon: Node = Finale.Watch.balloon_in(t.current_scene)
+	var typed: bool = shown and await t.wait_until(func(): return not balloon.dialogue_label.is_typing, 60 * 5)
+	var portrait: String = balloon.portrait.texture.resource_path if typed and balloon.portrait.texture != null else ""
+	var voiced: bool = typed and balloon._voice == DialogueVoices.for_character("Jordan")
+	# Nothing moves a loss's line on but a press.
+	await t.wait(60)
+	var held: bool = watch.lines.size() == 1 and scene_is(t, GOD_SCENE)
+	# A press a line, each once the line has typed out and its lock is past: the last one's goes to Defeat.
+	var presses := 0
+	for i in LOST_LINES.size():
+		if i > 0:
+			await t.wait_until(func(): return watch.lines.size() > i, 60 * 2)
+			balloon = Finale.Watch.balloon_in(t.current_scene)
+			if balloon != null:
+				await t.wait_until(func(): return not balloon.dialogue_label.is_typing, 60 * 5)
+			await t.wait(30)
+		t.tap(KEY_ENTER)
+		presses += 1
 	var defeated: bool = await t.wait_until(func(): return scene_is(t, DEFEAT), 60 * 10)
 	await t.wait(10)
 	t.process_frame.disconnect(watch.step)
 	var message: String = t.current_scene.message_label.text if defeated else ""
-	t.log_p("lost: %s; lines %s" % [message, watch.lines])
-	t.check(defeated and watch.outros.size() == 1 and watch.lines.is_empty(), "health to 0: one FightOutro, no line, the Defeat screen")
+	t.log_p("lost: %s; lines %s; portrait %s" % [message, watch.lines, portrait])
+	t.check(shown and watch.lines[0].character == "Jordan" and watch.lines[0].text == LOST_LINES[0] and portrait.ends_with("portrait_demon.png")
+		and voiced, "health to 0: his first loss line, in his demon portrait and his own voice")
+	t.check(held and defeated and watch.outros.size() == 1 and presses == LOST_LINES.size()
+		and watch.lines.map(func(entry: Dictionary) -> String: return entry.text) == LOST_LINES,
+		"it holds until a press, then a press a line shows all three and the third's goes to the Defeat screen, one FightOutro")
 	t.check(message.contains("#arena-10"), "reading #arena-10 (%s)" % message)
 
 

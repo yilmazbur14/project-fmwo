@@ -28,6 +28,9 @@ const FinaleLayout := preload("res://Scripts/JordanFinaleLayout.gd")
 const Layout := preload("res://Scripts/JordanGodLayout.gd")
 const VoidArena := preload("res://Scripts/VoidArena.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
+# What he says when he beats the player, under player_lost, in his demon portrait as in the finale (his win plays his
+# defeat instead, take_won_outro).
+const OUTRO_DIALOGUE := "res://Dialogue/JordanFinale.dialogue"
 
 @onready var state_machine: Node = $StateManager
 @onready var music: AudioStreamPlayer = $Music

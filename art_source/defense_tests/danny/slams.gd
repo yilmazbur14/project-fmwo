@@ -30,12 +30,29 @@ extends RefCounted
 #   far_right  the same mirrored: feet in the top-right corner under the top rope, him by the left rope.
 #   step_off   (the 2026-10-06 tuning, puddle_grace 0.35) still until hop 1 lands on them, then walking off its spot from
 #              the model's reaction to a new tell, 0.25 s after the landing: the puddle it leaves there never roots them.
-#   trail      (the 2026-10-06 tuning) a Spit, then a nine-hop string, roots held off: every hop lays its puddle, never
-#              more than trail_max of the string's live at once (older ones dry), and never more than eight in all.
+#   trail      (the 2026-10-06 tuning) a Spit, then a nine-hop string homing as it is live, roots held off: every hop
+#              lays its puddle, never more than trail_max of the string's live at once (older ones dry), and never more
+#              than eight in all.
 #   react      (the 2026-10-04 tuning, the splash at its tuned splash_radius) walk's answer from the experienced-player
 #              model's learned reaction, 0.20 s after each hop's latch: every splash still cleared on foot before its
 #              landing, so no hit and no root.
-# Every tier: the landings at 1.45, 2.35, 3.25, 4.15 and 5.45 s on his own clock, to the frame; the tuck and the
+# The homing hops (the user, 2026-10-07: "make the hops harder for danny"), every hop from homing_from on, with the
+# string's live numbers:
+#   homing         the longest string there is, eleven hops, from a full bar: the first walked out of, the ten homing
+#                  ones each dashed as he lands (HOMING_LEAD before, toward open floor), the big one dashed through.
+#                  Nothing lands on them and nothing roots them; every badge is up at least HOMING_TELL before its
+#                  landing; the homing hops land 1.35 s apart, past the i-frames; the dashes start at least
+#                  DASH_IMMUNITY_COOLDOWN apart, each with its i-frames; no dash is ever refused and the bar never runs
+#                  under a dash's cost; every other homing dash at least is a perfect dodge (its refund); his hint.
+#   homing_walk    walk's answer, 0.25 s down from each latch: the first hop is cleared, the first homing one follows
+#                  them and lands on them.
+#   homing_early   a dash 0.10 s after a homing hop's latch, as its yellow ring goes up: followed, and caught (it lands
+#                  on them or its splash roots them).
+#   homing_window  one homing hop at a time, dashed HOMING_WINDOW_LEADS before it lands: inside the dash's i-frames
+#                  (0.18, 0.10, 0.05 s) clean and a perfect dodge, the spot held where the dash set off; before them
+#                  (0.22, 0.30 s), the arrow held on after it as a player runs on, caught.
+# Every tier but counts, trail and the homing ones is written for the five-beat string, and pins its homing off.
+# Every one of those: the landings at 1.45, 2.35, 3.25, 4.15 and 5.45 s on his own clock, to the frame; the tuck and the
 # landings whole on screen side to side (his spot kept Layout.STRING_REACH in from the screen's sides); a yellow ring over
 # latches 1-4 and the strong red badge over the fifth, unless the player is stuck, and never outside a latch or a
 # drop; exactly one ring, and only after an unparried fifth; never more than eight puddles live. After an unparried
@@ -43,6 +60,8 @@ extends RefCounted
 
 const Spit := preload("res://art_source/defense_tests/danny/spit.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
+const AttackCatalog := preload("res://Scripts/AttackCatalog.gd")
+const DashImmunity := preload("res://Scripts/DashImmunity.gd")
 const BODY := "Arena/DannyBossScene/DannyBossCharacterBody"
 const RING_SCRIPT := "res://Scripts/DannyBossQuakeRingScript.gd"
 const HIT_INFO := "res://Scripts/HitInfo.gd"
@@ -87,7 +106,20 @@ const RING_DASH_AHEAD := 12.0
 const GAUGE_READ := 100.0 / 8.0
 # A spit's four and the string's four.
 const MOST_PUDDLES := 8
-const ANSWERS := ["walk", "step", "trap", "parry5", "finisher5", "dash", "hit", "press", "top", "far_left", "far_right", "react", "counts", "step_off", "trail"]
+const ANSWERS := ["walk", "step", "trap", "parry5", "finisher5", "dash", "hit", "press", "top", "far_left", "far_right", "react", "counts", "step_off", "trail",
+	"homing", "homing_walk", "homing_early", "homing_window"]
+# The homing tiers: the longest string's hops, a dash this long before a homing hop lands (the experienced-player
+# model's timing), the yellow ring's least lead on its landing, homing hops' landing to landing, and the leads tried
+# one at a time in homing_window, the last two outside the dash's i-frames.
+const LONGEST_HOPS := 11
+const HOMING_LEAD := 0.10
+const HOMING_TELL := 0.40
+const HOMING_GAP := 1.35
+# A press here starts its dash a physics step later, so 0.05 is the latest that is in before he lands (DASH_LEAD).
+const HOMING_WINDOW_LEADS := [0.18, 0.10, 0.05, 0.22, 0.30]
+const HOMING_STARTS := {"homing": Vector2(960, 520), "homing_walk": Vector2(760, 330), "homing_early": Vector2(960, 400),
+	"homing_window": Vector2(960, 400)}
+const DASH_REACH := 250.0
 # `counts`: this many strings, each with its hop count drawn as the fight draws it.
 const COUNT_STRINGS := 8
 # How far from each latched spot `counts` puts the player, out of its splash zone.
@@ -99,12 +131,15 @@ static func run(t) -> void:
 	if not answer in ANSWERS:
 		t.check(false, "tier is one of %s (%s)" % [ANSWERS, answer])
 		return
-	var drawn: Array = await enter(t)
+	var live: Dictionary = await enter(t)
 	if answer == "counts":
-		await counts(t, drawn)
+		await counts(t, live)
 		return
 	if answer == "trail":
-		await trail(t)
+		await trail(t, live)
+		return
+	if answer.begins_with("homing"):
+		await homing(t, answer, live)
 		return
 	var slams: Node = t.sm.states["Slams"]
 	var gauge: Node = t.boss.break_gauge
@@ -235,15 +270,17 @@ static func run(t) -> void:
 
 
 # `counts` (the 2026-10-06 tuning): COUNT_STRINGS strings from Idle, each with its hop count drawn as the fight draws it,
-# the player put COUNT_CLEAR px off each latched spot and the floor's puddles cleared, so nothing hits or roots them.
-# Every count one of `drawn`, more than one of them seen, and in each string every landing on its scheduled beat to a
-# frame, the hops yellow and the last landing alone the big red one.
-static func counts(t, drawn: Array) -> void:
+# the player put COUNT_CLEAR px off each spot once it stops moving (a homing hop's once it commits) and the floor's
+# puddles cleared, so nothing hits or roots them. Every count one of the drawn, more than one of them seen, and in each
+# string every landing on its scheduled beat to a frame, the hops yellow and the last landing alone the big red one.
+static func counts(t, live: Dictionary) -> void:
 	var slams: Node = t.sm.states["Slams"]
+	var drawn: Array = live.counts
 	t.check(drawn.size() >= 2, "his strings draw their hop counts from more than one (%s)" % [drawn])
 	if drawn.is_empty():
 		return
 	slams.hop_counts.assign(drawn)
+	slams.homing_from = live.homing_from
 	var hit_info: GDScript = load(HIT_INFO)
 	var seen_counts: Array = []
 	for n in COUNT_STRINGS:
@@ -260,6 +297,8 @@ static func counts(t, drawn: Array) -> void:
 		seen_counts.append(count - 1)
 		for k in count:
 			await until_latch(t, slams, k)
+			if slams.homes(k + 1):
+				await until_committed(t, slams, k)
 			t.sm.clear_puddles()
 			var spot: Vector2 = slams.target
 			var away := Vector2(0.0, COUNT_CLEAR if spot.y < 600.0 else -COUNT_CLEAR)
@@ -287,12 +326,13 @@ static func counts(t, drawn: Array) -> void:
 	t.check(all_drawn and kinds.size() >= 2, "every string's hops one of %s, and more than one count over %d strings (%s)" % [drawn, COUNT_STRINGS, seen_counts])
 
 
-# `trail`: a Spit's four puddles down, then the longest string there is, the player standing still with every root
-# held off (root_grace_left), watched every step.
-static func trail(t) -> void:
+# `trail`: a Spit's four puddles down, then a nine-hop string with its live homing, the player standing still with every
+# root held off (root_grace_left), watched every step.
+static func trail(t, live: Dictionary) -> void:
 	var slams: Node = t.sm.states["Slams"]
 	var hops := 9
 	slams.hop_counts.assign([hops])
+	slams.homing_from = live.homing_from
 	await reset(t, Vector2(960, 560))
 	t.sm.on_child_transition(t.sm.current_state, "Spit")
 	var spat: bool = await t.wait_until(func(): return t.sm.live_puddles().size() == 4 and t.sm.live_puddles().all(func(p): return p.armed), 200)
@@ -317,20 +357,243 @@ static func trail(t) -> void:
 	park(t)
 
 
-# His fight, loaded past his entrance and the card, parked in Idle with his cycle held off. Every tier but `counts` is
-# written for the five-beat string, so the hop count each string draws (hop_counts) is pinned to four hops: what it
-# drew from, for `counts`.
-static func enter(t) -> Array:
+# The homing tiers, with the string's homing as it is live; the strings are pinned to what each needs.
+static func homing(t, answer: String, live: Dictionary) -> void:
+	var slams: Node = t.sm.states["Slams"]
+	slams.homing_from = live.homing_from
+	t.check(live.homing_from > 1, "his hops home in from a hop after the first (homing_from %d)" % live.homing_from)
+	if live.homing_from <= 1:
+		return
+	match answer:
+		"homing":
+			await homing_answered(t, slams)
+		"homing_walk":
+			await homing_walked(t, slams)
+		"homing_early":
+			await homing_dashed_early(t, slams)
+		"homing_window":
+			await homing_window(t, slams)
+	park(t)
+
+
+# `homing`: the longest string, from a full bar, every hop answered as the experienced player answers it.
+static func homing_answered(t, slams: Node) -> void:
+	slams.slams = LONGEST_HOPS + 1
+	await reset(t, HOMING_STARTS.homing)
+	var health: int = t.player.playerHealth
+	var cost: float = t.defense.dash_stamina_cost
+	var seen := {"refused": 0, "dodges": 0, "starts": [], "immune": [], "stamina": [], "badge_up": {}, "colours": {}}
+	var refused := func(): seen.refused += 1
+	var dodged := func(hit): if hit.attack_id == slams.hop_id: seen.dodges += 1
+	t.defense.stamina_refused.connect(refused)
+	t.defense.perfect_dodged.connect(dodged)
+	var watch := func():
+		if t.sm.current_state != slams or seen.badge_up.has(slams.slam):
+			return
+		var tells: Array = t.live_tells()
+		if not tells.is_empty() and (slams.beat == slams.Beat.LATCH or slams.beat == slams.Beat.DROP):
+			seen.badge_up[slams.slam] = slams.clock
+			seen.colours[slams.slam] = "yellow" if tells[0].dodge else ("strong red" if tells[0].strong else "red")
+	t.physics_frame.connect(watch)
+	t.sm.on_child_transition(t.sm.current_state, "Slams")
+	var homing_hops := 0
+	for k in slams.slams:
+		var big: bool = k + 1 == slams.slams
+		if not big and not slams.homes(k + 1):
+			await until_latch(t, slams, k)
+			await walk(t, [KEY_DOWN], WALK_TIME)
+			continue
+		if not big:
+			homing_hops += 1
+		await until_before_landing(t, slams, k, DASH_LEAD if big else HOMING_LEAD)
+		seen.stamina.append(snappedf(t.defense.stamina, 0.1))
+		var dash: Dictionary = await dash_open(t, slams, k, big)
+		seen.starts.append(dash.start)
+		seen.immune.append(dash.immune)
+	await t.wait_until(func(): return t.sm.current_state != slams or slams.beat == slams.Beat.SETTLE, 200)
+	await t.wait(30)
+	t.physics_frame.disconnect(watch)
+	t.defense.stamina_refused.disconnect(refused)
+	t.defense.perfect_dodged.disconnect(dodged)
+	var hit_info: GDScript = load(HIT_INFO)
+	var names: Array = slams.results.map(func(r): return hit_info.Result.keys()[r.result])
+	var landed: Array = slams.impact_times
+	t.log_p("-- the longest string, %d homing hops dashed %.2f s before each lands: %s; landings %s; badges up %s (%s); dashes at %s, i-frames %s; stamina before each %s, after %.1f; refused %d; perfect dodges off hops %d; health %d -> %d; stuck at %s, splash roots %d" % [
+		homing_hops, HOMING_LEAD, names, landed.map(func(x): return snappedf(x, 0.001)), seen.badge_up.values().map(func(x): return snappedf(x, 0.001)),
+		seen.colours.values(), seen.starts.map(func(x): return snappedf(x, 0.001)), seen.immune, seen.stamina, t.defense.stamina,
+		seen.refused, seen.dodges, health, t.player.playerHealth, slams.seal_times, slams.splash_roots])
+	t.check(homing_hops == LONGEST_HOPS - slams.homing_from + 1 and landed.size() == slams.slams,
+		"the string's %d homing hops and the big one all land (%d homing, %d landings)" % [LONGEST_HOPS - slams.homing_from + 1, homing_hops, landed.size()])
+	t.check(not names.has("HIT") and t.player.playerHealth == health and slams.seal_times.is_empty() and slams.splash_roots == 0,
+		"nothing lands on them and nothing roots them (%s)" % [names])
+	t.check(t.boss.hints_shown.has(slams.HOMING_HINT) and t.boss.hints_shown.has(slams.HOP_HINT), "the hop hint, then the homing one")
+	var leads_ok := true
+	var colours_ok := true
+	for k in range(1, landed.size() + 1):
+		leads_ok = leads_ok and seen.badge_up.has(k) and landed[k - 1] - seen.badge_up[k] >= HOMING_TELL - FRAME
+		colours_ok = colours_ok and seen.colours.get(k, "") == ("strong red" if k == slams.slams else "yellow")
+	t.check(leads_ok and colours_ok, "every badge up at least %.2f s before its landing, the hops yellow and the big one red" % HOMING_TELL)
+	var gaps_ok := true
+	for k in range(2, slams.slams):
+		if slams.homes(k) and landed.size() >= k:
+			gaps_ok = gaps_ok and absf(landed[k - 1] - landed[k - 2] - HOMING_GAP) <= FRAME + 0.0001
+	t.check(gaps_ok and HOMING_GAP > t.defense.blocked_rehit_interval,
+		"the homing hops land %.2f s apart, past the %.1f s i-frames" % [HOMING_GAP, t.defense.blocked_rehit_interval])
+	var spaced := true
+	for i in range(1, seen.starts.size()):
+		spaced = spaced and seen.starts[i] - seen.starts[i - 1] >= AttackCatalog.DASH_IMMUNITY_COOLDOWN - 0.0001
+	t.check(spaced and seen.immune.all(func(x): return x),
+		"the dashes start at least %.1f s apart, each with its i-frames" % AttackCatalog.DASH_IMMUNITY_COOLDOWN)
+	t.check(seen.refused == 0 and seen.stamina.all(func(s): return s >= cost - 0.01),
+		"no dash refused, the bar never under a dash's %.1f when one was due (least %.1f)" % [cost, seen.stamina.min()])
+	t.check(seen.dodges >= int(homing_hops / 2.0), "every other homing dash at least a perfect dodge, its refund paid (%d of %d)" % [seen.dodges, homing_hops])
+
+
+# `homing_walk`: walk's answer to every hop up to the first homing one.
+static func homing_walked(t, slams: Node) -> void:
+	var first: int = slams.homing_from
+	slams.slams = first + 1
+	await reset(t, HOMING_STARTS.homing_walk)
+	t.sm.on_child_transition(t.sm.current_state, "Slams")
+	for k in first:
+		await until_latch(t, slams, k)
+		await walk(t, [KEY_DOWN], WALK_TIME)
+	await until_landed(t, slams, first - 1)
+	var hit_info: GDScript = load(HIT_INFO)
+	var names: Array = slams.results.map(func(r): return hit_info.Result.keys()[r.result])
+	t.log_p("-- walked %.2f s down from each latch: %s, the homing hop's feet in its footprint %s" % [WALK_TIME, names,
+		slams.results[-1].feet_inside if not slams.results.is_empty() else false])
+	t.check(names.size() == first and names.slice(0, first - 1).all(func(n): return n == "IGNORED"),
+		"the hops before the homing ones cleared on foot (%s)" % [names])
+	t.check(names.size() == first and names[-1] == "HIT" and slams.results[-1].feet_inside,
+		"the first homing hop follows the walk and lands on them (%s)" % [names])
+
+
+# `homing_early`: a dash as the first homing hop's yellow ring goes up.
+static func homing_dashed_early(t, slams: Node) -> void:
+	var first: int = slams.homing_from
+	slams.slams = first + 1
+	await reset(t, HOMING_STARTS.homing_early)
+	t.sm.on_child_transition(t.sm.current_state, "Slams")
+	for k in first - 1:
+		await until_latch(t, slams, k)
+		await walk(t, [KEY_DOWN], WALK_TIME)
+	await until_latch(t, slams, first - 1)
+	await game_wait(t, 0.10)
+	t.press(KEY_DOWN)
+	t.tap(KEY_W)
+	await t.wait_until(func(): return t.player.is_dodging, 10)
+	var ahead: float = slams.landing_time(first) - slams.clock
+	await until_landed(t, slams, first - 1)
+	t.release(KEY_DOWN)
+	var hit_info: GDScript = load(HIT_INFO)
+	var result: String = hit_info.Result.keys()[slams.results[-1].result] if slams.results.size() == first else "none"
+	t.log_p("-- dashed %.3f s before the homing hop lands, %.2f s after its latch: %s, rooted %s" % [ahead, 0.10, result,
+		slams.splash_roots > 0 or not slams.seal_times.is_empty()])
+	var stuck: bool = slams.splash_roots > 0 or not slams.seal_times.is_empty()
+	t.check(ahead > AttackCatalog.DASH_IMMUNITY_TIME and ((result == "HIT" and slams.results[-1].feet_inside) or stuck),
+		"a dash as the yellow ring goes up is followed and caught: the hop lands on them or its splash roots them (%s, rooted %s)" % [result, stuck])
+
+
+# `homing_window`: the first homing hop alone, a fresh string for each lead, its dash straight down.
+static func homing_window(t, slams: Node) -> void:
+	var first: int = slams.homing_from
+	slams.slams = first + 1
+	var hit_info: GDScript = load(HIT_INFO)
+	var dodges := {"n": 0}
+	var dodged := func(hit): if hit.attack_id == slams.hop_id: dodges.n += 1
+	t.defense.perfect_dodged.connect(dodged)
+	for lead in HOMING_WINDOW_LEADS:
+		await reset(t, HOMING_STARTS.homing_window)
+		dodges.n = 0
+		t.sm.on_child_transition(t.sm.current_state, "Slams")
+		for k in first - 1:
+			await until_latch(t, slams, k)
+			await walk(t, [KEY_DOWN], WALK_TIME)
+		await until_before_landing(t, slams, first - 1, lead)
+		var set_off: Vector2 = t.sm.player_feet()
+		t.press(KEY_DOWN)
+		t.tap(KEY_W)
+		await t.wait_until(func(): return t.player.is_dodging, 10)
+		var ahead: float = slams.landing_time(first) - slams.clock
+		await until_landed(t, slams, first - 1)
+		await t.wait(2)
+		t.release(KEY_DOWN)
+		var result: String = hit_info.Result.keys()[slams.results[-1].result] if slams.results.size() == first else "none"
+		var stuck: bool = slams.splash_roots > 0 or not slams.seal_times.is_empty()
+		var held: float = slams.target.distance_to(set_off)
+		t.log_p("-- dashed %.3f s before it lands (%.2f asked): %s, rooted %s, perfect dodges %d, his spot %.0f px from where the dash set off" % [
+			ahead, lead, result, stuck, dodges.n, held])
+		if lead <= AttackCatalog.DASH_IMMUNITY_TIME:
+			t.check((result == "IGNORED" or result == "DODGED") and not stuck and dodges.n == 1 and held <= slams.homing_speed / 60.0 + 1.0,
+				"%.2f s ahead: clean, a perfect dodge, his spot held where the dash set off (%s, %.0f px)" % [lead, result, held])
+		else:
+			t.check(result == "HIT" or stuck, "%.2f s ahead, before his last %.2f s: followed and caught (%s)" % [lead, AttackCatalog.DASH_IMMUNITY_TIME, result])
+		park(t)
+	t.defense.perfect_dodged.disconnect(dodged)
+
+
+# A dash toward open floor from where they stand: its end off every armed puddle and inside the ropes, with the most
+# room round it. `through`: sideways, the feet still in the big one's footprint as it lands, toward the side with more
+# room of the two off the puddles. Its start on the defence's clock and whether it has its i-frames.
+static func dash_open(t, slams: Node, k: int, through: bool) -> Dictionary:
+	var feet: Vector2 = t.sm.player_feet()
+	var ropes: Rect2 = t.sm.ROPES.grow(-30.0)
+	var dirs: Array = [Vector2.LEFT, Vector2.RIGHT] if through else [Vector2.DOWN, Vector2.UP, Vector2(1, 1), Vector2(-1, 1),
+		Vector2(1, -1), Vector2(-1, -1), Vector2.LEFT, Vector2.RIGHT]
+	var best := Vector2.ZERO
+	var best_room := -INF
+	for dir in dirs:
+		var end: Vector2 = feet + dir.normalized() * DASH_REACH
+		var room := minf(minf(end.x - ropes.position.x, ropes.end.x - end.x) / 2.0, minf(end.y - ropes.position.y, ropes.end.y - end.y))
+		if in_puddle(t, end) or (not through and not ropes.has_point(end)):
+			continue
+		if room > best_room:
+			best_room = room
+			best = dir
+	if best == Vector2.ZERO:
+		best = Vector2.DOWN if feet.y < ropes.get_center().y else Vector2.UP
+	var keys: Array = []
+	if best.x != 0.0:
+		keys.append(KEY_RIGHT if best.x > 0.0 else KEY_LEFT)
+	if best.y != 0.0:
+		keys.append(KEY_DOWN if best.y > 0.0 else KEY_UP)
+	for code in keys:
+		t.press(code)
+	t.tap(KEY_W)
+	await t.wait_until(func(): return t.player.is_dodging, 10)
+	var out := {"start": t.defense.dash_start_time,
+		"immune": DashImmunity.is_immune(t.player, AttackCatalog.DASH_IMMUNITY_TIME, AttackCatalog.DASH_IMMUNITY_COOLDOWN)}
+	await until_landed(t, slams, k)
+	await t.wait_until(func(): return not t.player.is_dodging, 30)
+	for code in keys:
+		t.release(code)
+	return out
+
+
+# Whether feet at `point` are within 30 px of an armed puddle's trigger.
+static func in_puddle(t, point: Vector2) -> bool:
+	for puddle in t.sm.live_puddles():
+		if puddle.armed and ((point - puddle.global_position) / (puddle.radii + Vector2.ONE * 30.0)).length_squared() <= 1.0:
+			return true
+	return false
+
+
+# His fight, loaded past his entrance and the card, parked in Idle with his cycle held off. The older tiers are written
+# for the five-beat string, so the hop count each string draws (hop_counts) is pinned to four hops and the homing hops
+# are off: what each was live, for the tiers that put them back.
+static func enter(t) -> Dictionary:
 	await t.load_fight("danny")
 	t.boss = t.current_scene.get_node(BODY)
 	t.sm = t.boss.state_machine
 	t.sm.rng.seed = SEED
 	park(t)
 	var slams: Node = t.sm.states["Slams"]
-	var drawn: Array = slams.hop_counts.duplicate()
+	var live := {"counts": slams.hop_counts.duplicate(), "homing_from": slams.homing_from}
 	slams.hop_counts.clear()
 	slams.slams = LANDINGS.size()
-	return drawn
+	slams.homing_from = 0
+	return live
 
 
 static func park(t) -> void:
@@ -376,6 +639,12 @@ static func until_latch(t, slams: Node, k: int) -> void:
 
 static func until_landed(t, slams: Node, k: int) -> void:
 	await t.wait_until(func(): return t.sm.current_state != slams or slams.results.size() > k, 400)
+
+
+# Until slam k + 1's spot has stopped moving for good: its latch, or a homing hop's commit.
+static func until_committed(t, slams: Node, k: int) -> void:
+	var commit: float = slams.commit_at(k + 1) - 0.0001
+	await t.wait_until(func(): return t.sm.current_state != slams or slams.results.size() > k or slams.clock >= commit, 400)
 
 
 static func until_before_landing(t, slams: Node, k: int, lead: float) -> void:

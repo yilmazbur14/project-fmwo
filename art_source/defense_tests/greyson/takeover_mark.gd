@@ -7,7 +7,8 @@ extends RefCounted
 #   watched  (the default) every line read: they walk onto the mark on the walk's rows as he walks in, done before he
 #            is home, and stand on it facing him; clear of him through the tear and the hurl, where his z is over
 #            theirs; the end state holds them on it, free; and his first plate, thrown at them standing there, has a
-#            real first leg and touches them no sooner than min_flight after it leaves his hand.
+#            real first leg and touches them no sooner than min_flight after it leaves his hand, nor FIRST_TOUCH after
+#            they are free (the 2026-10-07 playtest: 1.05 s, where every other fight gives 2.5 s or more).
 #   held     a hold on the shout (before the walk), mid-walk, and mid-tear: each lands them on the mark, free, and his
 #            first plate the same.
 #   restart  the GREYSON row and a restart in his half (GameProgress.start_at_greyson): the takeover from Computah
@@ -27,6 +28,8 @@ const HOLD_FRAMES := 90
 # A first leg this long or longer is a flight to read, not a plate that leaves his hand on them.
 const REAL_FLIGHT := 250.0
 const ON_MARK := 0.5
+# From the player free to his first plate touching them standing still, at the least (GreysonStateMachine.first_beat).
+const FIRST_TOUCH := 2.0
 
 
 static func run(t) -> void:
@@ -188,8 +191,10 @@ static func at_point(t, point: String, body: Node, start: Vector2, mark: Vector2
 
 
 # The takeover over, by whichever way: the player on the mark, free, and his first plate thrown at them standing there
-# flies a real first leg and touches them no sooner than min_flight after it leaves his hand.
+# flies a real first leg and touches them no sooner than min_flight after it leaves his hand, nor FIRST_TOUCH after they
+# were freed, which is the takeover's end: the callers come here the frame they see it.
 static func check_end(t, body: Node, takeover: Node, label: String) -> void:
+	var freed_at: float = body.fight_clock
 	var sm: Node = body.state_machine
 	var mark: Vector2 = takeover.PLAYER_MARK
 	await Takeover.settle(t, body)
@@ -203,6 +208,7 @@ static func check_end(t, body: Node, takeover: Node, label: String) -> void:
 			return
 		if is_instance_valid(hit.source) and hit.source == throw.plates[0]:
 			touch["after"] = body.fight_clock - throw.release_clocks[0]
+			touch["since_free"] = body.fight_clock - freed_at
 	t.defense.hit_taken.connect(on_hit)
 	t.player.playerHealth = 1000
 	var thrown: bool = await t.wait_until(func(): return throw.thrown >= 1, 60 * 3)
@@ -218,6 +224,9 @@ static func check_end(t, body: Node, takeover: Node, label: String) -> void:
 	t.check(not throw.point_blank[0] and leg >= REAL_FLIGHT, "%s: his first plate flies a real first leg (%.0f px, at least %.0f)" % [label, leg, REAL_FLIGHT])
 	t.check(after >= throw.min_flight - FRAME_TIME - 0.001,
 		"%s: and touches them no sooner than %.2f s after it leaves his hand (%.3f s)" % [label, throw.min_flight, after])
+	var since_free: float = touch.get("since_free", -1.0)
+	t.check(since_free >= FIRST_TOUCH - FRAME_TIME,
+		"%s: nor sooner than %.1f s after they were free (%.2f s)" % [label, FIRST_TOUCH, since_free])
 
 
 # A sprite's frame as drawn, mirrored or not: the box its flipped twin covers too, so a flip can't hide an overlap.

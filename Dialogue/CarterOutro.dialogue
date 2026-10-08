@@ -2,10 +2,9 @@
 # player_won: the player beat Carter. player_lost: Carter beat the player.
 
 ~ player_won
-Carter: Hm.
-Carter: You're awake now. Good.
+Carter: Impossible.
 => END
 
 ~ player_lost
-Carter: That was the move.
+Carter: Wretched weakling, you will never make it to Jordan.
 => END

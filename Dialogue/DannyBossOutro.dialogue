@@ -3,11 +3,9 @@
 # sumo.
 
 ~ player_won
-Danny: ...ow. okay. #helper's yours.
-Danny: wake me up when it's raid time.
+Danny: ...ow. okay. go ahead dude. You won't get so lucky on the next boss.
 => END
 
 ~ player_lost
 Danny: out of the ring, dum dum. that's sumo.
-Danny: ...five more minutes.
 => END

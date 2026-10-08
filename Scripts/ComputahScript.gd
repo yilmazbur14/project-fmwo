@@ -831,6 +831,7 @@ func _hand_to_greyson() -> void:
 	var scene := greyson_scene.instantiate()
 	scene.get_node("GreysonCharacterBody").computah = self
 	get_parent().add_sibling(scene)
+	GameProgress.reach_phase(GameProgress.PHASE_GREYSON)
 
 
 # FIGHT 06's second half on its own, with no fight of his first: already down where his entrance would have stood

@@ -22,16 +22,17 @@ static var USE_FINAL_ART := true
 static var STAGING := &"side"
 # mark: the player's origin (their soles 39 px under it); facing: PlayerScript.Facing; angle: the beam's, fixed, in
 # degrees; ball and muzzle: texels of the player's 48x48 cell (the contract's), on both the drawn and the stand-in
-# player; shout and ken: where the drawn words hang off the origin, before and from the release.
+# player; shout and ken: where the drawn words hang off the origin, before and from the release; zooms and focus: the
+# charge's camera (#THE CAMERA).
 const STAGINGS := {
 	&"side": {mark = Vector2(266, 975), facing = 3, angle = -45.0, ball = Vector2(14.5, 29.0), muzzle = Vector2(36.5, 12.5),
 		sheet = "res://Assets/Characters/MainPlayer/player_final_beam_side.png", aura = EFFECTS + "final_beam_aura_side.png",
 		disintegrate_ash = GOD_DIR + "jordan_god_disintegrate_ash_side.png", reform_ash = GOD_DIR + "jordan_god_reform_ash_side.png",
-		shout = Vector2(40, -105), ken = Vector2(400, 80)},
+		shout = Vector2(40, -105), ken = Vector2(400, 80), zooms = [1.35, 1.4, 1.45, 1.5, 1.55], focus = Vector2(540, 558)},
 	&"back": {mark = Vector2(960, 1290), facing = 1, angle = -90.0, ball = Vector2(33.0, 28.0), muzzle = Vector2(23.5, 11.5),
 		sheet = "res://Assets/Characters/MainPlayer/player_final_beam_back.png", aura = EFFECTS + "final_beam_aura_back.png",
 		disintegrate_ash = GOD_DIR + "jordan_god_disintegrate_ash_back.png", reform_ash = GOD_DIR + "jordan_god_reform_ash_back.png",
-		shout = Vector2(-250, -60), ken = Vector2(-360, -20)},
+		shout = Vector2(-250, -60), ken = Vector2(-360, -20), zooms = [1.0, 1.04, 1.08, 1.12, 1.16], focus = Vector2(960, 715)},
 }
 # His drawn white core on his hit and hover frame 0, which the beam is aimed at: not the rune circle's centre.
 const CORE_TEXEL := Vector2(159.5, 117.5)
@@ -52,10 +53,13 @@ const MERCY_MAX_FAILS := 3
 const MIN_PRESS_INTERVAL := 0.03
 const BARS := 5
 
-#THE CAMERA (a factor over the fight's 2/3 base, by bars banked; the stops are whole px a texel: 2 x zoom)
-const ZOOMS: Array[float] = [1.5, 2.0, 2.5, 3.0, 3.5]
-# From the muzzle toward his core.
-const FOCUS_WEIGHTS: Array[float] = [0.30, 0.22, 0.15, 0.08, 0.0]
+#THE CAMERA (a factor over the fight's 2/3 base, by bars banked: the staging's zooms, closing on its focus)
+# Every step holds his head and the player whole on screen (the 2026-10-07 playtest: the old steps, 1.5 to 3.5 closing
+# on the muzzle, cut his head off the top from the first bar). The side staging's span, his crown to their feet, is
+# about 980 px, which caps it at 1.55. It starts at 1.35 for the meter: under about 1.45 ScreenView holds the view
+# inside the fight's base rect, pinned to its top-left, which puts his crown under the meter's right key - half of it
+# at 1.2, a fifth at 1.35 - and from 1.5 its focus has his head clear right of the meter. The back staging's span is
+# about 1300 px, and its head is under the meter at every step.
 const STEP_TIME := 0.25
 const RELEASE_ZOOM := 4.0
 # Real seconds: it plays out inside the release's hit-stop.
@@ -127,6 +131,11 @@ const PUNCH_THROUGH := {speed = 2600.0, time = 0.35, burst = 18.0, burst_steps =
 const BODY_FADE := 0.45
 const BODY_FADE_ALPHA := 0.5
 const EMPTY_HOLD := 0.5
+
+#HIS SHOUT (the user, 2026-10-08: "While Jordan is getting disintegrated: NOOOOO! IMPOSSIBLE!")
+# A line of his finale's dialogue, in his demon portrait and voice, up from the disintegration's start, typed out slowly
+# over it, and taken down as it ends: its input lock outlasts it, so no press moves it on.
+const SHOUT := {dialogue = "res://Dialogue/JordanFinale.dialogue", title = "disintegrated"}
 
 #FAIL (by bars banked)
 const FAIL_WIDTH: Array[float] = [0.0, 0.35, 0.5, 0.65, 0.8]

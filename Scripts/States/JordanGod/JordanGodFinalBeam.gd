@@ -10,13 +10,14 @@ extends State
 # on; his next kill brings the beam back, a little easier each time it failed (MERCY_PER_FAIL).
 #
 # Nothing in it is skippable, and the pause holds all of it: every wait a node-bound tween in `waits`, the meter on the
-# physics step, the camera on the process step, and the input isn't delivered while paused. Entered once a kill, so a
-# run cut short never resumes into the next (generation). release() puts back everything it touched; on a win he stays
-# gone.
+# physics step, the camera on the process step, and the input isn't delivered while paused; his shout over the
+# disintegration (FinalBeamLayout.SHOUT) is a balloon it puts up and takes down on those waits. Entered once a kill,
+# so a run cut short never resumes into the next (generation). release() puts back everything it touched; on a win he
+# stays gone.
 #
 # THE TESTS READ: beat (&"ko", &"collapse", &"stage", &"mash", then &"release", &"dissolve", &"fade", &"settle", &"won",
 # or &"weak" / &"fizzle", &"reform", &"revived"), meter, bars, fails, result (&"won", &"weak", &"fizzle"), entries,
-# min_press_interval (real seconds; a test sets 0), fx and ui.
+# min_press_interval (real seconds; a test sets 0), fx, ui and shout_balloon.
 
 const Layout := preload("res://Scripts/FinalBeamLayout.gd")
 const GodLayout := preload("res://Scripts/JordanGodLayout.gd")
@@ -43,6 +44,8 @@ var entries := 0
 var min_press_interval := Layout.MIN_PRESS_INTERVAL
 var fx: Node2D
 var ui: CanvasLayer
+var shout_dialogue: Resource
+var shout_balloon: Node
 
 var generation := 0
 var waits: Array[Tween] = []
@@ -177,6 +180,8 @@ func _build(p: CharacterBody2D) -> void:
 	ui.setup(p)
 	if voices.is_empty():
 		_build_sounds()
+	if shout_dialogue == null:
+		shout_dialogue = load(Layout.SHOUT.dialogue)
 
 
 # The strings snap, the puppets crumple and dissolve, and they are gone.
@@ -256,7 +261,7 @@ func _on_bank(count: int) -> void:
 	_play(&"swell", 1.0 + 0.2 * count)
 	if count >= Layout.BARS:
 		return
-	_camera_to(Layout.ZOOMS[count], _focus(count), Layout.STEP_TIME)
+	_camera_to(Layout.staging().zooms[count], Layout.staging().focus, Layout.STEP_TIME)
 	_kick(Layout.KICKS[count - 1], Layout.KICK_STEPS)
 	rumble_px = Layout.RUMBLES[count]
 	_hum_level()
@@ -283,7 +288,8 @@ func _win(run_of: int) -> void:
 	ui.release_won()
 	fx.release_flash()
 	_kick(Layout.KICKS[Layout.BARS - 1], Layout.RELEASE_KICK_STEPS)
-	_camera_to(Layout.RELEASE_ZOOM, ScreenView.focus, 0.0)
+	# Punched in on the beam leaving the muzzle, not on the charge's focus between the two of them.
+	_camera_to(Layout.RELEASE_ZOOM, fx.muzzle_point(), 0.0)
 	HitStop.freeze(get_tree(), Layout.RELEASE_HIT_STOP)
 	_play(&"release")
 	fx.pose(&"release")
@@ -297,6 +303,7 @@ func _win(run_of: int) -> void:
 		return
 	_impact(true)
 	beat = &"dissolve"
+	_shout()
 	fx.pose(&"hold")
 	fx.begin_end(true)
 	fx.fade_runes()
@@ -307,6 +314,7 @@ func _win(run_of: int) -> void:
 	await _wait(Layout.DISSOLVE_TIME)
 	if _stale(run_of):
 		return
+	_end_shout()
 	beat = &"fade"
 	_beam_sounds(false)
 	rumble_px = 0.0
@@ -334,6 +342,18 @@ func _win(run_of: int) -> void:
 	_restore_music(0.0)
 	_unlock()
 	god.finish_beam_won()
+
+
+# Up over the disintegration with no press to move it on: its input lock, on the real clock, outlasts it.
+func _shout() -> void:
+	shout_balloon = DialogueManager.show_dialogue_balloon(shout_dialogue, Layout.SHOUT.title)
+	shout_balloon.input_lock_time = Layout.DISSOLVE_TIME + 1.0
+
+
+func _end_shout() -> void:
+	if is_instance_valid(shout_balloon):
+		shout_balloon.queue_free()
+	shout_balloon = null
 
 
 func _impact(full: bool) -> void:
@@ -424,14 +444,10 @@ func _reform(run_of: int, reached: float) -> void:
 
 #THE CAMERA (the only writer of the view while it runs, as the finisher's charge is)
 
-func _focus(step: int) -> Vector2:
-	return fx.muzzle_point().lerp(Layout.core(), Layout.FOCUS_WEIGHTS[step])
-
-
 func _camera_snap(step: int) -> void:
 	if ScreenView.zoom_tween:
 		ScreenView.zoom_tween.kill()
-	_camera_to(Layout.ZOOMS[step], _focus(step), 0.0)
+	_camera_to(Layout.staging().zooms[step], Layout.staging().focus, 0.0)
 	_step_camera(0.0)
 
 
@@ -640,6 +656,7 @@ func release() -> void:
 	if is_instance_valid(ui):
 		ui.queue_free()
 	ui = null
+	_end_shout()
 	_unlock()
 	var p := _player()
 	if p != null:

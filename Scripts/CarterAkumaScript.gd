@@ -992,6 +992,13 @@ func outro_line_delay(player_won: bool) -> float:
 	return state_machine.states["Victory"].pose_length()
 
 
+# Asked by FightOutro when the player presses through that wait: the pose ends at once, where it would have.
+func skip_outro_pose() -> void:
+	var victory = state_machine.states["Victory"]
+	if state_machine.current_state == victory:
+		victory.finish_pose()
+
+
 # Whoever won, nothing he has sent out may stay live.
 func _clear_hazards() -> void:
 	for hazard in get_tree().get_nodes_in_group(state_machine.HAZARD_GROUP):

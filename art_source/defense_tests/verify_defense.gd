@@ -549,6 +549,7 @@ func _main() -> void:
 		"jordan_final_beam": await run_mode_file(JORDAN_MODES + "final_beam.gd")
 		"jordan_wheel": await run_mode_file(JORDAN_MODES + "wheel.gd")
 		"bounds":await load(RING_MODES + "bounds.gd").run(self)
+		"crowd_murmur": await run_mode_file(RING_MODES + "murmur.gd")
 		"liam_takeover": await run_mode_file(LIAM_MODES + "takeover.gd")
 		"liam_waves": await run_mode_file(LIAM_MODES + "waves.gd")
 		"liam_pillar": await run_mode_file(LIAM_MODES + "pillar.gd")

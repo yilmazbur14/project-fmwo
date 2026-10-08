@@ -22,8 +22,8 @@ extends RefCounted
 #   menu     the FINALE row (GameProgress.start_at_finale), opened with open_scene, not load_fight, which would end
 #            a dialogue: no pre-fight line and no VS card; Jordan Defeated, then WalkOut, the flag cleared; a hold
 #            then skips to the menu.
-#   lost     the player at 0 health: the two player_lost lines verbatim, and Defeat; WalkOut never entered and no
-#            finale scene loaded.
+#   lost     the player at 0 health: the two player_lost lines verbatim, a press each, and Defeat; WalkOut never
+#            entered and no finale scene loaded.
 #   normal   all four in turn.
 # With his last phase switched on (JordanFinaleLayout.USE_GOD_FIGHT, and its scene built) every end of the finale lands on
 # that fight instead of the card: the scenes after the fight are the room and the god fight, each hold lands on the god

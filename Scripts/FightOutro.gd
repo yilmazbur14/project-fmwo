@@ -18,6 +18,11 @@ const LINE_DELAY := 0.7
 # mash can't reveal it and move straight on. The same for every input, keyboard included: nobody
 # reads a line faster than this anyway.
 const LINE_INPUT_LOCK := 1.2
+# A loss's lines instead are on the way back to the fight (the 2026-10-07 playtest: each death cost 6 to 9 s before the
+# player was back in control, mostly locked lines), so each holds its input this much shorter: past it a fresh press
+# finishes a line still typing or moves on one line, as in every balloon, and the last one's press starts the fade to
+# Defeat. Every line is still seen.
+const LOSS_LINE_INPUT_LOCK := 0.3
 # Seconds the fade to black takes after the last line.
 const FADE_TIME := 1.75
 # Whether every sound still playing in the fight (the boss music after a loss, the victory fanfare's
@@ -34,6 +39,11 @@ const SILENT_DB := -60.0
 # from the fight being decided to its first line. It is asked after on_player_defeated(), since that
 # is what starts the pose. It can only lengthen the wait: a boss without it, or one asking for less,
 # gets LINE_DELAY exactly as before.
+# On a loss that wait is on the way back to the fight as well (the user, 2026-10-07: "make carters pose
+# skippable"): past LOSS_LINE_INPUT_LOCK from the fight being decided, a fresh press of a dialogue key
+# ends it and the first line comes up. A boss whose wait is a pose of its own also has
+# skip_outro_pose(), called on that press, which puts the pose at its end at once. The line then has
+# its own lock from the moment it is up, so the press that ended the wait can't move it on too.
 # A boss whose win plays out a sequence of its own rather than lines and the Victory screen - Jordan
 # storming out of the arena into his finale - has take_won_outro(outro, line_delay), and is handed
 # this outro on a win instead of the lines. It ends it with leave_to(), this outro's own fade and
@@ -47,7 +57,13 @@ const DEFEAT_SCENE := "res://Scenes/Core/DefeatScene.tscn"
 # Above the dialogue balloon and every HUD and health bar.
 const FADE_LAYER := 128
 
+signal line_delay_over
+
 var player_won := false
+# Real time, as the balloon's locks are, so a hit-stop can't stretch the lock on the wait.
+var decided_msec := 0
+# A loss's wait before its first line is running and can be pressed through.
+var line_delay_skippable := false
 # The fight scene this outro decided.
 var fight_scene: Node
 var fade: ColorRect
@@ -74,6 +90,7 @@ static func finish_fight(tree: SceneTree, won: bool) -> void:
 
 
 func _ready() -> void:
+	decided_msec = Time.get_ticks_msec()
 	layer = FADE_LAYER
 	fade = ColorRect.new()
 	fade.color = Color(0, 0, 0, 0)
@@ -87,6 +104,8 @@ func _ready() -> void:
 	# Before on_player_defeated(), while the bosses still say which half of the fight this was.
 	if not player_won:
 		GameProgress.note_retry(get_tree())
+	else:
+		GameProgress.note_win(get_tree())
 	var dialogue: DialogueResource
 	var line_delay := LINE_DELAY
 	var taker: Node
@@ -106,13 +125,43 @@ func _ready() -> void:
 
 
 func _play(dialogue: DialogueResource, line_delay: float) -> void:
-	await get_tree().create_timer(line_delay, false, false, true).timeout
+	var delay := get_tree().create_timer(line_delay, false, false, true)
+	if player_won:
+		await delay.timeout
+	else:
+		delay.timeout.connect(_end_line_delay)
+		line_delay_skippable = true
+		await line_delay_over
 	_settle_screen()
 	if dialogue:
 		var balloon = DialogueManager.show_dialogue_balloon(dialogue, "player_won" if player_won else "player_lost")
-		balloon.input_lock_time = LINE_INPUT_LOCK
+		balloon.input_lock_time = LINE_INPUT_LOCK if player_won else LOSS_LINE_INPUT_LOCK
 		await DialogueManager.dialogue_ended
 	leave_to(VICTORY_SCENE if player_won else DEFEAT_SCENE)
+
+
+# _input rather than _unhandled_input, as the pause screen's: nothing the fight leaves up may take the press first. Only a
+# fresh press: a key held from the fight, or its repeats, ends nothing.
+func _input(event: InputEvent) -> void:
+	if not line_delay_skippable or Time.get_ticks_msec() - decided_msec < LOSS_LINE_INPUT_LOCK * 1000.0:
+		return
+	var clicked: bool = event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed
+	if not (clicked or event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"ui_cancel")):
+		return
+	# Before it is marked handled: the device tracker is an autoload, and _input reaches autoloads last.
+	InputSettings.note_device(event)
+	get_viewport().set_input_as_handled()
+	for boss in get_tree().get_nodes_in_group(BOSS_GROUP):
+		if boss.has_method("skip_outro_pose"):
+			boss.skip_outro_pose()
+	_end_line_delay()
+
+
+func _end_line_delay() -> void:
+	if not line_delay_skippable:
+		return
+	line_delay_skippable = false
+	line_delay_over.emit()
 
 
 # The fade to black, every sound fading with it, and the change to `scene_path`. Once: a second call

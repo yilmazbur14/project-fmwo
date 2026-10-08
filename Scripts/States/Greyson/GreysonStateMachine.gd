@@ -64,9 +64,12 @@ const HUD_FADE_RECT := Rect2(680, -1080, 560, 1280)
 
 #PACING (seconds)
 # The breath between cycles, and the first one, after the takeover (the user, 2026-09-30: "the setup before the
-# posing takes far too long"; then a setup of five seconds, from his breath to the first pose).
+# posing takes far too long"; then a setup of five seconds, from his breath to the first pose). The first is longer
+# since the 2026-10-07 playtest, fixed at the user's word: at 0.3 his first plate hit a player standing still 1.05 s
+# after they got control, where every other fight gives 2.5 s or more. At 1.3, with the throw's 0.35 s wind-up and the
+# plate's 0.40 s first leg, it is about 2.05 s.
 @export var idle_beat := 0.3
-@export var first_beat := 0.3
+@export var first_beat := 1.3
 # How often Idle looks again at a locked gauge, or at plates of his last throw still flying.
 @export var gauge_wait_step := 0.2
 # The longest a throw waits in Idle for his last throw's plates to finish their ropes; any still flying then vanish

@@ -279,7 +279,8 @@ static func danny_nudge(t, ring: Rect2, origins: Rect2) -> void:
 	await t.settle_player(Vector2(origins.position.x + 30.0, 660.0))
 	var slams: Node = t.sm.states["Slams"]
 	t.sm.on_child_transition(t.sm.current_state, "Slams")
-	await t.wait_until(func(): return t.sm.current_state != slams or slams.beat == slams.Beat.SETTLE, 900)
+	# The longest string, eleven hops with the homing ones' hang (2026-10-07), lands its big one 16.3 s in.
+	await t.wait_until(func(): return t.sm.current_state != slams or slams.beat == slams.Beat.SETTLE, 1500)
 	var box: Rect2 = t.boss.body_box_rect(&"sleep")
 	var inside: bool = slams.results.size() == slams.slams and slams.results[-1].feet_inside
 	await t.wait_until(func(): return t.sm.current_state != slams, 120)

@@ -3,11 +3,9 @@
 # after the hand-over beat the player.
 
 ~ player_won
-Liam: *cough*... okay. Okay! Maybe I should've stuck to fire too. [#liam=beaten]
 Liam: Fine. You win, newcomer. Jordan's waiting for you. [#liam=beaten]
 => END
 
 ~ player_lost
-Liam: Four elements, newcomer. FOUR. [#liam=smug]
 Liam: Nyahahaha! [#liam=laugh, #blips=off]
 => END

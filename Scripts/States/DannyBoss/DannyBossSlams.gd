@@ -2,13 +2,14 @@ extends State
 
 # Danny's Attack 2, the Sumo Smash string (plan section 4; SF6 E. Honda's Sumo Smash), dodge first since Addendum 1:
 # he crouches, leaps and hangs over the ring tracking the player, then latches and comes down rear first on the
-# marked spot, eight to ten times (hop_counts; five before the 2026-10-06 tuning, which the beats below still show).
-# All but the last are hops (danny_hop_slam), yellow, told by the dodge ring and a dashed
+# marked spot, ten to twelve times (hop_counts; five before the 2026-10-06 tuning, which the beats below still show,
+# homing aside). All but the last are hops (danny_hop_slam), yellow, told by the dodge ring and a dashed
 # splash zone on the floor: each is its own hit (DannyBossSlamHit) and then its worm splash (DannyBossSplash), which
-# roots a player still in the zone, and none sends a quake ring. The last is the big one (danny_butt_slam): a
-# longer hang, a longer red read, a heavier drop, and the only quake ring (DannyBossQuakeRingScript). Parried, it
-# bounces him off the player's fists onto his back (DannyBossOnBack) instead of his nap; anything else ends in his
-# nap (DannyBossStateMachine.attack_done).
+# roots a player still in the zone, and none sends a quake ring. From the second on they home in (THE HOMING HOPS,
+# with the exports): the spot follows the player down until he has all but landed. The last is the big one
+# (danny_butt_slam): a longer hang, a longer red read, a heavier drop, and the only quake ring
+# (DannyBossQuakeRingScript). Parried, it bounces him off the player's fists onto his back (DannyBossOnBack) instead
+# of his nap; anything else ends in his nap (DannyBossStateMachine.attack_done).
 #
 # THE BEATS, in seconds (landings at 1.45, 2.35, 3.25, 4.15 and 5.45):
 #   CROUCH  0.30              jump_crouch, facing the player: the tell.
@@ -28,6 +29,9 @@ extends State
 #   start, harder at the end), and IMPACT at 5.45. Then SETTLE 0.35: slam_impact held and a player sat in his
 #   footprint slid out beside him, and the nap from 5.80. Or, parried, BOUNCE bounce_time: back_bounce on a
 #   bounce_arc arc onto the floor beside the player, and onto his back.
+#   A homing hop (the 2026-10-07 tuning): a TRACK of homing_track_time, then its LATCH and DROP as above with the
+#   spot still chasing the feet at homing_speed, and the yellow ring, the splash zone and he himself with it, until
+#   commit_time before it lands: 1.35 s landing to landing.
 # It all runs on one clock against that schedule, worked out as he enters, so no landing drifts off the beat
 # whatever length a step is.
 #
@@ -36,6 +40,14 @@ extends State
 # buys the next landing: a player who does nothing takes the first, the third and the fifth, 1 + 1 + 2 half-hearts.
 # The splash zone, splash_radius on the floor flattened by floor_flatten (ry 97), is cleared in 0.16 s walking up or
 # down, leaving 0.24 s to react; sideways from a standstill is too slow, on purpose.
+# A homing hop is never walked out of, since its zone keeps up with the feet until it commits, and its yellow ring
+# still stands the whole 0.40 s before it lands. Its answer is a dash as he lands: one started in the last
+# AttackCatalog.DASH_IMMUNITY_TIME has its i-frames over the landing and holds his spot where it set off, so it is
+# clear of the zone and a perfect dodge besides; one before that is followed. Homing hops land 1.35 s apart, past
+# the i-frames, so each is its own read (a player who does nothing takes every one), and the dashes they ask for are
+# well over DASH_IMMUNITY_COOLDOWN apart. A bar answered right holds level through them: each dash's third comes back
+# before the next, half from the refill and half from the perfect dodge's refund on every other one
+# (PlayerDefense.perfect_dodge_cooldown), so only misses run it down.
 #
 # HIS LIFT IS ON HIS SPRITE ALONE (DannyBossScript.set_lift): his node, hurtbox and y-sort stay on the spot
 # he'll land on, placed so the slam sheet's rear contact texel comes down on it.
@@ -65,6 +77,7 @@ const QuakeRing := preload("res://Scripts/DannyBossQuakeRingScript.gd")
 const BossBroken := preload("res://Scripts/BossBroken.gd")
 const SlamPuddle := preload("res://Scripts/DannyBossSlamPuddle.gd")
 const Splash := preload("res://Scripts/DannyBossSplash.gd")
+const AttackCatalog := preload("res://Scripts/AttackCatalog.gd")
 
 enum Beat { CROUCH, LAUNCH, TRACK, LATCH, DROP, IMPACT, REBOUND, RISE, SETTLE, BOUNCE, DONE }
 
@@ -80,6 +93,9 @@ const HOP_HINT := &"hop"
 const HOP_HINT_TEXT := "DODGE HIS HOPS - GET CLEAR OF THE WORMS!"
 const BIG_HINT := &"big_slam"
 const BIG_HINT_TEXT := "THE BIG ONE! TAP %s AS HE LANDS!"
+# The first homing hop's, which takes over from the hop hint.
+const HOMING_HINT := &"homing_hop"
+const HOMING_HINT_TEXT := "NOW HE FOLLOWS YOU! DASH (%s) AS HE LANDS!"
 
 @export var body : CharacterBody2D
 
@@ -88,8 +104,9 @@ const BIG_HINT_TEXT := "THE BIG ONE! TAP %s AS HE LANDS!"
 @export var slams := 5
 # The hops before the big one, drawn afresh for each string off the fight's rng, which sets `slams`: the string was
 # the same five beats every time, so it could be counted rather than read (the 2026-10-06 tuning). Empty: `slams`
-# as it is set.
-@export var hop_counts: Array[int] = [7, 8, 9]
+# as it is set. 7, 8 or 9 until the homing hops (the user, 2026-10-07: "make the hops harder for danny"): two more,
+# with the hang they take, put him between Eric and Greyson for the experienced player who dashes.
+@export var hop_counts: Array[int] = [9, 10, 11]
 @export var crouch_time := 0.30
 @export var launch_time := 0.30
 @export var first_track_time := 0.45
@@ -160,6 +177,23 @@ const BIG_HINT_TEXT := "THE BIG ONE! TAP %s AS HE LANDS!"
 @export var back_window := 3.0
 @export var back_cap := 6
 
+#THE HOMING HOPS (the user, 2026-10-07: "make the hops harder for danny")
+# From hop homing_from on, every hop but the big one homes in: its spot runs on after the player's feet through its
+# latch and its drop at homing_speed, the yellow ring, the splash zone and he himself with it, and holds only
+# commit_time before it lands. A walk out of the zone is followed, and so is a dash before his last
+# AttackCatalog.DASH_IMMUNITY_TIME; a dash in it holds the spot where it set off and goes through on its i-frames.
+# 0 turns them off. Every hop but the first: the first keeps teaching the hop as it was, under its own hint.
+@export var homing_from := 2
+@export var commit_time := 0.05
+# How fast a homing hop's spot chases through its latch and drop. At track_speed a dash 0.25 s out with a run on after
+# it outran him; at this, any dash before his last DASH_IMMUNITY_TIME is caught, run on or not. Walking is slower
+# than either, so it only shows when they dash.
+@export var homing_speed := 2000.0
+# A homing hop's hang before its latch, in place of track_time: 0.67 makes it 1.35 s landing to landing, the
+# shortest at which a bar answered right holds level through a string of them (FAIRNESS). At 1.20 the experienced
+# model ran dry on about one homing hop in twenty-five.
+@export var homing_track_time := 0.67
+
 @onready var state_machine = get_parent()
 
 # Starts spent, so a release() from a path that never entered this state does nothing.
@@ -173,6 +207,8 @@ var beat_start := 0.0
 var beat_length := 0.0
 var slam := 0
 var drop_ease_now := 1.0
+# On this state's clock, when the homing hop in the air commits to its spot; -INF while none is chasing.
+var chase_until := -INF
 # How far into the launch its lift-off frame comes.
 var liftoff := 0.0
 # Where his rear contact texel comes down, and from there to his node.
@@ -217,6 +253,7 @@ func Enter() -> void:
 	clock = 0.0
 	next_entry = 0
 	slam = 0
+	chase_until = -INF
 	results.clear()
 	latch_times.clear()
 	impact_times.clear()
@@ -280,6 +317,7 @@ func release() -> void:
 		body.set_lift(0.0)
 		if body.is_inside_tree():
 			body.hide_hint(HOP_HINT)
+			body.hide_hint(HOMING_HINT)
 			body.hide_hint(BIG_HINT)
 
 
@@ -300,7 +338,13 @@ func _schedule() -> Array:
 	at += launch_time
 	for k in range(1, slams + 1):
 		var big := k == slams
-		var track: float = big_track_time if big else (first_track_time if k == 1 else track_time)
+		var track := track_time
+		if big:
+			track = big_track_time
+		elif k == 1:
+			track = first_track_time
+		elif homes(k):
+			track = homing_track_time
 		var latch: float = big_latch_time if big else latch_time
 		var drop: float = big_drop_time if big else drop_time
 		entries.append([at, Beat.TRACK, k, track])
@@ -338,6 +382,16 @@ func latch_at(number: int) -> float:
 		if entry[1] == Beat.LATCH and entry[2] == number:
 			return entry[0]
 	return INF
+
+
+# Whether slam `number` is a homing hop. Never the big one.
+func homes(number: int) -> bool:
+	return homing_from > 0 and number >= homing_from and number < slams
+
+
+# When slam `number`'s spot stops moving for good, on this state's clock: its latch, or a homing hop's commit.
+func commit_at(number: int) -> float:
+	return landing_time(number) - commit_time if homes(number) else latch_at(number)
 
 
 # Every beat that is due, in order, stopping after a landing: the fifth's settle, due with it, starts a step
@@ -394,8 +448,10 @@ func _step(delta: float) -> void:
 			_track(delta)
 		Beat.LATCH:
 			lift = hover_height
+			_chase(delta)
 		Beat.DROP:
 			lift = hover_height * (1.0 - pow(clampf(t / beat_length, 0.0, 1.0), drop_ease_now))
+			_chase(delta)
 		Beat.RISE:
 			lift = hover_height * _ease_out(t / beat_length)
 			_track(delta)
@@ -418,14 +474,14 @@ func _step(delta: float) -> void:
 # sat out all four (the 2026-10-04 playtest). The big one keeps WALK_RECT's top, since his nap and his back are laid
 # out from where it lands. Side to side, every slam stays Layout.STRING_REACH in from the screen's sides, where
 # WALK_RECT let the tuck be cut off (the same playtest); a footprint there still reaches the ropes.
-func _track(delta: float) -> void:
+func _track(delta: float, speed := 0.0) -> void:
 	var walk: Rect2 = state_machine.WALK_RECT
 	var top: float = walk.position.y if _tracking_big() else minf(hop_top, walk.position.y)
 	var side: float = Layout.STRING_REACH * Layout.SCALE
 	var low := Vector2(maxf(walk.position.x, side), top)
 	var high := Vector2(minf(walk.end.x, ScreenView.VIEW_SIZE.x - side), walk.end.y)
 	var goal: Vector2 = state_machine.player_feet().clamp(low, high)
-	target = target.move_toward(goal, _track_speed(goal, delta) * delta)
+	target = target.move_toward(goal, (speed if speed > 0.0 else _track_speed(goal, delta)) * delta)
 	_place()
 
 
@@ -438,6 +494,25 @@ func _track_speed(goal: Vector2, delta: float) -> float:
 	return maxf(track_speed, target.distance_to(goal) / maxf(latch_at(1) - clock, delta))
 
 
+# A homing hop's spot runs on after the player through its latch and drop until it commits. A dash started in his
+# last DASH_IMMUNITY_TIME commits it there and then, where the dash set off from: chased on, the spot left the dodge
+# ghost behind and an on-time dash up or down paid no perfect dodge, nor its refund. One before that is followed.
+func _chase(delta: float) -> void:
+	if clock >= chase_until - STEP_TOLERANCE:
+		return
+	if _dashing_as_he_lands():
+		chase_until = clock
+		return
+	_track(delta, homing_speed)
+
+
+func _dashing_as_he_lands() -> bool:
+	if not is_instance_valid(player) or not player.is_dodging:
+		return false
+	var ago := float(Engine.get_physics_frames() - player.last_dodge_physics_frame) / Engine.physics_ticks_per_second
+	return landing_time(slam) - (clock - maxf(ago, 0.0)) <= AttackCatalog.DASH_IMMUNITY_TIME + STEP_TOLERANCE
+
+
 # Rising off the last hop or hanging before the big one: the spot is the big one's.
 func _tracking_big() -> bool:
 	return slam == slams or (beat == Beat.RISE and slam == slams - 1)
@@ -447,6 +522,8 @@ func _place() -> void:
 	body.global_position = (target + contact_offset).round()
 	if is_instance_valid(mark):
 		mark.global_position = target.round()
+	if is_instance_valid(splash):
+		splash.global_position = target.round()
 
 
 func _raise_mark() -> void:
@@ -467,10 +544,11 @@ func _badge_point() -> Vector2:
 	return Vector2(target.x, maxf(target.y - badge_rise, badge_top))
 
 
-# The spot holds. A hop's splash zone goes down round it and the yellow ring up over it; the big one's red badge
-# goes up alone. Not over a stuck player, who can give neither answer.
+# The spot holds, or a homing hop's runs on to its commit. A hop's splash zone goes down round it and the yellow ring
+# up over it; the big one's red badge goes up alone. Not over a stuck player, who can give neither answer.
 func _latch(number: int) -> void:
 	latch_times.append(clock)
+	chase_until = commit_at(number) if homes(number) else -INF
 	var big := number == slams
 	if big:
 		body.show_hint(BIG_HINT, BIG_HINT_TEXT % InputSettings.label_for(&"block"))
@@ -478,6 +556,9 @@ func _latch(number: int) -> void:
 		_add_splash()
 		if number == 1:
 			body.show_hint(HOP_HINT, HOP_HINT_TEXT)
+		elif homes(number):
+			body.hide_hint(HOP_HINT)
+			body.show_hint(HOMING_HINT, HOMING_HINT_TEXT % InputSettings.label_for(&"dodge"))
 	if _sealed():
 		badges_withheld.append(number)
 		return
@@ -543,6 +624,7 @@ func _land() -> void:
 			return
 	elif slam == slams - 1:
 		body.hide_hint(HOP_HINT)
+		body.hide_hint(HOMING_HINT)
 	# Only now the landing has had its say on the player does a root sprung in the string let go. The puddles
 	# under a stuck player armed while they were held, so the one it frees gets puddle_grace to step off them before
 	# another root can take them; the landing that frees them has just hit them, or found them in the i-frames of

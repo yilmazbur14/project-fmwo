@@ -44,6 +44,10 @@ extends RefCounted
 #              its mark. Needs the sheets: imported by the editor, or read off their PNGs with art=raw.
 #   model      (reports only, never fails) the experienced-player bot (playtest_1004/BRIEF.md) over seeds 1-8, first
 #              and learned: per-attack hits, time to kill, half-hearts a minute, clear rate, attempts to a first clear.
+#   answers    the model's Bot on the two hits it kept taking in the 2026-10-07 playtest: a pair of figures 0.30 s apart,
+#              both parried by presses due on the fight's clock through the first parry's freeze; the breath's line of
+#              fire between it and his lowered head with the bar under a dash: it waits for the bar, dashes square across
+#              unburnt and lands a punch in the opening.
 #   normal     every tier but art and model.
 # Its own runs leave the switch on in this process only. art=raw (after `--`) reads the kaiju's sheets off their PNGs for
 # the run (JordanKaijuLayout.test_textures), so every tier can play the drawn art before the editor has imported it.
@@ -62,7 +66,7 @@ const ScreenView := preload("res://Scripts/ScreenView.gd")
 
 const FIGHT := "res://Scenes/Bosses/JordanBossFightScene.tscn"
 const BODY := "Arena/JordanScene/JordanCharacterBody"
-const TIERS := ["layout", "intro", "breath", "stomp", "punish", "occlusion", "defeat", "lazy", "recoil"]
+const TIERS := ["layout", "intro", "breath", "stomp", "punish", "occlusion", "defeat", "lazy", "recoil", "answers"]
 const Sheets := preload("res://Scripts/JordanKaijuSheets.gd")
 const SEED := 20261004
 const FRAME := 1.0 / 60.0
@@ -110,6 +114,8 @@ static func run(t) -> void:
 				await tier_art(t)
 			"model":
 				await load("res://art_source/defense_tests/jordan/kaiju_model.gd").run(t)
+			"answers":
+				await tier_answers(t)
 			_:
 				t.check(false, "jordan_kaiju has no tier %s" % tier)
 
@@ -1153,6 +1159,91 @@ static func tier_defeat(t) -> void:
 		t.check(frame_ok and (how != "riding" or soles_at.distance_to(Layout.DEFEAT_LANDING) < 1.0),
 			"he lies on %s" % ("the juggle's down loop" if how == "juggled" else "the defeat's last frame"))
 		t.check(walked, "and the walk-out comes")
+
+
+#THE MODEL'S ANSWERS
+
+# Two figures going off this far apart, the second inside the first parry's freeze and slow motion.
+const PAIR_GAP := 0.30
+# The second half's line of fire, the one the model met in the playtest (seed 1): its last pass's mouth and aim, the line
+# running from (701, 626) down to the bottom rope between the player's feet and the floor in front of the lowered head.
+const RECOIL_BURN_ORIGIN := Vector2(574, 546)
+const RECOIL_BURN_ANGLE := 32.0
+const RECOIL_BURN_FEET := Vector2(1000, 900)
+
+
+# The 2026-10-07 playtest's two hits the model kept taking, played by its own Bot (kaiju_model.gd), learned: a pair of
+# figures going off PAIR_GAP apart, its presses due on the fight's clock, both parried; then the breath's line of fire
+# lying between it and his lowered head with the bar under a dash, and it waits for the dash's third of the bar instead
+# of walking through the fire, dashes square across it unburnt and lands a punch in the opening (what the wait costs it
+# of the opening is the price of the low bar).
+static func tier_answers(t) -> void:
+	var model: GDScript = load("res://art_source/defense_tests/jordan/kaiju_model.gd")
+	await enter(t)
+	t.hold_break_gauge(t.boss)
+	await home_again(t)
+	t.log_p("-- two figures going off %.2f s apart" % PAIR_GAP)
+	await at_feet(t, model.STATION)
+	var seen := Log.new(t)
+	var bot = model.Bot.new(t, 1, true)
+	bot.late_share = 0.0
+	var figures: Array = []
+	for i in 2:
+		var figure: Node = FunkoThrow.FUNKO_FIGURE_SCENE.instantiate()
+		figure.player = t.player
+		figure.jordan = t.boss
+		figure.tell_lead = FunkoFigure.TELL_LEAD
+		figure.attack_id = FunkoThrow.ATTACK_ID
+		t.sm.add_hazard(figure, t.player.global_position + Vector2(60.0 if i == 0 else -60.0, 0.0))
+		figure.fuse = 1.2 + PAIR_GAP * i
+		figures.append(figure)
+	for f in 60 * 3:
+		bot.step()
+		await t.physics_frame
+		if figures.all(func(figure) -> bool: return not is_instance_valid(figure)) and not t.player.is_invincible:
+			break
+	bot.keys.stop()
+	t.release(KEY_SHIFT)
+	t.log_p("  parried %s, hit by %s, presses %s" % [seen.parries, seen.hits, bot.press_log])
+	t.check(seen.of(seen.parries, FunkoThrow.ATTACK_ID) == 2 and seen.hits.is_empty(),
+		"both blasts parried, the second through the first parry's freeze and slow motion")
+
+	t.log_p("-- the breath's line of fire between the player and his lowered head, the bar under a dash")
+	await home_again(t)
+	var recoil: Node = t.sm.states["Recoil"]
+	await at_feet(t, Vector2(1500, 800))
+	await play_turn(t, "Breath", true)
+	await t.wait_until(func(): return recoil.open, 60)
+	for old in t.sm.live_burns():
+		old.queue_free()
+	var burn := BurnLine.new()
+	burn.player = t.player
+	burn.boss = t.boss
+	burn.origin = RECOIL_BURN_ORIGIN
+	burn.angle = deg_to_rad(RECOIL_BURN_ANGLE)
+	burn.life = 9.0
+	t.sm.add_floor_hazard(burn, Vector2.ZERO)
+	await at_feet(t, RECOIL_BURN_FEET)
+	t.clear_iframes()
+	t.defense.drain_stamina(t.defense.stamina - 20.0)
+	seen.clear()
+	var health: int = t.boss.boss_health
+	bot = model.Bot.new(t, 2, true)
+	# Steps it stood still short of him, its keys let go and the bar under a dash.
+	var waited := 0
+	for f in 60 * 4:
+		if not recoil.open and not t.player.get_node("Finisher").is_active():
+			break
+		bot.step()
+		await t.physics_frame
+		if f > 3 and not bot.punishing and bot.keys.held.is_empty() and t.defense.stamina < t.defense.max_stamina * model.DASH_COST:
+			waited += 1
+	bot.keys.stop()
+	var dealt: int = health - t.boss.boss_health
+	t.log_p("  burns %d, waited for the bar %.2f s, dealt %d, the player at %s" % [seen.of(seen.hits, BurnLine.BURN_ID),
+		waited * FRAME, dealt, soles(t)])
+	t.check(seen.of(seen.hits, BurnLine.BURN_ID) == 0 and waited >= 12 and dealt >= 1,
+		"it waits for the bar, dashes across unburnt and lands a punch on him in the opening (%d)" % dealt)
 
 
 #LAZY

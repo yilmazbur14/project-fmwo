@@ -137,6 +137,7 @@ DEFAULT_MODES=(
 	"bounds fight=eric" "bounds fight=computah" "bounds fight=carter" "bounds fight=carter_akuma"
 	"bounds fight=josh" "bounds fight=mason" "bounds fight=jordan" "bounds fight=liam"
 	"bounds fight=matt" "bounds fight=burak" "bounds fight=danny" "bounds fight=greyson"
+	crowd_murmur
 	"jordan_kaiju tier=layout" "jordan_kaiju tier=intro" "jordan_kaiju tier=breath" "jordan_kaiju tier=stomp"
 	"jordan_kaiju tier=punish" "jordan_kaiju tier=recoil" "jordan_kaiju tier=occlusion" "jordan_kaiju tier=defeat"
 	"jordan_kaiju tier=lazy" "jordan_kaiju tier=art art=raw"

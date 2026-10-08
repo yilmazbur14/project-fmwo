@@ -7,7 +7,13 @@ extends RefCounted
 #               0.25 s late
 #   dashes      a perfect dodge 70% of the time (its window over 150 ms), else the dash goes 0.12 s early or late; never
 #               below a third of the stamina bar unless forced
-#   moving      600 px/s about a spot in the open ring, the burn lines crossed only by a dash
+#   timing      every press and dash planned for a contact is due on the fight's own clock (his fight_clock), as a
+#               player times them to what they see, so a hit-stop or a parry's freeze and slow motion (0.31 s for 0.06 s
+#               of the fight's) holds them as it holds the fight. Counted in frames until the 2026-10-07 playtest, they
+#               came due about 0.25 s early after every parry: the next figure's press whiffed and its blast landed.
+#   moving      600 px/s about a spot in the open ring, the burn lines crossed only by a dash: on the way to a punish one
+#               in the way is dashed square across, or waited at for the dash's third of the bar (it walked through, or
+#               dashed along it the way it was walking and stood in it, a half-heart or two a breath's opening)
 #   offence     every knock-off and Break punched to its POW, the finisher mashed at 8.5 presses a second, the interval
 #               accumulated so a fixed-fps run doesn't round it down
 # Its answers: the figures' blasts parried when one will be on them; the beam outrun along its sweep where there is room
@@ -158,7 +164,11 @@ class Bot:
 	var learned := false
 	var keys
 	var exposures := {}
+	# Real time, a frame a step: the guard key's hold, the dash's, the punches and the mash.
 	var clock := 0.0
+	# The fight's own clock: everything planned for a contact.
+	var game := 0.0
+	var game_origin := 0.0
 	# Guard presses due: [game time, the figure it is for or null]. A figure's press is only made if it is still
 	# within 150 px then (the playtest bot's rule). A press is let go 4 frames later.
 	var presses: Array = []
@@ -183,6 +193,8 @@ class Bot:
 	var phase_b_at := -1.0
 	var last_state := ""
 	var debug := false
+	# The share of learned presses that go 0.25 s late: a var, so a check can pin it.
+	var late_share := 0.15
 	var press_log: Array = []
 	var gauge_in := 0.0
 	var gauge_out := 0.0
@@ -201,11 +213,12 @@ class Bot:
 		t.defense.hit_taken.connect(_on_hit)
 		t.defense.parried.connect(func(_h, _p, _s, _n): parries += 1)
 		t.defense.perfect_dodged.connect(func(_h): dodges += 1)
-		t.defense.block_pressed.connect(func(credited): press_log.append([snappedf(clock, 0.01), credited]))
+		t.defense.block_pressed.connect(func(credited): press_log.append([snappedf(game, 0.01), credited]))
 		debug = OS.get_cmdline_user_args().has("debug=1")
 		t.boss.break_gauge.changed.connect(_on_gauge)
 		t.boss.break_gauge.broke.connect(_on_broke)
 		health_was = t.boss.boss_health
+		game_origin = t.boss.fight_clock
 
 	func _on_gauge(value: float, _max_value: float) -> void:
 		last_drop = 0.0
@@ -242,9 +255,9 @@ class Bot:
 		hits[hit.attack_id] = hits.get(hit.attack_id, 0) + 1
 		lost += hit.damage
 		if debug and hit.attack_id == &"jordan_kaiju_stomp":
-			t.log_p("  STOMP HIT at %.2f: presses %s, stamina %.0f, planned %s" % [clock, press_log.slice(-3), t.defense.stamina, presses])
+			t.log_p("  STOMP HIT at %.2f: presses %s, stamina %.0f, planned %s" % [game, press_log.slice(-3), t.defense.stamina, presses])
 		elif debug and hit.attack_id == &"jordan_kaiju_breath":
-			t.log_p("  BREATH HIT at %.2f: outrun %s, dash due %s, stamina %.0f, feet %s" % [clock, outrun_until > clock, dash_due, t.defense.stamina, soles()])
+			t.log_p("  BREATH HIT at %.2f: outrun %s, dash due %s, stamina %.0f, feet %s" % [game, outrun_until > game, dash_due, t.defense.stamina, soles()])
 
 	func _see(id: StringName, key: Variant) -> bool:
 		if planned.has(key):
@@ -268,6 +281,7 @@ class Bot:
 
 	func step() -> void:
 		clock += FRAME
+		game = t.boss.fight_clock - game_origin
 		_track_damage()
 		var sm = t.sm
 		var state: String = sm.current_state.name
@@ -298,11 +312,11 @@ class Bot:
 		if punishing:
 			punishing = false
 			t.player.clear_face_point()
-		if outrun_until > clock and not outrun_plan.is_empty():
+		if outrun_until > game and not outrun_plan.is_empty():
 			var a: float = (soles() - outrun_plan.origin).angle()
 			_move(Vector2.from_angle(a).rotated(PI / 2.0) * float(outrun_plan.dir), true)
 			return
-		if step_out_until > clock:
+		if step_out_until > game:
 			_move(step_out_dir, true)
 			return
 		var to: Vector2 = STATION - soles()
@@ -310,20 +324,34 @@ class Bot:
 
 	#MOVING
 
-	func _move(direction: Vector2, urgent: bool) -> void:
+	# On the way to a punish a burn line in the way is dashed straight over, the shortest way across it, or waited at for
+	# the dash's third of the bar, and walked straight off if it is already underfoot.
+	func _move(direction: Vector2, urgent: bool, punish := false) -> void:
 		if direction == Vector2.ZERO:
 			keys.stop()
 			return
 		var ahead: Vector2 = soles() + direction.normalized() * 60.0
 		for burn in t.sm.live_burns():
 			if burn.distance_to_point(ahead) <= BurnLine.HALF_WIDTH + Beam.FOOT_RADIUS + SAFETY:
+				var way: Vector2 = _across(burn, direction) if punish else direction
 				if _can_dash():
-					_dash(direction)
+					_dash(way)
+					return
+				if punish:
+					if burn.distance_to_point(soles()) <= BurnLine.HALF_WIDTH + Beam.FOOT_RADIUS:
+						keys.toward(way)
+					else:
+						keys.stop()
 					return
 				if not urgent:
 					keys.stop()
 					return
 		keys.toward(direction)
+
+	# Square across `burn`, toward the side `direction` heads for.
+	func _across(burn: Node2D, direction: Vector2) -> Vector2:
+		var normal: Vector2 = (burn.to - burn.from).orthogonal().normalized()
+		return normal if normal.dot(direction) >= 0.0 else -normal
 
 	func _can_dash() -> bool:
 		return t.defense.stamina >= t.defense.max_stamina * DASH_COST - 0.01 and not t.defense.is_dash_recovering() and not t.defense.is_dash_cooling_down()
@@ -335,7 +363,7 @@ class Bot:
 		dash_hold_until = clock + 8.0 * FRAME
 
 	func _dash_now() -> bool:
-		if dash_due.is_empty() or clock < dash_due[0]:
+		if dash_due.is_empty() or game < dash_due[0]:
 			return false
 		var direction: Vector2 = dash_due[1]
 		dash_due.clear()
@@ -347,7 +375,7 @@ class Bot:
 		var when := at - 2.0 * FRAME
 		if rng.randf() >= 0.70:
 			when += 0.12 if rng.randf() < 0.5 else -0.12
-		dash_due = [maxf(when, clock), direction]
+		dash_due = [maxf(when, game), direction]
 
 	#GUARDING
 
@@ -356,7 +384,7 @@ class Bot:
 			release_at = -1.0
 			t.release(KEY_SHIFT)
 		for i in range(presses.size() - 1, -1, -1):
-			if clock >= presses[i][0]:
+			if game >= presses[i][0]:
 				var fig = presses[i][1]
 				presses.remove_at(i)
 				if fig != null and (not is_instance_valid(fig) or fig.global_position.distance_to(t.player.global_position) > 150.0):
@@ -369,9 +397,9 @@ class Bot:
 	func _plan_parry(tell: StringName, in_seconds: float, figure: Node = null) -> void:
 		var newbie := is_new(tell)
 		var react := reaction(tell)
-		var at := clock + react
+		var at := game + react
 		if not newbie:
-			at = clock + in_seconds - 0.12 + (0.0 if rng.randf() < 0.85 else 0.25)
+			at = game + in_seconds - 0.12 + (0.0 if rng.randf() < 1.0 - late_share else 0.25)
 		presses.append([at, figure])
 
 	func _watch_figures() -> void:
@@ -399,15 +427,15 @@ class Bot:
 			var outrun: bool = room >= breath.s_end + Beam.HALF_WIDTH + Beam.FOOT_RADIUS + SAFETY
 			if outrun:
 				outrun_plan = plan
-				outrun_until = clock + (plan.fire - breath.clock) + breath.grow_time + absf(plan.end - plan.start) / plan.omega + 0.35
+				outrun_until = game + (plan.fire - breath.clock) + breath.grow_time + absf(plan.end - plan.start) / plan.omega + 0.35
 				# Moving starts after the reaction.
 				step_out_until = -1.0
 				dash_due.clear()
-				outrun_until = maxf(outrun_until, clock + react)
+				outrun_until = maxf(outrun_until, game + react)
 				_delay_move(react)
 			else:
 				var edge: float = (Beam.HALF_WIDTH + Beam.FOOT_RADIUS) / float(plan.v_eff)
-				var arrive: float = clock + (plan.contact - breath.clock) - edge
+				var arrive: float = game + (plan.contact - breath.clock) - edge
 				var a: float = (soles() - plan.origin).angle()
 				_plan_dash(arrive, -Vector2.from_angle(a).rotated(PI / 2.0) * float(plan.dir))
 
@@ -416,7 +444,7 @@ class Bot:
 	var punishing := false
 
 	func _delay_move(seconds: float) -> void:
-		hold_until = clock + seconds
+		hold_until = game + seconds
 
 	# A time on a turn's own clock, which starts over every turn, as centiseconds of the fight's: a key that tells this
 	# turn's beat from the last one's.
@@ -445,12 +473,12 @@ class Bot:
 			var reach: float = (stomp.tail_windup + stomp.tail_lead - react) * 600.0
 			if need_up <= up_room and need_up <= reach:
 				step_out_dir = Vector2.UP
-				step_out_until = clock + stomp.tail_windup + stomp.tail_spin
+				step_out_until = game + stomp.tail_windup + stomp.tail_spin
 			elif need_down <= down_room and need_down <= reach:
 				step_out_dir = Vector2.DOWN
-				step_out_until = clock + stomp.tail_windup + stomp.tail_spin
+				step_out_until = game + stomp.tail_windup + stomp.tail_spin
 			else:
-				var arrive: float = clock + stomp.tail_windup + stomp.tail_lead - 0.05
+				var arrive: float = game + stomp.tail_windup + stomp.tail_lead - 0.05
 				var away: Vector2 = (feet - kaiju.feet_point()).normalized()
 				_plan_dash(arrive, away.rotated(PI / 2.0))
 
@@ -464,7 +492,7 @@ class Bot:
 				continue
 			var feet: Vector2 = soles() - ring.global_position
 			var floor_distance: float = Vector2(feet.x, feet.y / 0.36).length()
-			var arrive: float = clock + maxf(floor_distance - ring.radius - 36.0, 0.0) / ring.speed
+			var arrive: float = game + maxf(floor_distance - ring.radius - 36.0, 0.0) / ring.speed
 			_plan_dash(arrive, (soles() - ring.global_position).normalized() * -1.0)
 
 	#OFFENCE
@@ -479,7 +507,7 @@ class Bot:
 		var spot := Vector2(edge - reach.get_center().x * t.player.global_scale.x, box.end.y - 42.0 + 3.0)
 		var to: Vector2 = spot - t.player.global_position
 		if to.length() > 10.0:
-			_move(to, true)
+			_move(to, true, true)
 			return
 		keys.stop()
 		punishing = true
