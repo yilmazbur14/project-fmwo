@@ -26,6 +26,11 @@ const ERUPTION_ID := &"greyson_eruption"
 # The rumble from waiting to going off: its level under its own and its pitch against its own.
 const RUMBLE_DB := Vector2(-12.0, 0.0)
 const RUMBLE_PITCH := Vector2(0.9, 1.15)
+# The yellow ring stands this far over the zone's centre, clear of a player's head there: zone 1 is centred on the
+# player's feet, and a ring standing on them (ParryTell's z, over the fighters) covered them to the chest just as they
+# had to move. RING_TOP keeps the ring's 72 px frame inside the ropes for a zone planted up by the top one.
+const RING_LIFT := 100.0
+const RING_TOP := 72.0
 
 enum Phase { PENDING, SCHEDULED, ERUPTING, FIZZLING }
 
@@ -140,7 +145,20 @@ func _physics_process(delta: float) -> void:
 func _rush() -> void:
 	stage = 3
 	ring_after = phase_clock
-	ParryTell.telegraph(self, ERUPTION_ID, fuse_left + zone.ring_slack, get_global_position)
+	ParryTell.telegraph(self, ERUPTION_ID, fuse_left + zone.ring_slack, ring_anchor)
+
+
+# Never past the top rope, nor up into his HUD block over the middle of the ring (which is drawn over it): a zone
+# planted that high has its ring held just under them instead.
+func ring_anchor() -> Vector2:
+	var at := global_position - Vector2(0.0, RING_LIFT)
+	var top: float = zone.mark_clip.position.y
+	if is_instance_valid(body):
+		var hud: Rect2 = body.state_machine.HUD_FADE_RECT
+		if at.x >= hud.position.x and at.x <= hud.end.x:
+			top = maxf(top, hud.end.y)
+	at.y = maxf(at.y, top + RING_TOP)
+	return at
 
 
 func _erupt() -> void:

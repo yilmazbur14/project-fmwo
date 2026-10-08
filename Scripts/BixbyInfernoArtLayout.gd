@@ -98,6 +98,25 @@ const SCORCH_FADE_TIME := 1.0
 # The volley's fireballs free themselves once they are this far above the top of the screen.
 const RISE_OFF_SCREEN_Y := -60.0
 
+#EMBERS (BixbyEmberScript: bixby_fire_trail.png and bixby_fire_scorch.png, 40x40 frames at 3x around the bed's
+# centre, texel (20, 31), on the timings the fire breath's trail had)
+const EMBER_SCORCH_SHEET := preload("res://Assets/Characters/Bixby/bixby_fire_scorch.png")
+const EMBER_FRAME_WIDTH := 40
+# What hurts, centred on the ember: the burning bed, texels (4, 26) to (35, 35).
+const EMBER_SIZE := Vector2(96, 30)
+const EMBER_IGNITE_FRAMES := [0, 1, 2]
+const EMBER_IGNITE_TIMES := [0.07, 0.07, 0.09]
+const EMBER_BURN_LOOP_FRAMES := [3, 4, 5, 6]
+const EMBER_BURN_LOOP_TIME := 0.11
+const EMBER_BURN_OUT_FRAMES := [7, 8, 9]
+const EMBER_BURN_OUT_TIMES := [0.12, 0.14, 0.18]
+# It hurts from ignite frame 1 until burn-out frame 2 starts.
+const EMBER_HURTS_FROM_IGNITE_STEP := 1
+const EMBER_HURTS_UNTIL_BURN_OUT_STEP := 2
+# The scorch smoulders on frame 0, then fades out on frame 1.
+const EMBER_SCORCH_SMOULDER_TIME := 0.4
+const EMBER_SCORCH_FADE_TIME := 1.0
+
 #FINAL ART
 const USE_FINAL_FIREBALL := true
 const USE_FINAL_FLOOD := true

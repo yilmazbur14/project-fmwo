@@ -7,9 +7,9 @@
 ~ start
 Captain Burak: Ahoy, newcomer! Welcome aboard the server. [#captain=smug]
 Burak: ...who are you supposed to be?
-Captain Burak: Captain Burak. Best-dressed member this server's ever seen. [#captain=point]
-Burak: Captain? It's a Discord server.
-Captain Burak: And every server needs a captain. Want your @member rank? Get past me first. [#captain=shrug]
+Captain Burak: ScurvyCumslinger to you newcomer. [#captain=point]
+Burak: ...
+Captain Burak: You want a shot at the other members? You wanna meet our king Jordan? You'll have to get through me pal [#captain=shrug]
 do warning_shot()
 Captain Burak: Hah! Relax, kiddo. I'll go easy on ya. [#captain=laugh]
 => END

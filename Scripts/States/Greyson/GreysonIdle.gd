@@ -2,7 +2,8 @@ extends State
 
 # The breath before each cycle, where he gets up after a Break or a finisher, and where he is left standing
 # between the two. A chain that pays the Break waits here while the gauge is locked
-# (GreysonStateMachine.gauge_ready), and start_cycle() is only ever reached from here.
+# (GreysonStateMachine.gauge_ready), one that throws while his last throw's plates are still flying for up to
+# plate_wait_cap (throw_ready), and start_cycle() is only ever reached from here.
 
 @export var body : CharacterBody2D
 @export var beat_timer : Timer

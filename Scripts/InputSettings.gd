@@ -81,8 +81,11 @@ const MOVE_DIRECTIONS: Array[Vector2] = [
 	Vector2(-1, 0), Vector2(-1, -1), Vector2(0, -1), Vector2(1, -1),
 ]
 # Of the engine's vector, which has already taken the 0.2 action dead zone off and rescaled the rest,
-# so 0.4 of it is 52% of a full push.
-const MOVE_THRESHOLD := 0.4
+# so 0.125 of it is 30% of a full push: clear of a resting stick's drift, which the 0.2 already takes.
+# It was 0.4 (52%) until the 2026-10-04 playtest, inherited from the old ui_* read rather than chosen,
+# and a pad walked nowhere at half a push and spent a dash in place when it was pressed with the stick
+# still on its way out.
+const MOVE_THRESHOLD := 0.125
 # A stick has to be pushed at least this far to count as "the player is using the pad": drift must
 # never flip the prompts on its own.
 const DEVICE_AXIS_THRESHOLD := 0.5

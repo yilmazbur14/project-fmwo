@@ -1,0 +1,504 @@
+{
+ "boss": "matt",
+ "sheet": "res://Assets/Characters/Matt/matt_idle.png",
+ "frame": [
+  96,
+  96
+ ],
+ "feet": [
+  48,
+  95
+ ],
+ "idle_frames": [
+  0,
+  1,
+  2,
+  3
+ ],
+ "note": "Texels on the frame, (0,0) its top-left; a ring hook is its hole, the texel the string ties to. \"back\" sits between the shoulder blades, behind the body on every front view: draw its string UNDER the sprite. \"_l\"/\"_r\" are screen left/right on the unflipped sheet (mirror x as frame_width - 1 - x when flipped). relative_to_feet = texel - feet. carry_frames: the same points tracked onto his fight sheets; null = not found there, to be filled by hand.",
+ "frames": {
+  "0": {
+   "head": [
+    48,
+    12
+   ],
+   "back": [
+    48,
+    58
+   ],
+   "wrist_l": [
+    14,
+    72
+   ],
+   "wrist_r": [
+    82,
+    72
+   ],
+   "knee_l": [
+    38,
+    80
+   ],
+   "knee_r": [
+    58,
+    80
+   ]
+  },
+  "1": {
+   "head": [
+    47,
+    12
+   ],
+   "back": [
+    48,
+    58
+   ],
+   "wrist_l": [
+    14,
+    71
+   ],
+   "wrist_r": [
+    82,
+    71
+   ],
+   "knee_l": [
+    38,
+    80
+   ],
+   "knee_r": [
+    58,
+    80
+   ]
+  },
+  "2": {
+   "head": [
+    48,
+    13
+   ],
+   "back": [
+    48,
+    58
+   ],
+   "wrist_l": [
+    14,
+    72
+   ],
+   "wrist_r": [
+    82,
+    72
+   ],
+   "knee_l": [
+    38,
+    80
+   ],
+   "knee_r": [
+    58,
+    80
+   ]
+  },
+  "3": {
+   "head": [
+    49,
+    12
+   ],
+   "back": [
+    48,
+    58
+   ],
+   "wrist_l": [
+    14,
+    72
+   ],
+   "wrist_r": [
+    82,
+    72
+   ],
+   "knee_l": [
+    38,
+    80
+   ],
+   "knee_r": [
+    58,
+    80
+   ]
+  }
+ },
+ "relative_to_feet": {
+  "0": {
+   "head": [
+    0,
+    -83
+   ],
+   "back": [
+    0,
+    -37
+   ],
+   "wrist_l": [
+    -34,
+    -23
+   ],
+   "wrist_r": [
+    34,
+    -23
+   ],
+   "knee_l": [
+    -10,
+    -15
+   ],
+   "knee_r": [
+    10,
+    -15
+   ]
+  },
+  "1": {
+   "head": [
+    -1,
+    -83
+   ],
+   "back": [
+    0,
+    -37
+   ],
+   "wrist_l": [
+    -34,
+    -24
+   ],
+   "wrist_r": [
+    34,
+    -24
+   ],
+   "knee_l": [
+    -10,
+    -15
+   ],
+   "knee_r": [
+    10,
+    -15
+   ]
+  },
+  "2": {
+   "head": [
+    0,
+    -82
+   ],
+   "back": [
+    0,
+    -37
+   ],
+   "wrist_l": [
+    -34,
+    -23
+   ],
+   "wrist_r": [
+    34,
+    -23
+   ],
+   "knee_l": [
+    -10,
+    -15
+   ],
+   "knee_r": [
+    10,
+    -15
+   ]
+  },
+  "3": {
+   "head": [
+    1,
+    -83
+   ],
+   "back": [
+    0,
+    -37
+   ],
+   "wrist_l": [
+    -34,
+    -23
+   ],
+   "wrist_r": [
+    34,
+    -23
+   ],
+   "knee_l": [
+    -10,
+    -15
+   ],
+   "knee_r": [
+    10,
+    -15
+   ]
+  }
+ },
+ "carry_frames": {
+  "Matt/matt_yell_tell.png": {
+   "0": {
+    "head": [
+     48,
+     11
+    ],
+    "back": [
+     48,
+     57
+    ],
+    "wrist_l": [
+     13,
+     68
+    ],
+    "wrist_r": [
+     83,
+     68
+    ],
+    "knee_l": [
+     38,
+     80
+    ],
+    "knee_r": [
+     58,
+     80
+    ]
+   },
+   "1": {
+    "head": [
+     48,
+     12
+    ],
+    "back": [
+     48,
+     57
+    ],
+    "wrist_l": [
+     11,
+     65
+    ],
+    "wrist_r": [
+     84,
+     66
+    ],
+    "knee_l": [
+     38,
+     80
+    ],
+    "knee_r": [
+     58,
+     80
+    ]
+   }
+  },
+  "Matt/matt_yell_up.png": {
+   "0": {
+    "head": [
+     48,
+     15
+    ],
+    "back": [
+     48,
+     57
+    ],
+    "wrist_l": [
+     15,
+     69
+    ],
+    "wrist_r": [
+     80,
+     68
+    ],
+    "knee_l": [
+     37,
+     80
+    ],
+    "knee_r": [
+     59,
+     80
+    ]
+   },
+   "1": {
+    "head": null,
+    "back": [
+     48,
+     57
+    ],
+    "wrist_l": [
+     13,
+     67
+    ],
+    "wrist_r": [
+     83,
+     67
+    ],
+    "knee_l": [
+     37,
+     80
+    ],
+    "knee_r": [
+     59,
+     80
+    ]
+   },
+   "2": {
+    "head": null,
+    "back": [
+     48,
+     58
+    ],
+    "wrist_l": [
+     11,
+     66
+    ],
+    "wrist_r": [
+     85,
+     66
+    ],
+    "knee_l": [
+     37,
+     80
+    ],
+    "knee_r": [
+     59,
+     80
+    ]
+   },
+   "3": {
+    "head": null,
+    "back": [
+     49,
+     58
+    ],
+    "wrist_l": [
+     13,
+     66
+    ],
+    "wrist_r": [
+     87,
+     66
+    ],
+    "knee_l": [
+     37,
+     80
+    ],
+    "knee_r": [
+     59,
+     80
+    ]
+   },
+   "4": {
+    "head": null,
+    "back": [
+     47,
+     58
+    ],
+    "wrist_l": [
+     9,
+     66
+    ],
+    "wrist_r": [
+     83,
+     66
+    ],
+    "knee_l": [
+     37,
+     80
+    ],
+    "knee_r": [
+     59,
+     80
+    ]
+   }
+  },
+  "Matt/matt_roar.png": {
+   "0": {
+    "head": [
+     48,
+     12
+    ],
+    "back": [
+     48,
+     57
+    ],
+    "wrist_l": [
+     16,
+     70
+    ],
+    "wrist_r": [
+     79,
+     69
+    ],
+    "knee_l": [
+     38,
+     80
+    ],
+    "knee_r": [
+     58,
+     80
+    ]
+   },
+   "1": {
+    "head": [
+     48,
+     12
+    ],
+    "back": null,
+    "wrist_l": [
+     10,
+     64
+    ],
+    "wrist_r": [
+     86,
+     64
+    ],
+    "knee_l": [
+     37,
+     80
+    ],
+    "knee_r": [
+     59,
+     80
+    ]
+   },
+   "2": {
+    "head": [
+     49,
+     12
+    ],
+    "back": null,
+    "wrist_l": [
+     12,
+     65
+    ],
+    "wrist_r": [
+     88,
+     65
+    ],
+    "knee_l": [
+     37,
+     80
+    ],
+    "knee_r": [
+     59,
+     80
+    ]
+   },
+   "3": {
+    "head": [
+     47,
+     13
+    ],
+    "back": null,
+    "wrist_l": [
+     8,
+     64
+    ],
+    "wrist_r": [
+     84,
+     64
+    ],
+    "knee_l": [
+     37,
+     80
+    ],
+    "knee_r": [
+     59,
+     80
+    ]
+   }
+  }
+ }
+}

@@ -16,6 +16,7 @@ extends RefCounted
 # The placeholders are cut from the first approved sheet, jordan_redesign.png.
 
 const SCALE := 3.0
+const RiderSheets := preload("res://Scripts/JordanRiderSheets.gd")
 
 #JORDAN (horizontal strips of 96x96 frames, soles on row 95, x = 48 his centre line)
 const FRAME_SIZE := Vector2(96, 96)
@@ -31,6 +32,9 @@ const FLOOR_POINT := Vector2(0, 96)
 # up; frame 1 his signature fist-pump, a pink puff and a gold star off the fist. Every placeholder
 # below is one of those two.
 const REDESIGN_SHEET := "res://Assets/Characters/Jordan/jordan_redesign.png"
+# The v2 idle, which the finale's walk-out stands in on until its own sheets are drawn: the redesign sheet above is
+# the v1 look.
+const IDLE_SHEET := "res://Assets/Characters/Jordan/jordan_idle.png"
 
 # What the player can punch and turns to face: the taunt's body, the union of all four frames, measured
 # off the shipped sheet (art_source/jordan_anims/janim_measure.py). Rows 6 to 95 are the tip of his
@@ -74,8 +78,8 @@ const BROKEN_CROWN := Vector2(56, 34)
 # frames - squash, stretch or the keel-over. The placeholders are single frames and those clips are all
 # the life they have; the final sheets draw their own, so they name none and he rests at SCALE,
 # upright (the RESET clip). The final sheets are 96x96 strips with his soles on row 95, so ANCHOR and
-# SPRITE_OFFSET hold for all of them. Turn a flag on only once its sheet is in Assets/Characters/Jordan:
-# nothing loads a final sheet while its flag is off.
+# SPRITE_OFFSET hold for all of them. Turn a flag on only once its sheet is approved: nothing loads a final
+# sheet while its flag is off, and anim() plays the stand-in until the editor has imported the sheet.
 const USE_FINAL_ANIMS := {
 	&"idle": true,
 	&"summon": true,
@@ -84,6 +88,22 @@ const USE_FINAL_ANIMS := {
 	&"hit": true,
 	&"defeat": true,
 	&"broken": true,
+	# The finale's walk-out (JordanWalkOut), approved 2026-09-28: on stand-ins until the editor has imported
+	# jordan_getup.png and jordan_walk_away.png (anim()).
+	&"getup": true,
+	&"walk_away": true,
+	# Phase 1 on the kaiju (JordanKaijuLayout.USE_KAIJU): his ride and mat sheets, approved 2026-10-04, read with their
+	# contract's per-frame anchors (JordanRiderSheets, anchors()); the stand-ins below are cut from his other sheets.
+	&"ride_idle": true,
+	&"ride_throw": true,
+	&"ride_brace": true,
+	&"ride_taunt": true,
+	&"topple": true,
+	&"dismount_daze": true,
+	&"climb": true,
+	&"box_open": true,
+	&"toss": true,
+	&"butt_land": true,
 }
 
 const PLACEHOLDER_ANIMS := {
@@ -99,6 +119,23 @@ const PLACEHOLDER_ANIMS := {
 	&"defeat": {sheet = REDESIGN_SHEET, frames = [0], times = [1.0], loop = false, motion = &"defeated"},
 	# His idle, standing: the redesign has no kneel.
 	&"broken": {sheet = REDESIGN_SHEET, frames = [0], times = [1.0], loop = true},
+	# Up off his knee straight into the v2 idle, and walking away on its loop, the idle clip bobbing him.
+	&"getup": {sheet = IDLE_SHEET, frames = [0], times = [0.5], loop = false},
+	&"walk_away": {sheet = IDLE_SHEET, frames = [0, 1, 2, 3], times = [0.2, 0.16, 0.2, 0.16], loop = true, motion = &"idle"},
+	&"ride_idle": {sheet = IDLE_SHEET, frames = [0, 1, 2, 3], times = [0.2, 0.16, 0.2, 0.16], loop = true},
+	# The summon's crouch, punch up and "yes!" for the throw from the box.
+	&"ride_throw": {sheet = "res://Assets/Characters/Jordan/jordan_summon.png", frames = [0, 1, 2, 3], times = [0.20, 0.20, 0.10, 0.15], loop = false},
+	&"ride_brace": {sheet = "res://Assets/Characters/Jordan/jordan_hit.png", frames = [0, 1], times = [0.10], loop = true},
+	&"ride_taunt": {sheet = "res://Assets/Characters/Jordan/jordan_taunt.png", frames = [0, 1, 2, 3], times = [0.13, 0.11, 0.13, 0.11], loop = true},
+	# Flailing off its head: the hit, over and over, on the arc the code flies him along.
+	&"topple": {sheet = "res://Assets/Characters/Jordan/jordan_hit.png", frames = [0, 1], times = [0.06, 0.08], loop = true},
+	# The defeat's kneel, dazed.
+	&"dismount_daze": {sheet = "res://Assets/Characters/Jordan/jordan_defeat.png", frames = [3, 4], times = [0.15], loop = true},
+	&"climb": {sheet = "res://Assets/Characters/Jordan/jordan_summon.png", frames = [0, 1], times = [0.10, 0.5], loop = false},
+	&"box_open": {sheet = "res://Assets/Characters/Jordan/jordan_taunt.png", frames = [0], times = [0.6], loop = false},
+	&"toss": {sheet = "res://Assets/Characters/Jordan/jordan_summon.png", frames = [1, 2, 3], times = [0.08, 0.08, 0.14], loop = false},
+	# Down onto the mat into the defeat's last frame, which the walk-out gets up from.
+	&"butt_land": {sheet = "res://Assets/Characters/Jordan/jordan_defeat.png", frames = [3, 4, 5], times = [0.06, 0.08, 1.0], loop = false},
 }
 
 # The artist's timings, except the summon's wind-up.
@@ -126,6 +163,33 @@ const FINAL_ANIMS := {
 	# A Break: the defeat's kneel by the fallen box, held. There is no Broken art of his own.
 	&"broken": {sheet = "res://Assets/Characters/Jordan/jordan_defeat.png",
 		frames = [4], times = [1.0], loop = true},
+	# The finale's walk-out: up from the defeat's last kneel (frame 5) to standing, box in hand, in the walk-out's
+	# 0.5 s; and the walk seen from behind, carrying the box, its planted foot always on row 95.
+	&"getup": {sheet = "res://Assets/Characters/Jordan/jordan_getup.png",
+		frames = [0, 1, 2, 3], times = [0.125], loop = false},
+	&"walk_away": {sheet = "res://Assets/Characters/Jordan/jordan_walk_away.png",
+		frames = [0, 1, 2, 3, 4, 5], times = [0.1], loop = true},
+	# Phase 1 on the kaiju: the art contract's sheets and timings (scratchpad jordan_kaiju/PLAN.md section 5).
+	&"ride_idle": {sheet = "res://Assets/Characters/Jordan/jordan_ride_idle.png",
+		frames = [0, 1, 2, 3], times = [0.2, 0.16, 0.2, 0.16], loop = true},
+	&"ride_throw": {sheet = "res://Assets/Characters/Jordan/jordan_ride_throw.png",
+		frames = [0, 1, 2, 3], times = [0.20, 0.20, 0.10, 0.15], loop = false},
+	&"ride_brace": {sheet = "res://Assets/Characters/Jordan/jordan_ride_brace.png",
+		frames = [0, 1], times = [0.10], loop = true},
+	&"ride_taunt": {sheet = "res://Assets/Characters/Jordan/jordan_ride_taunt.png",
+		frames = [0, 1, 2, 3], times = [0.13, 0.11, 0.13, 0.11], loop = true},
+	&"topple": {sheet = "res://Assets/Characters/Jordan/jordan_topple.png",
+		frames = [0, 1, 2, 3, 4, 5], times = [0.06, 0.08, 0.10, 0.10, 0.10, 0.11], loop = false},
+	&"dismount_daze": {sheet = "res://Assets/Characters/Jordan/jordan_dismount_daze.png",
+		frames = [0, 1, 2, 3], times = [0.15], loop = true},
+	&"climb": {sheet = "res://Assets/Characters/Jordan/jordan_climb.png",
+		frames = [0, 1, 2, 3, 4, 5], times = [0.10], loop = false},
+	&"box_open": {sheet = "res://Assets/Characters/Jordan/jordan_box_open.png",
+		frames = [0, 1, 2, 3, 4, 5], times = [0.10], loop = false},
+	&"toss": {sheet = "res://Assets/Characters/Jordan/jordan_toss.png",
+		frames = [0, 1, 2], times = [0.08, 0.08, 0.14], loop = false},
+	&"butt_land": {sheet = "res://Assets/Characters/Jordan/jordan_butt_land.png",
+		frames = [0, 1, 2, 3, 4, 5], times = [0.06, 0.08, 0.10, 0.12, 0.14, 1.0], loop = false},
 }
 
 #JUGGLED (JordanJuggled, a BossJuggled, under the tiered finisher's uppercuts)
@@ -164,8 +228,18 @@ static func juggle() -> Dictionary:
 	return FINAL_JUGGLE
 
 
+# The per-frame anchors of `anim_name`'s own sheet (JordanRiderSheets) while it is the one drawn; [] for a stand-in.
+static func anchors(anim_name: StringName) -> Array:
+	if not RiderSheets.SHEETS.has(anim_name) or not USE_FINAL_ANIMS.get(anim_name, false):
+		return []
+	if not ResourceLoader.exists(FINAL_ANIMS[anim_name].sheet):
+		return []
+	return RiderSheets.SHEETS[anim_name]
+
+
+# The final sheet once its flag is on and the editor has imported it; its stand-in until then.
 static func anim(anim_name: StringName) -> Dictionary:
-	if USE_FINAL_ANIMS.get(anim_name, false):
+	if USE_FINAL_ANIMS.get(anim_name, false) and ResourceLoader.exists(FINAL_ANIMS[anim_name].sheet):
 		return FINAL_ANIMS[anim_name]
 	return PLACEHOLDER_ANIMS[anim_name]
 
@@ -190,3 +264,25 @@ static func broken_daze_anchor() -> Vector2:
 
 static func tell_anchor() -> Vector2:
 	return frame_local(WINDUP_CROWN) + Vector2(0, -TELL_GAP)
+
+
+#THEME (his kaiju fight, and the finale's room playing it muffled)
+# "The Last Name on the List", written for this fight - see art_source/music/jordan_theme.rb. One 16-bar cycle cut
+# to the beat, so LOOP_FORWARD runs it end to end with no seam. Kept in Music/OriginalThemes/. From 2026-09-28 the
+# user's own track, "Neo Tokyo", played here whenever it was in; since 2026-10-06 that is his god fight's alone
+# (JordanGodLayout.MUSIC_LOCAL; the user: "we dont want to use the same music as god jordan so lets use the music you
+# had created in the first place for the jordan fight"), so this plays his first fight on every machine.
+const MUSIC := {
+	"stream": "res://Assets/Audio/Music/OriginalThemes/jordan_theme.wav",
+	"volume_db": -7.0,
+}
+
+
+# His theme, loaded and set to loop, and the level it plays at in his fight.
+static func theme() -> Dictionary:
+	var stream = load(MUSIC.stream)
+	if stream is AudioStreamWAV:
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin = 0
+		stream.loop_end = int(stream.get_length() * stream.mix_rate)
+	return {"stream": stream, "volume_db": MUSIC.volume_db}

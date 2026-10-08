@@ -1,0 +1,349 @@
+{
+ "boss": "danny_sumo",
+ "sheet": "res://Assets/Characters/Danny/Sumo/danny_sumo_idle.png",
+ "frame": [
+  176,
+  144
+ ],
+ "feet": [
+  88,
+  143
+ ],
+ "idle_frames": [
+  0,
+  1,
+  2,
+  3
+ ],
+ "note": "Texels on the frame, (0,0) its top-left; a ring hook is its hole, the texel the string ties to. \"back\" sits between the shoulder blades, behind the body on every front view: draw its string UNDER the sprite. \"_l\"/\"_r\" are screen left/right on the unflipped sheet (mirror x as frame_width - 1 - x when flipped). relative_to_feet = texel - feet. carry_frames: the same points tracked onto his fight sheets; null = not found there, to be filled by hand.",
+ "frames": {
+  "0": {
+   "head": [
+    88,
+    7
+   ],
+   "back": [
+    88,
+    60
+   ],
+   "wrist_l": [
+    24,
+    89
+   ],
+   "wrist_r": [
+    136,
+    89
+   ],
+   "knee_l": [
+    26,
+    114
+   ],
+   "knee_r": [
+    150,
+    114
+   ]
+  },
+  "1": {
+   "head": [
+    88,
+    8
+   ],
+   "back": [
+    88,
+    60
+   ],
+   "wrist_l": [
+    24,
+    89
+   ],
+   "wrist_r": [
+    136,
+    89
+   ],
+   "knee_l": [
+    26,
+    114
+   ],
+   "knee_r": [
+    150,
+    114
+   ]
+  },
+  "2": {
+   "head": [
+    88,
+    9
+   ],
+   "back": [
+    88,
+    60
+   ],
+   "wrist_l": [
+    24,
+    89
+   ],
+   "wrist_r": [
+    136,
+    89
+   ],
+   "knee_l": [
+    26,
+    114
+   ],
+   "knee_r": [
+    150,
+    114
+   ]
+  },
+  "3": {
+   "head": [
+    88,
+    8
+   ],
+   "back": [
+    88,
+    60
+   ],
+   "wrist_l": [
+    24,
+    89
+   ],
+   "wrist_r": [
+    136,
+    89
+   ],
+   "knee_l": [
+    26,
+    114
+   ],
+   "knee_r": [
+    150,
+    114
+   ]
+  }
+ },
+ "relative_to_feet": {
+  "0": {
+   "head": [
+    0,
+    -136
+   ],
+   "back": [
+    0,
+    -83
+   ],
+   "wrist_l": [
+    -64,
+    -54
+   ],
+   "wrist_r": [
+    48,
+    -54
+   ],
+   "knee_l": [
+    -62,
+    -29
+   ],
+   "knee_r": [
+    62,
+    -29
+   ]
+  },
+  "1": {
+   "head": [
+    0,
+    -135
+   ],
+   "back": [
+    0,
+    -83
+   ],
+   "wrist_l": [
+    -64,
+    -54
+   ],
+   "wrist_r": [
+    48,
+    -54
+   ],
+   "knee_l": [
+    -62,
+    -29
+   ],
+   "knee_r": [
+    62,
+    -29
+   ]
+  },
+  "2": {
+   "head": [
+    0,
+    -134
+   ],
+   "back": [
+    0,
+    -83
+   ],
+   "wrist_l": [
+    -64,
+    -54
+   ],
+   "wrist_r": [
+    48,
+    -54
+   ],
+   "knee_l": [
+    -62,
+    -29
+   ],
+   "knee_r": [
+    62,
+    -29
+   ]
+  },
+  "3": {
+   "head": [
+    0,
+    -135
+   ],
+   "back": [
+    0,
+    -83
+   ],
+   "wrist_l": [
+    -64,
+    -54
+   ],
+   "wrist_r": [
+    48,
+    -54
+   ],
+   "knee_l": [
+    -62,
+    -29
+   ],
+   "knee_r": [
+    62,
+    -29
+   ]
+  }
+ },
+ "carry_frames": {
+  "Danny/Sumo/danny_sumo_jump.png": {
+   "0": {
+    "head": null,
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "1": {
+    "head": [
+     88,
+     9
+    ],
+    "back": [
+     88,
+     62
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": [
+     26,
+     122
+    ],
+    "knee_r": null
+   },
+   "2": {
+    "head": null,
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   }
+  },
+  "Danny/Sumo/danny_sumo_air.png": {
+   "0": {
+    "head": [
+     82,
+     19
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "1": {
+    "head": [
+     86,
+     17
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "2": {
+    "head": [
+     93,
+     19
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "3": {
+    "head": [
+     89,
+     17
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   }
+  },
+  "Danny/Sumo/danny_sumo_slam.png": {
+   "0": {
+    "head": [
+     88,
+     12
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "1": {
+    "head": null,
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": [
+     134,
+     75
+    ],
+    "knee_l": null,
+    "knee_r": null
+   },
+   "2": {
+    "head": [
+     88,
+     9
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   }
+  }
+ }
+}

@@ -1,16 +1,21 @@
 """The red mark on the floor under the spot Eric's thrown greatsword is going to land on, so the throw
 is still readable once the player has walked off it (Scripts/EricSwordMark.gd).
 
-  eric_sword_mark  12 x 152x52, pivot (76, 26)
-                   0-8   the fixed target ring, plus a second ring closing onto it from 1.8x its
+  eric_sword_mark  12 x 146x168, pivot (73, 84)
+                   0-8   the fixed target ring, plus a second ring closing onto it from 1.5x its
                          radius to just outside it
                    9     the commit frame: the target ring lit hot, with ticks turned in on it
                    10-11 the impact flash, played once where the blade goes in
 
-The ellipse is squashed to eric_leap_shadow.png's own ratio (its lowest frame is 44 x 14 texels), so
-the mark lies on the same floor plane every shadow in the fight already does. Drawn at 3x like the
-rest of this kit: the target ring's 40-texel radius is DefenseHypeArtLayout.SWORD_MARK_RADIUS, 120
-screen px, the ground the sword can still reach the player on.
+The ring is drawn the size of what the sword lands on (EricThrownSwordScript._reaches as the blade
+goes in): its 108 px reach against the player's 36 x 81 px hurtbox, which reaches a player whose
+middle is up to 126 px across and 147-150 px in depth from the mark. That edge is a rounded box, not
+an ellipse, so the ring straddles it: drawn at 3x like the rest of this kit, RX 46.5 by RY 53 texels
+puts the lit band 123-141 px across and 144-162 px deep, with the edge inside the band all the way
+round, and the closing frames' thinner target band too. art_source/defense_tests/eric/sword_path.gd
+holds the drawn ring to the hit. It is taller than it is wide because the hit reaches further in depth
+than across, so it no longer lies on the floor plane of the fight's shadows (the user's call, 2026-09-27:
+what the player sees is what hits them).
 
 Its colours are parry_tell_strong.png's, the fight's "this one can be parried" red, and it is a closed
 filled band where the yellow dodge tell is a hollow silhouette: neither can be mistaken for the other
@@ -19,15 +24,13 @@ import sys
 sys.dont_write_bytecode = True
 from ev2_common import *
 
-TW, TH = 152, 52
+TW, TH = 146, 168
 # The ellipse sits on the boundary between the two middle texels, so the pivot is the canvas centre.
 CX, CY = TW / 2.0 - 0.5, TH / 2.0 - 0.5
 PIVOT = (TW // 2, TH // 2)
 
-# eric_leap_shadow.png frame 0: 44 texels across, 14 tall.
-SQUASH = 7.0 / 22.0
-RX = 40.0
-RY = RX * SQUASH
+RX = 46.5
+RY = 53.0
 
 # Band thicknesses in texels. A band is the gap between the ellipse and the same one pulled this far
 # in along both axes, rather than a scaled-down copy: a squashed ellipse's poles are so flat that a
@@ -38,8 +41,9 @@ COMMIT_BAND = 4.0
 
 CLOSE_FRAMES = 9
 # The closing ring's radius, as a multiple of the target's: it stops a clear gap short of it, and the
-# commit frame is where it arrives.
-FROM_SCALE, TO_SCALE = 1.8, 1.15
+# commit frame is where it arrives. It started at 1.8x round the flat ring; round this one that swept
+# half the floor.
+FROM_SCALE, TO_SCALE = 1.5, 1.15
 # It heats up as it comes in, so the last frames before the commit already read as hot.
 CLOSING_RAMP = ['E'] * 4 + ['e'] * 3 + ['S'] * 2
 
@@ -74,14 +78,14 @@ def band(c, scale, thickness, body, edge):
 
 
 def ticks(c, col):
-    """short marks turned in off the ring's four poles, so the commit frame differs in silhouette too"""
+    """short marks turned in off the ring's four poles, so the commit frame differs in silhouette too;
+    all four as long, since the ring is taller than it is wide"""
     x0 = CX - RX + COMMIT_BAND + TICK_GAP
     y0 = CY - RY + COMMIT_BAND + TICK_GAP
     for k in range(TICK_LEN):
         for y in (CY - 0.5, CY + 0.5):
             put(c, x0 + k, y, col)
             put(c, TW - 1 - int(x0 + k), y, col)
-    for k in range(TICK_LEN - 3):
         for x in (CX - 0.5, CX + 0.5):
             put(c, x, y0 + k, col)
             put(c, x, TH - 1 - int(y0 + k), col)

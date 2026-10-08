@@ -17,7 +17,7 @@ const SPEC := {
 	"home": Vector2(960, 560),
 	"light": &"greyson_plate",
 	"strong": &"",
-	"foreign": &"josh_card_throw",
+	"foreign": &"eric_quake_wave_v2",
 	"punish_state": "Pose",
 	"broken_state": "Broken",
 	"cycle_states": ["Throw", "Slams"],
@@ -120,7 +120,7 @@ static func extra(t) -> void:
 			"the Break leaves no plate in flight and no zone waiting")
 
 	if wanted.has("spoil"):
-		t.log_p("-- a hit in a pose spoils it: half a cell off")
+		t.log_p("-- a hit in a pose spoils it and empties his meter (GreysonScript.hit_resets_hype)")
 		await t.reset_gauged(SPEC.home)
 		await t.settle_player(Vector2(760, 700))
 		sm.on_child_transition(sm.current_state, "Pose")
@@ -129,7 +129,7 @@ static func extra(t) -> void:
 		boss.add_hype(2.0)
 		var dealt: int = boss.take_punch(1)
 		await t.wait(2)
-		t.check(open and dealt == 1 and is_equal_approx(boss.hype, 1.5), "the pose's first hit takes his meter from 2 to %.1f" % boss.hype)
+		t.check(open and dealt == 1 and is_equal_approx(boss.hype, 0.0), "the pose's first hit takes his meter from 2 to %.1f" % boss.hype)
 
 
 # A perfect dodge of `id`: a dash, and inside its immunity the hit, from a source of its own. Whether it paid one.

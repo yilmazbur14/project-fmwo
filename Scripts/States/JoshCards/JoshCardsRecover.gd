@@ -6,6 +6,10 @@ extends State
 
 @onready var state_machine = get_parent()
 
+# Seconds on top of recover_time for the next window only, then back to none: a parried Portal Monte opens him longer
+# (JoshCardsStateMachine.monte_parry_recover_bonus).
+var bonus_time := 0.0
+
 
 # The punish window: the only place punches reach him.
 func Enter() -> void:
@@ -20,7 +24,8 @@ func Enter() -> void:
 	body.play_anim(&"recover")
 	body.set_hurtbox_active(true)
 	recover_sfx_player.play()
-	recover_timer.start(state_machine.recover_time)
+	recover_timer.start(state_machine.recover_time + bonus_time)
+	bonus_time = 0.0
 
 
 func Exit() -> void:

@@ -1,0 +1,289 @@
+{
+ "boss": "liam",
+ "sheet": "res://Assets/Characters/Liam/liam.png",
+ "frame": [
+  64,
+  64
+ ],
+ "feet": [
+  32,
+  63
+ ],
+ "idle_frames": [
+  0
+ ],
+ "note": "Texels on the frame, (0,0) its top-left; a ring hook is its hole, the texel the string ties to. \"back\" sits between the shoulder blades, behind the body on every front view: draw its string UNDER the sprite. \"_l\"/\"_r\" are screen left/right on the unflipped sheet (mirror x as frame_width - 1 - x when flipped). relative_to_feet = texel - feet. carry_frames: the same points tracked onto his fight sheets; null = not found there, to be filled by hand.",
+ "frames": {
+  "0": {
+   "head": [
+    30,
+    4
+   ],
+   "back": [
+    31,
+    36
+   ],
+   "wrist_l": [
+    7,
+    45
+   ],
+   "wrist_r": [
+    54,
+    42
+   ],
+   "knee_l": [
+    18,
+    52
+   ],
+   "knee_r": [
+    40,
+    52
+   ]
+  }
+ },
+ "relative_to_feet": {
+  "0": {
+   "head": [
+    -2,
+    -59
+   ],
+   "back": [
+    -1,
+    -27
+   ],
+   "wrist_l": [
+    -25,
+    -18
+   ],
+   "wrist_r": [
+    22,
+    -21
+   ],
+   "knee_l": [
+    -14,
+    -11
+   ],
+   "knee_r": [
+    8,
+    -11
+   ]
+  }
+ },
+ "carry_frames": {
+  "Liam/liam_glasses_push.png": {
+   "0": {
+    "head": [
+     30,
+     4
+    ],
+    "back": [
+     31,
+     36
+    ],
+    "wrist_l": [
+     7,
+     45
+    ],
+    "wrist_r": [
+     54,
+     42
+    ],
+    "knee_l": [
+     18,
+     52
+    ],
+    "knee_r": [
+     40,
+     52
+    ]
+   },
+   "1": {
+    "head": [
+     30,
+     5
+    ],
+    "back": [
+     31,
+     36
+    ],
+    "wrist_l": null,
+    "wrist_r": [
+     54,
+     42
+    ],
+    "knee_l": [
+     18,
+     52
+    ],
+    "knee_r": [
+     40,
+     52
+    ]
+   },
+   "2": {
+    "head": [
+     30,
+     4
+    ],
+    "back": [
+     31,
+     36
+    ],
+    "wrist_l": null,
+    "wrist_r": [
+     54,
+     42
+    ],
+    "knee_l": [
+     18,
+     52
+    ],
+    "knee_r": [
+     40,
+     52
+    ]
+   },
+   "3": {
+    "head": [
+     30,
+     3
+    ],
+    "back": [
+     31,
+     36
+    ],
+    "wrist_l": null,
+    "wrist_r": [
+     54,
+     42
+    ],
+    "knee_l": [
+     18,
+     52
+    ],
+    "knee_r": [
+     40,
+     52
+    ]
+   },
+   "4": {
+    "head": [
+     30,
+     3
+    ],
+    "back": [
+     31,
+     36
+    ],
+    "wrist_l": null,
+    "wrist_r": [
+     54,
+     42
+    ],
+    "knee_l": [
+     18,
+     52
+    ],
+    "knee_r": [
+     40,
+     52
+    ]
+   },
+   "5": {
+    "head": [
+     30,
+     3
+    ],
+    "back": [
+     31,
+     36
+    ],
+    "wrist_l": null,
+    "wrist_r": [
+     54,
+     42
+    ],
+    "knee_l": [
+     18,
+     52
+    ],
+    "knee_r": [
+     40,
+     52
+    ]
+   },
+   "6": {
+    "head": [
+     30,
+     3
+    ],
+    "back": [
+     31,
+     36
+    ],
+    "wrist_l": null,
+    "wrist_r": [
+     54,
+     42
+    ],
+    "knee_l": [
+     18,
+     52
+    ],
+    "knee_r": [
+     40,
+     52
+    ]
+   },
+   "7": {
+    "head": [
+     30,
+     4
+    ],
+    "back": [
+     31,
+     36
+    ],
+    "wrist_l": null,
+    "wrist_r": [
+     54,
+     42
+    ],
+    "knee_l": [
+     18,
+     52
+    ],
+    "knee_r": [
+     40,
+     52
+    ]
+   },
+   "8": {
+    "head": [
+     30,
+     5
+    ],
+    "back": [
+     31,
+     36
+    ],
+    "wrist_l": [
+     7,
+     45
+    ],
+    "wrist_r": [
+     54,
+     42
+    ],
+    "knee_l": [
+     18,
+     52
+    ],
+    "knee_r": [
+     40,
+     52
+    ]
+   }
+  }
+ }
+}

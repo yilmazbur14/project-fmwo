@@ -1,0 +1,437 @@
+{
+ "scale": 3,
+ "drawn_as": "the RIGHT portal (its hand is the giant's left hand, thumb toward Josh); the left is the code's mirror (flip_h)",
+ "pivot_convention": "corner coordinates, Josh's convention: sprite.offset = frame_size / 2 - pivot",
+ "hand": {
+  "frame": [
+   128,
+   128
+  ],
+  "pivot": [
+   64,
+   70
+  ],
+  "mirror_axis_column": 64,
+  "clips": {
+   "form": {
+    "frames": 7,
+    "times": [
+     0.08,
+     0.08,
+     0.08,
+     0.08,
+     0.08,
+     0.1,
+     0.1
+    ],
+    "total": 0.6,
+    "loop": false
+   },
+   "hover": {
+    "frames": 6,
+    "times": [
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "total": 0.6,
+    "loop": true
+   },
+   "windup": {
+    "frames": 2,
+    "times": [
+     0.07,
+     0.08
+    ],
+    "total": 0.15,
+    "loop": false
+   },
+   "drop": {
+    "frames": 2,
+    "times": [
+     0.12,
+     0.13
+    ],
+    "total": 0.25,
+    "loop": false
+   },
+   "impact": {
+    "frames": 4,
+    "times": [
+     0.05,
+     0.05,
+     0.05,
+     0.3
+    ],
+    "total": 0.45,
+    "loop": false
+   },
+   "shatter": {
+    "frames": 6,
+    "times": [
+     0.04,
+     0.05,
+     0.05,
+     0.05,
+     0.05,
+     0.06
+    ],
+    "total": 0.3,
+    "loop": false
+   }
+  },
+  "impact_contact_frame": 0,
+  "impact_hold_frame": 3,
+  "footprint_radii_texels": [
+   28,
+   19
+  ],
+  "footprint_radii_px": [
+   84,
+   57
+  ],
+  "contact_fill": 0.928,
+  "contact_reach_texels_lrud": [
+   32.0,
+   32.0,
+   23.0,
+   22.0
+  ],
+  "air_extents_texels": {
+   "left": 50.0,
+   "right": 48.0,
+   "up": 47.0,
+   "down": 47.0
+  },
+  "air_box_px": [
+   -150.0,
+   -141.0,
+   294.0,
+   282.0
+  ],
+  "cuff_centre_from_pivot_texels": [
+   4.0,
+   -32.9
+  ],
+  "glow_layers": "optional: josh_hand_<clip>_glow.png, same frames, drawn additive"
+ },
+ "mark": {
+  "frame": [
+   64,
+   40
+  ],
+  "pivot": [
+   32,
+   20
+  ],
+  "frames": 6,
+  "times": [
+   0.1,
+   0.1,
+   0.1,
+   0.1,
+   0.1,
+   0.1
+  ],
+  "hover_frames": [
+   0,
+   1
+  ],
+  "height_frames": [
+   2,
+   3,
+   4
+  ],
+  "land_frame": 5,
+  "rim": "exactly the footprint ellipse on every frame (pixel centres inside ((x+0.5-px)/rx)^2 + ((y+0.5-py)/ry)^2 <= 1, its edge ring)"
+ },
+ "impact_fx": {
+  "file": "josh_hand_impact_fx.png",
+  "frame": [
+   160,
+   96
+  ],
+  "pivot": [
+   80,
+   48
+  ],
+  "frames": 4,
+  "times": [
+   0.05,
+   0.06,
+   0.07,
+   0.1
+  ],
+  "layer": "floor, under the hand",
+  "note": "named _fx: the plan listed the optional FX as josh_hand_impact.png, the same name as the impact clip"
+ },
+ "portal": {
+  "frame": [
+   112,
+   112
+  ],
+  "pivot": [
+   56,
+   56
+  ],
+  "opening_radius_texels": 21.0,
+  "rim_outer_radius_texels": 25.0,
+  "ring_outer_radius_texels": 35.0,
+  "sequences": {
+   "open": {
+    "frames": 5,
+    "times": [
+     0.07,
+     0.08,
+     0.08,
+     0.09,
+     0.1
+    ],
+    "total": 0.42,
+    "loop": false
+   },
+   "loop": {
+    "frames": 12,
+    "times": [
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "total": 1.2,
+    "loop": true
+   },
+   "close": {
+    "frames": 4,
+    "times": [
+     0.07,
+     0.07,
+     0.08,
+     0.08
+    ],
+    "total": 0.3,
+    "loop": false
+   },
+   "feed": {
+    "frames": 2,
+    "times": [
+     0.05,
+     0.05
+    ],
+    "total": 0.1,
+    "loop": false
+   }
+  },
+  "layers": [
+   "back (normal)",
+   "glow (additive)"
+  ]
+ },
+ "josh": {
+  "frame": [
+   80,
+   80
+  ],
+  "feet_row": 79,
+  "axis_x": 40,
+  "facing": "right",
+  "summon": {
+   "frames": 4,
+   "times": [
+    0.15,
+    0.15,
+    0.1,
+    0.1
+   ],
+   "loop": [
+    2,
+    3
+   ],
+   "card_origins_texels": {
+    "2": {
+     "left": [
+      14,
+      17
+     ],
+     "right": [
+      66,
+      17
+     ]
+    },
+    "3": {
+     "left": [
+      14,
+      16
+     ],
+     "right": [
+      67,
+      16
+     ]
+    }
+   }
+  },
+  "command": {
+   "frames": 4,
+   "times": [
+    0.2,
+    0.15,
+    0.16,
+    0.16
+   ],
+   "loop": [
+    2,
+    3
+   ]
+  }
+ },
+ "rest_offset_px": [
+  0,
+  170
+ ],
+ "keepout_check_world_px": {
+  "gate_left": {
+   "rect": [
+    452,
+    147,
+    698,
+    393
+   ],
+   "hits_hud": false
+  },
+  "rest_hand_left": {
+   "rect": [
+    407,
+    236,
+    743,
+    575
+   ],
+   "hits_hud": false
+  },
+  "gate_right": {
+   "rect": [
+    1222,
+    147,
+    1468,
+    393
+   ],
+   "hits_hud": false
+  },
+  "rest_hand_right": {
+   "rect": [
+    1177,
+    236,
+    1513,
+    575
+   ],
+   "hits_hud": false
+  }
+ },
+ "palette": {
+  "0": "#F6EFDC",
+  "5": "#463C2C",
+  "6": "#6B5D44",
+  "7": "#9E8D68",
+  "8": "#C8B994",
+  "9": "#E6DBBE",
+  "G": "#B07D22",
+  "N": "#20203C",
+  "O": "#F5D94E",
+  "R": "#C2283A",
+  "S": "#45487F",
+  "T": "#E8605A",
+  "V": "#861826",
+  "W": "#FFFFFF",
+  "Y": "#FFF3B0",
+  "Z": "#C96C74",
+  "a": "#84412F",
+  "b": "#B86C4E",
+  "c": "#DB976C",
+  "d": "#F0B98E",
+  "e": "#FBD6B0",
+  "g": "#7A5216",
+  "h": "#130B09",
+  "i": "#24160F",
+  "j": "#3D261A",
+  "k": "#000000",
+  "l": "#5F3C29",
+  "m": "#8A5B3D",
+  "n": "#14142A",
+  "o": "#E0AB35",
+  "p": "#E0917C",
+  "r": "#E07A2C",
+  "s": "#32335C",
+  "t": "#5E63A0",
+  "v": "#4A0C16",
+  "w": "#2B0A12",
+  "x": "#4D1420",
+  "y": "#7A2032",
+  "z": "#A63B4B"
+ },
+ "glow_palette": {
+  "q": "#160C03",
+  "u": "#2E1A06",
+  "U": "#56340C",
+  "Q": "#845C1C",
+  "e": "#28060C",
+  "E": "#4A0E18"
+ },
+ "files": [
+  "josh_hand_form.png",
+  "josh_hand_form_glow.png",
+  "josh_hand_hover.png",
+  "josh_hand_hover_glow.png",
+  "josh_hand_windup.png",
+  "josh_hand_windup_glow.png",
+  "josh_hand_drop.png",
+  "josh_hand_drop_glow.png",
+  "josh_hand_impact.png",
+  "josh_hand_impact_glow.png",
+  "josh_hand_shatter.png",
+  "josh_hand_shatter_glow.png",
+  "takeB/josh_hand_form.png",
+  "takeB/josh_hand_form_glow.png",
+  "takeB/josh_hand_hover.png",
+  "takeB/josh_hand_hover_glow.png",
+  "takeB/josh_hand_windup.png",
+  "takeB/josh_hand_windup_glow.png",
+  "takeB/josh_hand_drop.png",
+  "takeB/josh_hand_drop_glow.png",
+  "takeB/josh_hand_impact.png",
+  "takeB/josh_hand_impact_glow.png",
+  "takeB/josh_hand_shatter.png",
+  "takeB/josh_hand_shatter_glow.png",
+  "josh_hand_mark.png",
+  "josh_hand_impact_fx.png",
+  "josh_portal_open_back.png",
+  "josh_portal_open_glow.png",
+  "josh_portal_loop_back.png",
+  "josh_portal_loop_glow.png",
+  "josh_portal_close_back.png",
+  "josh_portal_close_glow.png",
+  "josh_portal_feed_back.png",
+  "josh_portal_feed_glow.png",
+  "josh_summon.png",
+  "josh_command.png",
+  "josh_hands_sheet.png",
+  "mock_1_rest.png",
+  "mock_2_attack.png",
+  "mock_3_brief.png",
+  "takeB/mock_1_rest_takeB.png",
+  "takeB/mock_3_brief_takeB.png",
+  "gif_1_portal_open_loop.gif",
+  "gif_2_summon_flurry_form.gif",
+  "gif_3_hover_windup_drop_impact.gif",
+  "gif_4_parry_shatter_reform.gif"
+ ]
+}

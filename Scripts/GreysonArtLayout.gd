@@ -544,13 +544,97 @@ const SFX := {
 	# CANNON_HUM's ramp below it (GreysonScript._tune_cannon_hum).
 	&"cannon_hum": {stream = SFX_DIR + "greyson_cannon_hum.wav", volume_db = -12.5, loop = true,
 		stand_in = SFX_DIR + "finisher_charge_loop.wav", stand_in_pitch = 0.6, stand_in_db = -14.0},
+	# The doom orb (GreysonDoomOrb), from sounds already in the game: the glass giving as a hit bursts it, and his stomp,
+	# played low (DOOM_ORB.thump_pitch), as the vignette's heartbeat.
+	&"orb_burst": {stream = SFX_DIR + "matt_glass_shatter.wav", volume_db = -4.0,
+		stand_in = SFX_DIR + "carter_parry_break.wav", stand_in_pitch = 1.0, stand_in_db = -4.0},
+	&"orb_thump": {stream = SFX_DIR + "greyson_stomp_1.wav", volume_db = -9.0,
+		stand_in = SFX_DIR + "matt_stomp.wav", stand_in_pitch = 1.0, stand_in_db = -12.0},
 }
 # The hum under his meter, the sound agent's ramp: this many dB quieter on an empty meter than on a full one, and
 # its pitch from x (empty) to y (full).
 const CANNON_HUM := {quieter_empty = 14.0, pitch = Vector2(0.85, 1.3)}
-# How many players a sound gets, for the ones that overlap with themselves: a voice a plate for the throw's four,
+
+#THE DOOM ORB (GreysonDoomOrb; the user's 2026-09-30 playtest: the poses, his meter and the spirit bomb made plain,
+# with no text)
+# His hype meter made physical over his head: a spirit-bomb orb that forms at his first banked cell and grows a stage
+# a cell, the crowd's energy streaking into it on each bank, a vignette and a heartbeat from vignette_from on, a burst
+# when a hit empties his meter, and the camera nudging to him the first time it forms in a fight.
+const USE_DOOM_ORB := true
+# The approved art, used once its files exist (the art pass drops them in FX_DIR; its contract.json has the numbers
+# for DOOM_ORB_FINAL). Until the orb's own sheet exists, the placeholders in DOOM_ORB; each other sheet is used once it
+# exists too (the glow and the vignette are extras the placeholders do without).
+const DOOM_ORB_ART := {orb = FX_DIR + "greyson_doom_orb.png", glow = FX_DIR + "greyson_doom_orb_glow.png",
+	burst = FX_DIR + "greyson_doom_orb_burst.png", streak = FX_DIR + "greyson_hype_streak.png",
+	vignette = FX_DIR + "greyson_doom_vignette.png"}
+# The approved sheets as the art pass's contract has them (art_source/greyson_doom_orb/approval/contract.json,
+# 2026-09-30), in texels at SCALE:
+#   orb: a row a stage (1-6), `frames` frames of frame_size each - loop_frames its pulse, at the stage's frame_time,
+#     and flash_frame shown once for flash_time as the stage banks - its pivot the orb's FOOT, the bottom of its
+#     sphere, the same on every stage, so it grows upward off one point over his head; `radii` the sphere a stage.
+#     The glow: the same grid, pivot and frame, drawn additively under it.
+#   burst: a row per size (row 0 for stages under burst_big_from, row 1 from it) of burst_frames frames, pivot its
+#     centre, placed on the orb's centre, once at burst_frame_times.
+#   streak: streak_rows rows, a heading each, 360/streak_rows degrees apart from row 0 flying right (row 4 down), of
+#     streak_frames frames, its head on the pivot, its tail drawn behind it; the row picked from its velocity.
+#   vignette: one 640x360 frame, a screen layer.
+#   The hand-off: stage 6 f0 is greyson_bomb's handoff_bomb_frame less the muzzle's beam; through his arm going up
+#     the orb's foot goes to the muzzle + handoff_lift px, and the bomb gathers on from that frame.
+const DOOM_ORB_FINAL := {frames = 5, loop_frames = [0, 1, 2, 3], flash_frame = 4, frame_size = Vector2(72, 72),
+	pivot = Vector2(36, 56), radii = [5.0, 7.0, 9.0, 11.0, 13.0, 19.0],
+	frame_times = [0.14, 0.13, 0.12, 0.11, 0.10, 0.09], flash_time = 0.08,
+	burst_rows = 2, burst_big_from = 4, burst_frames = 6, burst_frame_size = Vector2(96, 96), burst_pivot = Vector2(48, 48),
+	burst_frame_times = [0.05, 0.06, 0.05, 0.06, 0.07, 0.08],
+	streak_rows = 16, streak_frames = 4, streak_frame_size = Vector2(40, 40), streak_pivot = Vector2(20, 20),
+	streak_frame_time = 0.05,
+	handoff_bomb_frame = 1, handoff_lift = Vector2(0, -9)}
+const DOOM_ORB := {
+	# Stages 1-6 on the placeholder, the bomb_orb sheet's rows (10, 16, 26 and 40 texels across) at whole-number
+	# scales, [row, scale], near the approved sheet's sizes (30, 42, 54, 66, 78 and 114 px across). Two banks' cells
+	# show it at stage 2 first (bank 2). Stage 6 is his spirit bomb itself, which takes over from the orb as it fires.
+	stages = [[0, 3], [1, 3], [2, 2], [2, 3], [3, 2], [3, 3]],
+	# The orb's foot, the bottom of its sphere, this far over his crown (the contract's 6 px: at HOME, (960, 296)),
+	# kept clear of the HUD's keep-out (HUD_FADE_RECT) and inside the screen, pushed down behind his head rather than
+	# over the bar.
+	gap = 6.0,
+	# While the player's body box overlaps it, it fades to this, so it never hides them.
+	player_fade = 0.4,
+	# The placeholder's throb a stage: brighter this much at the peak, this often (s). The approved sheet pulses in
+	# its own frames.
+	pulse_times = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4],
+	pulse_bright = 0.35,
+	# The bomb's own light on the floor under it (bomb_light), this strong a stage (the art pass: 0.1, 0.3 and 0.5
+	# read fine at HOME).
+	light_alphas = [0.1, 0.1, 0.3, 0.3, 0.5, 0.5],
+	# The placeholder's purple crackle from crackle_from on: bolts at a time, how often, how long each shows, its
+	# colour. The approved sheet crackles in its own frames.
+	crackle_from = 3, crackle_bolts = 2, crackle_every = 0.35, crackle_time = 0.08, crackle_color = Color("#C77DFF"),
+	# On each bank, streaks from the crowd (the stands across the top, and ringside down each side) into it over
+	# streak_time, set off inside streak_spread; it grows as they land. On the placeholder, each is one of the bomb's
+	# own crowd orbs (bomb_orb's row streak_row, at SCALE) with a trail.
+	streaks = 12, streak_time = 0.4, streak_spread = 0.12, streak_arc = 60.0, streak_tail = 90.0, streak_width = 8.0,
+	streak_color = Color("#B35CFF"), streak_head = Color("#E9D2FF"), streak_row = 0,
+	crowd_top = Rect2(150, 20, 1620, 70), crowd_sides = Rect2(20, 200, 1880, 700),
+	# The crowd's cheer this much louder a banked cell (dB).
+	cheer_gain_db = 1.0,
+	# The vignette from vignette_from on (the contract's): its alpha a stage from there, and bomb_vignette as the
+	# spirit bomb starts; the heartbeat every heartbeat_every s lifts it heartbeat_bump for heartbeat_hold s, easing
+	# back over heartbeat_ease s, with the thump at thump_pitch. The placeholder's own gradient (vignette_color, up
+	# to vignette_edge at the screen's edges) stands in for greyson_doom_vignette.
+	vignette_from = 4, vignette_alphas = [0.5, 0.75], bomb_vignette = 1.0, vignette_color = Color(0.36, 0.06, 0.52),
+	vignette_edge = 0.6,
+	heartbeat_every = 0.9, heartbeat_bump = 0.25, heartbeat_hold = 0.12, heartbeat_ease = 0.3, thump_pitch = 0.55,
+	# A hit that empties his meter: the placeholder's pop (greyson_hype_pop, at the whole-number scale nearest the
+	# orb), this long a frame, and the streaks flung back out to the crowd.
+	burst_frame_time = 0.07,
+	# The meter up top flashing with each growth and throb, so the two read as one thing.
+	meter_flash = Color(1.6, 1.3, 1.9),
+	# The first time it forms in a fight: the view eases this much closer on him over nudge_in, holds, and eases back.
+	nudge = true, nudge_zoom = 1.12, nudge_in = 0.2, nudge_hold = 0.15, nudge_out = 0.25,
+}
+# How many players a sound gets, for the ones that overlap with themselves: a voice a plate for the throw's six,
 # and three for the blasts, 1.55 s long and never under 0.8 s apart.
-const SFX_VOICES := {&"plate_throw": 4, &"plate_bounce": 4, &"plate_parry": 4, &"plate_drop": 4, &"eruption_blast": 3,
+const SFX_VOICES := {&"plate_throw": 6, &"plate_bounce": 6, &"plate_parry": 6, &"plate_drop": 6, &"eruption_blast": 3,
 	&"stomp": 2, &"flex": 2}
 # "Two Bars", the fight's theme since Computah's half (art_source/music/greyson_theme.rb), restarted at the bar swap.
 # It loops by its own import.

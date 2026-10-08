@@ -1,0 +1,829 @@
+{
+  "what": "Champion ending cutscene - APPROVAL PASS art contract (nothing ships yet)",
+  "date": "2026-10-06",
+  "recommended_take": "A",
+  "units": "All art is authored in texels and drawn at scale 3 (1 texel = 3 screen px), like every arena sprite. Cell coords are texels inside one frame.",
+  "player": {
+    "source": "Assets/Characters/MainPlayer/player_4dir_sheet.png (32x32 cells, 7 colours, no keyline)",
+    "walk_in": "use his own sheet: row 0 (down) cols 0-4, 0.1667 s a frame (the \"walking\" animation). Recommended entry: the TOP rope doorway (screen x 852..1068), walking straight down to the mark, so he faces the camera all the way and arrives behind the stand. (Bottom-gate entry also works but must path round the stand; the art is the same.)",
+    "mark_screen_px": [
+      960,
+      495
+    ],
+    "walk_from_screen_px": [
+      960,
+      78
+    ],
+    "walk_seconds_in_mock": 2.3
+  },
+  "cell": {
+    "size": [
+      40,
+      64
+    ],
+    "body_box_origin": [
+      4,
+      21
+    ],
+    "body_box_note": "the player 32x32 cell sits at cell (4,21)-(35,52) in EVERY frame of every 40x64 sheet here; his sprite centre (4dir cell 16,16) = cell (20,37); shoe soles on cell row 49.",
+    "godot_sprite2d": "centered=true, scale=(3,3), offset=Vector2(0,-5), node at the player mark (his CharacterBody2D position). Or centered=false at mark - (60,111) px.",
+    "stand_rect": [
+      8,
+      51,
+      23,
+      13
+    ],
+    "stand_seat_row": 55,
+    "stand_floor_contact_centre": [
+      19,
+      63
+    ]
+  },
+  "files": {
+    "trophy/trophy_stand_idle_{A,B}.png": {
+      "frames": 11,
+      "cell": [
+        40,
+        64
+      ],
+      "what": "the stand with the cup waiting on it, shine + sparkle loop. Same 40x64 registration as the champion sheet: put it at the player mark with the same Sprite2D settings. Draw it ABOVE the player while he walks in (he is always north of it).",
+      "seconds_per_frame": [
+        0.6,
+        0.05,
+        0.05,
+        0.05,
+        0.05,
+        0.05,
+        0.35,
+        0.06,
+        0.08,
+        0.06,
+        0.45
+      ],
+      "loop": true
+    },
+    "trophy/stand_empty.png": {
+      "frames": 1,
+      "cell": [
+        40,
+        64
+      ],
+      "what": "the stand alone, same registration (for after the cutscene if the stand should stay)."
+    },
+    "trophy/trophy_{A,B}.png": {
+      "what": "the cup alone (A 17x16, B 17x20), bottom row = plinth outline, centre column x=8."
+    },
+    "champion/champion_lift_{A,B}.png": {
+      "frames": 12,
+      "cell": [
+        40,
+        64
+      ],
+      "hframes": 12,
+      "vframes": 1,
+      "baked": "stand + Burak + cup + his grip + effects, layered correctly per frame (Burak < stand < cup < grip < fx). The .aseprite keeps those 5 layers and champion/layers_{A,B}/*.png are the same layers as strips if the cup is ever wanted as its own sprite.",
+      "swap_in": "when he reaches the mark showing idle_down, hide the player sprite AND trophy_stand_idle, show this sheet at frame 0. Frame 0 is pixel-identical to that pair (checked), so the swap is invisible."
+    },
+    "fx/lift_flash.png": {
+      "frames": 3,
+      "size": [
+        640,
+        360
+      ],
+      "seconds_per_frame": 0.05,
+      "place": "full screen, centered=false at (0,0), scale 3",
+      "z": "BELOW the champion sprite, above the arena (the cup stays readable on the drop)",
+      "centre_texel": [
+        319,
+        140
+      ]
+    },
+    "fx/confetti_burst.png": {
+      "frames": 28,
+      "size": [
+        640,
+        360
+      ],
+      "seconds_per_frame": 0.05,
+      "loop": false,
+      "place": "full screen, over everything",
+      "pop_texel": [
+        319,
+        140
+      ],
+      "cannons": "the four ring corners, two streamers each"
+    },
+    "fx/confetti_rain.png": {
+      "frames": 4,
+      "size": [
+        640,
+        360
+      ],
+      "seconds_per_frame": 0.12,
+      "loop": true,
+      "place": "full screen, over everything",
+      "note": "victory_confetti.png rhythm and piece style, denser, with the cup gold weighted x3."
+    },
+    "fx/spot_sweep.png": {
+      "frames": 10,
+      "size": [
+        640,
+        360
+      ],
+      "one_shot": {
+        "frames": [
+          0,
+          7
+        ],
+        "seconds_per_frame": 0.06
+      },
+      "loop": {
+        "frames": [
+          8,
+          9
+        ],
+        "seconds_per_frame": 0.15
+      },
+      "alpha": "semi-alpha in 4 fixed steps (30/56/80/100 of 255), normal blend",
+      "target_texel": [
+        320,
+        180
+      ]
+    },
+    "crowd/crowd_v3_roar.png": {
+      "frames": 11,
+      "size_per_frame": [
+        640,
+        40
+      ],
+      "replaces": "Assets/Environment/crowd_v3.png (frames 0-6 pixel-identical, checked)"
+    },
+    "crowd/arena_ringside_crowd_roar.png": {
+      "frames": 11,
+      "size_per_frame": [
+        640,
+        360
+      ],
+      "replaces": "Assets/Environment/arena_ringside_crowd.png (frames 0-6 pixel-identical, checked)"
+    },
+    "crowd/ROAR": {
+      "frames": [
+        7,
+        8,
+        9,
+        10
+      ],
+      "seconds_per_frame": 0.1,
+      "loop": true,
+      "note": "needs hframes 7 -> 11 on both crowd sprites and a roar() mood in ArenaCrowdScript (code, not art)"
+    },
+    "credits/credits_still_{A,B}.png": {
+      "size": [
+        640,
+        360
+      ],
+      "optional": true,
+      "what": "champion from behind (the approved victory sprite), cup raised, backlit, roaring crowd in silhouette"
+    }
+  },
+  "champion_frames": [
+    {
+      "index": 0,
+      "name": "arrive",
+      "seconds": 0.3,
+      "hand_left": [
+        16,
+        30
+      ],
+      "hand_right": [
+        23,
+        31
+      ],
+      "trophy": {
+        "A": {
+          "rect": [
+            11,
+            40,
+            17,
+            16
+          ],
+          "bottom_centre": [
+            19,
+            55
+          ],
+          "on_stand": true,
+          "from_hands_midpoint": [
+            -0.5,
+            24.5
+          ]
+        },
+        "B": {
+          "rect": [
+            11,
+            36,
+            17,
+            20
+          ],
+          "bottom_centre": [
+            19,
+            55
+          ],
+          "on_stand": true,
+          "from_hands_midpoint": [
+            -0.5,
+            24.5
+          ]
+        }
+      }
+    },
+    {
+      "index": 1,
+      "name": "take_in",
+      "seconds": 0.4,
+      "hand_left": [
+        13,
+        38
+      ],
+      "hand_right": [
+        26,
+        38
+      ],
+      "trophy": {
+        "A": {
+          "rect": [
+            11,
+            40,
+            17,
+            16
+          ],
+          "bottom_centre": [
+            19,
+            55
+          ],
+          "on_stand": true,
+          "from_hands_midpoint": [
+            -0.5,
+            17.0
+          ]
+        },
+        "B": {
+          "rect": [
+            11,
+            36,
+            17,
+            20
+          ],
+          "bottom_centre": [
+            19,
+            55
+          ],
+          "on_stand": true,
+          "from_hands_midpoint": [
+            -0.5,
+            17.0
+          ]
+        }
+      }
+    },
+    {
+      "index": 2,
+      "name": "reach",
+      "seconds": 0.15,
+      "hand_left": [
+        10,
+        44
+      ],
+      "hand_right": [
+        29,
+        44
+      ],
+      "trophy": {
+        "A": {
+          "rect": [
+            11,
+            40,
+            17,
+            16
+          ],
+          "bottom_centre": [
+            19,
+            55
+          ],
+          "on_stand": true,
+          "from_hands_midpoint": [
+            -0.5,
+            11.0
+          ]
+        },
+        "B": {
+          "rect": [
+            11,
+            36,
+            17,
+            20
+          ],
+          "bottom_centre": [
+            19,
+            55
+          ],
+          "on_stand": true,
+          "from_hands_midpoint": [
+            -0.5,
+            11.0
+          ]
+        }
+      }
+    },
+    {
+      "index": 3,
+      "name": "grab",
+      "seconds": 0.25,
+      "hand_left": [
+        12,
+        53
+      ],
+      "hand_right": [
+        27,
+        53
+      ],
+      "trophy": {
+        "A": {
+          "rect": [
+            11,
+            40,
+            17,
+            16
+          ],
+          "bottom_centre": [
+            19,
+            55
+          ],
+          "on_stand": true,
+          "from_hands_midpoint": [
+            -0.5,
+            2.0
+          ]
+        },
+        "B": {
+          "rect": [
+            11,
+            36,
+            17,
+            20
+          ],
+          "bottom_centre": [
+            19,
+            55
+          ],
+          "on_stand": true,
+          "from_hands_midpoint": [
+            -0.5,
+            2.0
+          ]
+        }
+      }
+    },
+    {
+      "index": 4,
+      "name": "gather_a",
+      "seconds": 0.1,
+      "hand_left": [
+        12,
+        53
+      ],
+      "hand_right": [
+        27,
+        53
+      ],
+      "trophy": {
+        "A": {
+          "rect": [
+            11,
+            40,
+            17,
+            16
+          ],
+          "bottom_centre": [
+            19,
+            55
+          ],
+          "on_stand": true,
+          "from_hands_midpoint": [
+            -0.5,
+            2.0
+          ]
+        },
+        "B": {
+          "rect": [
+            11,
+            36,
+            17,
+            20
+          ],
+          "bottom_centre": [
+            19,
+            55
+          ],
+          "on_stand": true,
+          "from_hands_midpoint": [
+            -0.5,
+            2.0
+          ]
+        }
+      }
+    },
+    {
+      "index": 5,
+      "name": "gather_b",
+      "seconds": 0.1,
+      "hand_left": [
+        12,
+        52
+      ],
+      "hand_right": [
+        27,
+        52
+      ],
+      "trophy": {
+        "A": {
+          "rect": [
+            11,
+            39,
+            17,
+            16
+          ],
+          "bottom_centre": [
+            19,
+            54
+          ],
+          "on_stand": true,
+          "from_hands_midpoint": [
+            -0.5,
+            2.0
+          ]
+        },
+        "B": {
+          "rect": [
+            11,
+            35,
+            17,
+            20
+          ],
+          "bottom_centre": [
+            19,
+            54
+          ],
+          "on_stand": true,
+          "from_hands_midpoint": [
+            -0.5,
+            2.0
+          ]
+        }
+      }
+    },
+    {
+      "index": 6,
+      "name": "lift",
+      "seconds": 0.1,
+      "hand_left": [
+        12,
+        21
+      ],
+      "hand_right": [
+        27,
+        21
+      ],
+      "trophy": {
+        "A": {
+          "rect": [
+            11,
+            7,
+            17,
+            16
+          ],
+          "bottom_centre": [
+            19,
+            22
+          ],
+          "on_stand": false,
+          "from_hands_midpoint": [
+            -0.5,
+            1.0
+          ]
+        },
+        "B": {
+          "rect": [
+            11,
+            3,
+            17,
+            20
+          ],
+          "bottom_centre": [
+            19,
+            22
+          ],
+          "on_stand": false,
+          "from_hands_midpoint": [
+            -0.5,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "index": 7,
+      "name": "settle",
+      "seconds": 0.1,
+      "hand_left": [
+        12,
+        22
+      ],
+      "hand_right": [
+        27,
+        22
+      ],
+      "trophy": {
+        "A": {
+          "rect": [
+            11,
+            8,
+            17,
+            16
+          ],
+          "bottom_centre": [
+            19,
+            23
+          ],
+          "on_stand": false,
+          "from_hands_midpoint": [
+            -0.5,
+            1.0
+          ]
+        },
+        "B": {
+          "rect": [
+            11,
+            4,
+            17,
+            20
+          ],
+          "bottom_centre": [
+            19,
+            23
+          ],
+          "on_stand": false,
+          "from_hands_midpoint": [
+            -0.5,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "index": 8,
+      "name": "hold_1",
+      "seconds": 0.2,
+      "hand_left": [
+        11,
+        21
+      ],
+      "hand_right": [
+        26,
+        21
+      ],
+      "trophy": {
+        "A": {
+          "rect": [
+            10,
+            7,
+            17,
+            16
+          ],
+          "bottom_centre": [
+            18,
+            22
+          ],
+          "on_stand": false,
+          "from_hands_midpoint": [
+            -0.5,
+            1.0
+          ]
+        },
+        "B": {
+          "rect": [
+            10,
+            3,
+            17,
+            20
+          ],
+          "bottom_centre": [
+            18,
+            22
+          ],
+          "on_stand": false,
+          "from_hands_midpoint": [
+            -0.5,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "index": 9,
+      "name": "hold_2",
+      "seconds": 0.2,
+      "hand_left": [
+        12,
+        23
+      ],
+      "hand_right": [
+        27,
+        23
+      ],
+      "trophy": {
+        "A": {
+          "rect": [
+            11,
+            9,
+            17,
+            16
+          ],
+          "bottom_centre": [
+            19,
+            24
+          ],
+          "on_stand": false,
+          "from_hands_midpoint": [
+            -0.5,
+            1.0
+          ]
+        },
+        "B": {
+          "rect": [
+            11,
+            5,
+            17,
+            20
+          ],
+          "bottom_centre": [
+            19,
+            24
+          ],
+          "on_stand": false,
+          "from_hands_midpoint": [
+            -0.5,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "index": 10,
+      "name": "hold_3",
+      "seconds": 0.2,
+      "hand_left": [
+        13,
+        21
+      ],
+      "hand_right": [
+        28,
+        21
+      ],
+      "trophy": {
+        "A": {
+          "rect": [
+            12,
+            7,
+            17,
+            16
+          ],
+          "bottom_centre": [
+            20,
+            22
+          ],
+          "on_stand": false,
+          "from_hands_midpoint": [
+            -0.5,
+            1.0
+          ]
+        },
+        "B": {
+          "rect": [
+            12,
+            3,
+            17,
+            20
+          ],
+          "bottom_centre": [
+            20,
+            22
+          ],
+          "on_stand": false,
+          "from_hands_midpoint": [
+            -0.5,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "index": 11,
+      "name": "hold_4",
+      "seconds": 0.2,
+      "hand_left": [
+        12,
+        23
+      ],
+      "hand_right": [
+        27,
+        23
+      ],
+      "trophy": {
+        "A": {
+          "rect": [
+            11,
+            9,
+            17,
+            16
+          ],
+          "bottom_centre": [
+            19,
+            24
+          ],
+          "on_stand": false,
+          "from_hands_midpoint": [
+            -0.5,
+            1.0
+          ]
+        },
+        "B": {
+          "rect": [
+            11,
+            5,
+            17,
+            20
+          ],
+          "bottom_centre": [
+            19,
+            24
+          ],
+          "on_stand": false,
+          "from_hands_midpoint": [
+            -0.5,
+            1.0
+          ]
+        }
+      }
+    }
+  ],
+  "the_drop": {
+    "frame_index": 6,
+    "frame_name": "lift",
+    "rule": "frame 6 (lift) must be the frame on screen at DROP_TIME (the song beat drop, ~9-10 s in - measure it from the file). Everything that hits on the drop starts on that same tick: lift frame, lift_flash, confetti_burst, spot_sweep, crowd ROAR.",
+    "lead_in": "arrive 0.30 + take_in 0.40 + reach 0.15 + grab 0.25 = 1.10 s, then gather_a/gather_b loop (0.10 s each) until the drop; the gather loop absorbs any difference, so arrive at the mark >= 1.3 s before the drop.",
+    "announcer": "his line plays over the gather loop; the crowd ROAR starts on the drop and covers the name."
+  },
+  "after_the_drop": {
+    "settle": "frame 7 for 0.10 s",
+    "hold_loop": "frames 8-11 looping; 8 and 10 are the cup-up shout frames, 9 and 11 the pumps down. Default 0.20 s a frame; to pump on the beat use (60/BPM)/2 s.",
+    "confetti_rain_from": "drop + 1.0 s (over the tail of the burst)",
+    "house_lights": "optional dim of the arena to ~35% darker over 0.3 s from the drop, so the spotlights read (the mock uses rgba(8,6,20,90/255) over the arena only)",
+    "fade": "slow fade to black (mock: 2.5 s starting 4 s after the drop) while the hold loop keeps playing; then credits on black."
+  },
+  "mock_timeline_seconds (compressed - the drop is at 6.5 here)": {
+    "fade_in": [
+      0.0,
+      0.5
+    ],
+    "walk_in": [
+      0.5,
+      2.8
+    ],
+    "arrive": 2.8,
+    "take_in": 3.1,
+    "reach": 3.5,
+    "grab": 3.65,
+    "gather_loop": [
+      3.9,
+      6.5
+    ],
+    "announcer": [
+      3.0,
+      6.4
+    ],
+    "DROP_lift": 6.5,
+    "settle": 6.6,
+    "hold_loop_from": 6.7,
+    "fade": [
+      10.5,
+      13.0
+    ],
+    "credits_still_fades_in": [
+      13.6,
+      14.4
+    ]
+  },
+  "measured": {
+    "burak_pixels": "exactly his 7 sheet colours, no keyline (the source has none: black is only hair + shoes), 0 semi-alpha"
+  }
+}

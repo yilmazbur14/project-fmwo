@@ -210,6 +210,18 @@ func fade_away() -> void:
 	fade.chain().tween_callback(queue_free)
 
 
+# Jordan's kegs only (JordanComboKegs); his own fight never calls it. There a lit keg is punched out rather than shot:
+# the fuse goes out, the pulse stops and it stands again as it landed, to be lit again.
+func defuse(puncher: Vector2) -> void:
+	phase = Phase.STANDING
+	fuse_lit = false
+	fuse_sprite.hide()
+	hurtbox.add_to_group(PlayerScript.THREAT_GROUP)
+	boss.play_sfx(&"barrel_tonk")
+	_flash_and_jolt()
+	_throw_chips(puncher)
+
+
 #PUNCHES
 
 # The hurtbox has to stay on collision layer 0 and not monitorable, FunkoFigure's rule: one-way, a punch is

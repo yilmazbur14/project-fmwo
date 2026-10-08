@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/BixbySonicLanesScript.gd" id="1_lanes"]
+
+[node name="BixbySonicLanes" type="Node2D" groups=["bixby_beast_hazard"]]
+script = ExtResource("1_lanes")

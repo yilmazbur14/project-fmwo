@@ -1,10 +1,6 @@
-# Placeholder lines for the end of the Jordan fight, said before the fade to the Victory or Defeat screen.
-# player_won: the player beat Jordan. player_lost: Jordan beat the player.
-
-~ player_won
-Jordan: My collection... at least they're still mint in box.
-Jordan: Fine. You've earned your invite, newcomer.
-=> END
+# Placeholder lines for the end of the Jordan fight, said before the fade to the Defeat screen.
+# player_lost: Jordan beat the player. Beating Jordan plays his finale instead - JordanFinale.dialogue's walk_out,
+# from JordanWalkOut - so there is no player_won here.
 
 ~ player_lost
 Jordan: Should've read the server rules.

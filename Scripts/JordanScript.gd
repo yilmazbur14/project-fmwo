@@ -6,14 +6,16 @@ const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 const BossBreakGauge := preload("res://Scripts/BossBreakGauge.gd")
 const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
 const JordanArtLayout := preload("res://Scripts/JordanArtLayout.gd")
+const KaijuLayout := preload("res://Scripts/JordanKaijuLayout.gd")
+const FunkoThrow := preload("res://Scripts/JordanFunkoThrow.gd")
 # What he says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/JordanOutro.dialogue"
 # This fight's place in the order; as the last one, GameProgress finds nothing after it.
 const FIGHT_SCENE := "res://Scenes/Bosses/JordanBossFightScene.tscn"
 
 #CONSTANTS
-# Phase 1's health.
-@export var max_health := 12
+# Phase 1's health, the whole fight's, doubled from 12 by the user (2026-09-25), then raised 25% (2026-09-30).
+@export var max_health := 30
 var boss_health := max_health
 const MAX_HITS_PER_WINDOW := 3
 # Each opening takes the damage of a clean chain of MAX_HITS_PER_WINDOW punches (PunchAllowance).
@@ -29,8 +31,9 @@ const STAGGER_LEAN_TIME := 0.1
 #BREAK GAUGE (BossBreakGauge)
 # The rule the fights share: N clean reads from empty is a guaranteed Break. A parry or a perfect dodge
 # is a read, a hit costs one and a guard break two, a 3-punch combo is one (a quarter, a quarter and a
-# half), and nothing decays. His N is 6, not 8: his fight is about two summon cycles long, and eight
-# reads would rarely arrive. A figure the player punched back into him is two (take_explosion_hit).
+# half), and nothing decays. His N is 6, not 8: his fight was about two summon cycles long at the 12
+# health it was set on, before the user doubled it (2026-09-25), and eight reads would rarely arrive. A
+# figure the player punched back into him is two (take_explosion_hit).
 # BREAK_READ is BossBreakGauge's max_value of 100 over N, given as it is (BREAK_EPSILON).
 const BREAK_READS := 6
 const BREAK_READ := 100.0 / BREAK_READS
@@ -48,11 +51,32 @@ const BREAK := {
 }
 # The attacks this fight owns, for the gauge. His one attack both fills it and drains it.
 const ATTACK_IDS: Array[StringName] = [&"funko_blast"]
+# On the kaiju (JordanKaijuLayout.USE_KAIJU) the same rule over its own N (JordanKaijuLayout.BREAK_READS), with the stomp's parry worth two reads
+# (grab_parry_gain: strong_parry_ids) and a throw's funko parries one between them (earns_from).
+const KAIJU_BREAK_READ := 100.0 / KaijuLayout.BREAK_READS
+const KAIJU_BREAK := {
+	"parry_gain": KAIJU_BREAK_READ,
+	"grab_parry_gain": 2.0 * KAIJU_BREAK_READ,
+	"reflect_gain": 2.0 * KAIJU_BREAK_READ,
+	"perfect_dodge_gain": KAIJU_BREAK_READ,
+	"punch_gain": KAIJU_BREAK_READ / 4.0,
+	"charged_punch_gain": KAIJU_BREAK_READ / 2.0,
+	"hit_loss": KAIJU_BREAK_READ,
+	"guard_break_loss": 2.0 * KAIJU_BREAK_READ,
+	"unlock_delay": 3.0,
+	"broken_time": 3.0,
+}
+const STOMP_ID := &"jordan_kaiju_stomp"
+const KAIJU_ATTACK_IDS: Array[StringName] = [FunkoThrow.ATTACK_ID, &"jordan_kaiju_breath", &"jordan_burn_line", STOMP_ID,
+	&"jordan_kaiju_quake", &"jordan_kaiju_tail"]
 
 #UI (BossHealthBarUI builds it at runtime)
 var health_bar: Control
 var hud_layer: CanvasLayer
 var break_gauge: Node
+var gauge_bar: Control
+var hud_fade: Tween
+var hud_alpha := 1.0
 
 @onready var sprite = $Sprite2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
@@ -60,10 +84,8 @@ var break_gauge: Node
 @onready var state_machine = $StateManager
 
 #AUDIO
-# His own theme. Same level as Eric's and the pair's, so the ladder does not jump between fights.
-const THEME := "res://Assets/Audio/Music/jordan_theme.wav"
-const THEME_DB := -7.0
-
+# His theme and its level are JordanArtLayout.theme(): his original, "The Last Name on the List" (Neo Tokyo is his
+# god fight's since 2026-10-06).
 @onready var music_player: AudioStreamPlayer = $MusicPlayer
 @onready var hit_sfx_player: AudioStreamPlayer = $HitSfxPlayer
 @onready var victory_sfx_player: AudioStreamPlayer = $VictorySfxPlayer
@@ -91,11 +113,18 @@ var anim_next := &""
 var anim_done := false
 # What the state he is in shows, which a flinch hands back to.
 var state_anim := &""
+# On the kaiju's head: it draws him there (JordanKaiju) and his own sprite is hidden.
+var mounted := false
+# The throws a funko read has been paid for (_earns_read).
+var paid_throws := {}
 
 
 func _ready() -> void:
 	add_to_group(FightOutro.BOSS_GROUP)
 	hurtbox.area_entered.connect(_on_hurtbox_entered)
+	if kaiju_mode():
+		max_health = KaijuLayout.MAX_HEALTH
+		boss_health = max_health
 
 	_apply_art_layout()
 	sprite_base_position = sprite.position
@@ -106,17 +135,10 @@ func _ready() -> void:
 		_add_break_gauge(player)
 	_build_hud()
 
-	# Placeholder: Jordan has no theme of his own yet.
-	# "The Last Name on the List", written for this fight - see art_source/music/jordan_theme.rb.
-	# One 16-bar cycle cut to the beat, so LOOP_FORWARD runs it end to end with no seam.
-	music_player.stream = load(THEME)
-	music_player.volume_db = THEME_DB
-	if music_player.stream is AudioStreamWAV:
-		music_player.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		music_player.stream.loop_begin = 0
-		music_player.stream.loop_end = int(music_player.stream.get_length() * music_player.stream.mix_rate)
-	elif music_player.stream and "loop" in music_player.stream:
-		music_player.stream.loop = true
+	# Loaded here rather than when the fight starts, so the first play doesn't hitch.
+	var theme := JordanArtLayout.theme()
+	music_player.stream = theme.stream
+	music_player.volume_db = theme.volume_db
 	hit_sfx_player.stream = load("res://Assets/Audio/SFX/hit_impact.ogg")
 	victory_sfx_player.stream = load("res://Assets/Audio/SFX/victory_fanfare.ogg")
 	summon_sfx_player.stream = load("res://Assets/Audio/SFX/whirlwind_whoosh.ogg")
@@ -128,19 +150,47 @@ func _add_break_gauge(player: Node) -> void:
 	break_gauge.name = "BreakGauge"
 	break_gauge.boss = self
 	break_gauge.player = player
-	# earns_from stays unset: his one attack both fills and drains it.
-	break_gauge.owns_attack = func(id: StringName) -> bool: return ATTACK_IDS.has(id)
-	break_gauge.parry_gain = BREAK.parry_gain
-	break_gauge.grab_parry_gain = BREAK.grab_parry_gain
-	break_gauge.reflect_gain = BREAK.reflect_gain
-	break_gauge.perfect_dodge_gain = BREAK.perfect_dodge_gain
-	break_gauge.punch_gain = BREAK.punch_gain
-	break_gauge.charged_punch_gain = BREAK.charged_punch_gain
-	break_gauge.hit_loss = BREAK.hit_loss
-	break_gauge.guard_break_loss = BREAK.guard_break_loss
-	break_gauge.unlock_delay = BREAK.unlock_delay
+	var table: Dictionary = BREAK
+	if kaiju_mode():
+		table = KAIJU_BREAK
+		break_gauge.owns_attack = func(id: StringName) -> bool: return KAIJU_ATTACK_IDS.has(id)
+		break_gauge.earns_from = _earns_read
+		var strong: Array[StringName] = [STOMP_ID]
+		break_gauge.strong_parry_ids = strong
+	else:
+		# earns_from stays unset: his one attack both fills and drains it.
+		break_gauge.owns_attack = func(id: StringName) -> bool: return ATTACK_IDS.has(id)
+	break_gauge.parry_gain = table.parry_gain
+	break_gauge.grab_parry_gain = table.grab_parry_gain
+	break_gauge.reflect_gain = table.reflect_gain
+	break_gauge.perfect_dodge_gain = table.perfect_dodge_gain
+	break_gauge.punch_gain = table.punch_gain
+	break_gauge.charged_punch_gain = table.charged_punch_gain
+	break_gauge.hit_loss = table.hit_loss
+	break_gauge.guard_break_loss = table.guard_break_loss
+	break_gauge.unlock_delay = table.unlock_delay
 	add_child(break_gauge)
 	break_gauge.broke.connect(_on_break)
+
+
+# On the kaiju: one read a throw for its funkos, parried or dodged, however many of them were; the rest of his
+# attacks fill it every time.
+func _earns_read(hit: RefCounted) -> bool:
+	if not KAIJU_ATTACK_IDS.has(hit.attack_id):
+		return false
+	if hit.attack_id != FunkoThrow.ATTACK_ID or not is_instance_valid(hit.source) or not ("throw_id" in hit.source):
+		return true
+	var throw: int = hit.source.throw_id
+	if throw < 0:
+		return true
+	if paid_throws.has(throw):
+		return false
+	paid_throws[throw] = true
+	return true
+
+
+func kaiju_mode() -> bool:
+	return state_machine.kaiju_mode
 
 
 # The gauge fills inside physics flushes and his own physics steps, where his states can't switch.
@@ -175,6 +225,112 @@ func is_down() -> bool:
 	return is_broken() or is_juggled()
 
 
+# His crown as the frame showing has it, or standing.
+func crown_point() -> Vector2:
+	var crown = anchor(&"crown")
+	return global_position + JordanArtLayout.frame_local(crown if crown != null else JordanArtLayout.TAUNT_CROWN)
+
+
+#HIS SHEETS' ANCHORS (phase 1 on the kaiju: JordanRiderSheets)
+
+# Where `key` is on the frame he shows, or on frame `step` of his animation, as his own sheet's contract has it: a texel,
+# or null on a stand-in or a frame without it.
+func anchor(key: StringName, step := -1) -> Variant:
+	var table := JordanArtLayout.anchors(current_anim)
+	if table.is_empty():
+		return null
+	var frame: int = anim.frames[clampi(step if step >= 0 else anim_step, 0, anim.frames.size() - 1)]
+	if frame >= table.size():
+		return null
+	return table[frame].get(key)
+
+
+# Where on him the kaiju's seat goes: his ride sheets' SEAT, or his soles on a stand-in.
+func seat_local() -> Vector2:
+	var seat = anchor(&"seat")
+	return JordanArtLayout.frame_local(seat) if seat != null else JordanArtLayout.FLOOR_POINT
+
+
+# His body put so `key` on the frame he shows is on `point`. False on a stand-in.
+func place_anchor(key: StringName, point: Vector2) -> bool:
+	var texel = anchor(key)
+	if texel == null:
+		return false
+	global_position = (point - JordanArtLayout.frame_local(texel)).round()
+	return true
+
+
+# His hips (PIVOT) on an arc `apex` px high from where they are with `from_key` of frame `from_step` on `from_point`, to
+# where they are with `to_key` of frame `to_step` on `to_point`, `weight` of the way, whichever frame shows: the topple,
+# the climb and the buck off go through it. False on a stand-in.
+func place_on_arc(from_point: Vector2, from_key: StringName, from_step: int, to_point: Vector2, to_key: StringName,
+		to_step: int, weight: float, apex: float) -> bool:
+	var p0 = anchor(&"pivot", from_step)
+	var k0 = _key_texel(from_key, from_step)
+	var p1 = anchor(&"pivot", to_step)
+	var k1 = _key_texel(to_key, to_step)
+	var now = anchor(&"pivot")
+	if p0 == null or k0 == null or p1 == null or k1 == null or now == null:
+		return false
+	var w := clampf(weight, 0.0, 1.0)
+	var start: Vector2 = from_point + JordanArtLayout.frame_local(p0) - JordanArtLayout.frame_local(k0)
+	var finish: Vector2 = to_point + JordanArtLayout.frame_local(p1) - JordanArtLayout.frame_local(k1)
+	var at := start.lerp(finish, w) - Vector2(0, 4.0 * apex * w * (1.0 - w))
+	global_position = (at - JordanArtLayout.frame_local(now)).round()
+	return true
+
+
+# A frame without SOLES of its own still stands on the bottom of its centre column, as all his sheets do.
+func _key_texel(key: StringName, step: int) -> Variant:
+	var texel = anchor(key, step)
+	if texel == null and key == &"soles":
+		return JordanArtLayout.ANCHOR + Vector2(0, 1)
+	return texel
+
+
+# His hurtbox the frame's own BODY_BOX (sat on the mat), or back to standing.
+func set_body_box(box_texels: Rect2) -> void:
+	var box := JordanArtLayout.local_rect(box_texels)
+	var hurtbox_shape: CollisionShape2D = hurtbox.get_node("CollisionShape2D")
+	hurtbox_shape.position = box.get_center()
+	(hurtbox_shape.shape as RectangleShape2D).size = box.size
+
+
+func restore_body_box() -> void:
+	set_body_box(JordanArtLayout.BODY_BOX)
+
+
+# Where a figure punched back at him goes off on him (FunkoFigureScript): the kaiju's legs while he rides it and it
+# stands, nothing while it is in the air, and his own hurtbox otherwise.
+func redirect_rect() -> Rect2:
+	var kaiju: Node2D = state_machine.kaiju
+	if kaiju == null or not mounted:
+		return hurtbox_rect()
+	return Rect2() if kaiju.lift > 0.0 else kaiju.redirect_rect()
+
+
+# The bar and the gauge under it fade while any of `points` is under them, and come back as they leave (Danny's).
+func update_hud_fade(points: Array[Vector2]) -> void:
+	var alpha := 1.0
+	for point in points:
+		if KaijuLayout.HUD_FADE_RECT.has_point(point):
+			alpha = KaijuLayout.HUD_FADE_ALPHA
+	_fade_hud(alpha)
+
+
+# Bound to the bar itself, so a pause or a finisher's freeze holds it with the fight.
+func _fade_hud(alpha: float) -> void:
+	if not health_bar or is_equal_approx(hud_alpha, alpha):
+		return
+	hud_alpha = alpha
+	if hud_fade:
+		hud_fade.kill()
+	hud_fade = health_bar.create_tween().set_parallel()
+	for bar: Control in [health_bar, gauge_bar]:
+		if bar:
+			hud_fade.tween_property(bar, "modulate:a", alpha, KaijuLayout.HUD_FADE_TIME)
+
+
 func _physics_process(delta: float) -> void:
 	fight_clock += delta
 
@@ -194,11 +350,11 @@ func _apply_art_layout() -> void:
 
 # A non-looping animation holds its last frame when it ends, unless `next_anim` follows it. The layout
 # picks the frames, and the entry's AnimationPlayer clip plays under them.
-func play_anim(anim_name: StringName, next_anim: StringName = &"") -> void:
+func play_anim(anim_name: StringName, next_anim: StringName = &"", from_step := 0) -> void:
 	current_anim = anim_name
 	anim = JordanArtLayout.anim(anim_name)
 	anim_next = next_anim
-	anim_step = 0
+	anim_step = mini(from_step, anim.frames.size() - 1)
 	anim_clock = 0.0
 	anim_done = false
 	var sheet: Texture2D = load(anim.sheet)
@@ -247,6 +403,13 @@ func _show_anim_frame() -> void:
 	sprite.frame = anim.frames[anim_step]
 
 
+# Frame `step` of his animation, held there until something plays.
+func hold_frame(step: int) -> void:
+	anim_step = clampi(step, 0, anim.frames.size() - 1)
+	anim_done = true
+	_show_anim_frame()
+
+
 # A hit plays over whatever he was doing and hands back to what his state shows: a hit on the summon's
 # pop, which runs into the taunt window, goes back to the taunt, not the pop.
 func _flinch() -> void:
@@ -265,9 +428,9 @@ func _on_hurtbox_entered(area: Area2D) -> void:
 		last_contact_hit_time = fight_clock
 
 
-# Punches only land while he taunts, or while a Break has him down.
+# Punches only land in his windows: the taunt, or knocked off the kaiju, and a Break.
 func take_punch(amount: int) -> int:
-	if boss_health <= 0 or not (state_machine.is_taunting() or is_broken()):
+	if boss_health <= 0 or not state_machine.is_open():
 		return 0
 	var allowed := punches.allow(amount, hits_this_window, MAX_HITS_PER_WINDOW)
 	if allowed <= 0:
@@ -290,20 +453,25 @@ func take_explosion_hit(amount: int) -> int:
 		if break_gauge:
 			break_gauge.add(break_gauge.reflect_gain)
 	get_tree().call_group("arena_crowd", "cheer", 1.5)
-	if boss_health > 0:
+	# On the kaiju its legs flinch for him (_hit_feedback), and down on the mat he takes it where he sits.
+	if boss_health > 0 and not kaiju_mode():
 		_stagger()
 	return dealt
 
 
 # The player's finisher (see PlayerFinisher): a charged combo punch during the taunt or a Break dazes
 # him, and the uppercut that follows ends that window. Phase 1 has no health floor for its damage to
-# stop at.
+# stop at. On the kaiju each opening says whether its POW dazes him (its dazeable): knocked off by a parried
+# stomp it does, and on the lowered head after its breath it does too (the user, 2026-10-06).
 func can_be_dazed() -> bool:
-	return not defeated and boss_health > 0 and not daze_used and (state_machine.is_taunting() or is_broken())
+	if defeated or boss_health <= 0 or daze_used or not state_machine.is_open():
+		return false
+	var window: Node = state_machine.current_state
+	return window.dazeable if "dazeable" in window else true
 
 
 # The three-bar mash and the juggle are the Break's payout alone; the taunt pays the plain single-bar
-# finisher. With his 12 health the juggle's 40% on every window would end the fight in two.
+# finisher. With his 24 health the juggle's 50% on every window would end the fight in two.
 func can_be_juggled() -> bool:
 	return not defeated and boss_health > 0 and is_broken()
 
@@ -347,7 +515,12 @@ func get_max_health() -> int:
 
 
 func get_daze_anchor() -> Vector2:
-	if is_broken():
+	if mounted:
+		return crown_point() + Vector2(0, -JordanArtLayout.DAZE_GAP)
+	var stars = anchor(&"stars") if state_machine.is_dismounted() else null
+	if stars != null:
+		return global_position + JordanArtLayout.frame_local(stars)
+	if is_broken() or state_machine.is_dismounted():
 		return global_position + JordanArtLayout.broken_daze_anchor()
 	return global_position + JordanArtLayout.daze_anchor()
 
@@ -388,11 +561,23 @@ func get_juggle_point() -> Vector2:
 
 
 # A juggle that kills him ends with him still in the air: the outro's first line holds until he has
-# landed, as Eric's and Mason's do.
+# landed, as Eric's and Mason's do. On the kaiju, until it has shrunk back into the toy and he has hit the mat.
 func outro_line_delay(_player_won: bool) -> float:
+	var delay := 0.0
 	if is_juggled():
-		return JordanArtLayout.juggle().outro_delay
-	return 0.0
+		delay = JordanArtLayout.juggle().outro_delay
+	if kaiju_mode():
+		delay = maxf(delay, state_machine.states["Defeated"].kaiju_time_left())
+	return delay
+
+
+# The stomp's parry knocks him off the kaiju (JordanStomp): the stagger itself is the stomp's to play out.
+func can_parry_stagger(hit: RefCounted) -> bool:
+	return hit.attack_id == STOMP_ID and state_machine.current_state == state_machine.states.get("Stomp")
+
+
+func parry_stagger(_duration: float) -> void:
+	pass
 
 
 func _take_damage(amount: int, pitch := 1.0) -> int:
@@ -439,6 +624,24 @@ func _on_defeated() -> void:
 	FightOutro.finish_fight(get_tree(), true)
 
 
+# FIGHT 10 from his KO with no fight first, the main menu's FINALE row (JordanStateMachine._ready): his bar empty, not
+# a hit draining it, and the win that plays his finale.
+func start_at_finale() -> void:
+	if defeated:
+		return
+	boss_health = 0
+	if health_bar:
+		health_bar.set_value(0, 0, BossHealthBarUI.HIT_SILENT)
+	_refresh_health_bar()
+	_on_defeated()
+
+
+# FightOutro hands him the won outro: his finale plays in place of the lines and the Victory screen, starting with the
+# walk-out (JordanWalkOut), which ends it with FightOutro.leave_to() into his room.
+func take_won_outro(outro: Node, line_delay: float) -> void:
+	state_machine.begin_walk_out(outro, line_delay)
+
+
 # Called by FightOutro when the player loses.
 func on_player_defeated() -> void:
 	state_machine.enter_player_defeated()
@@ -477,7 +680,7 @@ func _build_hud() -> void:
 	hud_layer.add_child(health_bar)
 
 	if break_gauge:
-		var gauge_bar := BreakGaugeUI.new()
+		gauge_bar = BreakGaugeUI.new()
 		gauge_bar.gauge = break_gauge
 		hud_layer.add_child(gauge_bar)
 		gauge_bar.position = health_bar.break_gauge_anchor()
@@ -486,9 +689,15 @@ func _build_hud() -> void:
 func _hit_feedback() -> void:
 	if not sprite:
 		return
+	# Riding it, the kaiju takes the flinch for him, but for a punch on its lowered head (JordanRecoil), which flashes him.
+	if mounted and state_machine.kaiju and not state_machine.is_open():
+		state_machine.kaiju.flinch()
+		HitStop.freeze(get_tree(), 0.06)
+		return
 
-	# Down, he has no hit pose: the kneel holds, and in the air the hit sheet would replace the juggle's.
-	if not is_down():
+	# Down, he has no hit pose: the kneel holds, and in the air the hit sheet would replace the juggle's. Knocked
+	# off the kaiju he sits it out the same way.
+	if not is_down() and not state_machine.is_dismounted() and not mounted:
 		_flinch()
 	sprite.modulate = Color(3, 3, 3)
 	var flash_tween = create_tween()

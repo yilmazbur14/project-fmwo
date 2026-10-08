@@ -1,9 +1,10 @@
 extends State
 
 # Danny at 0 HP (plan section 8): it isn't over. A false victory with the gates open, then he wakes, leaps
-# onto the top gate and blocks it, says his line, and the two of them push for it: a progressive tug-of-war
-# mash (DannyBossTugOfWar) that throws the loser out through a gate. Only its result ends the fight, so
-# nothing before it may set the player's fight_over: hold_pose() refuses from then on.
+# onto the top gate and blocks it, says his line, and the two of them push for it: a tug-of-war mash
+# (DannyBossTugOfWar), the same effort wherever the rope is and swinging both ways as he surges, that throws
+# the loser out through a gate. Only its result ends the fight, so nothing before it may set the player's
+# fight_over: hold_pose() refuses from then on.
 #
 # THE BEATS, in seconds:
 #   KO             once the finisher is done with him, 0.4. Juggled to 0 he lands here from his crash, lying.
@@ -20,8 +21,8 @@ extends State
 #   CLINCH         0.3: the cut is over; the player sealed and posed facing him, his push set, the tachiai's
 #                  clash, and the meter (DannyBossSumoMeter) coming up with the mash keys either side and PUSH!
 #   MASH           the tug-of-war: presses in _input, the rope stepped in Physics_Update and drawn as the two
-#                  of them on the gate's line, whoever it is going against skidding; then WON or LOST, which
-#                  push the loser out and end the fight.
+#                  of them on the gate's line, whoever it is going against skidding, him leaning in through each
+#                  surge; then WON or LOST, which push the loser out and end the fight.
 # A held skip anywhere in the cut (skip_cut) lands on the clinch exactly as a watched cut does.
 #
 # EVERY WAIT is a node-bound tween in `waits` or the MASH's physics step, so a pause holds any beat; the skip
@@ -100,20 +101,22 @@ const CALL_FLICKER := 0.15
 @export var clash_hit_stop := 0.08
 @export var clash_shake := 10.0
 
-#THE TUG (DannyBossTugOfWar's fit: re-run its table() whenever one of these moves)
-@export var push_gain := 0.08
-@export var push_drain := 0.02
-@export var push_base := 0.10
-@export var push_grace := 5.0
-@export var push_ramp := 0.22
-@export var bulldoze := 3.0
-@export var sumo_max := 15.0
-# The crowd for every tenth of the rope the player wins off the line, and as he surges.
+#THE TUG (DannyBossTugOfWar's knobs and its fit: re-run its table() whenever one of these moves)
+@export var press_gain := 0.1
+@export var press_speed := 0.75
+@export var danny_push := 0.40
+@export var surge_push := 1.2
+@export var surge_time := 1.0
+@export var surge_every := 3.0
+@export var surge_first := 1.2
+@export var sumo_max := 30.0
+@export var final_surge := 1.0
+# The crowd for every tenth of the rope the player wins off the line, and as each surge starts, with a shake.
 @export var gain_cheer := 0.4
 @export var surge_cheer := 1.5
-# His strain loop's length, and once he surges.
+@export var surge_shake := 6.0
+# His strain loop's length.
 @export var strain_loop := 0.27
-@export var surge_strain_loop := 0.18
 
 #THE FINISH
 @export var danny_out_time := 0.8
@@ -146,6 +149,8 @@ var cut: CanvasLayer
 var cut_skipped := false
 var waits: Array[Tween] = []
 var was_asleep := false
+# 0 HP caught him on his back (DannyBossOnBack): he lies on through the false victory and rolls up to stir.
+var was_on_back := false
 var ko_left := 0.0
 var beat_started := 0.0
 var tug: TugOfWar
@@ -159,7 +164,9 @@ var pair: Array[StringName] = []
 var last_action := &""
 var last_press_usec := 0
 var best_tenth := 0
-var surged := false
+var danny_surging := false
+# The push pose he is showing: straining, skidding, or leaning in (push_win) through a surge.
+var danny_pose := &""
 var player_skidding := false
 var danny_skidding := false
 var gates_closing := false
@@ -179,13 +186,15 @@ func Enter() -> void:
 	gates_closing = false
 	gates_shut = false
 	pushed_out = false
-	surged = false
+	danny_surging = false
+	danny_pose = &""
 	best_tenth = 0
 	player_skidding = false
 	danny_skidding = false
 	tug = null
 	ko_left = ko_hold
 	was_asleep = body.current_anim in [&"sleep", &"sleep_hit"]
+	was_on_back = String(body.current_anim).begins_with("back_")
 	body.velocity = Vector2.ZERO
 	body.set_hurtbox_active(false)
 
@@ -268,7 +277,10 @@ func _false_victory() -> void:
 	# Lying, the juggle's `down` loop is still his, until the stir.
 	if not lying:
 		body.show_body()
-		body.play_anim(&"sleep" if was_asleep else &"defeat")
+		if was_on_back:
+			body.play_anim(&"back_daze")
+		else:
+			body.play_anim(&"sleep" if was_asleep else &"defeat")
 	body.finish_health_bar()
 	body.hide_boss_hud(hud_fade_time)
 	body.fade_music(SILENT_DB, music_fade_time, true)
@@ -308,6 +320,12 @@ func _stir() -> void:
 		body.show_body()
 		_hold_last(&"defeat")
 		await _beat(sit_up_time)
+		if not _cut_live():
+			return
+	elif was_on_back:
+		body.play_anim(&"back_roll")
+		body.play_sfx(&"back_roll")
+		await _beat(Layout.loop_length(Layout.anim(&"back_roll")))
 		if not _cut_live():
 			return
 	body.play_anim(&"wake")
@@ -522,18 +540,17 @@ func _clinch() -> void:
 func _start_mash() -> void:
 	phase = Phase.MASH
 	tug = TugOfWar.new()
-	tug.push_gain = push_gain
-	tug.push_drain = push_drain
-	tug.push_base = push_base
-	tug.push_grace = push_grace
-	tug.push_ramp = push_ramp
-	tug.bulldoze = bulldoze
-	tug.sumo_max = sumo_max
+	for knob in TugOfWar.KNOBS:
+		tug.set(knob, get(knob))
+	# The head start his parried belly bumps banked, 0 unless the user's open question 4 turns it on.
+	tug.rope = state_machine.tug_head_start
 	last_action = &""
 	last_press_usec = 0
 	player_skidding = false
 	danny_skidding = false
+	danny_surging = false
 	_pose_player(&"strain")
+	danny_pose = &"push_strain"
 	body.play_anim(&"push_strain", &"", strain_loop)
 	body.play_sfx(&"push_strain")
 	_build_dust()
@@ -599,25 +616,28 @@ func _mash_feedback(delta: float) -> void:
 	if tenth > best_tenth:
 		best_tenth = tenth
 		get_tree().call_group("arena_crowd", "cheer", gain_cheer)
-	if not surged and tug.clock >= tug.push_grace:
-		surged = true
-		get_tree().call_group("arena_crowd", "cheer", surge_cheer)
-		if not danny_skidding:
-			body.play_anim(&"push_strain", &"", surge_strain_loop)
+	# Each surge is told as it starts, a stomp, a shake and the crowd, and his end of the meter stays lit
+	# through it.
+	var surging: bool = tug.surging()
+	if surging != danny_surging:
+		danny_surging = surging
+		if surging:
+			get_tree().call_group("arena_crowd", "cheer", surge_cheer)
+			ScreenView.shake(get_tree(), surge_shake, SHAKE_STEPS, SHAKE_STEP)
+			body.play_sfx(&"sumo_stomp")
 		if is_instance_valid(meter):
-			meter.surging = true
+			meter.surging = surging
 	# Whoever the rope is going against skids, and the other strains: the player behind the line, him past it.
+	# Through a surge he leans in, gaining, wherever the rope is.
 	var skidding := rope < 0.0
 	if skidding != player_skidding:
 		player_skidding = skidding
 		_pose_player(&"skid" if skidding else &"strain")
-	var losing := rope > 0.0
-	if losing != danny_skidding:
-		danny_skidding = losing
-		if losing:
-			body.play_anim(&"push_skid")
-		else:
-			body.play_anim(&"push_strain", &"", surge_strain_loop if surged else strain_loop)
+	var pose := &"push_win" if danny_surging else (&"push_skid" if rope > 0.0 else &"push_strain")
+	if pose != danny_pose:
+		danny_pose = pose
+		body.play_anim(pose, &"", strain_loop if pose == &"push_strain" else 0.0)
+	danny_skidding = pose == &"push_skid"
 	_step_dust(delta)
 
 

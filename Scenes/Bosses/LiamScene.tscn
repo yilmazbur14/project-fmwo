@@ -1,0 +1,47 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/LiamScript.gd" id="1_body"]
+[ext_resource type="Script" path="res://Scripts/States/Liam/LiamStateMachine.gd" id="2_machine"]
+[ext_resource type="Texture2D" path="res://Assets/Characters/Liam/liam.png" id="3_liam"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_liam_hurtbox"]
+size = Vector2(96, 180)
+
+[node name="LiamScene" type="Node2D"]
+y_sort_enabled = true
+
+[node name="FloorLayer" type="Node2D" parent="."]
+position = Vector2(0, 101)
+
+[node name="WaveLayer" type="Node2D" parent="."]
+position = Vector2(0, 101)
+
+[node name="FxLayer" type="Node2D" parent="."]
+z_index = 3
+
+[node name="LiamCharacterBody" type="CharacterBody2D" parent="." node_paths=PackedStringArray("floor_layer", "wave_layer", "fx_layer")]
+position = Vector2(960, 348)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_body")
+floor_layer = NodePath("../FloorLayer")
+wave_layer = NodePath("../WaveLayer")
+fx_layer = NodePath("../FxLayer")
+
+[node name="Air" type="Node2D" parent="LiamCharacterBody"]
+
+[node name="Sprite2D" type="Sprite2D" parent="LiamCharacterBody/Air"]
+scale = Vector2(3, 3)
+texture = ExtResource("3_liam")
+offset = Vector2(0, -32)
+
+[node name="Hurtbox" type="Area2D" parent="LiamCharacterBody" groups=["enemy", "boss_target"]]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LiamCharacterBody/Hurtbox"]
+position = Vector2(0, -90)
+shape = SubResource("RectangleShape2D_liam_hurtbox")
+
+[node name="StateManager" type="Node" parent="LiamCharacterBody"]
+script = ExtResource("2_machine")

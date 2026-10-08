@@ -11,8 +11,8 @@ const FIGHT_PANEL_OFFSET_RIGHT: float = -24.0
 
 const DialogueVoices := preload("res://Scripts/DialogueVoices.gd")
 
-## Speakers whose portrait lives in a folder not named after them.
-const PORTRAIT_FOLDERS := {"Captain Burak": "BurakBoss"}
+## Speakers whose portrait lives in a folder not named after them. Aiden is Burak in a moustache (JordanFinale).
+const PORTRAIT_FOLDERS := {"Captain Burak": "BurakBoss", "Aiden": "Burak"}
 
 ## The dialogue resource
 @export var dialogue_resource: DialogueResource
@@ -145,7 +145,9 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if is_instance_valid(dialogue_line):
-		progress.visible = not dialogue_label.is_typing and dialogue_line.responses.size() == 0 and not dialogue_line.has_tag("voice")
+		# Not while the input lock still holds the line either: the arrow asks for a press, and one would do nothing yet. A line
+		# locked for longer than it is up (god-Jordan's shout as the beam takes him) never shows it.
+		progress.visible = not dialogue_label.is_typing and dialogue_line.responses.size() == 0 and not dialogue_line.has_tag("voice") and not _input_locked()
 
 
 func _unhandled_input(_event: InputEvent) -> void:
@@ -187,7 +189,11 @@ func apply_dialogue_line() -> void:
 
 	character_label.visible = not dialogue_line.character.is_empty()
 	character_label.text = tr(dialogue_line.character, "dialogue")
-	var portriat_path: String = "res://Assets/Characters/%s/portrait.png" % PORTRAIT_FOLDERS.get(dialogue_line.character, dialogue_line.character)
+	var portrait_file := "portrait"
+	# A `portrait` tag asks for another of the speaker's portraits, portrait_<value>.png: until it is drawn, none shows.
+	if dialogue_line.has_tag("portrait"):
+		portrait_file = "portrait_%s" % dialogue_line.get_tag_value("portrait")
+	var portriat_path: String = "res://Assets/Characters/%s/%s.png" % [PORTRAIT_FOLDERS.get(dialogue_line.character, dialogue_line.character), portrait_file]
 	print("Portrait path: ", portriat_path)
 	if is_instance_valid(portrait):
 		if ResourceLoader.exists(portriat_path):
@@ -319,15 +325,20 @@ func _on_dialogue_label_spoke(letter: String, letter_index: int, speed: float) -
 	_letters_since_blip += 1
 
 
+func _input_locked() -> bool:
+	return Time.get_ticks_msec() - _line_shown_msec < input_lock_time * 1000.0
+
+
 func _on_balloon_gui_input(event: InputEvent) -> void:
-	if Time.get_ticks_msec() - _line_shown_msec < input_lock_time * 1000.0:
+	if _input_locked():
 		get_viewport().set_input_as_handled()
 		return
 
-	# See if we need to skip typing of the dialogue
+	# See if we need to skip typing of the dialogue. The accept finishes it as the skip does (the 2026-10-07 playtest: A did
+	# nothing while a line typed), and only finishes it: the next press moves on, so one press is never two lines.
 	if dialogue_label.is_typing:
 		var mouse_was_clicked: bool = event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed()
-		var skip_button_was_pressed: bool = event.is_action_pressed(skip_action)
+		var skip_button_was_pressed: bool = event.is_action_pressed(skip_action) or event.is_action_pressed(next_action)
 		if mouse_was_clicked or skip_button_was_pressed:
 			get_viewport().set_input_as_handled()
 			dialogue_label.skip_typing()

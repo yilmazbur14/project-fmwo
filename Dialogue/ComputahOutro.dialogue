@@ -1,5 +1,6 @@
-# The end of boss 2, said before the fade to the Victory or Defeat screen. STILL TO BE WRITTEN
-# BY THE USER: these are the old two-hander's lines, written when Greyson was a boss too.
+# The end of boss 2, said before the fade to the Victory or Defeat screen. The user kept these as they stand in
+# the dialogue review of 2026-10-08. player_won never plays (beating Computah always hands over to Greyson's
+# takeover), but stays so nothing that asks for it finds the title missing.
 # player_won: the player beat Computah. player_lost: Computah beat the player.
 
 ~ player_won

@@ -19,7 +19,8 @@ extends RefCounted
 # leaves the screen, and the crowd's cheer; about 1.5 s.
 # The end state (PLAN section 6): Greyson at HOME, whole, on his own z, wearing the cannon, idle, the only boss,
 # targetable with his hurtbox off; his bar full, his gauge and meter empty, his theme started once; the gates shut;
-# the player free; no balloon, nothing of the takeover's own left and nothing in the hazard group; Computah gone from
+# the player free on their mark under HOME (greyson_takeover_mark has the walk there); no balloon, nothing of the
+# takeover's own left and nothing in the hazard group; Computah gone from
 # the ring - hidden, out of the fight and untargetable, his bar gone.
 
 const ComputahLayout := preload("res://Scripts/ComputahArtLayout.gd")
@@ -130,7 +131,7 @@ static func watched(t) -> void:
 	t.check(roar_fx_seen and screen_fx_seen, "the roar's FX on his mouth and over the screen")
 	t.check(takeover.beat_times.size() == 4 and absf(takeover.beat_times.get(&"roar", 0.0) - 1.8) < 0.05,
 		"every beat, the roar's 1.8 s (%s)" % [takeover.beat_times.keys()])
-	await t.wait(30)
+	await settle(t, body)
 	var diffs := end_state_diffs(t, computah, body)
 	t.check(diffs.is_empty(), "the end state (%s)" % ", ".join(diffs))
 	var sm: Node = body.state_machine
@@ -168,7 +169,7 @@ static func hurl_right(t) -> void:
 	t.press(KEY_ESCAPE)
 	var skipped: bool = await t.wait_until(func(): return takeover.finished, HOLD_FRAMES)
 	t.release(KEY_ESCAPE)
-	await t.wait(30)
+	await settle(t, body)
 	var diffs := end_state_diffs(t, computah, body)
 	t.check(skipped and diffs.is_empty(), "held after the crash: the end state (%s)" % ", ".join(diffs))
 
@@ -188,7 +189,7 @@ static func held(t, point: String) -> void:
 	var skipped: bool = await t.wait_until(func(): return takeover.finished, HOLD_FRAMES)
 	t.release(KEY_ESCAPE)
 	t.check(skipped, "the hold skips it")
-	await t.wait(30)
+	await settle(t, body)
 	var diffs := end_state_diffs(t, computah, body)
 	t.check(diffs.is_empty(), "the end state (%s)" % ", ".join(diffs))
 
@@ -367,6 +368,12 @@ static func cell_local(point: Vector2, flipped: bool) -> Vector2:
 	return (point - size / 2.0) * ComputahLayout.SCALE
 
 
+# Long enough after the takeover's end for its leftovers to go, and short of his first breath's end (first_beat), when
+# he starts throwing.
+static func settle(t, body: Node) -> void:
+	await t.wait(clampi(floori(body.state_machine.first_beat * 60.0) - 4, 1, 30))
+
+
 # Everything the end state isn't, in words: empty when it is exactly the end state.
 static func end_state_diffs(t, computah: Node, body: Node) -> Array[String]:
 	var sm: Node = body.state_machine
@@ -392,6 +399,9 @@ static func end_state_diffs(t, computah: Node, body: Node) -> Array[String]:
 		diffs.append("the gates not shut")
 	if t.player.is_talking or t.player.is_action_locked:
 		diffs.append("the player held")
+	var mark: Vector2 = sm.states["Takeover"].PLAYER_MARK
+	if t.player.global_position.distance_to(mark) > 0.5:
+		diffs.append("the player at %s, not on their mark %s" % [t.player.global_position, mark])
 	if t.live_balloon() != null:
 		diffs.append("a balloon up")
 	var takeover: Node = sm.states["Takeover"]

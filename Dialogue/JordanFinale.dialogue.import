@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://bqre5yy3ghm7c"
+path="res://.godot/imported/JordanFinale.dialogue-ef5e56dad607318a52c42d34a5017823.tres"
+
+[deps]
+
+source_file="res://Dialogue/JordanFinale.dialogue"
+dest_files=["res://.godot/imported/JordanFinale.dialogue-ef5e56dad607318a52c42d34a5017823.tres"]
+
+[params]
+
+defaults=true

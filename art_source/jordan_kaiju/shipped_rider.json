@@ -1,0 +1,108 @@
+{
+  "shipped": "2026-10-04T14:19:30",
+  "by": "coordinator",
+  "approval": "user 2026-10-04: 'approve all' (Jordan rider + mat sheets, waves 1+2)",
+  "contract": "art_source/jordan_kaiju/contract_rider.json",
+  "files": [
+    {
+      "file": "Assets/Characters/Jordan/jordan_box_open.aseprite",
+      "sha256": "93b5e3507d0e53eb763f6d7df23c4cf90770d586e9710427dbaaef4a5a86bec2",
+      "bytes": 4653
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_box_open.png",
+      "sha256": "703f9125fec52d88873b2c1298e846aba864441f68bccd7a2d289d357c8b66f9",
+      "bytes": 6418
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_butt_land.aseprite",
+      "sha256": "0ba881e100cfd6e3a267bf4f52adeaeff4da268fa18948f08c9afda24946c795",
+      "bytes": 7000
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_butt_land.png",
+      "sha256": "efbd23645d64a2b40fa337440111525c89b1cbed9e203b7f70c5d79c1b7e0a12",
+      "bytes": 10470
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_climb.aseprite",
+      "sha256": "aec3e05a4a810ec4d1651399f049b71c0c9a5ddbbc0b526a72c7ae83e37710fd",
+      "bytes": 7537
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_climb.png",
+      "sha256": "9f70dd54ad05e6ad09afe274a0c5b8731093ee29a5cd64d9d5575719b374fa5c",
+      "bytes": 11024
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_dismount_daze.aseprite",
+      "sha256": "e37ed784a7e0f44a2f22f1c87ebde63286414af433c162e68554c04ce6125dd8",
+      "bytes": 3008
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_dismount_daze.png",
+      "sha256": "c8a69ff0fe200531c4ea4a196a7b94a72a432cd632b50a179adc4667533b46f4",
+      "bytes": 4223
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_ride_brace.aseprite",
+      "sha256": "e2b8f8ec68000503a9bb9379ee31a14900024df655089c0d5509fa9fdb359fbd",
+      "bytes": 2376
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_ride_brace.png",
+      "sha256": "6d6a45fafd67f7599873ef6193ae5887dbc2895fdeb50135a90a8d53e7ed54dd",
+      "bytes": 3540
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_ride_idle.aseprite",
+      "sha256": "36ebcc589a768a68d34963d6bf887cace6eabe50af0b15de064bb55ad41fdb1f",
+      "bytes": 2797
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_ride_idle.png",
+      "sha256": "263263dc3822eb21b4b5018ac96eb2ba3ca6ef9af30eedb2185c3de4edae8a51",
+      "bytes": 4186
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_ride_taunt.aseprite",
+      "sha256": "45163481682a7a844c6a384b865ce31e69f47e627eaeb12c99dfb43d150cdab1",
+      "bytes": 3051
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_ride_taunt.png",
+      "sha256": "4200608df615e728719902f484011d97420def4e75cb51614f6fe377f922529c",
+      "bytes": 4612
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_ride_throw.aseprite",
+      "sha256": "97685a9c624feef3d3fd9c9eada0807bc9007a95aa5175e4d3c47f88536d0cd2",
+      "bytes": 4161
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_ride_throw.png",
+      "sha256": "651c633c94ff65a0bafe603d45f2adaa0e04c947a3271f461c630b9c44f490bd",
+      "bytes": 5934
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_topple.aseprite",
+      "sha256": "3325579fa7d1b1a901a41587496f870c74fcb50e4717e95f68be16edc475020a",
+      "bytes": 8676
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_topple.png",
+      "sha256": "5620d395516077441a1ee729fda3c6ca8e5b05e4faf12d02214b164e2c9fa270",
+      "bytes": 13046
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_toss.aseprite",
+      "sha256": "605499ce16cc7e364ac670fa4d116ea6b12642921420a5a79f4b93df2394d7d6",
+      "bytes": 3412
+    },
+    {
+      "file": "Assets/Characters/Jordan/jordan_toss.png",
+      "sha256": "a81c8a3c5ea857bb307656ced793f99cbcb3e1cb2264e4f9e7bd4ba0d56ab72f",
+      "bytes": 4803
+    }
+  ]
+}

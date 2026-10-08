@@ -4,9 +4,9 @@ extends State
 #   SUMMON  0.70 s  four clones gather across the top of the ring, a fifth of it apart, and stay there.
 #   CHARGE  1.20 s  each takes his Messatsu stance and gathers the ball at its palms; a violet line from
 #                   each tracks the player and one lock ring closes on them.
-#   LOCK    0.50 s  all four latch onto the player's hurtbox centre on one frame and run out to their
-#                   full length. This and the tell are the escape.
-#   TELL    0.30 s  the yellow badge over the lock: dodge this.
+#   LOCK    0.80 s  all four latch onto the player's hurtbox centre on one frame, run out to their full
+#                   length and light up, and the yellow badge goes up over the lock on that same frame:
+#                   dodge this. All of it is the escape.
 #   STRING  1.30 s  all four fire on one frame. The heads land messatsu_travel later, and from then until
 #                   the fade, beam_live, touching a band hurts.
 #   FADE    0.30 s  the beams fade, then the next volley's charge: beam_volleys in all.
@@ -34,8 +34,8 @@ extends State
 # least strike_clear before the lock (CarterStateMachine.strike_latest), so a player who stood rooted to
 # parry it still has the whole escape ahead of them.
 #
-# A Break ends the attack on the spot, as it always has: both badges come down, the lines and the ring
-# go, the beams fade with no hurt left in them and the four dissolve, then the Break's window.
+# A Break ends the attack on the spot and hands him straight to his Break's window, where the parried
+# strike left him (on_broke): the four, their beams, the lines, the ring and both badges go with it.
 # IF THE PLAYER NEVER MOVES THEY DIE, and that is the design: two hits a volley against the i-frames,
 # beam_volleys volleys, and the strike. The player is NOT locked.
 #
@@ -81,7 +81,7 @@ const CLOCK_SLACK := 0.0001
 
 @onready var state_machine = get_parent()
 
-enum Beat { SUMMON, CHARGE, LOCK, TELL, STRING, FADE, END }
+enum Beat { SUMMON, CHARGE, LOCK, STRING, FADE, END }
 enum Strike { WAITING, SHOW, LUNGE, HOLD, DONE }
 
 
@@ -215,6 +215,7 @@ func Physics_Update(delta: float) -> void:
 	fx_clock += delta
 	_step_poses()
 	_step_sheets()
+	_step_see_through(delta)
 	_advance_strike(delta)
 	if beat != Beat.END and not _striking():
 		_face(body.sprite, body.global_position.x)
@@ -231,10 +232,7 @@ func Physics_Update(delta: float) -> void:
 			if _due(beat_clock, state_machine.beam_charge):
 				_lock()
 		Beat.LOCK:
-			if _due(beat_clock, maxf(state_machine.beam_escape - state_machine.messatsu_tell, 0.0)):
-				_tell()
-		Beat.TELL:
-			if _due(beat_clock, state_machine.messatsu_tell):
+			if _due(beat_clock, state_machine.beam_escape):
 				_fire()
 		Beat.STRING:
 			_advance_string(delta)
@@ -254,13 +252,13 @@ func _due(clock: float, at: float) -> bool:
 # there. His strike is the one read this attack offers, and a beam's hit costs one.
 
 # His Break, deferred here from CarterAkumaScript._on_break through the state machine. The gauge fills
-# inside a physics flush, where states cannot switch.
+# inside a physics flush, where states cannot switch. No END beat: the user wants him hittable at once
+# (2026-09-27), so release() takes everything of the attack as he is handed over.
 func on_broke() -> void:
 	if released:
 		return
 	broke = true
-	if beat != Beat.END:
-		_begin_end()
+	_hand_over()
 
 
 #THE FOUR AT THE TOP
@@ -324,6 +322,21 @@ func _pose_frame(anim: Dictionary, clock: float) -> int:
 		if into < 0.0:
 			return frames[i]
 	return frames[frames.size() - 1]
+
+
+# A figure the player's sprite overlaps goes see-through (CarterArtLayout.BEAM_CLONE_SEE_THROUGH): the four are
+# on the clone layer, over every fighter, and the whole top strip of the ring is behind one of them. On
+# self_modulate, so it multiplies with the fades in and out their own modulate runs.
+func _step_see_through(delta: float) -> void:
+	var player := _player()
+	var seen := Rect2()
+	if player != null:
+		seen = player.sprite.get_global_transform() * player.sprite.get_rect()
+	var step := delta / CarterArtLayout.BEAM_CLONE_SEE_THROUGH_TIME
+	for caster in casters:
+		var drawn: Rect2 = caster.figure.get_global_transform() * caster.figure.get_rect()
+		var target := CarterArtLayout.BEAM_CLONE_SEE_THROUGH if player != null and drawn.intersects(seen) else 1.0
+		caster.figure.self_modulate.a = move_toward(caster.figure.self_modulate.a, target, step)
 
 
 # Round to the player only once they are well past the centre line, so walking across in front of one
@@ -395,6 +408,11 @@ func _draw_lock(grown: float, at: Vector2) -> void:
 
 # From here on nothing of the four moves: each line runs out along its latched aim to the length its
 # beam will have, so the player sees all of what is about to fire, past them as well as up to them.
+# THE BADGE GOES UP ON THE LOCK, NOT AFTER IT. The lock is when the escape starts, so it is the real
+# cue; a badge that came messatsu_tell before the fire, 0.50 s after the lock, only taught a player
+# who waited for it to start late (the 2026-10-04 playtest: a first attempt's wins fell from 55% to
+# 30%). The beams can't be parried, so nothing is re-armed here: this is a cue to be gone, not a
+# timing.
 func _lock() -> void:
 	beat = Beat.LOCK
 	beat_clock = 0.0
@@ -409,17 +427,9 @@ func _lock() -> void:
 		caster.aim_line.global_position = caster.aim_origin.round()
 		caster.aim_line.points = PackedVector2Array([Vector2.ZERO,
 			(Vector2.from_angle(caster.aim_angle) * CarterArtLayout.MESSATSU_LENGTH).round()])
-		caster.aim_line.default_color = CarterArtLayout.PLACEHOLDER_MESSATSU_LINE.color
-
-
-# The beams can't be parried, so nothing is re-armed here: this is a cue to be gone, not a timing.
-func _tell() -> void:
-	beat = Beat.TELL
-	beat_clock = 0.0
-	for caster in casters:
 		caster.aim_line.default_color = CarterArtLayout.PLACEHOLDER_MESSATSU_LINE.lit_color
 	lock_tell_at = CarterArtLayout.clear_tell_anchor(_lock_tell_anchors())
-	ParryTell.telegraph(lock_ring, BEAM_ID, state_machine.messatsu_tell, _lock_tell_anchor)
+	ParryTell.telegraph(lock_ring, BEAM_ID, state_machine.beam_escape, _lock_tell_anchor)
 	body.charge_sfx_player.stop()
 	body.lights_sfx_player.play()
 
@@ -608,6 +618,9 @@ func _hand_over() -> void:
 		# zeroes the barrage's own tally so its banked damage cannot be cashed in a second time.
 		recover.prepare(0, 0, 0, 0,
 			state_machine.recover_break if broke else state_machine.recover_spent, broke or owed)
+		if state_machine.chains_on(self, recover):
+			state_machine.chain_on(recover)
+			return
 	state_machine.on_child_transition(self, "Recover")
 
 

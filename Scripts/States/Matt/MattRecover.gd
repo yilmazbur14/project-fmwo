@@ -1,15 +1,19 @@
 extends State
 
 # The punish window, and the only place punches reach him outside a Break (MattBroken): recover_time on
-# RecoverTimer, three punches at most, and a charged one dazes him once (MattScript.can_be_dazed). It
-# opens at HOME unless the attack before it left a recover_spot (the Glass Row: where he stands, over
-# the player) and a bonus.
+# RecoverTimer, three punches at most (1 + 1 + 2), the third still the POW. NO FINISHER STARTS HERE: only his
+# Break dazes him (MattScript.can_be_dazed, the Break-only rule, 2026-10-04; daze_in_recover brings the old
+# daze back). It opens at HOME unless the attack before it left a recover_spot (the Glass Row: where he
+# stands, over the player) and a bonus.
 # Enter() needs nothing from the state before it, so a bare transition into it opens a working window.
 #
-# THE YELL is a sub-phase INSIDE it, decided once as the window opens: never in the fight's first
-# window, then yell_chance. If it is on, it goes off the frame after landed punch 1 or 2 (even odds):
-#   TELL   0.40 s  the yellow ring over his head, a sharp inhale. Punches still land and count, and
-#                  flash him without flinching him.
+# THE YELL is a sub-phase INSIDE it, and OFF in the live game (MattStateMachine.yell_counter_enabled, the user,
+# 2026-10-04: no pushing a player away while they hit him). With it on it is decided once as the window opens:
+# never in the fight's first window, then yell_chance. If it is planned, it goes off the frame after landed punch
+# 1 or 2 (even odds):
+#   TELL   0.58 s  the yellow ring over his head, a sharp inhale. Punches still land and count, and
+#                  flash him without flinching him. Long enough for the swing that set it off and one more
+#                  chained before a reaction (MattStateMachine.yell_tell).
 #   BLAST  0.18 s  MattYellRingScript blown out from his mouth, 60 to 270 px, and the roar frames.
 #   AFTER  0.35 s  the roar held.
 # The window's timer is paused through all three and he can't be dazed in any of them. If it lands he
@@ -17,15 +21,30 @@ extends State
 # later (MattStateMachine.idle_after_yell). If it doesn't - dodged, or walked away from - the window
 # gets yell_whiff_bonus back on top of what it had left, and its hit count starts again, so a whole
 # combo into the daze is still there to be had.
+#
+# THE SCREAM (the user, 2026-09-27): once a punch short of the POW has landed here outside the yell, a
+# swing that whiffs or is refused before the POW lands and he screams at once, with no tell: the yell's
+# roar and a ring that hurts nobody, and the player shoved back to scream_clear from his mouth, inside the
+# ring, with no damage. The combo's count goes with it. He is out of his window the way a landed yell takes
+# him out, so there is no daze and no uppercut. The combo has no timing since 2026-09-30, so a slow press
+# or a mashed one is never a miss. The POW ends the watch, and nothing is watched again until a punch short
+# of it lands. Once the yell is on its way the combo is the yell's business: a miss through it does nothing,
+# and a punch landed after it is watched again. MattStateMachine.scream_on_miss off retires it.
 
 const ParryTell := preload("res://Scripts/ParryTell.gd")
 const HitInfo := preload("res://Scripts/HitInfo.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
 const RING_SCENE := preload("res://Scenes/Bosses/MattYellRingScene.tscn")
+const DefenseHypeArtLayout := preload("res://Scripts/DefenseHypeArtLayout.gd")
 
 const YELL_ID := &"matt_yell"
+# Between the yellow badge's top and the top of the screen, when his crown is too high for all of it.
+const BADGE_TOP_MARGIN := 4.0
 const YELL_SHAKE_STEPS := 6
 const YELL_SHAKE_STEP_TIME := 0.03
+# A rope in the scream's way turns its push this many degrees a try, up to this many tries each way.
+const SCREAM_TURN_STEP := 22.5
+const SCREAM_TURNS := 4
 
 @export var body : CharacterBody2D
 @export var recover_timer : Timer
@@ -49,6 +68,14 @@ var ring: Node2D
 var released := true
 # Yells blown this window, for a test.
 var yells := 0
+# The player's combo, heard while the window is open, and whether the last punch to land was one short of
+# the POW, landed on him outside the yell: the one a miss after it is screamed at. The scream itself waits
+# for the end of the frame, out of the callback the miss came in.
+var combo: Node
+var combo_watched := false
+var scream_due := false
+# Screams this window, for a test.
+var screams := 0
 
 
 func Enter() -> void:
@@ -63,6 +90,15 @@ func Enter() -> void:
 	yell_due = false
 	yells = 0
 	yell_result = HitInfo.Result.IGNORED
+	combo_watched = false
+	scream_due = false
+	screams = 0
+	var player: Node2D = state_machine.get_player()
+	combo = player.combo if player else null
+	if combo and not combo.punch_landed.is_connected(_on_punch_landed):
+		combo.punch_landed.connect(_on_punch_landed)
+		combo.punch_missed.connect(_on_punch_missed)
+		combo.punch_refused.connect(_on_punch_refused)
 	_plan_yell()
 	body.play_state_anim(&"recover")
 	body.set_hurtbox_active(true)
@@ -83,6 +119,12 @@ func release() -> void:
 	released = true
 	yell = Yell.NONE
 	yell_due = false
+	scream_due = false
+	if is_instance_valid(combo) and combo.punch_landed.is_connected(_on_punch_landed):
+		combo.punch_landed.disconnect(_on_punch_landed)
+		combo.punch_missed.disconnect(_on_punch_missed)
+		combo.punch_refused.disconnect(_on_punch_refused)
+	combo = null
 	recover_timer.paused = false
 	recover_timer.stop()
 	if is_instance_valid(body):
@@ -93,9 +135,10 @@ func release() -> void:
 	ring = null
 
 
+# Both draws are made whether the yell is on or not, so his rng gives every other roll what it always did.
 func _plan_yell() -> void:
 	var roll: float = state_machine.rng.randf()
-	yell_planned = state_machine.windows_opened >= state_machine.yell_from_window and roll < state_machine.yell_chance
+	yell_planned = state_machine.yell_counter_enabled and state_machine.windows_opened >= state_machine.yell_from_window 		and roll < state_machine.yell_chance
 	var pick: int = state_machine.rng.randi_range(1, 2)
 	yell_on_hit = pick if yell_planned else 0
 
@@ -147,8 +190,21 @@ func _tell() -> void:
 	ParryTell.telegraph(body, YELL_ID, state_machine.yell_tell, _tell_anchor)
 
 
+# Over his crown, but never with the badge's top off the screen: in the window at the Glass Row's station the
+# tip's spot over his crown is 53 px from the top, so the 72 px badge stood with its top quarter out of the view
+# (playtest 2026-10-04). Pushed down onto his crest instead.
 func _tell_anchor() -> Vector2:
-	return body.tell_anchor(&"yell_tell")
+	var at: Vector2 = body.tell_anchor(&"yell_tell")
+	return Vector2(at.x, maxf(at.y, badge_floor()))
+
+
+# The lowest the badge's tip may stand: its whole height (the dodge tell's pivot over its bottom, drawn at its
+# scale, or the stand-in ring's diameter) under the top of the screen.
+static func badge_floor() -> float:
+	var spec := DefenseHypeArtLayout.dodge_tell()
+	if spec.has("pivot"):
+		return spec.pivot.y * spec.scale + BADGE_TOP_MARGIN
+	return 2.0 * spec.radius + spec.width + BADGE_TOP_MARGIN
 
 
 func _blast() -> void:
@@ -158,15 +214,21 @@ func _blast() -> void:
 	body.play_anim(&"roar")
 	body.play_sfx(&"yell")
 	ScreenView.shake(get_tree(), state_machine.yell_shake, YELL_SHAKE_STEPS, YELL_SHAKE_STEP_TIME)
-	ring = RING_SCENE.instantiate()
-	ring.player = state_machine.get_player()
-	ring.start_radius = state_machine.yell_start_radius
-	ring.end_radius = state_machine.yell_radius
-	ring.band = state_machine.yell_band
-	ring.expand_time = state_machine.yell_expand_time
-	ring.landing_time = state_machine.yell_landing_time
+	ring = _blow_ring(state_machine.get_player())
 	ring.answered.connect(_on_ring_answered)
-	state_machine.add_hazard(ring, body.mouth_point(&"roar"), body.projectile_layer)
+
+
+# One ring of sound off his roaring mouth, at the yell's size: at `target`, or at nobody.
+func _blow_ring(target: Node2D) -> Node2D:
+	var blown: Node2D = RING_SCENE.instantiate()
+	blown.player = target
+	blown.start_radius = state_machine.yell_start_radius
+	blown.end_radius = state_machine.yell_radius
+	blown.band = state_machine.yell_band
+	blown.expand_time = state_machine.yell_expand_time
+	blown.landing_time = state_machine.yell_landing_time
+	state_machine.add_hazard(blown, body.mouth_point(&"roar"), body.projectile_layer)
+	return blown
 
 
 # The ring's one answer. A hit throws the player unless it killed them, and ends the window; a dodge is a
@@ -188,6 +250,66 @@ func launch_point(from: Vector2) -> Vector2:
 	var x: float = state_machine.launch_left_x if from.x < mouth.x else state_machine.launch_right_x
 	var y: float = from.y + state_machine.launch_follow * (from.y - mouth.y)
 	return Vector2(x, clampf(y, state_machine.launch_y_range.x, state_machine.launch_y_range.y))
+
+
+#THE SCREAM
+
+# Every punch that lands: one on him outside the yell, short of the POW, starts the watch, and anything
+# else ends it.
+func _on_punch_landed(target: Node, _dealt: int, charged: bool) -> void:
+	combo_watched = target == body and not charged and not is_yelling()
+
+
+# A swing that reached nothing, or one refused, while the watch is on.
+func _on_punch_missed() -> void:
+	if not combo_watched or is_yelling() or scream_due or not state_machine.scream_on_miss:
+		return
+	combo_watched = false
+	scream_due = true
+	_scream.call_deferred()
+
+
+func _on_punch_refused(_target: Node) -> void:
+	_on_punch_missed()
+
+
+func _scream() -> void:
+	if released or not scream_due:
+		return
+	scream_due = false
+	screams += 1
+	combo.reset()
+	body.play_anim(&"roar")
+	body.play_sfx(&"yell")
+	ScreenView.shake(get_tree(), state_machine.yell_shake, YELL_SHAKE_STEPS, YELL_SHAKE_STEP_TIME)
+	_blow_ring(null)
+	var player: Node2D = state_machine.get_player()
+	if player != null and player.playerHealth > 0:
+		var to := scream_point(player.global_position, player.ring_origins)
+		if to != player.global_position:
+			body.launch_player(player, to)
+	state_machine.idle_after_yell()
+
+
+# Where the scream leaves a player standing at `from`: straight away from his mouth to scream_clear px
+# from it, on whole px inside `inside`, the ring's floor for their origin. A rope in the way turns the push
+# along it, as little as still clears him; a player already that far off is left where they are.
+func scream_point(from: Vector2, inside: Rect2) -> Vector2:
+	var mouth: Vector2 = body.mouth_point(&"roar")
+	var clear: float = state_machine.scream_clear
+	if from.distance_to(mouth) >= clear:
+		return from
+	var away := Vector2.DOWN if from.is_equal_approx(mouth) else (from - mouth).normalized()
+	var best := from
+	for step in SCREAM_TURNS + 1:
+		for turn in ([0] if step == 0 else [step, -step]):
+			var to := (mouth + away.rotated(deg_to_rad(turn * SCREAM_TURN_STEP)) * clear).round() \
+				.clamp(inside.position.ceil(), inside.end.floor())
+			if to.distance_to(mouth) > best.distance_to(mouth):
+				best = to
+		if best.distance_to(mouth) >= clear - 1.0:
+			return best
+	return best
 
 
 # Nothing landed: the window carries on with what it had left and the bonus, and its punches count

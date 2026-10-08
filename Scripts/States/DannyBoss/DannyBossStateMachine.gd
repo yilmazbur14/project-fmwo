@@ -2,11 +2,16 @@ extends Node
 
 # Danny's fight, boss 7. His intro once (the lines, the hold that skips them and the VS card), then
 # ATTACK_ORDER round and round, one attack at a time with a breath in Idle between:
-#   Spit     four worm globs that land as puddles; a player whose feet step into one is rooted.
-#   Slams    a five-slam Sumo Smash string from the air, each landing sending a quake ring out, and then
-#   Sleep    his nap: he heals, and it is the window to punish him in.
+#   Spit       four worm globs that land as puddles; a player whose feet step into one is rooted.
+#   BellyBump  a charge along the player's line under a red badge (Addendum 1): a hit carries them into the ropes,
+#              a parry holds their ground and leaves him dizzy in Staggered, and his run can slip on his own worms
+#              onto his back.
+#   Slams      the Sumo Smash string from the air: nine to eleven hops that splash worms round where they land, all
+#              but the first homing in on the player until he has all but landed, then the big one, the only quake
+#              ring. Parried, the big one bounces him onto his back (OnBack); anything else ends in
+#   Sleep      his nap: he heals, and it is the window to punish him in.
 # A root in Idle, Spit or Sleep turns into his Headbutt (on_player_rooted); a parried one leaves him in
-# Staggered, a window of its own. The windows are Sleep, Staggered and the Break's.
+# Staggered, a window of its own. The windows are Sleep, Staggered, OnBack's and the Break's.
 #
 # THE BREAK: reads fill his gauge (DannyBossScript.BREAK). The one that fills it drops him into Broken where
 # he stands, mid-attack if need be (enter_broken), and he gets up into Idle and the next attack in order.
@@ -40,6 +45,10 @@ extends Node
 
 const VsCard := preload("res://Scripts/VsCard.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
+const Layout := preload("res://Scripts/DannyBossArtLayout.gd")
+# Addendum 1's two states, built here rather than in his scene (_add_state).
+const BellyBump := preload("res://Scripts/States/DannyBoss/DannyBossBellyBump.gd")
+const OnBack := preload("res://Scripts/States/DannyBoss/DannyBossOnBack.gd")
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/DannyBossPreFight.dialogue"
 const SUMO_DIALOGUE := "res://Dialogue/DannyBossSumo.dialogue"
 # Coder B's root, which test_root_player() puts on the player the way a puddle does.
@@ -47,10 +56,10 @@ const ROOT_SCRIPT := "res://Scripts/DannyBossRoot.gd"
 # Everything he sends out: globs, puddles, roots, slam marks and hits, rings, trails and their effects.
 const HAZARD_GROUP := "danny_hazard"
 # The states with a release(), which _stop_everything() calls.
-const RELEASING_STATES := ["Spit", "Slams", "Sleep", "Headbutt", "Staggered"]
+const RELEASING_STATES := ["Spit", "Slams", "Sleep", "Headbutt", "Staggered", "BellyBump", "OnBack"]
 # The attacks whose reads fill the gauge, which Idle holds while it is locked. The headbutt only ever
 # answers a root.
-const GAUGE_ATTACKS := ["Slams"]
+const GAUGE_ATTACKS := ["BellyBump", "Slams"]
 # No root is sprung while he is in one of these (can_root).
 const NO_ROOT_STATES := ["Intro", "Sumo", "Defeated", "Victory", "Broken", "Juggled", "Headbutt"]
 # A root sprung while he is in one of these is his headbutt's cue.
@@ -92,12 +101,21 @@ const PLAYER_IN_FRONT := 3.0
 #HUD
 @export var hud_fade_alpha := 0.3
 
+#ON HIS BACK (px)
+# His lying box's top never rises above this (DannyBossOnBack): under the top rope (ROPES, y 114) and clear of the
+# boss HP block that hangs below it, whose Break gauge ends at y 181. A bounce or a slip near the top of the ring
+# lands him that much lower instead, still beside the player (lying_feet_y_min); his standing poses keep WALK_RECT.
+@export var lying_top_min := 182.0
+
 # Seedable, so a test or a bot can replay a fight: the puddles' spots come from it.
 var rng := RandomNumberGenerator.new()
 
 var player_defeated := false
-# His attacks in the order they come, advanced as each one starts. A var, so a test can pin it.
-var ATTACK_ORDER: Array[String] = ["Spit", "Slams"]
+# His attacks in the order they come, advanced as each one starts. A var, so a test can pin it. The belly bump
+# comes while the spit's four fresh puddles are down, so the player can line one up between them and him. Three
+# strings to a bump since the 2026-10-06 tuning: every attack of his ends in an opening, and the bump's, a parry
+# away, was the cheap one.
+var ATTACK_ORDER: Array[String] = ["Spit", "Slams", "Spit", "Slams", "Spit", "BellyBump", "Slams"]
 var attacks_started := 0
 # The pre-fight lines' balloon, which a held skip takes down, and whether those lines have handed over to
 # the VS card yet.
@@ -107,6 +125,9 @@ var pre_fight_over := false
 var sumo_balloon: Node
 # 0 HP was reached: from here the only ways on are the sumo and its two endings.
 var sumo_entered := false
+# The final tug's rope the player has banked by parrying his belly bumps (DannyBossBellyBump.tug_head_start, the
+# user's open question 4: 0 unless that knob is on), which the sumo starts from.
+var tug_head_start := 0.0
 # The worm puddles lying on the floor, and the root holding the player's feet, if one is.
 var puddles: Array[Node] = []
 var root: Node
@@ -123,6 +144,10 @@ var warned := {}
 
 func _ready() -> void:
 	rng.randomize()
+	# Before the children are gathered, which takes these in with them. Built in code so nothing an open editor
+	# saves can write over them (Computah's and Liam's way).
+	_add_state(BellyBump.new(), "BellyBump")
+	_add_state(OnBack.new(), "OnBack")
 	for child in get_children():
 		if child is State:
 			states[child.name] = child
@@ -131,6 +156,13 @@ func _ready() -> void:
 		current_state = initial_state
 		# Deferred until the scene is up: his entrance reads the player and the gates off the fight scene.
 		current_state.Enter.call_deferred()
+
+
+# `body` is set before the state is ready, which needs it; the state finds this node as its parent itself.
+func _add_state(state: State, state_name: String) -> void:
+	state.name = state_name
+	state.body = DannyBossCharacterBody
+	add_child(state)
 
 
 func _process(delta: float) -> void:
@@ -258,13 +290,62 @@ func attack_done(state: State) -> void:
 	on_child_transition(state, "Idle")
 
 
-# His windows: his nap, the dizzy spell after a parried headbutt, and the Break's.
+# His windows: his nap, the dizzy spell after a parried headbutt or bump, the Break's, and his time on his back
+# while it is open.
 func is_open() -> bool:
-	return current_state in [states.get("Sleep"), states.get("Staggered"), states.get("Broken")]
+	if current_state in [states.get("Sleep"), states.get("Staggered"), states.get("Broken")]:
+		return true
+	return is_on_back() and current_state.is_window()
 
 
 func is_sleeping() -> bool:
 	return current_state == states.get("Sleep")
+
+
+func is_staggered() -> bool:
+	return current_state == states.get("Staggered")
+
+
+func is_on_back() -> bool:
+	return current_state != null and current_state == states.get("OnBack")
+
+
+# On his back with the finisher's daze on offer: the parried slam's window and, since 2026-10-06, a slip's.
+func on_back_dazeable() -> bool:
+	return is_on_back() and current_state.dazeable and current_state.is_window()
+
+
+# Onto his back for `window` seconds, `cap` punches, the finisher offered or not, and what put him there.
+func enter_on_back(window: float, cap: int, dazeable: bool, from: StringName) -> void:
+	var on_back = states.get("OnBack")
+	if on_back == null:
+		return
+	on_back.window = window
+	on_back.hit_cap = cap
+	on_back.dazeable = dazeable
+	on_back.from = from
+	on_child_transition(current_state, "OnBack")
+
+
+# The finisher's uppercut ended his time on his back: he flinches where he lies, rolls up onto his feet, and his next
+# attack comes once the stagger is over and the roll has played out. The flinch first: rolled up on the uppercut's own
+# frame, its flash lit the curled-up roll pose and its star hit the floor beside it (the 2026-10-04 playtest).
+func roll_up_then_start_cycle(stagger_time: float) -> void:
+	on_child_transition(current_state, "Idle")
+	beat_timer.stop()
+	DannyBossCharacterBody.play_anim(&"back_hit", &"back_roll")
+	if not DannyBossCharacterBody.anim_finished.is_connected(_on_roll_flinch_finished):
+		DannyBossCharacterBody.anim_finished.connect(_on_roll_flinch_finished, CONNECT_ONE_SHOT)
+	var chain := Layout.loop_length(Layout.anim(&"back_hit")) + Layout.loop_length(Layout.anim(&"back_roll"))
+	finisher_stagger_timer.start(maxf(stagger_time, chain))
+
+
+# The flinch is over and the roll has taken over from it: it hands over to his idle, with its sound.
+func _on_roll_flinch_finished(finished: StringName) -> void:
+	if finished != &"back_hit" or DannyBossCharacterBody.current_anim != &"back_roll":
+		return
+	DannyBossCharacterBody.anim_next = &"idle"
+	DannyBossCharacterBody.play_sfx(&"back_roll")
 
 
 func flinch() -> void:
@@ -272,7 +353,7 @@ func flinch() -> void:
 		current_state.flinch()
 
 
-# The finisher ended his nap early: he stays down, staggered, then the next attack.
+# The finisher ended his nap or his dizzy spell early: he stays down, staggered, then the next attack.
 func stagger_then_start_cycle(stagger_time: float) -> void:
 	sleep_timer.stop()
 	on_child_transition(current_state, "Idle")
@@ -358,6 +439,34 @@ func get_player() -> Node2D:
 func gates() -> Node:
 	var scene := get_tree().current_scene
 	return scene.get_node_or_null("Arena/Gates") if scene else null
+
+
+# The player's position with their hurtbox's far edge on the inner line of the side rope `dir` points at (+1 the
+# right rope, -1 the left), where the belly bump carries them: inside the positions their own ring net allows
+# (PlayerScript._keep_in_ring), so the net never snaps them off it.
+func player_rope_position(dir: float) -> Vector2:
+	var player := get_player()
+	if player == null:
+		return HOME
+	var shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var box: Rect2 = shape.global_transform * shape.shape.get_rect()
+	var far_edge := box.end.x if dir > 0.0 else box.position.x
+	var to: Vector2 = player.global_position + Vector2(rope_point(dir, 0.0).x - far_edge, 0.0)
+	var origins: Rect2 = player.ring_origins if "ring_origins" in player else Rect2()
+	if origins.has_area():
+		to = to.clamp(origins.position, origins.end)
+	return to.round()
+
+
+# The least feet y he may lie on his back at, with his lying box `box` given from his feet: its top then stays at
+# lying_top_min or below.
+func lying_feet_y_min(box: Rect2) -> float:
+	return lying_top_min - box.position.y
+
+
+# The side rope's inner line at height `y`: +1 the right rope, -1 the left.
+func rope_point(dir: float, y: float) -> Vector2:
+	return Vector2(ROPES.end.x if dir > 0.0 else ROPES.position.x, y)
 
 
 # Where every hit of his comes from: the player's own hurtbox centre, so any facing answers it and the check
@@ -476,6 +585,28 @@ func splat_puddles_in(centre: Vector2, rx: float, ry: float) -> void:
 		var d: Vector2 = puddle.global_position - centre
 		if pow(d.x / rx, 2.0) + pow(d.y / ry, 2.0) <= 1.0:
 			puddle.splat()
+
+
+# Every puddle whose trigger reaches into `box` grown by `margin` splats: the floor he lies on and the room round it,
+# clean for the punish. How many it took.
+func clear_floor_round(box: Rect2, margin: float) -> int:
+	var room := box.grow(margin)
+	var cleared := 0
+	for puddle in live_puddles():
+		var centre: Vector2 = puddle.global_position
+		var nearest := centre.clamp(room.position, room.end)
+		if ((nearest - centre) / puddle.radii).length_squared() <= 1.0:
+			puddle.splat()
+			cleared += 1
+	return cleared
+
+
+# The first armed puddle whose trigger `point` is in, or null.
+func armed_puddle_at(point: Vector2) -> Node:
+	for puddle in live_puddles():
+		if puddle.armed and puddle.contains_feet(point):
+			return puddle
+	return null
 
 
 # Whether a puddle may root the player now. Never in his intro, the Break, the juggle, the headbutt or the

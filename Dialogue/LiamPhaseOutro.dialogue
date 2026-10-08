@@ -1,0 +1,11 @@
+# Liam's own outro, once his elements phase decides the fight (LiamScript.OUTRO_DIALOGUE). LiamOutro.dialogue stays with
+# Bixby: its player_lost still covers losing to him. player_won: the player beat Liam himself. player_lost: either phase
+# after the hand-over beat the player.
+
+~ player_won
+Liam: Fine. You win, newcomer. Jordan's waiting for you. [#liam=beaten]
+=> END
+
+~ player_lost
+Liam: Nyahahaha! [#liam=laugh, #blips=off]
+=> END

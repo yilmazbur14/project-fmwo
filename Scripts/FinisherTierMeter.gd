@@ -34,14 +34,12 @@ var last_press := -1.0
 var resolved := false
 
 
-func _init(press_gain: float, bar_drains: Array, bar_windows: Array, grace: float, stop_after: float, banked_at_start := 0) -> void:
+func _init(press_gain: float, bar_drains: Array, bar_windows: Array, grace: float, stop_after: float) -> void:
 	gain = press_gain
 	drains = bar_drains
 	windows = bar_windows
 	start_grace = grace
 	idle_stop = stop_after
-	banked = banked_at_start
-	meter = float(banked)
 
 
 # Returns the bar this press banked, or 0.

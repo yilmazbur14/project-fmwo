@@ -1,0 +1,2014 @@
+{
+ "note": "FULL POSE SHEETS (texels, scale 3). Cells 96x96 unless stated; liam.png at (16,32); anchor point (48,96) = sprite.offset (0,-48). Points are cell texels.",
+ "liam_png_numbers": {
+  "black_ratio": 0.2819,
+  "colours": 35,
+  "band": [
+   0.2537,
+   0.3101
+  ]
+ },
+ "perch_box": {
+  "rect": [
+   12,
+   30,
+   72,
+   66
+  ]
+ },
+ "sheets": {
+  "slimed_sit": {
+   "file": "liam_slimed_sit.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 1,
+   "times": [
+    1.0
+   ],
+   "tags": [
+    {
+     "name": "slimed_sit",
+     "frames": [
+      0,
+      0
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.308,
+     "colours": 35,
+     "drawn_box": [
+      20,
+      31,
+      78,
+      95
+     ]
+    }
+   ]
+  },
+  "get_up": {
+   "file": "liam_get_up.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 3,
+   "times": [
+    0.17,
+    0.17,
+    0.16
+   ],
+   "tags": [
+    {
+     "name": "get_up",
+     "frames": [
+      0,
+      2
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.3082,
+     "colours": 34,
+     "drawn_box": [
+      3,
+      40,
+      92,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.3041,
+     "colours": 34,
+     "drawn_box": [
+      2,
+      38,
+      93,
+      95
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.2794,
+     "colours": 35,
+     "drawn_box": [
+      18,
+      33,
+      77,
+      95
+     ]
+    }
+   ]
+  },
+  "wipe": {
+   "file": "liam_wipe.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 2,
+   "times": [
+    0.2,
+    0.2
+   ],
+   "tags": [
+    {
+     "name": "wipe",
+     "frames": [
+      0,
+      1
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.2865,
+     "colours": 35,
+     "drawn_box": [
+      18,
+      33,
+      72,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.2894,
+     "colours": 35,
+     "drawn_box": [
+      18,
+      33,
+      77,
+      95
+     ]
+    }
+   ]
+  },
+  "talk_thanks": {
+   "file": "liam_talk_thanks.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 2,
+   "times": [
+    1.0,
+    1.0
+   ],
+   "tags": [
+    {
+     "name": "talk_thanks",
+     "frames": [
+      0,
+      1
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.284,
+     "colours": 36,
+     "drawn_box": [
+      18,
+      33,
+      75,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.284,
+     "colours": 36,
+     "drawn_box": [
+      18,
+      33,
+      75,
+      95
+     ]
+    }
+   ]
+  },
+  "talk_explain": {
+   "file": "liam_talk_explain.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 2,
+   "times": [
+    1.0,
+    1.0
+   ],
+   "tags": [
+    {
+     "name": "talk_explain",
+     "frames": [
+      0,
+      1
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.2846,
+     "colours": 35,
+     "drawn_box": [
+      16,
+      33,
+      77,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.2843,
+     "colours": 35,
+     "drawn_box": [
+      16,
+      33,
+      77,
+      95
+     ]
+    }
+   ]
+  },
+  "talk_elements": {
+   "file": "liam_talk_elements.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 2,
+   "times": [
+    1.0,
+    1.0
+   ],
+   "tags": [
+    {
+     "name": "talk_elements",
+     "frames": [
+      0,
+      1
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.2994,
+     "colours": 34,
+     "drawn_box": [
+      18,
+      33,
+      77,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.2994,
+     "colours": 34,
+     "drawn_box": [
+      18,
+      33,
+      77,
+      95
+     ]
+    }
+   ]
+  },
+  "talk_smug": {
+   "file": "liam_talk_smug.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 2,
+   "times": [
+    1.0,
+    1.0
+   ],
+   "tags": [
+    {
+     "name": "talk_smug",
+     "frames": [
+      0,
+      1
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.2872,
+     "colours": 35,
+     "drawn_box": [
+      18,
+      32,
+      77,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.2867,
+     "colours": 35,
+     "drawn_box": [
+      18,
+      32,
+      77,
+      95
+     ]
+    }
+   ]
+  },
+  "talk_staff": {
+   "file": "liam_talk_staff.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 2,
+   "times": [
+    1.0,
+    1.0
+   ],
+   "tags": [
+    {
+     "name": "talk_staff",
+     "frames": [
+      0,
+      1
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.3093,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      75,
+      95
+     ],
+     "staff_tip": [
+      21.0,
+      41.0
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.3093,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      75,
+      95
+     ],
+     "staff_tip": [
+      21.0,
+      41.0
+     ]
+    }
+   ]
+  },
+  "laugh": {
+   "file": "liam_laugh.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 4,
+   "times": [
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "tags": [
+    {
+     "name": "laugh",
+     "frames": [
+      0,
+      3
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.2906,
+     "colours": 34,
+     "drawn_box": [
+      18,
+      27,
+      78,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.2984,
+     "colours": 34,
+     "drawn_box": [
+      18,
+      23,
+      77,
+      95
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.2908,
+     "colours": 34,
+     "drawn_box": [
+      18,
+      26,
+      78,
+      95
+     ]
+    },
+    {
+     "frame": 3,
+     "black_ratio": 0.3,
+     "colours": 34,
+     "drawn_box": [
+      18,
+      22,
+      77,
+      95
+     ]
+    }
+   ]
+  },
+  "staff_pull": {
+   "file": "liam_staff_pull.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 5,
+   "times": [
+    0.3,
+    0.3,
+    0.3,
+    0.35,
+    0.35
+   ],
+   "tags": [
+    {
+     "name": "staff_pull",
+     "frames": [
+      0,
+      4
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.2884,
+     "colours": 35,
+     "drawn_box": [
+      18,
+      31,
+      77,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.2781,
+     "colours": 38,
+     "drawn_box": [
+      18,
+      22,
+      77,
+      95
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.2933,
+     "colours": 38,
+     "drawn_box": [
+      18,
+      4,
+      80,
+      95
+     ]
+    },
+    {
+     "frame": 3,
+     "black_ratio": 0.2881,
+     "colours": 38,
+     "drawn_box": [
+      18,
+      0,
+      84,
+      95
+     ]
+    },
+    {
+     "frame": 4,
+     "black_ratio": 0.3031,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      77,
+      95
+     ],
+     "staff_tip": [
+      21.0,
+      41.0
+     ]
+    }
+   ]
+  },
+  "slam_rise": {
+   "file": "liam_slam_rise.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 3,
+   "times": [
+    0.15,
+    0.1,
+    0.75
+   ],
+   "tags": [
+    {
+     "name": "slam_rise",
+     "frames": [
+      0,
+      2
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.3052,
+     "colours": 38,
+     "drawn_box": [
+      10,
+      22,
+      77,
+      95
+     ],
+     "staff_butt": [
+      19.0,
+      83.0
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.3074,
+     "colours": 37,
+     "drawn_box": [
+      10,
+      32,
+      77,
+      95
+     ],
+     "staff_butt": [
+      18.5,
+      95.0
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.305,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      33,
+      77,
+      95
+     ],
+     "staff_butt": [
+      20.5,
+      94.5
+     ],
+     "staff_tip": [
+      21.0,
+      42.0
+     ]
+    }
+   ]
+  },
+  "ride": {
+   "file": "liam_ride.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 2,
+   "times": [
+    0.2,
+    0.2
+   ],
+   "tags": [
+    {
+     "name": "ride",
+     "frames": [
+      0,
+      1
+     ]
+    }
+   ],
+   "on_pillar": true,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.3065,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      77,
+      95
+     ],
+     "staff_tip": [
+      21.0,
+      41.0
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.309,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      31,
+      78,
+      95
+     ],
+     "staff_tip": [
+      21.0,
+      40.0
+     ]
+    }
+   ]
+  },
+  "perch_idle": {
+   "file": "liam_perch_idle.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 4,
+   "times": [
+    0.2,
+    0.2,
+    0.2,
+    0.2
+   ],
+   "tags": [
+    {
+     "name": "perch_idle",
+     "frames": [
+      0,
+      3
+     ]
+    }
+   ],
+   "on_pillar": true,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.2975,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      77,
+      95
+     ],
+     "staff_tip": [
+      21.0,
+      41.0
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.2981,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      77,
+      95
+     ],
+     "staff_tip": [
+      21.0,
+      41.0
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.2985,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      77,
+      95
+     ],
+     "staff_tip": [
+      21.0,
+      41.0
+     ]
+    },
+    {
+     "frame": 3,
+     "black_ratio": 0.2994,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      77,
+      95
+     ],
+     "staff_tip": [
+      21.0,
+      41.0
+     ]
+    }
+   ]
+  },
+  "cast_left": {
+   "file": "liam_cast_left.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 3,
+   "times": [
+    0.15,
+    0.15,
+    0.15
+   ],
+   "tags": [
+    {
+     "name": "cast_left",
+     "frames": [
+      0,
+      2
+     ]
+    }
+   ],
+   "on_pillar": true,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.2973,
+     "colours": 37,
+     "drawn_box": [
+      12,
+      32,
+      77,
+      95
+     ],
+     "staff_tip": [
+      22.5,
+      41.0
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.2856,
+     "colours": 37,
+     "drawn_box": [
+      12,
+      30,
+      77,
+      95
+     ],
+     "staff_tip": [
+      20.5,
+      39.0
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.2939,
+     "colours": 37,
+     "drawn_box": [
+      12,
+      31,
+      77,
+      95
+     ],
+     "staff_tip": [
+      21.0,
+      40.0
+     ]
+    }
+   ]
+  },
+  "cast_right": {
+   "file": "liam_cast_right.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 3,
+   "times": [
+    0.15,
+    0.15,
+    0.15
+   ],
+   "tags": [
+    {
+     "name": "cast_right",
+     "frames": [
+      0,
+      2
+     ]
+    }
+   ],
+   "on_pillar": true,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.3074,
+     "colours": 37,
+     "drawn_box": [
+      14,
+      32,
+      78,
+      95
+     ],
+     "staff_tip": [
+      22.5,
+      41.0
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.3025,
+     "colours": 37,
+     "drawn_box": [
+      14,
+      32,
+      83,
+      95
+     ],
+     "staff_tip": [
+      22.5,
+      41.0
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.3058,
+     "colours": 37,
+     "drawn_box": [
+      14,
+      32,
+      82,
+      95
+     ],
+     "staff_tip": [
+      22.5,
+      41.0
+     ]
+    }
+   ]
+  },
+  "wobble": {
+   "file": "liam_wobble.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 4,
+   "times": [
+    0.12,
+    0.12,
+    0.12,
+    0.12
+   ],
+   "tags": [
+    {
+     "name": "wobble",
+     "frames": [
+      0,
+      3
+     ]
+    }
+   ],
+   "on_pillar": true,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.3076,
+     "colours": 38,
+     "drawn_box": [
+      13,
+      32,
+      81,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.3083,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      30,
+      82,
+      95
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.3047,
+     "colours": 37,
+     "drawn_box": [
+      14,
+      31,
+      82,
+      95
+     ]
+    },
+    {
+     "frame": 3,
+     "black_ratio": 0.3089,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      30,
+      82,
+      95
+     ]
+    }
+   ]
+  },
+  "steady": {
+   "file": "liam_steady.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 1,
+   "times": [
+    1.0
+   ],
+   "tags": [
+    {
+     "name": "steady",
+     "frames": [
+      0,
+      0
+     ]
+    }
+   ],
+   "on_pillar": true,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.3053,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      81,
+      95
+     ],
+     "staff_tip": [
+      21.0,
+      41.0
+     ]
+    }
+   ]
+  },
+  "blast": {
+   "file": "liam_blast.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 3,
+   "times": [
+    0.15,
+    0.15,
+    0.3
+   ],
+   "tags": [
+    {
+     "name": "blast",
+     "frames": [
+      0,
+      2
+     ]
+    }
+   ],
+   "on_pillar": true,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.3097,
+     "colours": 38,
+     "drawn_box": [
+      22,
+      31,
+      78,
+      95
+     ],
+     "staff_tip": [
+      70.0,
+      68.0
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.3036,
+     "colours": 38,
+     "drawn_box": [
+      20,
+      32,
+      82,
+      95
+     ],
+     "staff_tip": [
+      74.0,
+      70.0
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.3074,
+     "colours": 37,
+     "drawn_box": [
+      20,
+      32,
+      82,
+      95
+     ],
+     "staff_tip": [
+      74.0,
+      70.0
+     ]
+    }
+   ]
+  },
+  "breathe": {
+   "file": "liam_breathe.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 4,
+   "times": [
+    0.3,
+    0.1,
+    0.1,
+    0.2
+   ],
+   "tags": [
+    {
+     "name": "breathe",
+     "frames": [
+      0,
+      3
+     ]
+    }
+   ],
+   "on_pillar": true,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.293,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      77,
+      95
+     ],
+     "mouth": [
+      43.5,
+      54.0
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.2991,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      77,
+      95
+     ],
+     "mouth": [
+      43.5,
+      55.0
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.2997,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      78,
+      95
+     ],
+     "mouth": [
+      43.5,
+      56.0
+     ]
+    },
+    {
+     "frame": 3,
+     "black_ratio": 0.3001,
+     "colours": 38,
+     "drawn_box": [
+      12,
+      32,
+      77,
+      95
+     ],
+     "mouth": [
+      43.5,
+      55.0
+     ]
+    }
+   ],
+   "note": "the cold-breath POSE sheet (ANIMS cold_breath): 0 inhale, 1 blow, 2 blow, 3 recover; play 0,1,2,1,2,1,2,1,2,3; the plume liam_cold_breath.png pins on the mouth point"
+  },
+  "slam": {
+   "file": "liam_slam.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 4,
+   "times": [
+    0.1,
+    0.1,
+    0.15,
+    0.25
+   ],
+   "tags": [
+    {
+     "name": "slam",
+     "frames": [
+      0,
+      3
+     ]
+    }
+   ],
+   "on_pillar": true,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.2801,
+     "colours": 38,
+     "drawn_box": [
+      18,
+      33,
+      75,
+      95
+     ],
+     "staff_butt": [
+      65.0,
+      87.0
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.2927,
+     "colours": 38,
+     "drawn_box": [
+      18,
+      32,
+      75,
+      95
+     ],
+     "staff_butt": [
+      65.0,
+      82.0
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.2926,
+     "colours": 38,
+     "drawn_box": [
+      18,
+      34,
+      76,
+      95
+     ],
+     "staff_butt": [
+      65.0,
+      95.0
+     ]
+    },
+    {
+     "frame": 3,
+     "black_ratio": 0.2913,
+     "colours": 38,
+     "drawn_box": [
+      18,
+      33,
+      75,
+      95
+     ],
+     "staff_butt": [
+      65.0,
+      93.0
+     ]
+    }
+   ]
+  },
+  "fall": {
+   "file": "liam_fall.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 4,
+   "times": [
+    0.15,
+    0.15,
+    0.15,
+    0.15
+   ],
+   "tags": [
+    {
+     "name": "fall",
+     "frames": [
+      0,
+      3
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.3099,
+     "colours": 34,
+     "drawn_box": [
+      29,
+      34,
+      95,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.3088,
+     "colours": 35,
+     "drawn_box": [
+      10,
+      26,
+      84,
+      95
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.2669,
+     "colours": 35,
+     "drawn_box": [
+      9,
+      41,
+      86,
+      95
+     ]
+    },
+    {
+     "frame": 3,
+     "black_ratio": 0.3083,
+     "colours": 38,
+     "drawn_box": [
+      8,
+      33,
+      95,
+      94
+     ]
+    }
+   ]
+  },
+  "downed": {
+   "file": "liam_downed.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 3,
+   "times": [
+    0.3,
+    0.3,
+    0.3
+   ],
+   "tags": [
+    {
+     "name": "downed",
+     "frames": [
+      0,
+      2
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.3086,
+     "colours": 38,
+     "drawn_box": [
+      8,
+      30,
+      95,
+      94
+     ],
+     "head_top": [
+      48.0,
+      44.0
+     ],
+     "daze": [
+      47.0,
+      36.0
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.3093,
+     "colours": 38,
+     "drawn_box": [
+      8,
+      31,
+      95,
+      94
+     ],
+     "head_top": [
+      49.0,
+      44.0
+     ],
+     "daze": [
+      48.0,
+      36.0
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.3086,
+     "colours": 38,
+     "drawn_box": [
+      8,
+      31,
+      95,
+      94
+     ],
+     "head_top": [
+      48.0,
+      44.0
+     ],
+     "daze": [
+      47.0,
+      36.0
+     ]
+    }
+   ]
+  },
+  "downed_hit": {
+   "file": "liam_downed_hit.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 2,
+   "times": [
+    0.08,
+    0.14
+   ],
+   "tags": [
+    {
+     "name": "downed_hit",
+     "frames": [
+      0,
+      1
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.3052,
+     "colours": 36,
+     "drawn_box": [
+      8,
+      42,
+      95,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.307,
+     "colours": 37,
+     "drawn_box": [
+      8,
+      42,
+      95,
+      94
+     ]
+    }
+   ]
+  },
+  "defeat": {
+   "file": "liam_defeat.png",
+   "cell": [
+    96,
+    96
+   ],
+   "anchor": [
+    48,
+    96
+   ],
+   "frames": 5,
+   "times": [
+    0.12,
+    0.12,
+    0.14,
+    0.2,
+    1.0
+   ],
+   "tags": [
+    {
+     "name": "defeat",
+     "frames": [
+      0,
+      4
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.3073,
+     "colours": 38,
+     "drawn_box": [
+      8,
+      12,
+      80,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.3049,
+     "colours": 35,
+     "drawn_box": [
+      17,
+      37,
+      76,
+      95
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.3083,
+     "colours": 38,
+     "drawn_box": [
+      8,
+      33,
+      95,
+      94
+     ]
+    },
+    {
+     "frame": 3,
+     "black_ratio": 0.3088,
+     "colours": 34,
+     "drawn_box": [
+      9,
+      42,
+      78,
+      95
+     ]
+    },
+    {
+     "frame": 4,
+     "black_ratio": 0.2876,
+     "colours": 37,
+     "drawn_box": [
+      12,
+      41,
+      78,
+      95
+     ]
+    }
+   ]
+  },
+  "juggle": {
+   "file": "liam_juggle.png",
+   "cell": [
+    128,
+    96
+   ],
+   "anchor": [
+    64,
+    95
+   ],
+   "frames": 12,
+   "times": [
+    0.06,
+    0.08,
+    0.14,
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.07,
+    0.09,
+    0.14,
+    0.4,
+    0.4
+   ],
+   "tags": [
+    {
+     "name": "launch",
+     "frames": [
+      0,
+      1
+     ]
+    },
+    {
+     "name": "tumble",
+     "frames": [
+      2,
+      6
+     ]
+    },
+    {
+     "name": "crash",
+     "frames": [
+      7,
+      9
+     ]
+    },
+    {
+     "name": "down",
+     "frames": [
+      10,
+      11
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0,
+     "black_ratio": 0.294,
+     "colours": 34,
+     "drawn_box": [
+      32,
+      33,
+      94,
+      95
+     ]
+    },
+    {
+     "frame": 1,
+     "black_ratio": 0.3078,
+     "colours": 34,
+     "drawn_box": [
+      14,
+      11,
+      110,
+      91
+     ]
+    },
+    {
+     "frame": 2,
+     "black_ratio": 0.3,
+     "colours": 34,
+     "drawn_box": [
+      25,
+      11,
+      104,
+      93
+     ]
+    },
+    {
+     "frame": 3,
+     "black_ratio": 0.2986,
+     "colours": 35,
+     "drawn_box": [
+      31,
+      14,
+      108,
+      85
+     ]
+    },
+    {
+     "frame": 4,
+     "black_ratio": 0.3041,
+     "colours": 34,
+     "drawn_box": [
+      30,
+      14,
+      108,
+      82
+     ]
+    },
+    {
+     "frame": 5,
+     "black_ratio": 0.2975,
+     "colours": 35,
+     "drawn_box": [
+      23,
+      10,
+      98,
+      88
+     ]
+    },
+    {
+     "frame": 6,
+     "black_ratio": 0.3094,
+     "colours": 35,
+     "drawn_box": [
+      19,
+      12,
+      104,
+      90
+     ]
+    },
+    {
+     "frame": 7,
+     "black_ratio": 0.2576,
+     "colours": 34,
+     "drawn_box": [
+      18,
+      41,
+      109,
+      95
+     ]
+    },
+    {
+     "frame": 8,
+     "black_ratio": 0.2863,
+     "colours": 35,
+     "drawn_box": [
+      15,
+      39,
+      112,
+      95
+     ]
+    },
+    {
+     "frame": 9,
+     "black_ratio": 0.2795,
+     "colours": 34,
+     "drawn_box": [
+      32,
+      41,
+      94,
+      95
+     ]
+    },
+    {
+     "frame": 10,
+     "black_ratio": 0.2889,
+     "colours": 37,
+     "drawn_box": [
+      32,
+      41,
+      94,
+      95
+     ]
+    },
+    {
+     "frame": 11,
+     "black_ratio": 0.2866,
+     "colours": 37,
+     "drawn_box": [
+      32,
+      40,
+      94,
+      95
+     ]
+    }
+   ],
+   "juggle": {
+    "frame_size": [
+     128,
+     96
+    ],
+    "feet": [
+     64,
+     95
+    ],
+    "offset": [
+     0,
+     -48
+    ],
+    "tumble_centre": [
+     64,
+     50
+    ],
+    "top_row": 10
+   },
+   "note": "BossJuggled table: launch 0-1, tumble 2-6 (loop), crash 7-9, down 10-11; feet (64,95), offset (0,-48) like Mason; tumble_centre and top_row measured"
+  },
+  "leap_shadow": {
+   "file": "liam_leap_shadow.png",
+   "cell": [
+    64,
+    16
+   ],
+   "anchor": [
+    32,
+    8
+   ],
+   "frames": 3,
+   "times": [
+    0.1
+   ],
+   "tags": [
+    {
+     "name": "low",
+     "frames": [
+      0,
+      0
+     ]
+    },
+    {
+     "name": "mid",
+     "frames": [
+      1,
+      1
+     ]
+    },
+    {
+     "name": "high",
+     "frames": [
+      2,
+      2
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0
+    },
+    {
+     "frame": 1
+    },
+    {
+     "frame": 2
+    }
+   ],
+   "note": "solid black ellipses; the code sets the alpha (mason_leap_shadow convention)"
+  },
+  "shadow": {
+   "file": "liam_shadow.png",
+   "cell": [
+    64,
+    16
+   ],
+   "anchor": [
+    32,
+    8
+   ],
+   "frames": 1,
+   "times": [
+    1.0
+   ],
+   "tags": [
+    {
+     "name": "shadow",
+     "frames": [
+      0,
+      0
+     ]
+    }
+   ],
+   "on_pillar": false,
+   "per_frame": [
+    {
+     "frame": 0
+    }
+   ],
+   "note": "solid black ellipses; the code sets the alpha (mason_leap_shadow convention)"
+  }
+ },
+ "POINTS_for_LiamArtLayout": {
+  "staff_tip": {
+   "perch_idle": [
+    21.0,
+    41.0
+   ],
+   "cast_left": [
+    22.5,
+    41.0
+   ],
+   "cast_right": [
+    22.5,
+    41.0
+   ],
+   "blast": [
+    74.0,
+    70.0
+   ]
+  },
+  "mouth": {
+   "cold_breath": [
+    43.5,
+    55.0
+   ]
+  },
+  "staff_butt": {
+   "slam_rise": [
+    18.5,
+    95.0
+   ],
+   "slam": [
+    65.0,
+    95.0
+   ]
+  },
+  "head_top": {
+   "downed": [
+    48.0,
+    44.0
+   ]
+  },
+  "daze": {
+   "downed": [
+    47.0,
+    36.0
+   ]
+  }
+ },
+ "POINTS_note": "One point per pose as the code reads it today: the blast release frame (1), the breathe blow frame (1), the slam_rise and slam impact frames. Per-frame values are under sheets.",
+ "files": [
+  "liam_slimed_sit.png",
+  "liam_get_up.png",
+  "liam_wipe.png",
+  "liam_talk_thanks.png",
+  "liam_talk_explain.png",
+  "liam_talk_elements.png",
+  "liam_talk_smug.png",
+  "liam_talk_staff.png",
+  "liam_laugh.png",
+  "liam_staff_pull.png",
+  "liam_slam_rise.png",
+  "liam_ride.png",
+  "liam_perch_idle.png",
+  "liam_cast_left.png",
+  "liam_cast_right.png",
+  "liam_wobble.png",
+  "liam_steady.png",
+  "liam_blast.png",
+  "liam_breathe.png",
+  "liam_slam.png",
+  "liam_fall.png",
+  "liam_downed.png",
+  "liam_downed_hit.png",
+  "liam_defeat.png",
+  "liam_juggle.png",
+  "liam_leap_shadow.png",
+  "liam_shadow.png",
+  "gif_liam_laugh.gif",
+  "gif_liam_staff_pull.gif",
+  "gif_liam_wobble.gif",
+  "gif_liam_blast.gif",
+  "gif_liam_breathe.gif",
+  "gif_liam_slam.gif",
+  "gif_liam_fall_to_downed.gif",
+  "liam_mock_takeover_end.png",
+  "liam_full_contact.png"
+ ]
+}

@@ -1,6 +1,8 @@
 """Jordan's silhouette on the main-menu tower (Assets/UI/Screens/main_menu_bg.png), re-derived from the
 APPROVED v2 redesign (2026-09-24, jordan_redesign_v2.png frame 0) and rebuilt through the menu's own
 pipeline (art_source/main_menu/bg.py). It replaces the 09-23 silhouette (menu.py) of the first redesign.
+Re-sampled 2026-09-28 for the fitted tee (art_source/jordan_fit, approved "everywhere"): rows 17-31;
+and again the same day for the SKINNY build (art_source/jordan_fit/skinny, approved): rows 18-35.
 
 THE SCALE AND ANCHOR are the 09-23 entry's, as asked: factor 2.0, anchor 10.
   - menu_mask.new_mask(2.0, SPRITE_V2): v2 frame 0 at 2.0 is 24x44 (the top row empty, dropped).
@@ -16,8 +18,11 @@ THE MASK is the sampler's, hand-cleaned only here (see jordan_derived/menu_mask.
     a row lower, as v2 holds it
   - a pixel between the sneakers (the 1x gap, x48-49, falls between two columns)
   Nothing else is touched: the greasy crest flicking forward, the notch of the thin neck, the narrow
-  sloped shoulders, the sack of a tee and the stick legs are all as sampled. v2's stick forearm runs
-  flush down the tee from the drooping sleeve, so no gap is opened inside his elbow (there is none).
+  sloped shoulders, the skinny tee (a sack, then fitted, then skinny, all on 2026-09-28's round of
+  refits) and the stick legs are all as sampled. The skinny build's thinner arms open, at 2.0, a 2x2
+  gap inside the akimbo elbow (rows 23-24) and a notch between the tee and the hanging far arm (rows
+  22-24): both are the sampler's, and the elbow gap now reads as the hand on his hip (the fitted
+  tee's one-pixel gap sampled solid, and a one-cell hole opened by hand read as a stray fleck).
 
     python menu_v2.py            # rebuild in memory, prove it, write previews to the scratchpad
     python menu_v2.py --ship     # ...then write masks_clean.txt's [jordan] block, main_menu_bg.png and
@@ -88,25 +93,25 @@ JORDAN = [
     '..........######..#oo#oo#',   # 14 chin
     '...........###....#o###o#',   # 15 the thin neck
     '.......########...#ooooo#',   # 16 narrow sloped shoulders
-    '......###################',   # 17 his hand under the box
-    '.....####################',   # 18
-    '....################.....',   # 19
+    '......##########.########',   # 17 his hand under the box, a notch clear of the fitted shoulder
+    '......###################',   # 18 the near shoulder in to the skinny tee
+    '.....##############......',   # 19
     '....################.....',   # 20
-    '...#################.....',   # 21
-    '..#################......',   # 22 the stick arm down to his hip
-    '.##################......',   # 23
-    '.##################......',   # 24
-    '..################.......',   # 25
-    '...###############.......',   # 26
-    '....##############.......',   # 27 the tee hanging like a sack
-    '....##############.......',   # 28
-    '....##############.......',   # 29
-    '....#############........',   # 30
-    '.....###########.........',   # 31
-    '.......###.####..........',   # 32 stick legs, knock-kneed
-    '.......########..........',   # 33
-    '.......########..........',   # 34
-    '......####.####..........',   # 35
+    '...################......',   # 21
+    '..#############.###......',   # 22 the stick arm down to his hip, the far arm hanging clear of the tee
+    '.###..#########.###......',   # 23 the gap inside the akimbo elbow (sampled: 2x2 on the skinny arm)
+    '.###..#########..#.......',   # 24 the far elbow
+    '...############..........',   # 25
+    '....###########..........',   # 26 the skinny tee, 15px at the chest
+    '.....##########..........',   # 27
+    '.......########..........',   # 28
+    '.......########..........',   # 29 tapering to his 13px waist
+    '.......########..........',   # 30
+    '.......########..........',   # 31 its hem
+    '.......###.###...........',   # 32 stick legs, knock-kneed, a pixel thinner
+    '.......#######...........',   # 33
+    '.......#######...........',   # 34
+    '.......###.###...........',   # 35
     '......####..###..........',   # 36
     '.....#####..####.........',   # 37
     '.....#####..####.........',   # 38

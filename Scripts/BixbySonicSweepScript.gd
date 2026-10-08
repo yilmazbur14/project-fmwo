@@ -3,9 +3,9 @@ extends Node2D
 # The sonic scream beast Bixby spins with: one beam out of each of his three maws, sweeping the floor as he
 # turns. The beams are glued to his mouths, so his spin is what aims them: through the spin loop they glide
 # between the maws of the frame he is on and the next at his spin rate, and on the lead-in and the wobble
-# they sit on the frame's own. They come out where the art says, at the screen angle and the foreshortened
-# length a beam fired that way along the floor reads at. Dashing through one is the dodge, so like the other
-# sweeping beams it reports its own hits instead of joining "enemy projectile".
+# they sit on the frame's own. They come out where the art says, at the screen angle a beam fired that way
+# along the floor reads at, and reach the ropes whichever way they point. Dashing through one is the dodge, so
+# like the other sweeping beams it reports its own hits instead of joining "enemy projectile".
 #
 # Placing them follows his drawn clock, so it runs in _process; how long they take to grow, to die away and
 # what they hurt runs in _physics_process, so a freeze holds it. Their hitboxes are kept on what is drawn,
@@ -117,14 +117,12 @@ func _aim(frame_anchors: Array) -> void:
 		beam.position = BixbyBeastArtLayout.local(Vector2(anchor[1], anchor[2]))
 		beam.rotation = CombinedLayout.beam_angle(azimuth)
 		beam.z_index = NEAR_Z if anchor[3] else FAR_Z
-		# How long it reads pointing that way, foreshortened by the arena's viewing angle and cut off at
-		# the ropes.
-		var stretch := CombinedLayout.beam_length(azimuth) * grown
-		stretch = minf(stretch, _room_to_the_ropes(beam) / full)
+		# Right up to the ropes, whichever way it points: the art is stretched along its length to get there.
+		var length := CombinedLayout.beam_reach(azimuth, beam.global_position, beam.global_rotation, arena) * grown
 		var sprite: Sprite2D = beam.get_node("Sprite2D")
 		sprite.frame = (step + i) % sprite.hframes
-		sprite.scale.x = CombinedLayout.SCALE * stretch
-		_set_reach(beam, full * stretch)
+		sprite.scale.x = CombinedLayout.SCALE * length / full
+		_set_reach(beam, length)
 
 
 # His three heads are alike, so the mouths of a frame are listed from whichever one is at the front. Each
@@ -148,21 +146,6 @@ func _stay_on_their_heads(anchors: Array) -> Array:
 	for i in anchors.size():
 		ordered.append(anchors[(i + best) % anchors.size()])
 	return ordered
-
-
-# How far a beam out of this mouth runs before it is over the ropes. A mouth already outside them (he is
-# drawn tall, and can stand right against the back rope) is left to scream as far as it likes.
-func _room_to_the_ropes(beam: Area2D) -> float:
-	var from := beam.global_position
-	if not arena.has_point(from):
-		return INF
-	var along := Vector2.RIGHT.rotated(beam.global_rotation)
-	var room := INF
-	if absf(along.x) > 0.001:
-		room = minf(room, ((arena.end.x if along.x > 0.0 else arena.position.x) - from.x) / along.x)
-	if absf(along.y) > 0.001:
-		room = minf(room, ((arena.end.y if along.y > 0.0 else arena.position.y) - from.y) / along.y)
-	return room
 
 
 func _set_reach(beam: Area2D, length: float) -> void:

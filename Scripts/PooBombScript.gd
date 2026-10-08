@@ -2,6 +2,7 @@ extends Node2D
 
 const HitInfo := preload("res://Scripts/HitInfo.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
+const MasonImpactThrottle := preload("res://Scripts/MasonImpactThrottle.gd")
 
 # The red badge stands on the bomb rather than over Mason: the blast is what the player parries, and
 # it goes off wherever the line left it, often halfway across the mat from him.
@@ -86,7 +87,8 @@ func _tell_anchor() -> Vector2:
 
 
 func _detonate() -> void:
-	explode_sfx.play()
+	if MasonImpactThrottle.allow():
+		explode_sfx.play()
 	animation_player.play("explode")
 
 

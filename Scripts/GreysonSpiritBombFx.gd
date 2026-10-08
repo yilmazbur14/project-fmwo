@@ -44,6 +44,9 @@ var clock := 0.0
 var rng := RandomNumberGenerator.new()
 
 var gather_time := 2.5
+# The growth frame the gather starts from: his doom orb's stage 6 is greyson_bomb's frame 1, so the sphere grows on
+# from it rather than from nothing (GreysonDoomOrb.hands_to_bomb).
+var first_frame := 0
 var launch_from := Vector2.ZERO
 var launch_to := Vector2.ZERO
 var launch_time := 0.6
@@ -191,7 +194,7 @@ func _step(delta: float) -> void:
 		Phase.GATHER:
 			var grow: int = Layout.fx(&"bomb").grow
 			var grown := minf(clock / gather_time, 1.0)
-			sphere.frame = mini(int(grown * grow), grow - 1)
+			sphere.frame = mini(first_frame + int(grown * (grow - first_frame)), grow - 1)
 			_set_light(grown)
 			_feed(delta)
 			if grown >= 1.0:

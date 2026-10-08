@@ -1,18 +1,22 @@
 extends RefCounted
 
 # danny_sleep (coder A): his nap after the string, and the window to punish him in (DannyBossSleep), opened by a
-# bare transition once the fight has settled into Idle, with 30 of his 48 HP so he has room to heal. Real time
-# (--max-fps 60): the finisher's mash counts real seconds.
+# bare transition once the fight has settled into Idle, with 38 of his 120 HP so he has room to heal, and so the
+# window (34 at most: 4 from the punches, 30 from the finisher) leaves him up. Real time (--max-fps 60): the
+# finisher's mash counts real seconds.
 #   afk     nobody touches him: a tick of one HP every 1/(0.05 x max health) s from the 0.5 s settle, each "+N"
-#           the HP it healed, about 11 HP back, then he wakes into Idle at 5.0 s.
-#   hurry   the player is at him from the start: three punches in rhythm, the third charged, daze him; the
-#           finisher is the single-bar one, and its uppercut ends the nap. Net at least 12 off him.
-#   slow    the same, starting 2.5 s into the nap. Net at least 6.
+#           the HP it healed, about 27 HP back, then he wakes into Idle at 5.0 s.
+#   hurry   the player is at him from the start: three punches, the third charged, daze him; the
+#           finisher is the single-bar one, and its uppercut ends the nap. Net at least 25 off him.
+#   slow    the same, starting 2.5 s into the nap. Net at least 10.
+# Those floors were 12 and 6 at his old 48 health and 20 and 8 at 96, and move with it the way the window does:
+# the finisher's share grows with it and the punches' 4 doesn't, while the same regen time heals more HP. At 120
+# (2026-09-30) the floors and the start went up 25% with his health.
 # Every tier: no tick lands in the 0.6 s after a punch, ticks with nothing between them are one tick apart, and the
 # "+N" labels are exactly the HP each tick healed.
 
 const BODY := "Arena/DannyBossScene/DannyBossCharacterBody"
-const START_HEALTH := 30
+const START_HEALTH := 38
 # Where the afk player waits, well clear of his nap's box.
 const AWAY := Vector2(960, 900)
 const SLOW_START := 2.5
@@ -49,6 +53,11 @@ static func run(t) -> void:
 	var last_pause := 0.0
 	var left_at := -1.0
 	for i in 60 * 12:
+		# Read before the break: a tick can land on the very step his nap ends, its label with it.
+		for label in boss.regen_labels:
+			if is_instance_valid(label) and not labels.has(label.get_instance_id()):
+				labels[label.get_instance_id()] = label.text
+				label_order.append(label.text)
 		if not sm.is_sleeping():
 			break
 		if not report.started and (tier == "hurry" or (tier == "slow" and sleep.clock >= SLOW_START)):
@@ -57,10 +66,6 @@ static func run(t) -> void:
 		if sleep.pause_left > last_pause + 0.05:
 			punches.append(sleep.clock)
 		last_pause = sleep.pause_left
-		for label in boss.regen_labels:
-			if is_instance_valid(label) and not labels.has(label.get_instance_id()):
-				labels[label.get_instance_id()] = label.text
-				label_order.append(label.text)
 		left_at = sleep.clock
 		await t.physics_frame
 	var h_end: int = boss.boss_health
@@ -92,25 +97,27 @@ static func run(t) -> void:
 		if not punched and absf(ticks[k] - ticks[k - 1] - tick) > STEP + 0.001:
 			spacing.append(snappedf(ticks[k] - ticks[k - 1], 0.001))
 	t.check(spacing.is_empty(), "ticks with nothing between them are one tick (%.4f s) apart %s" % [tick, spacing])
+	# A tick lands on the first step its time has run out by, so off a step's multiple it lands up to a step late.
+	var first_at: float = sleep.settle + ceilf(tick / STEP - 0.001) * STEP
 	var first_ok := ticks.is_empty() or (not punches.is_empty() and punches[0] < ticks[0]) \
-		or absf(ticks[0] - sleep.settle - tick) <= STEP + 0.001
+		or absf(ticks[0] - first_at) <= STEP + 0.001
 	t.check(first_ok, "the first tick comes one tick after the %.1f s settle (%s)" % [sleep.settle, ticks.slice(0, 1)])
 
 	match tier:
 		"afk":
-			t.check(sleep.healed >= 10 and sleep.healed <= 11, "left alone he heals about 11 HP (%d)" % sleep.healed)
+			t.check(sleep.healed >= 26 and sleep.healed <= 27, "left alone he heals about 27 HP (%d)" % sleep.healed)
 			t.check(absf(left_at - sleep.sleep_time) <= 2.0 * STEP and sm.current_state.name == "Idle",
 				"and wakes into Idle at %.1f s (%.3f)" % [sleep.sleep_time, left_at])
 		"hurry", "slow":
-			t.check(report.dazed, "three punches in rhythm daze him")
+			t.check(report.dazed, "three punches daze him")
 			t.check(not report.tiered, "the finisher is the single-bar one: only the Break pays the tiered mash")
 			t.check(await t.wait_until(func(): return report.done, 600), "the mash lands its uppercut")
-			var floor_net: int = 12 if tier == "hurry" else 6
+			var floor_net: int = 25 if tier == "hurry" else 10
 			t.check(net >= floor_net, "net %d off him for the window, at least %d" % [net, floor_net])
 			t.check(sm.current_state.name == "Idle" and left_at < sleep.sleep_time, "the uppercut ended his nap early, into Idle (%.2f s)" % left_at)
 
 
-# Up to him, three punches in rhythm for the daze, then the finisher mashed out. Runs beside the watcher above.
+# Up to him, three punches for the daze, then the finisher mashed out. Runs beside the watcher above.
 static func punish(t, finisher: Node, report: Dictionary) -> void:
 	var boss: Node = t.boss
 	t.place_under(boss.get_finisher_hurtbox())

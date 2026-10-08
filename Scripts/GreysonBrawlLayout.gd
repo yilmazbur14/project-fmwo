@@ -60,8 +60,10 @@ const STRAIGHT_LANDED := Vector2(56, 71)
 
 #THE PLAYER (px from their origin)
 const USE_FINAL_PLAYER_2X := true
-# The native 2x back view: 10x4 cells of 64x96, soles 39 px under the origin, every row the same view.
-const PLAYER_SHEET_2X := {texture = "res://Assets/Characters/MainPlayer/player_final_brawl_2x.png", hframes = 10, vframes = 4}
+# The native 2x back view: 10x4 cells of 64x96, soles 39 px under the origin, every row the same view. `head` is
+# where the words over the player stand on the cell (CombatPopupUI): 4 texels over the top of the guard's hair, as
+# FinisherArtLayout.PLAYER_HEAD stands over their own sheet's.
+const PLAYER_SHEET_2X := {texture = "res://Assets/Characters/MainPlayer/player_final_brawl_2x.png", hframes = 10, vframes = 4, head = Vector2(32, 8)}
 # The approved 1x poses, the same columns, for a checkout without the 2x sheet.
 const PLAYER_SHEET_1X := {texture = "res://Assets/Characters/MainPlayer/player_final_brawl.png", hframes = 10, vframes = 4}
 # Columns, seconds each (the last for the rest), looping or held on the last. A slip is its half then its full; the
@@ -145,6 +147,11 @@ const FINAL_CLIPS := {
 	&"straight_parried": {sheet = &"straight", frames = [1, 2, 3, 4], times = [0.10, 0.12, 0.18, 0.12], loop = false,
 		next = &"guard"},
 	&"straight_landed": {sheet = &"straight", frames = [1, 4], times = [0.25, 0.12], loop = false, next = &"guard"},
+	# The feint, on the straight's own frames: the cannon arm cocked up and UNCHARGED (f4, the follow-through's
+	# frame: no glow in the muzzle), held through the hold; bitten, the counter-jab snaps out on the thrust (f1) and
+	# comes back. Held or slipped, he just drops back into his guard.
+	&"feint_windup": {sheet = &"straight", frames = [4], times = [1.0], loop = true},
+	&"feint_landed": {sheet = &"straight", frames = [1, 4], times = [0.10, 0.12], loop = false, next = &"guard"},
 	&"rocked": {sheet = &"rocked", frames = [0, 1], times = [0.12, 0.13], loop = false},
 	&"dazed": {sheet = &"dazed", frames = [0, 1, 2, 3], times = [0.12], loop = true},
 	# Each uppercut's snap, then the reel held until the next one or his landing.
@@ -175,6 +182,8 @@ const PLACEHOLDER_CLIPS := {
 	&"straight_parried": {times = [0.10, 0.12, 0.18, 0.12], loop = false, next = &"guard",
 		shifts = [Vector2(0, 4), Vector2.ZERO, Vector2.ZERO, Vector2.ZERO]},
 	&"straight_landed": {times = [0.25, 0.12], loop = false, next = &"guard", shifts = [Vector2(0, 4), Vector2.ZERO]},
+	&"feint_windup": {times = [1.0], loop = true, shifts = [Vector2(2, -2)]},
+	&"feint_landed": {times = [0.10, 0.12], loop = false, next = &"guard", shifts = [Vector2(0, 4), Vector2.ZERO]},
 	&"rocked": {times = [0.12, 0.13], loop = false},
 	&"dazed": {times = [1.0], loop = true},
 	&"uppercut": {times = [0.06, 1.0], loop = false, shifts = [Vector2(0, -3), Vector2(0, -3)]},

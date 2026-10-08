@@ -11,7 +11,7 @@ const SPEC := {
 	"home": Vector2(960, 700),
 	"light": &"mason_poo_blast",
 	"strong": &"carter_elbow_drop",
-	"foreign": &"josh_card_throw",
+	"foreign": &"eric_quake_wave_v2",
 	"punish_state": "Eat",
 	"broken_state": "Broken",
 	"cycle_states": ["PooSquat"],

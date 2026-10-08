@@ -47,7 +47,8 @@ extends CanvasLayer
 #     position and facing; the player on their mark with their state machine back and is_talking
 #     still on for the card; the HUD up; the music started once and at the same point; every prop
 #     freed or in its final place; the view level, time_scale 1, the crowd at rest, nothing in the
-#     fight's hazard group; and the lines never shown again.
+#     fight's hazard group; and the lines never shown again. It must hold up arriving straight after Enter(), before a
+#     line is up: RETRY and RESTART FIGHT send it then (GameProgress.take_intro_skip), to the first entrance to begin.
 #   - lines_over(): end(). Exit(): the same end state again, for a fight started over the top of it.
 #   The fight's state machine:
 #   - show_pre_fight_dialogue(): connects _on_dialogue_ended CONNECT_ONE_SHOT, and keeps the balloon
@@ -129,6 +130,11 @@ func begin(host_player: Node = null) -> void:
 		# A walk-in starts them past the bottom rope, where the ring's net would put them straight back.
 		player.may_leave_ring = true
 	set_process_input(true)
+	# RETRY and RESTART FIGHT: the skip a hold sends, sent at once and with no hint (GameProgress.take_intro_skip).
+	# Deferred, so the entrance that called this has set its beats and its lines going first, as a hold always finds them.
+	if GameProgress.take_intro_skip(get_tree()):
+		_send_skip.call_deferred()
+		return
 	_fade_hint(1.0)
 
 
@@ -227,9 +233,15 @@ func _process(delta: float) -> void:
 		return
 	held += delta
 	if held >= SKIP_HOLD:
-		skip_sent = true
-		arbitrating = false
-		skipped.emit()
+		_send_skip()
+
+
+func _send_skip() -> void:
+	if skip_sent:
+		return
+	skip_sent = true
+	arbitrating = false
+	skipped.emit()
 
 
 # The press this node took off the pause screen, handed back to it.

@@ -228,38 +228,40 @@ const PARRY_GLOW := {
 }
 
 #SWORD LANDING MARK
-# Where Eric's thrown greatsword is going to land, drawn flat on the fight's floor layer from the
-# moment it leaves his hand (EricSwordMark): a fixed target ring that says where, and a second ring
-# closing onto it that says when. The sword is aimed at where the player stood and never re-aims, so
-# without the mark a throw goes unreadable the moment they walk off that spot. Eric-only, behind the
-# player's feel_v2.
-# EricArtLayout.SWORD_HITBOX_RADIUS (108 px) plus the player's hurtbox half-width (18 px): the ground
-# the falling blade can still reach him on. Only the second term moves with the player's size - the
-# blade is Eric's and does not, so this is 108 + 18 and not the old 120 scaled.
-const SWORD_MARK_RADIUS := 126.0
+# Where Eric's thrown greatsword is going to land, drawn on the fight's floor layer from the moment it
+# leaves his hand (EricSwordMark): a fixed target ring that says where, and a second ring closing onto
+# it that says when. The sword is aimed at where the player stood and never re-aims, so without the
+# mark a throw goes unreadable the moment they walk off that spot. Eric-only, behind the player's
+# feel_v2.
+# The ring is drawn the size of what the blade lands on (EricThrownSwordScript._reaches as it goes in):
+# EricArtLayout.SWORD_HITBOX_RADIUS (108 px) against the player's hurtbox (36 x 81 px), which reaches a
+# player whose middle is up to 126 px across and 147-150 px in depth from the mark. The lit band runs
+# 123-141 px across and 144-162 px deep, with that edge inside it all the way round, so what the player
+# sees is what hits them. art_source/defense_tests/eric/sword_path.gd holds the drawn ring to the hit.
 
 const USE_FINAL_SWORD_MARK := true
-# Two rings built in code, squashed onto the floor plane the way Eric's leap shadow is, in px.
+# Two rings built in code, in px, their line on the final art's lit band.
 const PLACEHOLDER_SWORD_MARK := {
-	"radius": SWORD_MARK_RADIUS,
-	# eric_leap_shadow.png's own height-to-width ratio.
-	"squash": 7.0 / 22.0,
+	"radius": 132.0,
+	# Taller than it is wide, as the hit is.
+	"squash": 153.0 / 132.0,
 	"points": 28,
-	"width": 9.0,
+	"width": 18.0,
 	"color": Color(0.67, 0.2, 0.2),
 	"commit_color": Color(1.0, 0.93, 0.8),
 	# The closing ring's radius as a multiple of the target's, at release and at the commit.
-	"close_scale": [1.8, 1.15],
+	"close_scale": [1.5, 1.15],
 	"impact_scale": [1.2, 1.5],
 	"impact_frame_times": [0.05, 0.07],
 }
 # Frames 0 to close_frames - 1 step with the flight; commit_frame is lit for exactly
 # PlayerDefense.parry_window before the blade arrives, so the hot ring is the window; the impact
-# frames play once, where it goes in.
+# frames play once, where it goes in. The ring is centred on its frame, so the pivot is the frame's
+# middle (art_source/eric_v2_ui/sword_mark.py).
 const FINAL_SWORD_MARK := {
 	"texture": "res://Assets/Effects/eric_sword_mark.png",
 	"hframes": 12,
-	"pivot": Vector2(76, 26),
+	"pivot": Vector2(73, 84),
 	"scale": 3.0,
 	"close_frames": 9,
 	"commit_frame": 9,
@@ -460,8 +462,10 @@ const FINAL_STREAK_COUNTER := {
 # The status effects a boss puts on the player (PlayerStatus): a row of icons with countdowns, right
 # of the stamina bar and on its line, so a drained bar and its cause read together. The row is only
 # there while something is active.
-# High enough that the icon and its countdown bar clear the bottom of the screen.
-const STATUS_ICONS_POSITION := Vector2(292, 990)
+# High enough that the icon and its countdown bar clear the bottom of the screen, which puts the icon
+# level with the health tray too: so it starts 18 px past the tray's right end (PlayerHealthArtLayout's
+# TRAY_POSITION.x + TRAY_SIZE.x, 352 since its fourth container), as it did past the stamina bar's.
+const STATUS_ICONS_POSITION := Vector2(370, 990)
 const STATUS_ICON_GAP := 12.0
 # The hype meter's fade, so every HUD piece gets out of a balloon's way at the same speed.
 const STATUS_FADE_TIME := HYPE_FADE_TIME
@@ -517,6 +521,19 @@ const POPUP_FADE_TIME := 0.2
 # The boss health bars are above this line.
 const POPUP_TOP_LIMIT := 100.0
 const POPUP_SCREEN_MARGIN := 8.0
+# And clear of the HUD by POPUP_HUD_CLEARANCE: the boss's bar block (plate, bar and Break gauge, which reach below
+# POPUP_TOP_LIMIT), the player's hearts and stamina bottom left, and their parry streak and hype meter bottom right.
+# CarterArtLayout.HUD_KEEP_OUT's rects, which the suite's carter_hud mode measures off the live HUD. A word whose rise
+# would reach one over the head shows under the feet; one that would sink into one below stands clear above it.
+const POPUP_KEEP_OUT: Array[Rect2] = [
+	Rect2(720, 33, 480, 148),
+	Rect2(10, 842, 406, 229),
+	Rect2(1371, 946, 537, 126),
+]
+const POPUP_HUD_CLEARANCE := 12.0
+# Words said again while one is still up hold that one instead of stacking another: a refused press can come every
+# frame of mashing on an empty bar.
+const POPUP_HOLDING: Array[StringName] = [&"tired"]
 
 const USE_FINAL_POPUPS := true
 # Pixelify Sans is only crisp at multiples of its 11 px design size. Each word alternates two colours.
@@ -534,6 +551,11 @@ const PLACEHOLDER_POPUPS := {
 	# Held by Danny's worms in his slam string, where the root takes the parry too (DannyBossSlams): his worms'
 	# pinks.
 	&"stuck": {"text": "STUCK!", "font_size": 44, "outline": 8, "colors": [Color(1.0, 0.84, 0.82), Color(0.86, 0.48, 0.5)], "frame_time": 0.1},
+	# His belly bump parried: the player stood their ground (DannyBossBellyBump), as the sumo's ending asks of them.
+	&"held": {"text": "HELD!", "font_size": 44, "outline": 8, "colors": [Color(1.0, 0.95, 0.75), Color(1.0, 0.72, 0.1)], "frame_time": 0.1},
+	# A dash or a parry press the stamina bar refused (PlayerDefense.stamina_refused), in the bar's own low look: its
+	# orange and red, at its blink.
+	&"tired": {"text": "TIRED!", "font_size": 44, "outline": 8, "colors": [Color("df7126"), Color("d95763")], "frame_time": 0.12},
 }
 # Frame 0 rests and frame 1 pops; the word fills the top 48 px of each frame.
 const FINAL_POPUPS := {
@@ -565,6 +587,9 @@ const PARRY_HIT_FALLBACK_DB := 0.0
 # layer and climb through them, which is exactly the escalation that was cut.
 
 const GUARD_BREAK_SFX := {"stream": "res://Assets/Audio/SFX/wrestler_collision.ogg", "pitch": 0.8}
+# A dash or a parry press the stamina bar refused (PlayerDefense.stamina_refused): Carter's spent breath,
+# pitched up into the player's, beside the bar's own red flash.
+const TIRED_SFX := {"stream": "res://Assets/Audio/SFX/carter_spent.wav", "pitch": 1.35, "volume_db": -2.0}
 const PERFECT_DODGE_SFX := {"stream": "res://Assets/Audio/SFX/whirlwind_whoosh.ogg", "pitch": 1.5}
 const HYPE_FULL_SFX := {"stream": "res://Assets/Audio/SFX/downed_stinger.ogg", "pitch": 1.3}
 

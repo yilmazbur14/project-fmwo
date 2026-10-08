@@ -194,11 +194,26 @@ func _sort_marker_at(y: float) -> void:
 	target_sprite.offset.y = (drawn_centre.y - target_sprite.position.y) / target_sprite.scale.y
 
 
+# The bounds keep his landed pose under the back rope, and that alone left a strip along it, and the top
+# corners, that no landing reached: a player standing there was never hit (playtest 2026-10-04). A landing
+# short of a player above it comes up just far enough to reach MIN_PLAYER_OVERLAP into their hurtbox, the
+# reach a landing moved off Mason keeps, and his pose pokes over the rope for it.
+func _reach_past_back_rope(spot: Vector2, hurtbox: Rect2) -> Vector2:
+	if spot.y <= hurtbox.end.y:
+		return spot
+	var semi_axes := hit_size() / 2.0 - Vector2.ONE * MIN_PLAYER_OVERLAP
+	var across := maxf(0.0, maxf(hurtbox.position.x - spot.x, spot.x - hurtbox.end.x)) / semi_axes.x
+	if across >= 1.0:
+		return spot
+	# A pixel inside the edge the overlap allows, so the reach isn't left to rounding.
+	return Vector2(spot.x, minf(spot.y, hurtbox.end.y + semi_axes.y * sqrt(1.0 - across * across) - 1.0))
+
+
 # The spot nearest the target that's inside the bounds and outside keep_out, pushed straight out through
 # one of its edges. Standing right by Mason mustn't make a player safe, so an edge spot that still reaches
 # their hurtbox wins, and if there's none Carter lands on them anyway, over Mason.
 func _landing_spot(target: Vector2, hurtbox: Rect2) -> Vector2:
-	var spot := target.clamp(arena_bounds.position, arena_bounds.end)
+	var spot := _reach_past_back_rope(target.clamp(arena_bounds.position, arena_bounds.end), hurtbox)
 	if not keep_out.has_point(spot):
 		return spot
 	# Measured in semi-axes of the oval, shrunk by the overlap it needs: a landing reaches the player when
@@ -264,6 +279,20 @@ func _land() -> void:
 
 func _disable_hitbox() -> void:
 	hitbox_shape.set_deferred("disabled", true)
+	_fresh_hitbox.call_deferred()
+
+
+# PlayerDefense judges a parry per hit source and then absorbs that source for blocked_rehit_interval
+# (1.0 s). Every slam of a call went off on this one area, and in phase two they come 0.89 s apart, so a
+# parried slam swallowed the next one whole: no hit and no parry (playtest 2026-10-04). Each slam gets an
+# area of its own, made once the last one is off.
+func _fresh_hitbox() -> void:
+	var spent: Area2D = hitbox_shape.get_parent()
+	var fresh: Area2D = spent.duplicate()
+	fresh.set_meta(HitInfo.META_ATTACK, &"carter_elbow_drop")
+	spent.add_sibling(fresh)
+	hitbox_shape = fresh.get_node(NodePath(hitbox_shape.name))
+	spent.queue_free()
 
 
 # Back above everything as he jumps away: depth-sorted, he'd sink behind the arena floor as he rose.

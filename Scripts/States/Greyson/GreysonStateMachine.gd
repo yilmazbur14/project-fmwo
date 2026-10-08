@@ -1,18 +1,18 @@
 extends Node
 
-# Greyson's half of FIGHT 03. The takeover once (GreysonTakeover: Computah's cannon arm, his lines and the bar
+# Greyson's half of FIGHT 06. The takeover once (GreysonTakeover: Computah's cannon arm, his lines and the bar
 # swap, or its end state at once in the test scene), then his attacks round and round, each a CHAIN of states from
-# ATTACKS with a breath in Idle between. Attack 1 is Throw (plates off the ropes), Slams (five teleport slams, each
-# planting an eruption zone) and Pose (six poses to the crowd that fill his hype meter). The next attacks are new
+# ATTACKS with a breath in Idle between. Attack 1 is Throw (plates off the ropes), Slams (four teleport slams, each
+# planting two eruption zones) and Pose (six poses to the crowd that fill his hype meter). The next attacks are new
 # chains in ATTACKS: nothing else changes.
 #
 # HE CAN BE HIT only while he poses and while he is Broken (is_open). Parried and perfect-dodged plates fill his
 # Break gauge; the one that fills it drops him into Broken where he stands, and a Break skips that cycle's poses.
 #
 # THE ERUPTION ZONES wait in a queue here: Slams adds them (add_pending_zone) and each goes off when the queue says
-# (schedule_next_eruption): all five one after another through the first three poses, the last as pose 3 ends
-# (GreysonPose.eruptions). Any early end - a finisher, a Break, 0 HP, the spirit bomb - fizzles the rest
-# (clear_pending_zones), so none leak into the next cycle.
+# (schedule_next_eruption), told by the eruption clock Slams starts (start_eruption_clock): all eight one after
+# another through his poses (GreysonPose.eruptions). Any early end - a finisher, a Break, 0 HP, the spirit bomb -
+# fizzles the rest (clear_pending_zones), so none leak into the next cycle.
 #
 # THE ENDINGS. A full hype meter fires the spirit bomb, a loss (enter_spirit_bomb). 0 HP is not a defeat: it hands
 # to the final brawl (enter_final_brawl), whose end calls greyson_beaten() and the normal win. The player losing,
@@ -34,6 +34,7 @@ extends Node
 @export var beat_timer: Timer
 
 const ParryTell := preload("res://Scripts/ParryTell.gd")
+const PLATE_SCRIPT := preload("res://Scripts/GreysonPlateScript.gd")
 const TAKEOVER_DIALOGUE := "res://Dialogue/GreysonTakeover.dialogue"
 # Everything he sends out: plates, zones, bursts and their effects.
 const HAZARD_GROUP := "greyson_hazard"
@@ -46,7 +47,7 @@ const OPEN_STATES := ["Pose", "Broken"]
 const GAUGE_ATTACKS := ["Throw"]
 # Nothing breaks him in these.
 const NO_BREAK_STATES := ["Takeover", "SpiritBomb", "Broken", "Juggled", "FinalBrawl", "Defeated", "Victory"]
-# How many waiting zones rumble at once (rumbles): with five pending through the slams, every loop at once drones.
+# How many waiting zones rumble at once (rumbles): with eight pending through the slams, every loop at once drones.
 const RUMBLING_ZONES := 2
 
 #WHERE THINGS ARE (feet points, px)
@@ -62,11 +63,19 @@ const ROPES := Rect2(113, 114, 1692, 853)
 const HUD_FADE_RECT := Rect2(680, -1080, 560, 1280)
 
 #PACING (seconds)
-# The breath between cycles, and the first one, after the takeover.
-@export var idle_beat := 0.8
-@export var first_beat := 1.0
-# How often Idle looks again at a locked gauge.
+# The breath between cycles, and the first one, after the takeover (the user, 2026-09-30: "the setup before the
+# posing takes far too long"; then a setup of five seconds, from his breath to the first pose). The first is longer
+# since the 2026-10-07 playtest, fixed at the user's word: at 0.3 his first plate hit a player standing still 1.05 s
+# after they got control, where every other fight gives 2.5 s or more. At 1.3, with the throw's 0.35 s wind-up and the
+# plate's 0.40 s first leg, it is about 2.05 s.
+@export var idle_beat := 0.3
+@export var first_beat := 1.3
+# How often Idle looks again at a locked gauge, or at plates of his last throw still flying.
 @export var gauge_wait_step := 0.2
+# The longest a throw waits in Idle for his last throw's plates to finish their ropes; any still flying then vanish
+# in their puff as it starts (0: at once). A plate flies about 20 s to its tenth rope and a cycle is shorter than
+# that now, so waiting them out would stand him idle for seconds.
+@export var plate_wait_cap := 0.0
 
 #HUD
 @export var hud_fade_alpha := 0.3
@@ -91,6 +100,16 @@ var takeover_balloon: Node
 # Every zone Slams planted this cycle, and the ones not yet told when to go off, oldest first.
 var zones: Array[Node] = []
 var unscheduled: Array[Node] = []
+# The eruptions' clock (start_eruption_clock): seconds from the first pose's strike, negative before it, and how
+# many of GreysonPose.eruptions it has told. Off between cycles.
+var eruption_clock_running := false
+var eruption_clock := 0.0
+var eruptions_told := 0
+# For tests: how many flying plates of the last throw each throw cut short (start_cycle), and the ropes each had
+# turned off by then.
+var plates_cut: Array[int] = []
+var cut_plate_ropes: Array[int] = []
+var plate_hold := 0.0
 var warned := {}
 
 
@@ -112,6 +131,9 @@ func _process(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if eruption_clock_running:
+		eruption_clock += delta
+		_tell_eruptions()
 	if current_state:
 		current_state.Physics_Update(delta)
 
@@ -176,13 +198,21 @@ func next_chain() -> Array:
 
 
 # The next attack's chain, from its first state. Only from Idle, whose beat asks for it; a locked gauge holds an
-# attack that pays the Break, and Idle looks again every gauge_wait_step.
+# attack that pays the Break, and plates still flying hold one that throws for up to plate_wait_cap, and then
+# vanish; Idle looks again every gauge_wait_step.
 func start_cycle() -> void:
 	if current_state != states.get("Idle"):
 		return
 	if not gauge_ready():
 		beat_timer.start(gauge_wait_step)
 		return
+	if not throw_ready():
+		if plate_hold < plate_wait_cap:
+			plate_hold += gauge_wait_step
+			beat_timer.start(gauge_wait_step)
+			return
+		_cut_flying_plates()
+	plate_hold = 0.0
 	chain = next_chain()
 	cycles_started += 1
 	chain_step = 0
@@ -209,6 +239,29 @@ func gauge_ready() -> bool:
 		if GAUGE_ATTACKS.has(state_name):
 			return false
 	return true
+
+
+# Whether the next attack may start: one that throws never goes up over his last throw's plates, which fly on through
+# his poses until their last rope (the user, 2026-09-28).
+func throw_ready() -> bool:
+	return not next_chain().has("Throw") or flying_plates().is_empty()
+
+
+# Every plate of his still in the air: not knocked down, not gone.
+func flying_plates() -> Array:
+	return get_tree().get_nodes_in_group(HAZARD_GROUP).filter(func(hazard) -> bool:
+		return hazard.get_script() == PLATE_SCRIPT and not hazard.down and not hazard.spent)
+
+
+# His last throw's plates still flying as the next throw starts vanish in their puff where they are, as a Break takes
+# them.
+func _cut_flying_plates() -> void:
+	var flying := flying_plates()
+	plates_cut.append(flying.size())
+	for plate in flying:
+		cut_plate_ropes.append(plate.reflections)
+		plate.remove_from_group(HAZARD_GROUP)
+		plate.fizzle()
 
 
 # His windows: the poses and the Break's. A state that shuts its window for part of itself says so with an
@@ -355,7 +408,7 @@ func in_final_brawl() -> bool:
 
 
 # The brawl is won (GreysonFinalBrawl): he is down for good, lying where the brawl left him if it asks, and the
-# fight ends the normal way - the fanfare, his outro, Victory, and Matt next.
+# fight ends the normal way - the fanfare, his outro, Victory, and Liam & Bixby next.
 func greyson_beaten(lying := false) -> void:
 	if body.defeated or player_defeated:
 		return
@@ -476,6 +529,36 @@ func clear_pending_zones() -> void:
 			zone.fizzle()
 	zones.clear()
 	unscheduled.clear()
+	eruption_clock_running = false
+
+
+# The zones go off on GreysonPose's clock - its eruptions, counted from the first pose's strike, each told
+# eruption_notice before it goes - and that strike comes `strike_in` seconds from now. Slams starts it as it enters,
+# so a zone's notice can begin before the poses do; the poses start it themselves, `restart` off, only if nothing
+# has (a test that goes straight to them).
+func start_eruption_clock(strike_in: float, restart := true) -> void:
+	if eruption_clock_running and not restart:
+		return
+	eruption_clock_running = true
+	eruption_clock = -strike_in
+	eruptions_told = 0
+	_tell_eruptions()
+
+
+# Each zone told when its notice comes, the oldest first; one whose notice has already passed is told at once, with
+# what is left of its fuse. A zone not planted yet when its turn comes is told as soon as it is.
+func _tell_eruptions() -> void:
+	var pose = states.get("Pose")
+	if pose == null:
+		eruption_clock_running = false
+		return
+	var times: Array = pose.eruptions
+	while eruptions_told < times.size() and eruption_clock >= times[eruptions_told] - pose.eruption_notice:
+		if schedule_next_eruption(times[eruptions_told] - eruption_clock) == null:
+			return
+		eruptions_told += 1
+	if eruptions_told >= times.size():
+		eruption_clock_running = false
 
 
 #THE ARENA

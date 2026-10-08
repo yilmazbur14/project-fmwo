@@ -1,0 +1,19 @@
+{
+  "shipped": "2026-09-30T12:08:45",
+  "approved_by_user": "2026-09-30 'approved' (violet streaks, as-drawn size, drawn vignette, bomb gather from f1)",
+  "not_shipped": [
+    "greyson_hype_streak_cyan"
+  ],
+  "files": {
+    "Assets/Characters/Greyson/FX/greyson_doom_orb.png": "2f8f68517221bc3c4186fc7a0ca75963debd48463caae9a1d48c1fe89ff7de3d",
+    "Assets/Characters/Greyson/FX/greyson_doom_orb.aseprite": "db45c5e9e3adc09f86daf22bc3c5643908e0d5c580deb6d842f7cfa397bc4fc8",
+    "Assets/Characters/Greyson/FX/greyson_doom_orb_glow.png": "1f31f92745f564dfca86db8e302c712d9612bf334d2f406abc8911d3f68d9e16",
+    "Assets/Characters/Greyson/FX/greyson_doom_orb_glow.aseprite": "8d329a2e70d2ee30a8077baae9e7a7aa270a8248f4876c9f2aeba876f13eb8e6",
+    "Assets/Characters/Greyson/FX/greyson_doom_orb_burst.png": "29ac22c0ab4152320b79055e0a2d2c6311d215be9d4a3242832a5a1ed860e6dc",
+    "Assets/Characters/Greyson/FX/greyson_doom_orb_burst.aseprite": "14ecd61502c9050d2ff2f70dcea354a759e3c352141c37167d44e86de199262e",
+    "Assets/Characters/Greyson/FX/greyson_hype_streak.png": "d7abecdff16e2b8b3711786550e216c739ebe0403138fd3866480e63aaa54d68",
+    "Assets/Characters/Greyson/FX/greyson_hype_streak.aseprite": "310cf964732cc80156592053a332b9c7d0b75d9cd2e190db631d25b6dc07dc40",
+    "Assets/Characters/Greyson/FX/greyson_doom_vignette.png": "5b17f7e3597f25210a94f1262c11c35778334df1112315f523bc6be3a9461ff7",
+    "Assets/Characters/Greyson/FX/greyson_doom_vignette.aseprite": "9eb54e17c386e00761483037133cf42957ecb95a55898b0fda9fb34a34050911"
+  }
+}

@@ -29,10 +29,11 @@ const OUTRO_DIALOGUE := "res://Dialogue/BurakBossOutro.dialogue"
 const FIGHT_SCENE := "res://Scenes/Bosses/BurakBossFightScene.tscn"
 
 #CONSTANTS
-# 30, half a heart a punch and three punches a window: a player who never parries but finishes every
-# Taunt deals 12 a window (1 + 1 + 2 from the punches, 8 from the finisher), so the kegs are met at the
-# bottom, the middle and the top of their ramp.
-@export var max_health := 30
+# 75 (the user doubled it from 30, 2026-09-25, then raised it 25%, 2026-09-30), half a heart a punch and
+# three punches a window: a player who never parries but finishes every Taunt deals 23 a window (1 + 1 + 2
+# from the punches, 19 from the finisher), so the kegs are met four times: at the bottom of their ramp,
+# 0.38 and 0.77 of the way up it, and at the top.
+@export var max_health := 75
 var boss_health := max_health
 const MAX_HITS_PER_WINDOW := 3
 # Each opening takes the damage of a clean chain of MAX_HITS_PER_WINDOW punches (PunchAllowance).
@@ -355,6 +356,7 @@ func _stand_on(offset: Vector2) -> void:
 
 
 func _process(delta: float) -> void:
+	fade_hints_over_player()
 	if anim.is_empty() or anim_done:
 		return
 	anim_clock += delta
@@ -491,6 +493,22 @@ func hide_hint(key: StringName) -> void:
 	var fade: Tween = label.create_tween()
 	fade.tween_property(label, "modulate:a", 0.0, Layout.HINT.fade)
 	fade.tween_callback(label.queue_free)
+
+
+# The hints sit across the bottom of the ring, right where the player starts the fight and the parry hint
+# comes up: while the player is under one it goes see-through, as his bar does over his badge, so it never
+# hides them (playtest 2026-10-04). self_modulate, so the show and hide fades on modulate run as they were.
+func fade_hints_over_player() -> void:
+	if hints.is_empty():
+		return
+	var player: Node2D = state_machine.get_player()
+	if player == null:
+		return
+	var shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var body: Rect2 = get_viewport().get_canvas_transform() * (shape.global_transform * shape.shape.get_rect())
+	for label in hints.values():
+		if is_instance_valid(label):
+			label.self_modulate.a = state_machine.hud_fade_alpha if label.get_global_rect().intersects(body) else 1.0
 
 
 #THE BULLET TIMER (BurakBossPips)

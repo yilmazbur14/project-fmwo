@@ -31,6 +31,14 @@ const SLAP_SHAKE := 2.0
 const SLAP_SHAKE_STEPS := 2
 const SLAP_SHAKE_STEP_TIME := 0.03
 
+#LEFT ALONE (the user, 2026-10-04)
+# The one dialogue in the game that moves on by itself: a player who stands still through the kegs lands
+# here, and the fight would otherwise wait on the cut for good. A line moves on AUTO_ADVANCE_TIME after it
+# came up, and never sooner than AUTO_ADVANCE_READ after its last letter, so a long line still gets read.
+# Accept still moves it on at once (the balloon's own input). Counted in Update, so a pause holds it.
+const AUTO_ADVANCE_TIME := 4.5
+const AUTO_ADVANCE_READ := 1.5
+
 #DANNY, DEAFENED
 const DEAF_DUCK_DB := -8.0
 const DEAF_DUCK_TIME := 0.2
@@ -61,6 +69,12 @@ var jitter: Tween
 var jitter_sign := 1.0
 # Beats seen through to their end, for a test: name -> game seconds it took.
 var beat_times := {}
+# How long the current line has been up, and how long whole; the last line moved on by itself, and how
+# many have been (a test reads it).
+var line_clock := 0.0
+var typed_clock := 0.0
+var auto_advanced_line: RefCounted
+var auto_advances := 0
 
 
 func Enter() -> void:
@@ -70,6 +84,8 @@ func Enter() -> void:
 	pose = &"laugh"
 	last_line = null
 	last_slap_step = -1
+	auto_advanced_line = null
+	auto_advances = 0
 	body.velocity = Vector2.ZERO
 	body.set_hurtbox_active(false)
 	body.show_body()
@@ -85,11 +101,12 @@ func Exit() -> void:
 	finish_cut(false)
 
 
-func Update(_delta: float) -> void:
+func Update(delta: float) -> void:
 	if finished:
 		return
 	_read_lines()
 	_slap()
+	_auto_advance(delta)
 
 
 #THE BEAT THE DIALOGUE CALLS
@@ -130,6 +147,8 @@ func _read_lines() -> void:
 		return
 	if line != last_line:
 		last_line = line
+		line_clock = 0.0
+		typed_clock = 0.0
 		beat_running = false
 		_stop_deafened()
 		_apply_tags(line, balloon)
@@ -137,6 +156,26 @@ func _read_lines() -> void:
 		return
 	var talking: bool = line.character == SPEAKER and balloon.dialogue_label.is_typing
 	body.show_talk(pose, talking)
+
+
+# The balloon's own move-on, the one accept makes, once the line has been up long enough. Only on a line
+# waiting for input with nothing to choose, and once a line.
+func _auto_advance(delta: float) -> void:
+	var balloon = state_machine.laugh_balloon
+	if not is_instance_valid(balloon) or not balloon.is_inside_tree():
+		return
+	var line: RefCounted = balloon.dialogue_line
+	if line == null or line != last_line or line == auto_advanced_line:
+		return
+	line_clock += delta
+	if not balloon.is_waiting_for_input:
+		typed_clock = 0.0
+		return
+	typed_clock += delta
+	if line.responses.is_empty() and line_clock >= AUTO_ADVANCE_TIME and typed_clock >= AUTO_ADVANCE_READ:
+		auto_advanced_line = line
+		auto_advances += 1
+		balloon.next(line.next_id)
 
 
 func _apply_tags(line: RefCounted, balloon: Node) -> void:

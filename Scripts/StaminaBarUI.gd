@@ -1,10 +1,13 @@
 extends Control
 
-# The stamina bar under the hearts. A spend drains off it quickly, a refused dash flashes it red, it
-# shows its low look below the dash cost, blinks while the guard is broken and dims while holding
-# block keeps it from refilling.
+# The stamina bar under the hearts. A spend drains off it quickly, a refused dash or parry press
+# flashes it red, it shows its low look below the dash cost, blinks while the guard is broken and dims
+# while holding block keeps it from refilling.
 
 const DefenseHypeArtLayout := preload("res://Scripts/DefenseHypeArtLayout.gd")
+const HudPlayerFade := preload("res://Scripts/HudPlayerFade.gd")
+# This HUD's own player, from its CanvasLayer under MainPlayer.
+const PLAYER_SPRITE := ^"../../CharacterBody2D/Sprite2D"
 
 @export var defense: Node
 
@@ -23,6 +26,7 @@ func _ready() -> void:
 	position = DefenseHypeArtLayout.STAMINA_BAR_POSITION
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build(DefenseHypeArtLayout.stamina())
+	HudPlayerFade.wrap(self, get_node_or_null.bind(PLAYER_SPRITE))
 	bar.max_value = defense.max_stamina
 	target = defense.stamina
 	_show(target)
@@ -33,7 +37,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	clock += delta
 	var spec := DefenseHypeArtLayout.stamina()
-	var low: bool = defense.stamina < defense.dash_stamina_cost
+	var low: bool = not defense.can_afford(defense.dash_stamina_cost)
 	var broken_frame := int(clock / spec.broken_frame_time) % 2
 	if broken_overlay:
 		var texture_bar := bar as TextureProgressBar

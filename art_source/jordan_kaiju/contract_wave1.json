@@ -1,0 +1,7789 @@
+{
+ "scale": 3,
+ "keyline": "#000000",
+ "palette": {
+  "kaiju_16": {
+   "#": "#0B1416",
+   "%": "#152829",
+   "&": "#213D3F",
+   "+": "#467570",
+   "4": "#5E5B50",
+   "5": "#8F8975",
+   "6": "#BDB59B",
+   "7": "#E6DEC4",
+   "8": "#1B3AB4",
+   "=": "#689A8F",
+   "@": "#2F5454",
+   "C": "#5B5545",
+   "E": "#847A5E",
+   "F": "#AA9F7A",
+   "H": "#CEC39B",
+   "I": "#2D7BF0",
+   "J": "#5CC9FF",
+   "K": "#B8F1FF",
+   "X": "#FFFFFF",
+   "~": "#ACD6C9"
+  },
+  "jordan_40": "the approved Jordan v2 palette (eyes, star, puffs, mouth, mark rim)"
+ },
+ "pivot_convention": "texel coordinates from the frame's top-left. A Sprite2D with centered=true needs offset = frame_size / 2 - pivot (texels); its position is then the pivot's screen point. Anchors are given in the same frame texels; screen = position + 3 * (anchor - pivot).",
+ "home_screen": [
+  330,
+  800
+ ],
+ "body_frame": [
+  224,
+  232
+ ],
+ "body_pivot_FEET": [
+  98,
+  206
+ ],
+ "body_frame_top_left_at_home": [
+  36,
+  182
+ ],
+ "black_target": "14.2% (the approved kaiju layer) +-1.5 at fight size; the grow / shrink / toy sizes carry more line by nature and are reported, not held to it",
+ "sheets": {
+  "kaiju_idle": {
+   "file": "kaiju_idle.png",
+   "aseprite": "kaiju_idle.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 6,
+   "times": [
+    0.16,
+    0.16,
+    0.16,
+    0.16,
+    0.16,
+    0.16
+   ],
+   "loop": true,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "body",
+   "note": "",
+   "anchors": [
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      139,
+      53
+     ],
+     "NECK": [
+      131,
+      74
+     ],
+     "MOUTH": [
+      200,
+      82
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      149
+     ],
+     "TAIL_ROOT": [
+      49,
+      161
+     ],
+     "HEAD_TOP": [
+      160,
+      44
+     ],
+     "CROWN": [
+      156,
+      43
+     ],
+     "BODY_DRAWN": [
+      19,
+      43,
+      181,
+      183
+     ],
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       3
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       128,
+       25,
+       27
+      ],
+      [
+       23,
+       101,
+       37,
+       42
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      139,
+      53
+     ],
+     "NECK": [
+      131,
+      74
+     ],
+     "MOUTH": [
+      200,
+      82
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      149
+     ],
+     "TAIL_ROOT": [
+      49,
+      161
+     ],
+     "HEAD_TOP": [
+      160,
+      44
+     ],
+     "CROWN": [
+      156,
+      43
+     ],
+     "BODY_DRAWN": [
+      19,
+      43,
+      181,
+      183
+     ],
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       30,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       3
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       128,
+       25,
+       27
+      ],
+      [
+       23,
+       101,
+       37,
+       42
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      139,
+      54
+     ],
+     "NECK": [
+      131,
+      75
+     ],
+     "MOUTH": [
+      200,
+      83
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      149
+     ],
+     "TAIL_ROOT": [
+      49,
+      161
+     ],
+     "HEAD_TOP": [
+      160,
+      45
+     ],
+     "CROWN": [
+      156,
+      44
+     ],
+     "BODY_DRAWN": [
+      19,
+      44,
+      181,
+      182
+     ],
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       30,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       3
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       129,
+       25,
+       26
+      ],
+      [
+       23,
+       102,
+       37,
+       42
+      ],
+      [
+       27,
+       71,
+       39,
+       49
+      ],
+      [
+       54,
+       47,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      139,
+      54
+     ],
+     "NECK": [
+      131,
+      75
+     ],
+     "MOUTH": [
+      200,
+      83
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      149
+     ],
+     "TAIL_ROOT": [
+      49,
+      161
+     ],
+     "HEAD_TOP": [
+      160,
+      45
+     ],
+     "CROWN": [
+      156,
+      44
+     ],
+     "BODY_DRAWN": [
+      19,
+      44,
+      181,
+      182
+     ],
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       29,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       3
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       129,
+       25,
+       26
+      ],
+      [
+       23,
+       102,
+       37,
+       42
+      ],
+      [
+       27,
+       71,
+       39,
+       49
+      ],
+      [
+       54,
+       47,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      139,
+      54
+     ],
+     "NECK": [
+      131,
+      75
+     ],
+     "MOUTH": [
+      200,
+      83
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      149
+     ],
+     "TAIL_ROOT": [
+      49,
+      161
+     ],
+     "HEAD_TOP": [
+      160,
+      45
+     ],
+     "CROWN": [
+      156,
+      44
+     ],
+     "BODY_DRAWN": [
+      19,
+      44,
+      181,
+      182
+     ],
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       30,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       3
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       129,
+       25,
+       26
+      ],
+      [
+       23,
+       102,
+       37,
+       42
+      ],
+      [
+       27,
+       71,
+       39,
+       49
+      ],
+      [
+       54,
+       47,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      139,
+      53
+     ],
+     "NECK": [
+      131,
+      74
+     ],
+     "MOUTH": [
+      200,
+      82
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      149
+     ],
+     "TAIL_ROOT": [
+      49,
+      161
+     ],
+     "HEAD_TOP": [
+      160,
+      44
+     ],
+     "CROWN": [
+      156,
+      43
+     ],
+     "BODY_DRAWN": [
+      19,
+      43,
+      181,
+      183
+     ],
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       3
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       128,
+       25,
+       27
+      ],
+      [
+       23,
+       101,
+       37,
+       42
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1417,
+     "colours": 15,
+     "opaque": 21983,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1424,
+     "colours": 15,
+     "opaque": 21980,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1422,
+     "colours": 15,
+     "opaque": 21854,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1422,
+     "colours": 15,
+     "opaque": 21852,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1425,
+     "colours": 15,
+     "opaque": 21868,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1418,
+     "colours": 15,
+     "opaque": 21985,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {
+    "FEET": [
+     331,
+     801
+    ],
+    "RIDER_SEAT": [
+     454,
+     342
+    ],
+    "NECK": [
+     430,
+     405
+    ],
+    "MOUTH": [
+     637,
+     429
+    ],
+    "FOOT_IMPACT": [
+     454,
+     801
+    ],
+    "FOOT_NEAR": [
+     208,
+     801
+    ],
+    "HIP": [
+     340,
+     630
+    ],
+    "TAIL_ROOT": [
+     184,
+     666
+    ],
+    "HEAD_TOP": [
+     517,
+     315
+    ],
+    "CROWN": [
+     505,
+     312
+    ]
+   }
+  },
+  "kaiju_charge": {
+   "file": "kaiju_charge.png",
+   "aseprite": "kaiju_charge.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 2,
+   "times": [
+    0.2,
+    0.2
+   ],
+   "loop": true,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "body",
+   "note": "the breath stance with the head taken off: draw kaiju_head_aim / kaiju_head_fire over it with their NECK pivot on this sheet's NECK, then kaiju_spines over both (normal blend)",
+   "anchors": [
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      139,
+      53
+     ],
+     "NECK": [
+      131,
+      74
+     ],
+     "MOUTH": null,
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      149
+     ],
+     "TAIL_ROOT": [
+      49,
+      161
+     ],
+     "HEAD_TOP": null,
+     "CROWN": [
+      116,
+      45
+     ],
+     "BODY_DRAWN": [
+      19,
+      45,
+      164,
+      181
+     ],
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       3
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       128,
+       25,
+       27
+      ],
+      [
+       23,
+       101,
+       37,
+       42
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      139,
+      53
+     ],
+     "NECK": [
+      131,
+      74
+     ],
+     "MOUTH": null,
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      149
+     ],
+     "TAIL_ROOT": [
+      49,
+      161
+     ],
+     "HEAD_TOP": null,
+     "CROWN": [
+      116,
+      45
+     ],
+     "BODY_DRAWN": [
+      19,
+      45,
+      163,
+      181
+     ],
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       3
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       128,
+       25,
+       27
+      ],
+      [
+       23,
+       101,
+       37,
+       42
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1449,
+     "colours": 14,
+     "opaque": 19384,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1453,
+     "colours": 14,
+     "opaque": 19382,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {
+    "FEET": [
+     331,
+     801
+    ],
+    "RIDER_SEAT": [
+     454,
+     342
+    ],
+    "NECK": [
+     430,
+     405
+    ],
+    "FOOT_IMPACT": [
+     454,
+     801
+    ],
+    "FOOT_NEAR": [
+     208,
+     801
+    ],
+    "HIP": [
+     340,
+     630
+    ],
+    "TAIL_ROOT": [
+     184,
+     666
+    ],
+    "CROWN": [
+     385,
+     318
+    ]
+   }
+  },
+  "kaiju_head_aim": {
+   "file": "kaiju_head_aim.png",
+   "aseprite": "kaiju_head_aim.aseprite",
+   "frame": [
+    112,
+    143
+   ],
+   "frames": 8,
+   "times": null,
+   "loop": false,
+   "pivot": [
+    35,
+    66
+   ],
+   "kind": "head",
+   "note": "head layer: frame i aims [-60, -40, -20, 0, 20, 40, 65, 90] deg (0 = the approved head, + turns it down / clockwise); put its NECK pivot on kaiju_charge NECK. MOUTH = the beam origin.",
+   "anchors": [
+    {
+     "AIM_DEG": -60,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      75,
+      12
+     ],
+     "SEAT_ON_HEAD": [
+      20,
+      49
+     ]
+    },
+    {
+     "AIM_DEG": -40,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      91,
+      29
+     ],
+     "SEAT_ON_HEAD": [
+      27,
+      45
+     ]
+    },
+    {
+     "AIM_DEG": -20,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      100,
+      50
+     ],
+     "SEAT_ON_HEAD": [
+      35,
+      44
+     ]
+    },
+    {
+     "AIM_DEG": 0,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      102,
+      73
+     ],
+     "SEAT_ON_HEAD": [
+      42,
+      45
+     ]
+    },
+    {
+     "AIM_DEG": 20,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      95,
+      96
+     ],
+     "SEAT_ON_HEAD": [
+      49,
+      49
+     ]
+    },
+    {
+     "AIM_DEG": 40,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      81,
+      115
+     ],
+     "SEAT_ON_HEAD": [
+      54,
+      55
+     ]
+    },
+    {
+     "AIM_DEG": 65,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      56,
+      130
+     ],
+     "SEAT_ON_HEAD": [
+      57,
+      64
+     ]
+    },
+    {
+     "AIM_DEG": 90,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      28,
+      133
+     ],
+     "SEAT_ON_HEAD": [
+      56,
+      73
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1205,
+     "colours": 18,
+     "opaque": 4018,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1161,
+     "colours": 18,
+     "opaque": 4022,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1232,
+     "colours": 18,
+     "opaque": 4026,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1279,
+     "colours": 18,
+     "opaque": 4035,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1293,
+     "colours": 18,
+     "opaque": 4014,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1279,
+     "colours": 18,
+     "opaque": 4018,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1291,
+     "colours": 18,
+     "opaque": 4021,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1314,
+     "colours": 17,
+     "opaque": 4035,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ]
+  },
+  "kaiju_head_fire": {
+   "file": "kaiju_head_fire.png",
+   "aseprite": "kaiju_head_fire.aseprite",
+   "frame": [
+    112,
+    143
+   ],
+   "frames": 8,
+   "times": null,
+   "loop": false,
+   "pivot": [
+    35,
+    66
+   ],
+   "kind": "head",
+   "note": "head layer: frame i aims [-60, -40, -20, 0, 20, 40, 65, 90] deg (0 = the approved head, + turns it down / clockwise); put its NECK pivot on kaiju_charge NECK. MOUTH = the beam origin.",
+   "anchors": [
+    {
+     "AIM_DEG": -60,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      80,
+      16
+     ],
+     "SEAT_ON_HEAD": [
+      20,
+      49
+     ]
+    },
+    {
+     "AIM_DEG": -40,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      94,
+      35
+     ],
+     "SEAT_ON_HEAD": [
+      27,
+      45
+     ]
+    },
+    {
+     "AIM_DEG": -20,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      101,
+      57
+     ],
+     "SEAT_ON_HEAD": [
+      35,
+      44
+     ]
+    },
+    {
+     "AIM_DEG": 0,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      101,
+      80
+     ],
+     "SEAT_ON_HEAD": [
+      42,
+      45
+     ]
+    },
+    {
+     "AIM_DEG": 20,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      92,
+      102
+     ],
+     "SEAT_ON_HEAD": [
+      49,
+      49
+     ]
+    },
+    {
+     "AIM_DEG": 40,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      76,
+      119
+     ],
+     "SEAT_ON_HEAD": [
+      54,
+      55
+     ]
+    },
+    {
+     "AIM_DEG": 65,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      50,
+      131
+     ],
+     "SEAT_ON_HEAD": [
+      57,
+      64
+     ]
+    },
+    {
+     "AIM_DEG": 90,
+     "NECK": [
+      35,
+      66
+     ],
+     "MOUTH": [
+      21,
+      132
+     ],
+     "SEAT_ON_HEAD": [
+      56,
+      73
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1108,
+     "colours": 18,
+     "opaque": 4340,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1101,
+     "colours": 18,
+     "opaque": 4340,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1159,
+     "colours": 18,
+     "opaque": 4347,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1198,
+     "colours": 18,
+     "opaque": 4359,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1196,
+     "colours": 18,
+     "opaque": 4332,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1194,
+     "colours": 18,
+     "opaque": 4337,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1213,
+     "colours": 18,
+     "opaque": 4335,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1218,
+     "colours": 17,
+     "opaque": 4359,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ]
+  },
+  "kaiju_spines": {
+   "file": "kaiju_spines.png",
+   "aseprite": "kaiju_spines.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 9,
+   "times": null,
+   "loop": false,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "overlay",
+   "note": "overlay for kaiju_charge (same frame and pivot). Draw with NORMAL blend: it replaces the plate pixels it covers (opaque), its halo and sparks sit outside the body.",
+   "anchors": [
+    {
+     "ROWS_LIT": 0
+    },
+    {
+     "ROWS_LIT": 1,
+     "FLASH": false,
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       3
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       128,
+       25,
+       27
+      ],
+      [
+       23,
+       101,
+       37,
+       42
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "ROWS_LIT": 2,
+     "FLASH": false,
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       1
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       128,
+       25,
+       27
+      ],
+      [
+       23,
+       101,
+       37,
+       42
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "ROWS_LIT": 3,
+     "FLASH": false,
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       1
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       128,
+       25,
+       27
+      ],
+      [
+       23,
+       101,
+       37,
+       42
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "ROWS_LIT": 4,
+     "FLASH": false,
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       1
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       139,
+       14,
+       16
+      ],
+      [
+       23,
+       101,
+       37,
+       42
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "ROWS_LIT": 5,
+     "FLASH": false,
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       1
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       132,
+       26,
+       23
+      ],
+      [
+       23,
+       105,
+       35,
+       38
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "ROWS_LIT": 6,
+     "FLASH": false,
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       1
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       132,
+       26,
+       23
+      ],
+      [
+       23,
+       98,
+       37,
+       45
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "ROWS_LIT": 7,
+     "FLASH": false,
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       1
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       132,
+       26,
+       23
+      ],
+      [
+       23,
+       98,
+       37,
+       45
+      ],
+      [
+       27,
+       70,
+       55,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    },
+    {
+     "ROWS_LIT": 7,
+     "FLASH": true,
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       1
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       127,
+       28,
+       28
+      ],
+      [
+       23,
+       99,
+       37,
+       44
+      ],
+      [
+       27,
+       69,
+       51,
+       50
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 3,
+     "opaque": 17,
+     "audit": {
+      "gaps": 17,
+      "lone": 3,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 3,
+     "opaque": 22,
+     "audit": {
+      "gaps": 22,
+      "lone": 3,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 3,
+     "opaque": 31,
+     "audit": {
+      "gaps": 31,
+      "lone": 3,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 4,
+     "opaque": 107,
+     "audit": {
+      "gaps": 77,
+      "lone": 3,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 4,
+     "opaque": 634,
+     "audit": {
+      "gaps": 252,
+      "lone": 3,
+      "holes": 5,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 4,
+     "opaque": 1509,
+     "audit": {
+      "gaps": 480,
+      "lone": 3,
+      "holes": 20,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 5,
+     "opaque": 2492,
+     "audit": {
+      "gaps": 807,
+      "lone": 3,
+      "holes": 41,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 3,
+     "opaque": 2492,
+     "audit": {
+      "gaps": 807,
+      "lone": 3,
+      "holes": 41,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {}
+  },
+  "kaiju_rear": {
+   "file": "kaiju_rear.png",
+   "aseprite": "kaiju_rear.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 4,
+   "times": [
+    0.12,
+    0.12,
+    0.13,
+    0.13
+   ],
+   "loop": false,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "body",
+   "note": "",
+   "anchors": [
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      112,
+      45
+     ],
+     "NECK": [
+      116,
+      67
+     ],
+     "MOUTH": [
+      180,
+      39
+     ],
+     "FOOT_IMPACT": [
+      138,
+      201
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      147
+     ],
+     "TAIL_ROOT": [
+      50,
+      164
+     ],
+     "HEAD_TOP": [
+      126,
+      26
+     ],
+     "CROWN": [
+      132,
+      21
+     ],
+     "BODY_DRAWN": [
+      19,
+      21,
+      162,
+      195
+     ],
+     "SPINE_ROWS": [
+      [
+       111,
+       192,
+       31,
+       5
+      ],
+      [
+       99,
+       185,
+       6,
+       6
+      ],
+      null,
+      [
+       24,
+       138,
+       20,
+       12
+      ],
+      [
+       21,
+       110,
+       33,
+       39
+      ],
+      [
+       20,
+       82,
+       37,
+       49
+      ],
+      [
+       39,
+       43,
+       64,
+       55
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      95,
+      44
+     ],
+     "NECK": [
+      106,
+      63
+     ],
+     "MOUTH": [
+      158,
+      18
+     ],
+     "FOOT_IMPACT": [
+      138,
+      198
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      145
+     ],
+     "TAIL_ROOT": [
+      51,
+      164
+     ],
+     "HEAD_TOP": [
+      103,
+      21
+     ],
+     "CROWN": [
+      136,
+      5
+     ],
+     "BODY_DRAWN": [
+      17,
+      5,
+      155,
+      214
+     ],
+     "SPINE_ROWS": [
+      [
+       110,
+       195,
+       31,
+       6
+      ],
+      [
+       100,
+       187,
+       5,
+       7
+      ],
+      null,
+      [
+       24,
+       128,
+       21,
+       24
+      ],
+      [
+       23,
+       116,
+       29,
+       32
+      ],
+      [
+       18,
+       90,
+       35,
+       47
+      ],
+      [
+       32,
+       43,
+       55,
+       61
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      159,
+      72
+     ],
+     "NECK": [
+      145,
+      90
+     ],
+     "MOUTH": [
+      207,
+      121
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      156
+     ],
+     "TAIL_ROOT": [
+      48,
+      164
+     ],
+     "HEAD_TOP": [
+      182,
+      71
+     ],
+     "CROWN": [
+      123,
+      56
+     ],
+     "BODY_DRAWN": [
+      24,
+      56,
+      189,
+      159
+     ],
+     "SPINE_ROWS": [
+      [
+       110,
+       191,
+       30,
+       5
+      ],
+      [
+       98,
+       184,
+       6,
+       6
+      ],
+      null,
+      [
+       25,
+       135,
+       22,
+       14
+      ],
+      [
+       26,
+       97,
+       43,
+       46
+      ],
+      [
+       38,
+       66,
+       41,
+       48
+      ],
+      [
+       72,
+       57,
+       73,
+       32
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      172,
+      91
+     ],
+     "NECK": [
+      154,
+      104
+     ],
+     "MOUTH": [
+      206,
+      150
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      162
+     ],
+     "TAIL_ROOT": [
+      48,
+      167
+     ],
+     "HEAD_TOP": [
+      195,
+      96
+     ],
+     "CROWN": [
+      105,
+      62
+     ],
+     "BODY_DRAWN": [
+      25,
+      62,
+      193,
+      150
+     ],
+     "SPINE_ROWS": [
+      [
+       111,
+       189,
+       31,
+       4
+      ],
+      [
+       99,
+       183,
+       6,
+       6
+      ],
+      null,
+      [
+       26,
+       135,
+       24,
+       15
+      ],
+      [
+       29,
+       91,
+       49,
+       51
+      ],
+      [
+       50,
+       66,
+       41,
+       47
+      ],
+      [
+       86,
+       63,
+       73,
+       28
+      ]
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1417,
+     "colours": 17,
+     "opaque": 20841,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1369,
+     "colours": 17,
+     "opaque": 20922,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.143,
+     "colours": 17,
+     "opaque": 21091,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1442,
+     "colours": 15,
+     "opaque": 20185,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {
+    "FEET": [
+     331,
+     801
+    ],
+    "RIDER_SEAT": [
+     373,
+     318
+    ],
+    "NECK": [
+     385,
+     384
+    ],
+    "MOUTH": [
+     577,
+     300
+    ],
+    "FOOT_IMPACT": [
+     451,
+     786
+    ],
+    "FOOT_NEAR": [
+     208,
+     801
+    ],
+    "HIP": [
+     340,
+     624
+    ],
+    "TAIL_ROOT": [
+     187,
+     675
+    ],
+    "HEAD_TOP": [
+     415,
+     261
+    ],
+    "CROWN": [
+     433,
+     246
+    ]
+   }
+  },
+  "kaiju_leap": {
+   "file": "kaiju_leap.png",
+   "aseprite": "kaiju_leap.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 3,
+   "times": [
+    0.1,
+    0.1,
+    0.1
+   ],
+   "loop": false,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "body",
+   "note": "",
+   "anchors": [
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      117,
+      35
+     ],
+     "NECK": [
+      118,
+      57
+     ],
+     "MOUTH": [
+      185,
+      39
+     ],
+     "FOOT_IMPACT": [
+      135,
+      191
+     ],
+     "FOOT_NEAR": [
+      55,
+      195
+     ],
+     "HIP": [
+      101,
+      137
+     ],
+     "TAIL_ROOT": [
+      50,
+      153
+     ],
+     "HEAD_TOP": [
+      134,
+      18
+     ],
+     "CROWN": [
+      141,
+      14
+     ],
+     "BODY_DRAWN": [
+      19,
+      14,
+      163,
+      208
+     ],
+     "SPINE_ROWS": [
+      [
+       63,
+       197,
+       31,
+       8
+      ],
+      [
+       53,
+       190,
+       5,
+       6
+      ],
+      [
+       22,
+       154,
+       4,
+       3
+      ],
+      [
+       24,
+       128,
+       20,
+       19
+      ],
+      [
+       21,
+       99,
+       34,
+       39
+      ],
+      [
+       20,
+       70,
+       38,
+       49
+      ],
+      [
+       42,
+       33,
+       64,
+       52
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      113,
+      31
+     ],
+     "NECK": [
+      115,
+      53
+     ],
+     "MOUTH": [
+      182,
+      34
+     ],
+     "FOOT_IMPACT": [
+      126,
+      183
+     ],
+     "FOOT_NEAR": [
+      44,
+      187
+     ],
+     "HIP": [
+      101,
+      133
+     ],
+     "TAIL_ROOT": [
+      51,
+      152
+     ],
+     "HEAD_TOP": [
+      130,
+      14
+     ],
+     "CROWN": [
+      136,
+      10
+     ],
+     "BODY_DRAWN": [
+      17,
+      10,
+      161,
+      221
+     ],
+     "SPINE_ROWS": [
+      [
+       58,
+       203,
+       29,
+       14
+      ],
+      [
+       52,
+       198,
+       2,
+       1
+      ],
+      [
+       20,
+       146,
+       11,
+       21
+      ],
+      [
+       24,
+       126,
+       19,
+       21
+      ],
+      [
+       20,
+       96,
+       32,
+       42
+      ],
+      [
+       18,
+       68,
+       38,
+       49
+      ],
+      [
+       38,
+       29,
+       64,
+       54
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      151,
+      41
+     ],
+     "NECK": [
+      139,
+      61
+     ],
+     "MOUTH": [
+      205,
+      83
+     ],
+     "FOOT_IMPACT": [
+      140,
+      178
+     ],
+     "FOOT_NEAR": [
+      69,
+      174
+     ],
+     "HIP": [
+      101,
+      131
+     ],
+     "TAIL_ROOT": [
+      48,
+      141
+     ],
+     "HEAD_TOP": [
+      174,
+      37
+     ],
+     "CROWN": [
+      127,
+      29
+     ],
+     "BODY_DRAWN": [
+      7,
+      29,
+      202,
+      199
+     ],
+     "SPINE_ROWS": [
+      [
+       38,
+       194,
+       20,
+       23
+      ],
+      null,
+      [
+       16,
+       131,
+       14,
+       18
+      ],
+      [
+       24,
+       106,
+       28,
+       26
+      ],
+      [
+       25,
+       77,
+       40,
+       44
+      ],
+      [
+       33,
+       45,
+       40,
+       48
+      ],
+      [
+       64,
+       30,
+       73,
+       36
+      ]
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1378,
+     "colours": 15,
+     "opaque": 21423,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1387,
+     "colours": 15,
+     "opaque": 21289,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1378,
+     "colours": 15,
+     "opaque": 22559,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {
+    "FEET": [
+     331,
+     801
+    ],
+    "RIDER_SEAT": [
+     388,
+     288
+    ],
+    "NECK": [
+     391,
+     354
+    ],
+    "MOUTH": [
+     592,
+     300
+    ],
+    "FOOT_IMPACT": [
+     442,
+     756
+    ],
+    "FOOT_NEAR": [
+     202,
+     768
+    ],
+    "HIP": [
+     340,
+     594
+    ],
+    "TAIL_ROOT": [
+     187,
+     642
+    ],
+    "HEAD_TOP": [
+     439,
+     237
+    ],
+    "CROWN": [
+     460,
+     225
+    ]
+   }
+  },
+  "kaiju_drop": {
+   "file": "kaiju_drop.png",
+   "aseprite": "kaiju_drop.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 2,
+   "times": [
+    0.11,
+    0.11
+   ],
+   "loop": false,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "body",
+   "note": "f0 shows the stomping (far, screen-right) foot's sole with the gold star sticker",
+   "anchors": [
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      120,
+      35
+     ],
+     "NECK": [
+      114,
+      57
+     ],
+     "MOUTH": [
+      183,
+      61
+     ],
+     "FOOT_IMPACT": [
+      170,
+      159
+     ],
+     "FOOT_NEAR": [
+      36,
+      186
+     ],
+     "HIP": [
+      101,
+      137
+     ],
+     "TAIL_ROOT": [
+      51,
+      155
+     ],
+     "HEAD_TOP": [
+      141,
+      25
+     ],
+     "CROWN": [
+      138,
+      24
+     ],
+     "BODY_DRAWN": [
+      18,
+      24,
+      183,
+      197
+     ],
+     "SPINE_ROWS": [
+      [
+       86,
+       161,
+       23,
+       18
+      ],
+      [
+       71,
+       180,
+       7,
+       3
+      ],
+      null,
+      [
+       24,
+       131,
+       20,
+       24
+      ],
+      [
+       20,
+       101,
+       32,
+       40
+      ],
+      [
+       19,
+       73,
+       37,
+       49
+      ],
+      [
+       38,
+       34,
+       66,
+       54
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      163,
+      57
+     ],
+     "NECK": [
+      146,
+      71
+     ],
+     "MOUTH": [
+      201,
+      114
+     ],
+     "FOOT_IMPACT": [
+      125,
+      196
+     ],
+     "FOOT_NEAR": [
+      72,
+      169
+     ],
+     "HIP": [
+      101,
+      137
+     ],
+     "TAIL_ROOT": [
+      48,
+      144
+     ],
+     "HEAD_TOP": [
+      186,
+      60
+     ],
+     "CROWN": [
+      125,
+      38
+     ],
+     "BODY_DRAWN": [
+      20,
+      38,
+      191,
+      167
+     ],
+     "SPINE_ROWS": [
+      [
+       74,
+       174,
+       29,
+       8
+      ],
+      [
+       60,
+       176,
+       7,
+       5
+      ],
+      [
+       21,
+       148,
+       4,
+       3
+      ],
+      [
+       23,
+       115,
+       24,
+       24
+      ],
+      [
+       26,
+       77,
+       44,
+       46
+      ],
+      [
+       39,
+       47,
+       42,
+       48
+      ],
+      [
+       74,
+       39,
+       73,
+       31
+      ]
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1401,
+     "colours": 17,
+     "opaque": 21138,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1372,
+     "colours": 17,
+     "opaque": 21655,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {
+    "FEET": [
+     331,
+     801
+    ],
+    "RIDER_SEAT": [
+     397,
+     288
+    ],
+    "NECK": [
+     379,
+     354
+    ],
+    "MOUTH": [
+     586,
+     366
+    ],
+    "FOOT_IMPACT": [
+     547,
+     660
+    ],
+    "FOOT_NEAR": [
+     145,
+     741
+    ],
+    "HIP": [
+     340,
+     594
+    ],
+    "TAIL_ROOT": [
+     190,
+     648
+    ],
+    "HEAD_TOP": [
+     460,
+     258
+    ],
+    "CROWN": [
+     451,
+     255
+    ]
+   }
+  },
+  "kaiju_stomp": {
+   "file": "kaiju_stomp.png",
+   "aseprite": "kaiju_stomp.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 3,
+   "times": [
+    0.05,
+    0.1,
+    null
+   ],
+   "loop": false,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "body",
+   "note": "",
+   "anchors": [
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      167,
+      84
+     ],
+     "NECK": [
+      150,
+      98
+     ],
+     "MOUTH": [
+      204,
+      141
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      160
+     ],
+     "TAIL_ROOT": [
+      48,
+      167
+     ],
+     "HEAD_TOP": [
+      191,
+      88
+     ],
+     "CROWN": [
+      98,
+      61
+     ],
+     "BODY_DRAWN": [
+      24,
+      61,
+      191,
+      165
+     ],
+     "SPINE_ROWS": [
+      [
+       103,
+       202,
+       31,
+       5
+      ],
+      [
+       91,
+       195,
+       6,
+       6
+      ],
+      [
+       34,
+       184,
+       2,
+       2
+      ],
+      [
+       25,
+       136,
+       23,
+       14
+      ],
+      [
+       28,
+       94,
+       46,
+       50
+      ],
+      [
+       44,
+       67,
+       42,
+       47
+      ],
+      [
+       81,
+       62,
+       72,
+       28
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      153,
+      65
+     ],
+     "NECK": [
+      140,
+      83
+     ],
+     "MOUTH": [
+      205,
+      108
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      153
+     ],
+     "TAIL_ROOT": [
+      48,
+      162
+     ],
+     "HEAD_TOP": [
+      176,
+      61
+     ],
+     "CROWN": [
+      129,
+      51
+     ],
+     "BODY_DRAWN": [
+      24,
+      51,
+      186,
+      166
+     ],
+     "SPINE_ROWS": [
+      [
+       107,
+       193,
+       31,
+       5
+      ],
+      [
+       96,
+       186,
+       6,
+       6
+      ],
+      [
+       37,
+       181,
+       1,
+       2
+      ],
+      [
+       25,
+       127,
+       28,
+       20
+      ],
+      [
+       25,
+       98,
+       41,
+       44
+      ],
+      [
+       34,
+       67,
+       40,
+       48
+      ],
+      [
+       66,
+       52,
+       73,
+       36
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      144,
+      57
+     ],
+     "NECK": [
+      134,
+      77
+     ],
+     "MOUTH": [
+      201,
+      93
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      150
+     ],
+     "TAIL_ROOT": [
+      49,
+      162
+     ],
+     "HEAD_TOP": [
+      167,
+      50
+     ],
+     "CROWN": [
+      120,
+      46
+     ],
+     "BODY_DRAWN": [
+      23,
+      46,
+      180,
+      168
+     ],
+     "SPINE_ROWS": [
+      [
+       110,
+       190,
+       30,
+       5
+      ],
+      [
+       98,
+       183,
+       6,
+       6
+      ],
+      null,
+      [
+       24,
+       127,
+       28,
+       21
+      ],
+      [
+       24,
+       99,
+       38,
+       44
+      ],
+      [
+       28,
+       68,
+       40,
+       49
+      ],
+      [
+       58,
+       47,
+       72,
+       42
+      ]
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1393,
+     "colours": 17,
+     "opaque": 21452,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1434,
+     "colours": 17,
+     "opaque": 21407,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1455,
+     "colours": 15,
+     "opaque": 20996,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {
+    "FEET": [
+     331,
+     801
+    ],
+    "RIDER_SEAT": [
+     538,
+     435
+    ],
+    "NECK": [
+     487,
+     477
+    ],
+    "MOUTH": [
+     649,
+     606
+    ],
+    "FOOT_IMPACT": [
+     454,
+     801
+    ],
+    "FOOT_NEAR": [
+     208,
+     801
+    ],
+    "HIP": [
+     340,
+     663
+    ],
+    "TAIL_ROOT": [
+     181,
+     684
+    ],
+    "HEAD_TOP": [
+     610,
+     447
+    ],
+    "CROWN": [
+     331,
+     366
+    ]
+   }
+  },
+  "kaiju_stumble": {
+   "file": "kaiju_stumble.png",
+   "aseprite": "kaiju_stumble.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 5,
+   "times": [
+    0.07,
+    0.08,
+    0.1,
+    0.1,
+    null
+   ],
+   "loop": false,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "body",
+   "note": "Jordan leaves the seat on f1; f4 == kaiju_kneel f0",
+   "anchors": [
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      89,
+      47
+     ],
+     "NECK": [
+      101,
+      65
+     ],
+     "MOUTH": [
+      149,
+      16
+     ],
+     "FOOT_IMPACT": [
+      139,
+      192
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      98,
+      147
+     ],
+     "TAIL_ROOT": [
+      49,
+      168
+     ],
+     "HEAD_TOP": [
+      95,
+      24
+     ],
+     "CROWN": [
+      128,
+      4
+     ],
+     "BODY_DRAWN": [
+      13,
+      4,
+      159,
+      216
+     ],
+     "SPINE_ROWS": [
+      [
+       109,
+       196,
+       31,
+       6
+      ],
+      [
+       98,
+       189,
+       1,
+       4
+      ],
+      null,
+      [
+       21,
+       136,
+       21,
+       20
+      ],
+      [
+       19,
+       119,
+       28,
+       33
+      ],
+      [
+       14,
+       93,
+       36,
+       47
+      ],
+      [
+       27,
+       46,
+       54,
+       60
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      88,
+      46
+     ],
+     "NECK": [
+      97,
+      66
+     ],
+     "MOUTH": [
+      153,
+      25
+     ],
+     "FOOT_IMPACT": [
+      126,
+      198
+     ],
+     "FOOT_NEAR": [
+      54,
+      206
+     ],
+     "HIP": [
+      95,
+      148
+     ],
+     "TAIL_ROOT": [
+      47,
+      172
+     ],
+     "HEAD_TOP": [
+      98,
+      24
+     ],
+     "CROWN": [
+      130,
+      11
+     ],
+     "BODY_DRAWN": [
+      8,
+      11,
+      152,
+      215
+     ],
+     "SPINE_ROWS": [
+      [
+       107,
+       203,
+       31,
+       6
+      ],
+      [
+       96,
+       196,
+       1,
+       2
+      ],
+      null,
+      [
+       19,
+       150,
+       19,
+       12
+      ],
+      [
+       14,
+       119,
+       29,
+       41
+      ],
+      [
+       9,
+       93,
+       37,
+       48
+      ],
+      [
+       23,
+       47,
+       56,
+       58
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      168,
+      88
+     ],
+     "NECK": [
+      150,
+      101
+     ],
+     "MOUTH": [
+      201,
+      148
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      56,
+      201
+     ],
+     "HIP": [
+      101,
+      163
+     ],
+     "TAIL_ROOT": [
+      48,
+      170
+     ],
+     "HEAD_TOP": [
+      191,
+      93
+     ],
+     "CROWN": [
+      98,
+      64
+     ],
+     "BODY_DRAWN": [
+      24,
+      64,
+      189,
+      158
+     ],
+     "SPINE_ROWS": [
+      [
+       108,
+       198,
+       31,
+       5
+      ],
+      [
+       97,
+       191,
+       6,
+       6
+      ],
+      [
+       37,
+       189,
+       2,
+       1
+      ],
+      [
+       25,
+       139,
+       23,
+       14
+      ],
+      [
+       28,
+       97,
+       46,
+       50
+      ],
+      [
+       44,
+       70,
+       42,
+       47
+      ],
+      [
+       81,
+       65,
+       72,
+       28
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      176,
+      105
+     ],
+     "NECK": [
+      155,
+      113
+     ],
+     "MOUTH": [
+      192,
+      172
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      169
+     ],
+     "TAIL_ROOT": [
+      48,
+      174
+     ],
+     "HEAD_TOP": [
+      197,
+      116
+     ],
+     "CROWN": [
+      108,
+      69
+     ],
+     "BODY_DRAWN": [
+      3,
+      69,
+      206,
+      157
+     ],
+     "SPINE_ROWS": [
+      [
+       48,
+       203,
+       32,
+       5
+      ],
+      [
+       37,
+       196,
+       2,
+       3
+      ],
+      [
+       21,
+       159,
+       11,
+       7
+      ],
+      [
+       26,
+       142,
+       24,
+       19
+      ],
+      [
+       30,
+       96,
+       49,
+       52
+      ],
+      [
+       52,
+       72,
+       41,
+       47
+      ],
+      [
+       89,
+       70,
+       72,
+       27
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      172,
+      97
+     ],
+     "NECK": [
+      152,
+      107
+     ],
+     "MOUTH": [
+      197,
+      160
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      56,
+      204
+     ],
+     "HIP": [
+      101,
+      167
+     ],
+     "TAIL_ROOT": [
+      48,
+      173
+     ],
+     "HEAD_TOP": [
+      194,
+      105
+     ],
+     "CROWN": [
+      102,
+      68
+     ],
+     "BODY_DRAWN": [
+      4,
+      68,
+      208,
+      158
+     ],
+     "SPINE_ROWS": [
+      [
+       49,
+       203,
+       32,
+       5
+      ],
+      [
+       38,
+       196,
+       2,
+       3
+      ],
+      [
+       21,
+       158,
+       10,
+       7
+      ],
+      [
+       26,
+       142,
+       23,
+       18
+      ],
+      [
+       29,
+       98,
+       47,
+       51
+      ],
+      [
+       48,
+       72,
+       41,
+       47
+      ],
+      [
+       84,
+       69,
+       73,
+       27
+      ]
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1373,
+     "colours": 17,
+     "opaque": 20932,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1425,
+     "colours": 17,
+     "opaque": 20409,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1394,
+     "colours": 17,
+     "opaque": 20599,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1411,
+     "colours": 17,
+     "opaque": 21233,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1395,
+     "colours": 17,
+     "opaque": 21556,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {
+    "FEET": [
+     331,
+     801
+    ],
+    "RIDER_SEAT": [
+     304,
+     324
+    ],
+    "NECK": [
+     340,
+     378
+    ],
+    "MOUTH": [
+     484,
+     231
+    ],
+    "FOOT_IMPACT": [
+     454,
+     759
+    ],
+    "FOOT_NEAR": [
+     208,
+     801
+    ],
+    "HIP": [
+     331,
+     624
+    ],
+    "TAIL_ROOT": [
+     184,
+     687
+    ],
+    "HEAD_TOP": [
+     322,
+     255
+    ],
+    "CROWN": [
+     421,
+     195
+    ]
+   }
+  },
+  "kaiju_kneel": {
+   "file": "kaiju_kneel.png",
+   "aseprite": "kaiju_kneel.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 2,
+   "times": [
+    0.3,
+    0.3
+   ],
+   "loop": true,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "body",
+   "note": "",
+   "anchors": [
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      172,
+      97
+     ],
+     "NECK": [
+      152,
+      107
+     ],
+     "MOUTH": [
+      197,
+      160
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      56,
+      204
+     ],
+     "HIP": [
+      101,
+      167
+     ],
+     "TAIL_ROOT": [
+      48,
+      173
+     ],
+     "HEAD_TOP": [
+      194,
+      105
+     ],
+     "CROWN": [
+      102,
+      68
+     ],
+     "BODY_DRAWN": [
+      4,
+      68,
+      208,
+      158
+     ],
+     "SPINE_ROWS": [
+      [
+       49,
+       203,
+       32,
+       5
+      ],
+      [
+       38,
+       196,
+       2,
+       3
+      ],
+      [
+       21,
+       158,
+       10,
+       7
+      ],
+      [
+       26,
+       142,
+       23,
+       18
+      ],
+      [
+       29,
+       98,
+       47,
+       51
+      ],
+      [
+       48,
+       72,
+       41,
+       47
+      ],
+      [
+       84,
+       69,
+       73,
+       27
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      171,
+      97
+     ],
+     "NECK": [
+      151,
+      106
+     ],
+     "MOUTH": [
+      192,
+      162
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      56,
+      204
+     ],
+     "HIP": [
+      101,
+      167
+     ],
+     "TAIL_ROOT": [
+      48,
+      173
+     ],
+     "HEAD_TOP": [
+      193,
+      106
+     ],
+     "CROWN": [
+      100,
+      68
+     ],
+     "BODY_DRAWN": [
+      4,
+      68,
+      204,
+      158
+     ],
+     "SPINE_ROWS": [
+      [
+       49,
+       203,
+       30,
+       5
+      ],
+      [
+       38,
+       196,
+       2,
+       3
+      ],
+      [
+       21,
+       158,
+       10,
+       7
+      ],
+      [
+       26,
+       142,
+       23,
+       18
+      ],
+      [
+       28,
+       100,
+       46,
+       49
+      ],
+      [
+       46,
+       74,
+       41,
+       47
+      ],
+      [
+       82,
+       69,
+       72,
+       28
+      ]
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1395,
+     "colours": 17,
+     "opaque": 21556,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1375,
+     "colours": 17,
+     "opaque": 21385,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {
+    "FEET": [
+     331,
+     801
+    ],
+    "RIDER_SEAT": [
+     553,
+     474
+    ],
+    "NECK": [
+     493,
+     504
+    ],
+    "MOUTH": [
+     628,
+     663
+    ],
+    "FOOT_IMPACT": [
+     454,
+     801
+    ],
+    "FOOT_NEAR": [
+     205,
+     795
+    ],
+    "HIP": [
+     340,
+     684
+    ],
+    "TAIL_ROOT": [
+     181,
+     702
+    ],
+    "HEAD_TOP": [
+     619,
+     498
+    ],
+    "CROWN": [
+     343,
+     387
+    ]
+   }
+  },
+  "kaiju_stand": {
+   "file": "kaiju_stand.png",
+   "aseprite": "kaiju_stand.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 3,
+   "times": [
+    0.12,
+    0.12,
+    0.12
+   ],
+   "loop": false,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "body",
+   "note": "",
+   "anchors": [
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      158,
+      76
+     ],
+     "NECK": [
+      144,
+      93
+     ],
+     "MOUTH": [
+      205,
+      125
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      54,
+      199
+     ],
+     "HIP": [
+      101,
+      160
+     ],
+     "TAIL_ROOT": [
+      48,
+      168
+     ],
+     "HEAD_TOP": [
+      182,
+      75
+     ],
+     "CROWN": [
+      122,
+      60
+     ],
+     "BODY_DRAWN": [
+      24,
+      60,
+      188,
+      162
+     ],
+     "SPINE_ROWS": [
+      [
+       108,
+       198,
+       31,
+       5
+      ],
+      [
+       96,
+       191,
+       6,
+       6
+      ],
+      [
+       37,
+       188,
+       2,
+       1
+      ],
+      [
+       25,
+       140,
+       21,
+       13
+      ],
+      [
+       26,
+       102,
+       42,
+       46
+      ],
+      [
+       38,
+       71,
+       40,
+       48
+      ],
+      [
+       71,
+       61,
+       73,
+       33
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      146,
+      62
+     ],
+     "NECK": [
+      137,
+      82
+     ],
+     "MOUTH": [
+      204,
+      97
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      60,
+      201
+     ],
+     "HIP": [
+      101,
+      154
+     ],
+     "TAIL_ROOT": [
+      48,
+      164
+     ],
+     "HEAD_TOP": [
+      169,
+      55
+     ],
+     "CROWN": [
+      123,
+      51
+     ],
+     "BODY_DRAWN": [
+      24,
+      51,
+      182,
+      166
+     ],
+     "SPINE_ROWS": [
+      [
+       109,
+       193,
+       31,
+       5
+      ],
+      [
+       97,
+       186,
+       6,
+       6
+      ],
+      null,
+      [
+       25,
+       130,
+       27,
+       19
+      ],
+      [
+       25,
+       102,
+       38,
+       43
+      ],
+      [
+       31,
+       71,
+       40,
+       48
+      ],
+      [
+       61,
+       52,
+       73,
+       39
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      137,
+      54
+     ],
+     "NECK": [
+      131,
+      75
+     ],
+     "MOUTH": [
+      201,
+      78
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      150
+     ],
+     "TAIL_ROOT": [
+      49,
+      162
+     ],
+     "HEAD_TOP": [
+      158,
+      43
+     ],
+     "CROWN": [
+      156,
+      42
+     ],
+     "BODY_DRAWN": [
+      22,
+      42,
+      178,
+      172
+     ],
+     "SPINE_ROWS": [
+      [
+       110,
+       190,
+       30,
+       5
+      ],
+      [
+       98,
+       183,
+       6,
+       6
+      ],
+      null,
+      [
+       24,
+       129,
+       24,
+       19
+      ],
+      [
+       23,
+       102,
+       37,
+       42
+      ],
+      [
+       27,
+       71,
+       39,
+       49
+      ],
+      [
+       54,
+       47,
+       71,
+       44
+      ]
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1422,
+     "colours": 17,
+     "opaque": 20874,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.144,
+     "colours": 15,
+     "opaque": 20870,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.143,
+     "colours": 15,
+     "opaque": 20935,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {
+    "FEET": [
+     331,
+     801
+    ],
+    "RIDER_SEAT": [
+     511,
+     411
+    ],
+    "NECK": [
+     469,
+     462
+    ],
+    "MOUTH": [
+     652,
+     558
+    ],
+    "FOOT_IMPACT": [
+     454,
+     801
+    ],
+    "FOOT_NEAR": [
+     199,
+     780
+    ],
+    "HIP": [
+     340,
+     663
+    ],
+    "TAIL_ROOT": [
+     181,
+     687
+    ],
+    "HEAD_TOP": [
+     583,
+     408
+    ],
+    "CROWN": [
+     403,
+     363
+    ]
+   }
+  },
+  "kaiju_land": {
+   "file": "kaiju_land.png",
+   "aseprite": "kaiju_land.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 3,
+   "times": [
+    0.06,
+    0.1,
+    0.14
+   ],
+   "loop": false,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "body",
+   "note": "",
+   "anchors": [
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      125,
+      44
+     ],
+     "NECK": [
+      123,
+      67
+     ],
+     "MOUTH": [
+      191,
+      58
+     ],
+     "FOOT_IMPACT": [
+      138,
+      200
+     ],
+     "FOOT_NEAR": [
+      58,
+      204
+     ],
+     "HIP": [
+      101,
+      145
+     ],
+     "TAIL_ROOT": [
+      49,
+      160
+     ],
+     "HEAD_TOP": [
+      143,
+      30
+     ],
+     "CROWN": [
+      151,
+      27
+     ],
+     "BODY_DRAWN": [
+      20,
+      27,
+      169,
+      180
+     ],
+     "SPINE_ROWS": [
+      [
+       114,
+       178,
+       31,
+       6
+      ],
+      [
+       103,
+       171,
+       1,
+       3
+      ],
+      null,
+      [
+       24,
+       132,
+       19,
+       14
+      ],
+      [
+       21,
+       103,
+       35,
+       41
+      ],
+      [
+       22,
+       74,
+       38,
+       49
+      ],
+      [
+       46,
+       41,
+       67,
+       50
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      168,
+      87
+     ],
+     "NECK": [
+      151,
+      101
+     ],
+     "MOUTH": [
+      205,
+      144
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      162
+     ],
+     "TAIL_ROOT": [
+      48,
+      169
+     ],
+     "HEAD_TOP": [
+      191,
+      90
+     ],
+     "CROWN": [
+      99,
+      63
+     ],
+     "BODY_DRAWN": [
+      24,
+      63,
+      192,
+      163
+     ],
+     "SPINE_ROWS": [
+      [
+       103,
+       205,
+       31,
+       6
+      ],
+      [
+       92,
+       197,
+       6,
+       6
+      ],
+      [
+       34,
+       186,
+       3,
+       2
+      ],
+      [
+       25,
+       138,
+       24,
+       14
+      ],
+      [
+       28,
+       95,
+       46,
+       50
+      ],
+      [
+       45,
+       68,
+       41,
+       48
+      ],
+      [
+       82,
+       64,
+       72,
+       28
+      ]
+     ]
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      148,
+      62
+     ],
+     "NECK": [
+      137,
+      81
+     ],
+     "MOUTH": [
+      205,
+      99
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      153
+     ],
+     "TAIL_ROOT": [
+      48,
+      163
+     ],
+     "HEAD_TOP": [
+      170,
+      55
+     ],
+     "CROWN": [
+      125,
+      50
+     ],
+     "BODY_DRAWN": [
+      24,
+      50,
+      183,
+      167
+     ],
+     "SPINE_ROWS": [
+      [
+       108,
+       193,
+       31,
+       5
+      ],
+      [
+       97,
+       186,
+       5,
+       6
+      ],
+      [
+       38,
+       183,
+       1,
+       1
+      ],
+      [
+       25,
+       128,
+       28,
+       20
+      ],
+      [
+       25,
+       100,
+       39,
+       43
+      ],
+      [
+       31,
+       69,
+       41,
+       48
+      ],
+      [
+       62,
+       51,
+       73,
+       39
+      ]
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1454,
+     "colours": 17,
+     "opaque": 20497,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.14,
+     "colours": 17,
+     "opaque": 21343,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1439,
+     "colours": 15,
+     "opaque": 21130,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {
+    "FEET": [
+     331,
+     801
+    ],
+    "RIDER_SEAT": [
+     412,
+     315
+    ],
+    "NECK": [
+     406,
+     384
+    ],
+    "MOUTH": [
+     610,
+     357
+    ],
+    "FOOT_IMPACT": [
+     451,
+     783
+    ],
+    "FOOT_NEAR": [
+     211,
+     795
+    ],
+    "HIP": [
+     340,
+     618
+    ],
+    "TAIL_ROOT": [
+     184,
+     663
+    ],
+    "HEAD_TOP": [
+     466,
+     273
+    ],
+    "CROWN": [
+     490,
+     264
+    ]
+   }
+  },
+  "kaiju_grow": {
+   "file": "kaiju_grow.png",
+   "aseprite": "kaiju_grow.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 10,
+   "times": [
+    0.12,
+    0.12,
+    0.12,
+    0.12,
+    0.12,
+    0.12,
+    0.12,
+    0.12,
+    0.12,
+    0.12
+   ],
+   "loop": false,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "body",
+   "note": "baked sizes [12, 18, 26, 36, 48, 60, 72, 84, 94, 100]%, anchored on FEET; pink-gold puffs and gold stars are effects (fx layer); f0 is the toy; f9 == kaiju_idle f0",
+   "anchors": [
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      103,
+      188
+     ],
+     "NECK": [
+      102,
+      190
+     ],
+     "MOUTH": [
+      110,
+      191
+     ],
+     "FOOT_IMPACT": [
+      103,
+      206
+     ],
+     "FOOT_NEAR": [
+      93,
+      206
+     ],
+     "HIP": [
+      98,
+      199
+     ],
+     "TAIL_ROOT": [
+      92,
+      201
+     ],
+     "HEAD_TOP": [
+      105,
+      187
+     ],
+     "CROWN": [
+      101,
+      186
+     ],
+     "BODY_DRAWN": [
+      88,
+      186,
+      24,
+      23
+     ],
+     "SPINE_ROWS": [
+      null,
+      null,
+      [
+       89,
+       201,
+       1,
+       1
+      ],
+      null,
+      [
+       89,
+       195,
+       3,
+       4
+      ],
+      [
+       90,
+       191,
+       4,
+       5
+      ],
+      [
+       93,
+       187,
+       9,
+       5
+      ]
+     ],
+     "SIZE_PCT": 12
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      105,
+      178
+     ],
+     "NECK": [
+      104,
+      182
+     ],
+     "MOUTH": [
+      116,
+      184
+     ],
+     "FOOT_IMPACT": [
+      105,
+      206
+     ],
+     "FOOT_NEAR": [
+      91,
+      206
+     ],
+     "HIP": [
+      99,
+      196
+     ],
+     "TAIL_ROOT": [
+      89,
+      198
+     ],
+     "HEAD_TOP": [
+      109,
+      177
+     ],
+     "CROWN": [
+      108,
+      176
+     ],
+     "BODY_DRAWN": [
+      83,
+      176,
+      35,
+      34
+     ],
+     "SPINE_ROWS": [
+      [
+       93,
+       206,
+       1,
+       1
+      ],
+      null,
+      [
+       84,
+       201,
+       1,
+       1
+      ],
+      [
+       85,
+       195,
+       1,
+       3
+      ],
+      [
+       85,
+       189,
+       6,
+       6
+      ],
+      [
+       86,
+       183,
+       6,
+       7
+      ],
+      [
+       91,
+       178,
+       11,
+       7
+      ]
+     ],
+     "SIZE_PCT": 18
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      109,
+      166
+     ],
+     "NECK": [
+      107,
+      172
+     ],
+     "MOUTH": [
+      125,
+      174
+     ],
+     "FOOT_IMPACT": [
+      109,
+      206
+     ],
+     "FOOT_NEAR": [
+      87,
+      206
+     ],
+     "HIP": [
+      99,
+      191
+     ],
+     "TAIL_ROOT": [
+      85,
+      194
+     ],
+     "HEAD_TOP": [
+      114,
+      164
+     ],
+     "CROWN": [
+      112,
+      163
+     ],
+     "BODY_DRAWN": [
+      77,
+      163,
+      49,
+      49
+     ],
+     "SPINE_ROWS": [
+      [
+       91,
+       206,
+       3,
+       1
+      ],
+      null,
+      [
+       78,
+       193,
+       3,
+       3
+      ],
+      [
+       79,
+       188,
+       3,
+       6
+      ],
+      [
+       79,
+       182,
+       8,
+       7
+      ],
+      [
+       80,
+       172,
+       10,
+       11
+      ],
+      [
+       87,
+       165,
+       19,
+       10
+      ]
+     ],
+     "SIZE_PCT": 26
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      113,
+      151
+     ],
+     "NECK": [
+      110,
+      158
+     ],
+     "MOUTH": [
+      135,
+      161
+     ],
+     "FOOT_IMPACT": [
+      113,
+      206
+     ],
+     "FOOT_NEAR": [
+      83,
+      206
+     ],
+     "HIP": [
+      99,
+      186
+     ],
+     "TAIL_ROOT": [
+      80,
+      190
+     ],
+     "HEAD_TOP": [
+      120,
+      148
+     ],
+     "CROWN": [
+      118,
+      147
+     ],
+     "BODY_DRAWN": [
+      69,
+      147,
+      67,
+      67
+     ],
+     "SPINE_ROWS": [
+      [
+       87,
+       205,
+       11,
+       3
+      ],
+      [
+       82,
+       203,
+       1,
+       1
+      ],
+      [
+       70,
+       190,
+       3,
+       7
+      ],
+      [
+       71,
+       180,
+       9,
+       9
+      ],
+      [
+       71,
+       169,
+       13,
+       14
+      ],
+      [
+       73,
+       158,
+       14,
+       16
+      ],
+      [
+       83,
+       149,
+       25,
+       14
+      ]
+     ],
+     "SIZE_PCT": 36
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      117,
+      133
+     ],
+     "NECK": [
+      114,
+      143
+     ],
+     "MOUTH": [
+      147,
+      147
+     ],
+     "FOOT_IMPACT": [
+      117,
+      206
+     ],
+     "FOOT_NEAR": [
+      79,
+      206
+     ],
+     "HIP": [
+      99,
+      179
+     ],
+     "TAIL_ROOT": [
+      74,
+      184
+     ],
+     "HEAD_TOP": [
+      128,
+      128
+     ],
+     "CROWN": [
+      107,
+      128
+     ],
+     "BODY_DRAWN": [
+      60,
+      128,
+      88,
+      88
+     ],
+     "SPINE_ROWS": [
+      [
+       89,
+       206,
+       2,
+       1
+      ],
+      null,
+      [
+       61,
+       185,
+       2,
+       2
+      ],
+      [
+       62,
+       172,
+       12,
+       10
+      ],
+      [
+       62,
+       156,
+       17,
+       19
+      ],
+      [
+       64,
+       141,
+       18,
+       23
+      ],
+      [
+       77,
+       129,
+       34,
+       21
+      ]
+     ],
+     "SIZE_PCT": 48
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      122,
+      114
+     ],
+     "NECK": [
+      118,
+      127
+     ],
+     "MOUTH": [
+      159,
+      132
+     ],
+     "FOOT_IMPACT": [
+      122,
+      206
+     ],
+     "FOOT_NEAR": [
+      74,
+      206
+     ],
+     "HIP": [
+      100,
+      172
+     ],
+     "TAIL_ROOT": [
+      68,
+      179
+     ],
+     "HEAD_TOP": [
+      135,
+      109
+     ],
+     "CROWN": [
+      131,
+      108
+     ],
+     "BODY_DRAWN": [
+      50,
+      108,
+      110,
+      110
+     ],
+     "SPINE_ROWS": [
+      [
+       80,
+       205,
+       16,
+       2
+      ],
+      null,
+      [
+       52,
+       180,
+       2,
+       2
+      ],
+      [
+       53,
+       160,
+       12,
+       15
+      ],
+      [
+       53,
+       144,
+       23,
+       24
+      ],
+      [
+       55,
+       125,
+       24,
+       29
+      ],
+      [
+       72,
+       110,
+       43,
+       25
+      ]
+     ],
+     "SIZE_PCT": 60
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      127,
+      96
+     ],
+     "NECK": [
+      122,
+      111
+     ],
+     "MOUTH": [
+      172,
+      117
+     ],
+     "FOOT_IMPACT": [
+      127,
+      206
+     ],
+     "FOOT_NEAR": [
+      69,
+      206
+     ],
+     "HIP": [
+      100,
+      165
+     ],
+     "TAIL_ROOT": [
+      63,
+      174
+     ],
+     "HEAD_TOP": [
+      143,
+      89
+     ],
+     "CROWN": [
+      137,
+      89
+     ],
+     "BODY_DRAWN": [
+      41,
+      89,
+      131,
+      132
+     ],
+     "SPINE_ROWS": [
+      [
+       76,
+       204,
+       14,
+       4
+      ],
+      [
+       67,
+       200,
+       1,
+       1
+      ],
+      [
+       43,
+       175,
+       3,
+       2
+      ],
+      [
+       44,
+       150,
+       18,
+       19
+      ],
+      [
+       44,
+       131,
+       27,
+       30
+      ],
+      [
+       47,
+       109,
+       28,
+       34
+      ],
+      [
+       67,
+       91,
+       51,
+       31
+      ]
+     ],
+     "SIZE_PCT": 72
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      132,
+      78
+     ],
+     "NECK": [
+      126,
+      95
+     ],
+     "MOUTH": [
+      184,
+      102
+     ],
+     "FOOT_IMPACT": [
+      132,
+      206
+     ],
+     "FOOT_NEAR": [
+      64,
+      206
+     ],
+     "HIP": [
+      100,
+      158
+     ],
+     "TAIL_ROOT": [
+      57,
+      168
+     ],
+     "HEAD_TOP": [
+      150,
+      70
+     ],
+     "CROWN": [
+      146,
+      69
+     ],
+     "BODY_DRAWN": [
+      31,
+      69,
+      153,
+      154
+     ],
+     "SPINE_ROWS": [
+      [
+       71,
+       204,
+       26,
+       4
+      ],
+      [
+       62,
+       199,
+       5,
+       4
+      ],
+      [
+       34,
+       170,
+       3,
+       2
+      ],
+      [
+       35,
+       141,
+       21,
+       22
+      ],
+      [
+       35,
+       118,
+       31,
+       35
+      ],
+      [
+       38,
+       92,
+       33,
+       41
+      ],
+      [
+       62,
+       71,
+       59,
+       36
+      ]
+     ],
+     "SIZE_PCT": 84
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      136,
+      62
+     ],
+     "NECK": [
+      129,
+      82
+     ],
+     "MOUTH": [
+      194,
+      90
+     ],
+     "FOOT_IMPACT": [
+      136,
+      206
+     ],
+     "FOOT_NEAR": [
+      60,
+      206
+     ],
+     "HIP": [
+      101,
+      153
+     ],
+     "TAIL_ROOT": [
+      52,
+      164
+     ],
+     "HEAD_TOP": [
+      157,
+      53
+     ],
+     "CROWN": [
+      151,
+      53
+     ],
+     "BODY_DRAWN": [
+      24,
+      53,
+      170,
+      172
+     ],
+     "SPINE_ROWS": [
+      [
+       68,
+       203,
+       29,
+       5
+      ],
+      [
+       57,
+       197,
+       6,
+       6
+      ],
+      [
+       26,
+       166,
+       4,
+       2
+      ],
+      [
+       28,
+       133,
+       23,
+       25
+      ],
+      [
+       28,
+       107,
+       34,
+       40
+      ],
+      [
+       31,
+       78,
+       37,
+       46
+      ],
+      [
+       57,
+       55,
+       67,
+       42
+      ]
+     ],
+     "SIZE_PCT": 94
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      139,
+      53
+     ],
+     "NECK": [
+      131,
+      74
+     ],
+     "MOUTH": [
+      200,
+      82
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      149
+     ],
+     "TAIL_ROOT": [
+      49,
+      161
+     ],
+     "HEAD_TOP": [
+      160,
+      44
+     ],
+     "CROWN": [
+      156,
+      43
+     ],
+     "BODY_DRAWN": [
+      19,
+      43,
+      181,
+      183
+     ],
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       3
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       128,
+       25,
+       27
+      ],
+      [
+       23,
+       101,
+       37,
+       42
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ],
+     "SIZE_PCT": 100
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.3299,
+     "colours": 12,
+     "opaque": 385,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.2397,
+     "colours": 12,
+     "opaque": 801,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 2,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1755,
+     "colours": 12,
+     "opaque": 1544,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1332,
+     "colours": 12,
+     "opaque": 2229,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 3,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.2143,
+     "colours": 12,
+     "opaque": 4569,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 1,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.205,
+     "colours": 14,
+     "opaque": 7283,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1831,
+     "colours": 15,
+     "opaque": 11210,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1622,
+     "colours": 15,
+     "opaque": 15608,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1483,
+     "colours": 15,
+     "opaque": 19448,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1417,
+     "colours": 15,
+     "opaque": 21983,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {
+    "FEET": [
+     331,
+     801
+    ],
+    "RIDER_SEAT": [
+     346,
+     747
+    ],
+    "NECK": [
+     343,
+     753
+    ],
+    "MOUTH": [
+     367,
+     756
+    ],
+    "FOOT_IMPACT": [
+     346,
+     801
+    ],
+    "FOOT_NEAR": [
+     316,
+     801
+    ],
+    "HIP": [
+     331,
+     780
+    ],
+    "TAIL_ROOT": [
+     313,
+     786
+    ],
+    "HEAD_TOP": [
+     352,
+     744
+    ],
+    "CROWN": [
+     340,
+     741
+    ]
+   }
+  },
+  "kaiju_shrink": {
+   "file": "kaiju_shrink.png",
+   "aseprite": "kaiju_shrink.aseprite",
+   "frame": [
+    224,
+    232
+   ],
+   "frames": 8,
+   "times": [
+    0.11,
+    0.11,
+    0.11,
+    0.11,
+    0.11,
+    0.11,
+    0.11,
+    0.11
+   ],
+   "loop": false,
+   "pivot": [
+    98,
+    206
+   ],
+   "kind": "body",
+   "note": "sizes [100, 84, 60, 40, 24, 15, 12, 12]% on FEET with the puff; f7 is the toy (== kaiju_toy f0 placed on FEET)",
+   "anchors": [
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      139,
+      53
+     ],
+     "NECK": [
+      131,
+      74
+     ],
+     "MOUTH": [
+      200,
+      82
+     ],
+     "FOOT_IMPACT": [
+      139,
+      206
+     ],
+     "FOOT_NEAR": [
+      57,
+      206
+     ],
+     "HIP": [
+      101,
+      149
+     ],
+     "TAIL_ROOT": [
+      49,
+      161
+     ],
+     "HEAD_TOP": [
+      160,
+      44
+     ],
+     "CROWN": [
+      156,
+      43
+     ],
+     "BODY_DRAWN": [
+      19,
+      43,
+      181,
+      183
+     ],
+     "SPINE_ROWS": [
+      [
+       66,
+       203,
+       31,
+       5
+      ],
+      [
+       55,
+       196,
+       1,
+       3
+      ],
+      [
+       21,
+       163,
+       5,
+       3
+      ],
+      [
+       23,
+       128,
+       25,
+       27
+      ],
+      [
+       23,
+       101,
+       37,
+       42
+      ],
+      [
+       27,
+       70,
+       39,
+       49
+      ],
+      [
+       54,
+       46,
+       72,
+       44
+      ]
+     ],
+     "SIZE_PCT": 100
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      132,
+      78
+     ],
+     "NECK": [
+      126,
+      95
+     ],
+     "MOUTH": [
+      184,
+      102
+     ],
+     "FOOT_IMPACT": [
+      132,
+      206
+     ],
+     "FOOT_NEAR": [
+      64,
+      206
+     ],
+     "HIP": [
+      100,
+      158
+     ],
+     "TAIL_ROOT": [
+      57,
+      168
+     ],
+     "HEAD_TOP": [
+      150,
+      70
+     ],
+     "CROWN": [
+      146,
+      69
+     ],
+     "BODY_DRAWN": [
+      31,
+      69,
+      153,
+      154
+     ],
+     "SPINE_ROWS": [
+      [
+       71,
+       204,
+       26,
+       4
+      ],
+      [
+       62,
+       199,
+       5,
+       4
+      ],
+      [
+       34,
+       170,
+       3,
+       2
+      ],
+      [
+       35,
+       141,
+       21,
+       22
+      ],
+      [
+       35,
+       118,
+       31,
+       35
+      ],
+      [
+       38,
+       92,
+       33,
+       41
+      ],
+      [
+       62,
+       71,
+       59,
+       36
+      ]
+     ],
+     "SIZE_PCT": 84
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      122,
+      114
+     ],
+     "NECK": [
+      118,
+      127
+     ],
+     "MOUTH": [
+      159,
+      132
+     ],
+     "FOOT_IMPACT": [
+      122,
+      206
+     ],
+     "FOOT_NEAR": [
+      74,
+      206
+     ],
+     "HIP": [
+      100,
+      172
+     ],
+     "TAIL_ROOT": [
+      68,
+      179
+     ],
+     "HEAD_TOP": [
+      135,
+      109
+     ],
+     "CROWN": [
+      131,
+      108
+     ],
+     "BODY_DRAWN": [
+      50,
+      108,
+      110,
+      110
+     ],
+     "SPINE_ROWS": [
+      [
+       80,
+       205,
+       16,
+       2
+      ],
+      null,
+      [
+       52,
+       180,
+       2,
+       2
+      ],
+      [
+       53,
+       160,
+       12,
+       15
+      ],
+      [
+       53,
+       144,
+       23,
+       24
+      ],
+      [
+       55,
+       125,
+       24,
+       29
+      ],
+      [
+       72,
+       110,
+       43,
+       25
+      ]
+     ],
+     "SIZE_PCT": 60
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      114,
+      145
+     ],
+     "NECK": [
+      111,
+      153
+     ],
+     "MOUTH": [
+      139,
+      156
+     ],
+     "FOOT_IMPACT": [
+      114,
+      206
+     ],
+     "FOOT_NEAR": [
+      82,
+      206
+     ],
+     "HIP": [
+      99,
+      183
+     ],
+     "TAIL_ROOT": [
+      78,
+      188
+     ],
+     "HEAD_TOP": [
+      123,
+      141
+     ],
+     "CROWN": [
+      105,
+      141
+     ],
+     "BODY_DRAWN": [
+      66,
+      141,
+      74,
+      74
+     ],
+     "SPINE_ROWS": [
+      [
+       85,
+       205,
+       13,
+       3
+      ],
+      [
+       81,
+       203,
+       1,
+       1
+      ],
+      [
+       68,
+       188,
+       2,
+       3
+      ],
+      [
+       69,
+       178,
+       10,
+       9
+      ],
+      [
+       68,
+       165,
+       15,
+       16
+      ],
+      [
+       70,
+       154,
+       15,
+       17
+      ],
+      [
+       81,
+       142,
+       28,
+       17
+      ]
+     ],
+     "SIZE_PCT": 40
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      108,
+      169
+     ],
+     "NECK": [
+      106,
+      174
+     ],
+     "MOUTH": [
+      123,
+      176
+     ],
+     "FOOT_IMPACT": [
+      108,
+      206
+     ],
+     "FOOT_NEAR": [
+      88,
+      206
+     ],
+     "HIP": [
+      99,
+      192
+     ],
+     "TAIL_ROOT": [
+      86,
+      195
+     ],
+     "HEAD_TOP": [
+      113,
+      167
+     ],
+     "CROWN": [
+      103,
+      167
+     ],
+     "BODY_DRAWN": [
+      79,
+      167,
+      45,
+      45
+     ],
+     "SPINE_ROWS": [
+      [
+       94,
+       206,
+       1,
+       1
+      ],
+      null,
+      [
+       80,
+       196,
+       1,
+       1
+      ],
+      [
+       80,
+       188,
+       5,
+       7
+      ],
+      [
+       80,
+       184,
+       8,
+       7
+      ],
+      [
+       81,
+       175,
+       10,
+       10
+      ],
+      [
+       88,
+       168,
+       17,
+       10
+      ]
+     ],
+     "SIZE_PCT": 24
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      104,
+      183
+     ],
+     "NECK": [
+      103,
+      186
+     ],
+     "MOUTH": [
+      113,
+      187
+     ],
+     "FOOT_IMPACT": [
+      104,
+      206
+     ],
+     "FOOT_NEAR": [
+      92,
+      206
+     ],
+     "HIP": [
+      98,
+      198
+     ],
+     "TAIL_ROOT": [
+      91,
+      199
+     ],
+     "HEAD_TOP": [
+      107,
+      182
+     ],
+     "CROWN": [
+      101,
+      181
+     ],
+     "BODY_DRAWN": [
+      86,
+      181,
+      29,
+      29
+     ],
+     "SPINE_ROWS": [
+      [
+       94,
+       206,
+       1,
+       1
+      ],
+      [
+       91,
+       204,
+       1,
+       1
+      ],
+      [
+       87,
+       200,
+       1,
+       1
+      ],
+      [
+       87,
+       197,
+       1,
+       1
+      ],
+      [
+       87,
+       192,
+       4,
+       5
+      ],
+      [
+       88,
+       187,
+       6,
+       6
+      ],
+      [
+       92,
+       183,
+       10,
+       5
+      ]
+     ],
+     "SIZE_PCT": 15
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      103,
+      188
+     ],
+     "NECK": [
+      102,
+      190
+     ],
+     "MOUTH": [
+      110,
+      191
+     ],
+     "FOOT_IMPACT": [
+      103,
+      206
+     ],
+     "FOOT_NEAR": [
+      93,
+      206
+     ],
+     "HIP": [
+      98,
+      199
+     ],
+     "TAIL_ROOT": [
+      92,
+      201
+     ],
+     "HEAD_TOP": [
+      105,
+      187
+     ],
+     "CROWN": [
+      101,
+      186
+     ],
+     "BODY_DRAWN": [
+      88,
+      186,
+      24,
+      23
+     ],
+     "SPINE_ROWS": [
+      null,
+      null,
+      [
+       89,
+       201,
+       1,
+       1
+      ],
+      null,
+      [
+       89,
+       195,
+       3,
+       4
+      ],
+      [
+       90,
+       191,
+       4,
+       5
+      ],
+      [
+       93,
+       187,
+       9,
+       5
+      ]
+     ],
+     "SIZE_PCT": 12
+    },
+    {
+     "FEET": [
+      98,
+      206
+     ],
+     "RIDER_SEAT": [
+      103,
+      188
+     ],
+     "NECK": [
+      102,
+      190
+     ],
+     "MOUTH": [
+      110,
+      191
+     ],
+     "FOOT_IMPACT": [
+      103,
+      206
+     ],
+     "FOOT_NEAR": [
+      93,
+      206
+     ],
+     "HIP": [
+      98,
+      199
+     ],
+     "TAIL_ROOT": [
+      92,
+      201
+     ],
+     "HEAD_TOP": [
+      105,
+      187
+     ],
+     "CROWN": [
+      101,
+      186
+     ],
+     "BODY_DRAWN": [
+      88,
+      186,
+      24,
+      23
+     ],
+     "SPINE_ROWS": [
+      null,
+      null,
+      [
+       89,
+       201,
+       1,
+       1
+      ],
+      null,
+      [
+       89,
+       195,
+       3,
+       4
+      ],
+      [
+       90,
+       191,
+       4,
+       5
+      ],
+      [
+       93,
+       187,
+       9,
+       5
+      ]
+     ],
+     "SIZE_PCT": 12
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.1411,
+     "colours": 15,
+     "opaque": 21660,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1617,
+     "colours": 15,
+     "opaque": 15125,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 1,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.2039,
+     "colours": 15,
+     "opaque": 7206,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.1231,
+     "colours": 12,
+     "opaque": 2843,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.2717,
+     "colours": 11,
+     "opaque": 427,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 2,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.3962,
+     "colours": 7,
+     "opaque": 53,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.2812,
+     "colours": 12,
+     "opaque": 313,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.3299,
+     "colours": 12,
+     "opaque": 385,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ],
+   "anchors_screen_at_home_f0": {
+    "FEET": [
+     331,
+     801
+    ],
+    "RIDER_SEAT": [
+     454,
+     342
+    ],
+    "NECK": [
+     430,
+     405
+    ],
+    "MOUTH": [
+     637,
+     429
+    ],
+    "FOOT_IMPACT": [
+     454,
+     801
+    ],
+    "FOOT_NEAR": [
+     208,
+     801
+    ],
+    "HIP": [
+     340,
+     630
+    ],
+    "TAIL_ROOT": [
+     184,
+     666
+    ],
+    "HEAD_TOP": [
+     517,
+     315
+    ],
+    "CROWN": [
+     505,
+     312
+    ]
+   }
+  },
+  "kaiju_toy": {
+   "file": "kaiju_toy.png",
+   "aseprite": "kaiju_toy.aseprite",
+   "frame": [
+    32,
+    32
+   ],
+   "frames": 4,
+   "times": [
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "loop": false,
+   "pivot": [
+    12,
+    27
+   ],
+   "kind": "body",
+   "note": "the vinyl toy (the kaiju at 12%%): sit, crouch, hop, land; pivot = its feet. f0 is the same drawing as kaiju_grow f0 / kaiju_shrink f7",
+   "anchors": [
+    {
+     "FEET": [
+      12,
+      27
+     ]
+    },
+    {
+     "FEET": [
+      12,
+      27
+     ]
+    },
+    {
+     "FEET": [
+      12,
+      27
+     ]
+    },
+    {
+     "FEET": [
+      12,
+      27
+     ]
+    }
+   ],
+   "numbers": [
+    {
+     "black": 0.3299,
+     "colours": 12,
+     "opaque": 385,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.3297,
+     "colours": 12,
+     "opaque": 367,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.3299,
+     "colours": 12,
+     "opaque": 388,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.3181,
+     "colours": 12,
+     "opaque": 371,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ]
+  },
+  "kaiju_shadow": {
+   "file": "kaiju_shadow.png",
+   "aseprite": "kaiju_shadow.aseprite",
+   "frame": [
+    168,
+    32
+   ],
+   "frames": 1,
+   "times": null,
+   "loop": false,
+   "pivot": [
+    84,
+    14
+   ],
+   "kind": "shadow",
+   "note": "solid black; the game sets its alpha. Pivot sits on the kaiju's FEET",
+   "anchors": [
+    {}
+   ],
+   "numbers": [
+    {
+     "black": 1.0,
+     "colours": 1,
+     "opaque": 2876,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ]
+  },
+  "kaiju_stomp_mark": {
+   "file": "kaiju_stomp_mark.png",
+   "aseprite": "kaiju_stomp_mark.aseprite",
+   "frame": [
+    112,
+    80
+   ],
+   "frames": 6,
+   "times": [
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "loop": false,
+   "pivot": [
+    56,
+    40
+   ],
+   "kind": "fx",
+   "note": "f0-1 tracking flicker (a toed foot shadow), f2 high, f3 mid, f4 low, f5 landed. Rim = the (50, 35)-texel ellipse round the pivot on every frame",
+   "anchors": [
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+   ],
+   "numbers": [
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 394,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 608,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 852,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ]
+  },
+  "kaiju_stomp_impact": {
+   "file": "kaiju_stomp_impact.png",
+   "aseprite": "kaiju_stomp_impact.aseprite",
+   "frame": [
+    160,
+    96
+   ],
+   "frames": 6,
+   "times": [
+    0.05,
+    0.06,
+    0.07,
+    0.08,
+    0.1,
+    null
+   ],
+   "loop": false,
+   "pivot": [
+    80,
+    48
+   ],
+   "kind": "fx",
+   "note": "pivot on FOOT_IMPACT; floor layer; f5 = the cracks (hold)",
+   "anchors": [
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+   ],
+   "numbers": [
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ]
+  },
+  "kaiju_beam_body": {
+   "file": "kaiju_beam_body.png",
+   "aseprite": "kaiju_beam_body.aseprite",
+   "frame": [
+    32,
+    32
+   ],
+   "frames": 4,
+   "times": [
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "loop": true,
+   "pivot": [
+    0,
+    16
+   ],
+   "kind": "fx",
+   "note": "32x32 horizontal tile: repeat it along the beam (x), rotate the strip by code. Hit band 90 px = 30 texels; the drawn beam is rows 2..29 (28 texels = 84 px) with its glow edge",
+   "anchors": [
+    {},
+    {},
+    {},
+    {}
+   ],
+   "numbers": [
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ]
+  },
+  "kaiju_beam_mouth": {
+   "file": "kaiju_beam_mouth.png",
+   "aseprite": "kaiju_beam_mouth.aseprite",
+   "frame": [
+    48,
+    48
+   ],
+   "frames": 4,
+   "times": [
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "loop": true,
+   "pivot": [
+    24,
+    24
+   ],
+   "kind": "fx",
+   "note": "centred on MOUTH, drawn above the body",
+   "anchors": [
+    {},
+    {},
+    {},
+    {}
+   ],
+   "numbers": [
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 79,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 82,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 88,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 78,
+      "keys": 0
+     }
+    }
+   ]
+  },
+  "kaiju_beam_end": {
+   "file": "kaiju_beam_end.png",
+   "aseprite": "kaiju_beam_end.aseprite",
+   "frame": [
+    48,
+    48
+   ],
+   "frames": 4,
+   "times": [
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "loop": true,
+   "pivot": [
+    28,
+    24
+   ],
+   "kind": "fx",
+   "note": "the splash where the beam meets the rope; the beam arrives from the left (rotate with the beam)",
+   "anchors": [
+    {},
+    {},
+    {},
+    {}
+   ],
+   "numbers": [
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 43,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 48,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 51,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 47,
+      "keys": 0
+     }
+    }
+   ]
+  },
+  "kaiju_mouth_charge": {
+   "file": "kaiju_mouth_charge.png",
+   "aseprite": "kaiju_mouth_charge.aseprite",
+   "frame": [
+    32,
+    32
+   ],
+   "frames": 6,
+   "times": [
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08
+   ],
+   "loop": false,
+   "pivot": [
+    16,
+    16
+   ],
+   "kind": "fx_add",
+   "note": "additive, centred on MOUTH",
+   "anchors": [
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+   ],
+   "numbers": [
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ]
+  },
+  "kaiju_burn_flame": {
+   "file": "kaiju_burn_flame.png",
+   "aseprite": "kaiju_burn_flame.aseprite",
+   "frame": [
+    16,
+    24
+   ],
+   "frames": 6,
+   "times": [
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08
+   ],
+   "loop": true,
+   "pivot": [
+    8,
+    23
+   ],
+   "kind": "fx",
+   "note": "upright blue flame, pivot bottom-centre; place every 36 px along the burn line, never rotated, phase-offset",
+   "anchors": [
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+   ],
+   "numbers": [
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ]
+  },
+  "kaiju_burn_out": {
+   "file": "kaiju_burn_out.png",
+   "aseprite": "kaiju_burn_out.aseprite",
+   "frame": [
+    16,
+    24
+   ],
+   "frames": 4,
+   "times": [
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "loop": false,
+   "pivot": [
+    8,
+    23
+   ],
+   "kind": "fx",
+   "note": "the dying ember, same pivot as the flame",
+   "anchors": [
+    {},
+    {},
+    {},
+    {}
+   ],
+   "numbers": [
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    },
+    {
+     "black": 0.0,
+     "colours": 0,
+     "opaque": 0,
+     "audit": {
+      "gaps": 0,
+      "lone": 0,
+      "holes": 0,
+      "keys": 0
+     }
+    }
+   ]
+  }
+ },
+ "gifs": {
+  "idle": 12,
+  "rear_leap_drop_stomp": 12,
+  "stumble_kneel_stand": 12,
+  "grow": 10,
+  "shrink": 8,
+  "breath_charge_spines_fire": 15,
+  "head_aims": 14
+ },
+ "contact_sheet": [
+  2267,
+  5000
+ ],
+ "keys_used": "#%&+45678=@GIJKOPQRTVWXYkoqv~",
+ "keys_outside_palette": [],
+ "colours_used": 29
+}

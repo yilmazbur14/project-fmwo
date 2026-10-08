@@ -1,0 +1,2331 @@
+{
+ "sheets": {
+  "jordan_ride_idle": {
+   "file": "jordan_ride_idle.png",
+   "aseprite": "jordan_ride_idle.aseprite",
+   "frame": [
+    96,
+    96
+   ],
+   "frames": 4,
+   "hframes": 4,
+   "vframes": 1,
+   "times": [
+    0.2,
+    0.16,
+    0.2,
+    0.16
+   ],
+   "loop": true,
+   "kind": "ride",
+   "black_ref": 0.2896,
+   "build_to_frame_offset": [
+    -5,
+    5
+   ],
+   "note": "SEAT is the texel that sits on the kaiju RIDER_SEAT; f0 == the approved rider layer cropped at kaiju-frame offset (83, -10) (rider layer px (x, y) -> sheet (x - 83, y + 10)).",
+   "per_frame": [
+    {
+     "anchors": {
+      "BODY_BOX": [
+       25,
+       14,
+       37,
+       81
+      ],
+      "BOX": [
+       66,
+       42
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       57,
+       14
+      ]
+     },
+     "numbers": {
+      "opaque": 1785,
+      "colours": 40,
+      "black": 0.2896,
+      "black_vs_ref_pts": 0.0,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       25,
+       14,
+       74,
+       94
+      ],
+      "allowed_gaps": [
+       [
+        44,
+        88
+       ]
+      ]
+     },
+     "note": "the approved rider; the heel pixel (44, 88) touches the kaiju behind it, as approved"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       25,
+       15,
+       37,
+       80
+      ],
+      "BOX": [
+       66,
+       43
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       57,
+       15
+      ]
+     },
+     "numbers": {
+      "opaque": 1770,
+      "colours": 40,
+      "black": 0.2921,
+      "black_vs_ref_pts": 0.25,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       25,
+       15,
+       74,
+       94
+      ]
+     },
+     "note": "breath out, sneaker swings back"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       25,
+       15,
+       37,
+       80
+      ],
+      "BOX": [
+       66,
+       43
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       57,
+       15
+      ]
+     },
+     "numbers": {
+      "opaque": 1778,
+      "colours": 40,
+      "black": 0.2908,
+      "black_vs_ref_pts": 0.12,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       25,
+       15,
+       79,
+       94
+      ]
+     },
+     "note": "sunk, a glint off the box"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       25,
+       14,
+       37,
+       81
+      ],
+      "BOX": [
+       66,
+       42
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       57,
+       14
+      ]
+     },
+     "numbers": {
+      "opaque": 1781,
+      "colours": 40,
+      "black": 0.2914,
+      "black_vs_ref_pts": 0.18,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       25,
+       14,
+       74,
+       94
+      ]
+     },
+     "note": "breath in, sneaker swings forward"
+    }
+   ],
+   "sheet_numbers": {
+    "black": 0.291,
+    "colours": 40
+   },
+   "aseprite_roundtrip": "identical"
+  },
+  "jordan_ride_throw": {
+   "file": "jordan_ride_throw.png",
+   "aseprite": "jordan_ride_throw.aseprite",
+   "frame": [
+    96,
+    96
+   ],
+   "frames": 4,
+   "hframes": 4,
+   "vframes": 1,
+   "times": [
+    0.2,
+    0.2,
+    0.1,
+    0.15
+   ],
+   "loop": false,
+   "kind": "ride",
+   "black_ref": 0.2896,
+   "build_to_frame_offset": [
+    -5,
+    5
+   ],
+   "note": "HAND on f2 is where the thrown figure appears (the open palm). SEAT as jordan_ride_idle.",
+   "per_frame": [
+    {
+     "anchors": {
+      "BODY_BOX": [
+       36,
+       16,
+       26,
+       79
+      ],
+      "BOX": [
+       66,
+       42
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       60,
+       16
+      ]
+     },
+     "numbers": {
+      "opaque": 1672,
+      "colours": 40,
+      "black": 0.299,
+      "black_vs_ref_pts": 0.94,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       36,
+       16,
+       74,
+       94
+      ]
+     },
+     "note": "reach up into the box"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       21,
+       13,
+       39,
+       82
+      ],
+      "BOX": [
+       64,
+       42
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       53,
+       13
+      ]
+     },
+     "numbers": {
+      "opaque": 1893,
+      "colours": 40,
+      "black": 0.3016,
+      "black_vs_ref_pts": 1.2,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       18,
+       13,
+       72,
+       94
+      ]
+     },
+     "note": "wind-up, fist cocked behind his head"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       37,
+       18,
+       32,
+       77
+      ],
+      "BOX": [
+       69,
+       36
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       62,
+       18
+      ],
+      "HAND": [
+       66,
+       58
+      ]
+     },
+     "numbers": {
+      "opaque": 1708,
+      "colours": 40,
+      "black": 0.2951,
+      "black_vs_ref_pts": 0.55,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       25,
+       18,
+       77,
+       94
+      ]
+     },
+     "note": "release: HAND = the open palm"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       32,
+       15,
+       31,
+       80
+      ],
+      "BOX": [
+       67,
+       43
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       58,
+       15
+      ]
+     },
+     "numbers": {
+      "opaque": 1727,
+      "colours": 39,
+      "black": 0.2988,
+      "black_vs_ref_pts": 0.92,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       32,
+       15,
+       75,
+       94
+      ]
+     },
+     "note": "settling back, grinning"
+    }
+   ],
+   "sheet_numbers": {
+    "black": 0.2987,
+    "colours": 40
+   },
+   "aseprite_roundtrip": "identical"
+  },
+  "jordan_ride_brace": {
+   "file": "jordan_ride_brace.png",
+   "aseprite": "jordan_ride_brace.aseprite",
+   "frame": [
+    96,
+    96
+   ],
+   "frames": 2,
+   "hframes": 2,
+   "vframes": 1,
+   "times": [
+    0.1,
+    0.1
+   ],
+   "loop": true,
+   "kind": "ride",
+   "black_ref": 0.2896,
+   "build_to_frame_offset": [
+    -5,
+    5
+   ],
+   "note": "GRIP is his near fist (where the nearest back plate is on the approved mount). SEAT as jordan_ride_idle.",
+   "per_frame": [
+    {
+     "anchors": {
+      "BODY_BOX": [
+       25,
+       18,
+       39,
+       76
+      ],
+      "BOX": [
+       66,
+       47
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       39,
+       18
+      ],
+      "GRIP": [
+       29,
+       73
+      ]
+     },
+     "numbers": {
+      "opaque": 1780,
+      "colours": 40,
+      "black": 0.2933,
+      "black_vs_ref_pts": 0.37,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       13,
+       18,
+       74,
+       93
+      ]
+     },
+     "note": "hunched, hair streaming"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       25,
+       17,
+       39,
+       78
+      ],
+      "BOX": [
+       66,
+       46
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       34,
+       17
+      ],
+      "GRIP": [
+       29,
+       72
+      ]
+     },
+     "numbers": {
+      "opaque": 1775,
+      "colours": 40,
+      "black": 0.2963,
+      "black_vs_ref_pts": 0.67,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       13,
+       17,
+       74,
+       94
+      ]
+     },
+     "note": "jolted up, hair flicked"
+    }
+   ],
+   "sheet_numbers": {
+    "black": 0.2948,
+    "colours": 40
+   },
+   "aseprite_roundtrip": "identical"
+  },
+  "jordan_topple": {
+   "file": "jordan_topple.png",
+   "aseprite": "jordan_topple.aseprite",
+   "frame": [
+    96,
+    96
+   ],
+   "frames": 6,
+   "hframes": 6,
+   "vframes": 1,
+   "times": [
+    0.06,
+    0.08,
+    0.1,
+    0.1,
+    0.1,
+    0.11
+   ],
+   "loop": false,
+   "kind": "mat",
+   "black_ref": 0.3067,
+   "build_to_frame_offset": [
+    -1,
+    0
+   ],
+   "note": "Start: SEAT (f0) on the kaiju RIDER_SEAT; end: SOLES (f5) on the knock-off spot (his butt and heel on row 95). PIVOT = his hips on every frame, for the arc between. f5 leads into jordan_dismount_daze f0.",
+   "per_frame": [
+    {
+     "anchors": {
+      "BODY_BOX": [
+       24,
+       7,
+       46,
+       77
+      ],
+      "BOX": [
+       74,
+       22
+      ],
+      "CROWN": [
+       38,
+       7
+      ],
+      "SEAT": [
+       48,
+       70
+      ],
+      "PIVOT": [
+       48,
+       64
+      ]
+     },
+     "numbers": {
+      "opaque": 1879,
+      "colours": 40,
+      "black": 0.2964,
+      "black_vs_ref_pts": -1.03,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       24,
+       7,
+       82,
+       83
+      ]
+     },
+     "note": "the jolt: bounced 3 texels up off the seat (SEAT = the texel that was on it)"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       18,
+       7,
+       61,
+       65
+      ],
+      "CROWN": [
+       32,
+       13
+      ],
+      "PIVOT": [
+       51,
+       68
+      ]
+     },
+     "numbers": {
+      "opaque": 1901,
+      "colours": 39,
+      "black": 0.2967,
+      "black_vs_ref_pts": -1.0,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       18,
+       7,
+       78,
+       71
+      ]
+     },
+     "note": "tipping back off the head"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       2,
+       2,
+       66,
+       72
+      ],
+      "CROWN": [
+       29,
+       20
+      ],
+      "PIVOT": [
+       51,
+       68
+      ]
+     },
+     "numbers": {
+      "opaque": 1849,
+      "colours": 39,
+      "black": 0.3061,
+      "black_vs_ref_pts": -0.06,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       2,
+       2,
+       67,
+       73
+      ]
+     },
+     "note": "the pratfall: tipped right back"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       13,
+       11,
+       63,
+       65
+      ],
+      "CROWN": [
+       35,
+       18
+      ],
+      "PIVOT": [
+       51,
+       71
+      ]
+     },
+     "numbers": {
+      "opaque": 1931,
+      "colours": 39,
+      "black": 0.2967,
+      "black_vs_ref_pts": -1.0,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       13,
+       11,
+       75,
+       75
+      ]
+     },
+     "note": "dropping, flailing"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       22,
+       19,
+       59,
+       61
+      ],
+      "CROWN": [
+       37,
+       19
+      ],
+      "PIVOT": [
+       51,
+       76
+      ]
+     },
+     "numbers": {
+      "opaque": 1855,
+      "colours": 39,
+      "black": 0.3051,
+      "black_vs_ref_pts": -0.16,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       22,
+       19,
+       80,
+       79
+      ]
+     },
+     "note": "butt-first, about to land"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       28,
+       39,
+       49,
+       57
+      ],
+      "BOX": [
+       69,
+       69
+      ],
+      "CROWN": [
+       49,
+       39
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "PIVOT": [
+       48,
+       91
+      ]
+     },
+     "numbers": {
+      "opaque": 1834,
+      "colours": 40,
+      "black": 0.3026,
+      "black_vs_ref_pts": -0.41,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       19,
+       39,
+       86,
+       95
+      ]
+     },
+     "note": "the bump: down on the mat"
+    }
+   ],
+   "sheet_numbers": {
+    "black": 0.3006,
+    "colours": 40
+   },
+   "aseprite_roundtrip": "identical"
+  },
+  "jordan_dismount_daze": {
+   "file": "jordan_dismount_daze.png",
+   "aseprite": "jordan_dismount_daze.aseprite",
+   "frame": [
+    96,
+    96
+   ],
+   "frames": 4,
+   "hframes": 4,
+   "vframes": 1,
+   "times": [
+    0.15,
+    0.15,
+    0.15,
+    0.15
+   ],
+   "loop": true,
+   "kind": "mat",
+   "black_ref": 0.3067,
+   "build_to_frame_offset": [
+    -1,
+    0
+   ],
+   "note": "Sitting on the mat: SOLES = where his butt and heel meet the mat (the code sets this on the knock-off spot). BODY_BOX = the hurtbox (body, not the stars). CROWN = top of his head. STARS = the stars' centre.",
+   "per_frame": [
+    {
+     "anchors": {
+      "BODY_BOX": [
+       28,
+       37,
+       49,
+       59
+      ],
+      "BOX": [
+       69,
+       69
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       49,
+       37
+      ],
+      "STARS": [
+       49,
+       30
+      ]
+     },
+     "numbers": {
+      "opaque": 1817,
+      "colours": 39,
+      "black": 0.3181,
+      "black_vs_ref_pts": 1.14,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       28,
+       25,
+       77,
+       95
+      ]
+     },
+     "note": "lolled back"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       28,
+       39,
+       49,
+       57
+      ],
+      "BOX": [
+       69,
+       69
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       50,
+       39
+      ],
+      "STARS": [
+       50,
+       31
+      ]
+     },
+     "numbers": {
+      "opaque": 1798,
+      "colours": 39,
+      "black": 0.3192,
+      "black_vs_ref_pts": 1.25,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       28,
+       27,
+       77,
+       95
+      ]
+     },
+     "note": "rolling forward"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       28,
+       39,
+       49,
+       57
+      ],
+      "BOX": [
+       69,
+       69
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       49,
+       39
+      ],
+      "STARS": [
+       51,
+       31
+      ]
+     },
+     "numbers": {
+      "opaque": 1808,
+      "colours": 39,
+      "black": 0.3197,
+      "black_vs_ref_pts": 1.3,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       28,
+       26,
+       77,
+       95
+      ]
+     },
+     "note": "lolled forward"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       28,
+       38,
+       49,
+       58
+      ],
+      "BOX": [
+       69,
+       69
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       49,
+       38
+      ],
+      "STARS": [
+       50,
+       30
+      ]
+     },
+     "numbers": {
+      "opaque": 1803,
+      "colours": 39,
+      "black": 0.3189,
+      "black_vs_ref_pts": 1.22,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       28,
+       26,
+       77,
+       95
+      ]
+     },
+     "note": "rolling back"
+    }
+   ],
+   "sheet_numbers": {
+    "black": 0.319,
+    "colours": 39
+   },
+   "aseprite_roundtrip": "identical"
+  },
+  "jordan_climb": {
+   "file": "jordan_climb.png",
+   "aseprite": "jordan_climb.aseprite",
+   "frame": [
+    96,
+    96
+   ],
+   "frames": 6,
+   "hframes": 6,
+   "vframes": 1,
+   "times": [
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "loop": false,
+   "kind": "mat",
+   "black_ref": 0.3067,
+   "build_to_frame_offset": [
+    -1,
+    0
+   ],
+   "note": "Start: SOLES (f0) on the take-off spot; end: SEAT (f4, f5) on the kaiju RIDER_SEAT (kneel/bow/idle seat). PIVOT = body centre for the arc. Faces right throughout (a backflip), so it works for a leap either way; never flip it.",
+   "per_frame": [
+    {
+     "anchors": {
+      "BODY_BOX": [
+       31,
+       22,
+       41,
+       74
+      ],
+      "BOX": [
+       71,
+       83
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "PIVOT": [
+       50,
+       66
+      ],
+      "CROWN": [
+       69,
+       22
+      ]
+     },
+     "numbers": {
+      "opaque": 1930,
+      "colours": 40,
+      "black": 0.2953,
+      "black_vs_ref_pts": -1.14,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       31,
+       22,
+       79,
+       95
+      ]
+     },
+     "note": "crouch on his soles"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       30,
+       1,
+       38,
+       93
+      ],
+      "BOX": [
+       72,
+       17
+      ],
+      "PIVOT": [
+       49,
+       56
+      ],
+      "CROWN": [
+       57,
+       1
+      ]
+     },
+     "numbers": {
+      "opaque": 2030,
+      "colours": 39,
+      "black": 0.2951,
+      "black_vs_ref_pts": -1.16,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       30,
+       1,
+       80,
+       93
+      ]
+     },
+     "note": "launch"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       22,
+       22,
+       64,
+       45
+      ],
+      "PIVOT": [
+       51,
+       48
+      ],
+      "CROWN": [
+       35,
+       37
+      ]
+     },
+     "numbers": {
+      "opaque": 1614,
+      "colours": 40,
+      "black": 0.3042,
+      "black_vs_ref_pts": -0.25,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       22,
+       22,
+       85,
+       66
+      ]
+     },
+     "note": "tuck, a quarter turn back"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       25,
+       13,
+       45,
+       64
+      ],
+      "PIVOT": [
+       51,
+       48
+      ],
+      "CROWN": [
+       48,
+       42
+      ]
+     },
+     "numbers": {
+      "opaque": 1614,
+      "colours": 39,
+      "black": 0.3055,
+      "black_vs_ref_pts": -0.12,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       25,
+       13,
+       69,
+       76
+      ]
+     },
+     "note": "tuck, upside down"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       37,
+       13,
+       34,
+       74
+      ],
+      "BOX": [
+       75,
+       32
+      ],
+      "SEAT": [
+       48,
+       70
+      ],
+      "PIVOT": [
+       49,
+       58
+      ],
+      "CROWN": [
+       43,
+       13
+      ]
+     },
+     "numbers": {
+      "opaque": 1661,
+      "colours": 40,
+      "black": 0.3131,
+      "black_vs_ref_pts": 0.64,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       37,
+       13,
+       83,
+       86
+      ]
+     },
+     "note": "scramble: landed astride, gripping"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       30,
+       10,
+       37,
+       79
+      ],
+      "BOX": [
+       71,
+       38
+      ],
+      "SEAT": [
+       48,
+       70
+      ],
+      "PIVOT": [
+       49,
+       58
+      ],
+      "CROWN": [
+       62,
+       10
+      ]
+     },
+     "numbers": {
+      "opaque": 1774,
+      "colours": 39,
+      "black": 0.2943,
+      "black_vs_ref_pts": -1.24,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       30,
+       10,
+       79,
+       88
+      ]
+     },
+     "note": "settled in the seat"
+    }
+   ],
+   "sheet_numbers": {
+    "black": 0.3008,
+    "colours": 40
+   },
+   "aseprite_roundtrip": "identical"
+  },
+  "jordan_ride_taunt": {
+   "file": "jordan_ride_taunt.png",
+   "aseprite": "jordan_ride_taunt.aseprite",
+   "frame": [
+    96,
+    96
+   ],
+   "frames": 4,
+   "hframes": 4,
+   "vframes": 1,
+   "times": [
+    0.13,
+    0.11,
+    0.13,
+    0.11
+   ],
+   "loop": true,
+   "kind": "ride",
+   "black_ref": 0.2896,
+   "build_to_frame_offset": [
+    -5,
+    5
+   ],
+   "note": "SEAT as jordan_ride_idle. Also works as the intro's seated cheer.",
+   "per_frame": [
+    {
+     "anchors": {
+      "BODY_BOX": [
+       25,
+       11,
+       40,
+       84
+      ],
+      "BOX": [
+       69,
+       18
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       51,
+       11
+      ]
+     },
+     "numbers": {
+      "opaque": 1871,
+      "colours": 40,
+      "black": 0.2924,
+      "black_vs_ref_pts": 0.28,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       25,
+       8,
+       77,
+       94
+      ]
+     },
+     "note": "laughing, box high"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       25,
+       12,
+       40,
+       82
+      ],
+      "BOX": [
+       69,
+       19
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       51,
+       12
+      ]
+     },
+     "numbers": {
+      "opaque": 1837,
+      "colours": 40,
+      "black": 0.2956,
+      "black_vs_ref_pts": 0.6,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       25,
+       9,
+       77,
+       93
+      ]
+     },
+     "note": "shaking down a pixel"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       25,
+       11,
+       40,
+       84
+      ],
+      "BOX": [
+       69,
+       17
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       51,
+       11
+      ]
+     },
+     "numbers": {
+      "opaque": 1882,
+      "colours": 40,
+      "black": 0.2917,
+      "black_vs_ref_pts": 0.21,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       25,
+       5,
+       83,
+       94
+      ]
+     },
+     "note": "box pumped, a glint"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       25,
+       12,
+       40,
+       82
+      ],
+      "BOX": [
+       69,
+       19
+      ],
+      "SEAT": [
+       44,
+       75
+      ],
+      "CROWN": [
+       51,
+       12
+      ]
+     },
+     "numbers": {
+      "opaque": 1837,
+      "colours": 40,
+      "black": 0.2956,
+      "black_vs_ref_pts": 0.6,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       25,
+       9,
+       77,
+       93
+      ]
+     },
+     "note": "shaking down again"
+    }
+   ],
+   "sheet_numbers": {
+    "black": 0.2938,
+    "colours": 40
+   },
+   "aseprite_roundtrip": "identical"
+  },
+  "jordan_box_open": {
+   "file": "jordan_box_open.png",
+   "aseprite": "jordan_box_open.aseprite",
+   "frame": [
+    96,
+    96
+   ],
+   "frames": 6,
+   "hframes": 6,
+   "vframes": 1,
+   "times": [
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "loop": false,
+   "kind": "mat",
+   "black_ref": 0.3067,
+   "build_to_frame_offset": [
+    -1,
+    0
+   ],
+   "note": "Standing (SOLES row 95 at his intro spot). f0 == live jordan_idle f0. TOY (f4, f5) = where kaiju_toy FEET (its pivot (12, 27)) goes; its tray hollow is ~9x10 texels, so the toy reads best at ~0.4-0.5 scale.",
+   "per_frame": [
+    {
+     "anchors": {
+      "BODY_BOX": [
+       29,
+       9,
+       48,
+       87
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       61,
+       9
+      ]
+     },
+     "numbers": {
+      "opaque": 1950,
+      "colours": 40,
+      "black": 0.3067,
+      "black_vs_ref_pts": -0.0,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       29,
+       9,
+       76,
+       95
+      ]
+     },
+     "note": "his idle f0"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       36,
+       10,
+       30,
+       86
+      ],
+      "BOX": [
+       69,
+       37
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       64,
+       10
+      ]
+     },
+     "numbers": {
+      "opaque": 1871,
+      "colours": 40,
+      "black": 0.3132,
+      "black_vs_ref_pts": 0.65,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       36,
+       10,
+       76,
+       95
+      ]
+     },
+     "note": "reaching for the panel"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       29,
+       9,
+       37,
+       87
+      ],
+      "BOX": [
+       70,
+       37
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       61,
+       9
+      ]
+     },
+     "numbers": {
+      "opaque": 1987,
+      "colours": 39,
+      "black": 0.301,
+      "black_vs_ref_pts": -0.57,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       29,
+       9,
+       84,
+       95
+      ]
+     },
+     "note": "panel open, the toy in the tray"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       36,
+       11,
+       30,
+       85
+      ],
+      "BOX": [
+       70,
+       37
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       64,
+       11
+      ]
+     },
+     "numbers": {
+      "opaque": 1873,
+      "colours": 40,
+      "black": 0.3027,
+      "black_vs_ref_pts": -0.4,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       36,
+       11,
+       78,
+       95
+      ]
+     },
+     "note": "hand into the tray"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       29,
+       8,
+       37,
+       88
+      ],
+      "BOX": [
+       70,
+       37
+      ],
+      "TOY": [
+       36,
+       29
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       59,
+       8
+      ]
+     },
+     "numbers": {
+      "opaque": 2015,
+      "colours": 39,
+      "black": 0.2978,
+      "black_vs_ref_pts": -0.89,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       29,
+       8,
+       78,
+       95
+      ]
+     },
+     "note": "the toy lifted out on his palm"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       26,
+       8,
+       40,
+       88
+      ],
+      "BOX": [
+       70,
+       37
+      ],
+      "TOY": [
+       30,
+       16
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       60,
+       8
+      ]
+     },
+     "numbers": {
+      "opaque": 2066,
+      "colours": 40,
+      "black": 0.2948,
+      "black_vs_ref_pts": -1.19,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       26,
+       8,
+       78,
+       95
+      ]
+     },
+     "note": "holding the toy up high"
+    }
+   ],
+   "sheet_numbers": {
+    "black": 0.3025,
+    "colours": 40
+   },
+   "aseprite_roundtrip": "identical"
+  },
+  "jordan_toss": {
+   "file": "jordan_toss.png",
+   "aseprite": "jordan_toss.aseprite",
+   "frame": [
+    96,
+    96
+   ],
+   "frames": 3,
+   "hframes": 3,
+   "vframes": 1,
+   "times": [
+    0.08,
+    0.08,
+    0.14
+   ],
+   "loop": false,
+   "kind": "mat",
+   "black_ref": 0.3067,
+   "build_to_frame_offset": [
+    -1,
+    0
+   ],
+   "note": "Standing (SOLES row 95). TOY on f0 (kaiju_toy FEET), HAND on f1 = where the tossed toy leaves his hand.",
+   "per_frame": [
+    {
+     "anchors": {
+      "BODY_BOX": [
+       36,
+       10,
+       30,
+       86
+      ],
+      "BOX": [
+       70,
+       37
+      ],
+      "TOY": [
+       56,
+       45
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       64,
+       10
+      ]
+     },
+     "numbers": {
+      "opaque": 1873,
+      "colours": 39,
+      "black": 0.3017,
+      "black_vs_ref_pts": -0.5,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       36,
+       10,
+       78,
+       95
+      ]
+     },
+     "note": "wind-up, the toy across his chest"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       15,
+       8,
+       51,
+       88
+      ],
+      "BOX": [
+       70,
+       37
+      ],
+      "HAND": [
+       16,
+       40
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       57,
+       8
+      ]
+     },
+     "numbers": {
+      "opaque": 2050,
+      "colours": 40,
+      "black": 0.2927,
+      "black_vs_ref_pts": -1.4,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       15,
+       8,
+       78,
+       95
+      ]
+     },
+     "note": "release: the backhand fling"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       16,
+       9,
+       50,
+       87
+      ],
+      "BOX": [
+       70,
+       37
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       59,
+       9
+      ]
+     },
+     "numbers": {
+      "opaque": 1996,
+      "colours": 40,
+      "black": 0.2956,
+      "black_vs_ref_pts": -1.11,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       16,
+       9,
+       78,
+       95
+      ]
+     },
+     "note": "follow-through, smug"
+    }
+   ],
+   "sheet_numbers": {
+    "black": 0.2965,
+    "colours": 40
+   },
+   "aseprite_roundtrip": "identical"
+  },
+  "jordan_butt_land": {
+   "file": "jordan_butt_land.png",
+   "aseprite": "jordan_butt_land.aseprite",
+   "frame": [
+    96,
+    96
+   ],
+   "frames": 6,
+   "hframes": 6,
+   "vframes": 1,
+   "times": [
+    0.06,
+    0.08,
+    0.1,
+    0.12,
+    0.14,
+    1.0
+   ],
+   "loop": false,
+   "kind": "mat",
+   "black_ref": 0.3067,
+   "build_to_frame_offset": [
+    -1,
+    0
+   ],
+   "note": "Ends pixel-identical to jordan_defeat f5 (f3, f4 == defeat f3, f4). PIVOT (hips) on f0-f1 for the arc from the seat; SOLES on f2-f5 = the defeat landing spot. Hold f5 (times[5] is nominal).",
+   "per_frame": [
+    {
+     "anchors": {
+      "BODY_BOX": [
+       17,
+       12,
+       60,
+       58
+      ],
+      "BOX": [
+       75,
+       17
+      ],
+      "PIVOT": [
+       49,
+       66
+      ],
+      "CROWN": [
+       42,
+       12
+      ]
+     },
+     "numbers": {
+      "opaque": 1785,
+      "colours": 38,
+      "black": 0.3126,
+      "black_vs_ref_pts": 0.59,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       17,
+       6,
+       86,
+       69
+      ]
+     },
+     "note": "bucked off, the box flung away"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       16,
+       17,
+       59,
+       57
+      ],
+      "BOX": [
+       81,
+       23
+      ],
+      "PIVOT": [
+       49,
+       70
+      ],
+      "CROWN": [
+       41,
+       17
+      ]
+     },
+     "numbers": {
+      "opaque": 1743,
+      "colours": 39,
+      "black": 0.3167,
+      "black_vs_ref_pts": 1.0,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       16,
+       14,
+       93,
+       73
+      ]
+     },
+     "note": "dropping butt-first, the box tumbling"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       28,
+       38,
+       49,
+       58
+      ],
+      "BOX": [
+       80,
+       68
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       50,
+       38
+      ]
+     },
+     "numbers": {
+      "opaque": 1782,
+      "colours": 39,
+      "black": 0.3109,
+      "black_vs_ref_pts": 0.42,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       19,
+       38,
+       89,
+       95
+      ]
+     },
+     "note": "THUMP: on his butt, the box coming down"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       26,
+       28,
+       41,
+       68
+      ],
+      "BOX": [
+       73,
+       88
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       47,
+       28
+      ]
+     },
+     "numbers": {
+      "opaque": 1762,
+      "colours": 39,
+      "black": 0.3133,
+      "black_vs_ref_pts": 0.66,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       26,
+       28,
+       83,
+       95
+      ]
+     },
+     "note": "jordan_defeat f3: bounced up onto his knees"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       26,
+       34,
+       46,
+       62
+      ],
+      "BOX": [
+       73,
+       88
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       55,
+       34
+      ]
+     },
+     "numbers": {
+      "opaque": 1696,
+      "colours": 39,
+      "black": 0.3137,
+      "black_vs_ref_pts": 0.7,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       26,
+       34,
+       83,
+       95
+      ]
+     },
+     "note": "jordan_defeat f4"
+    },
+    {
+     "anchors": {
+      "BODY_BOX": [
+       26,
+       35,
+       46,
+       61
+      ],
+      "BOX": [
+       73,
+       88
+      ],
+      "SOLES": [
+       48,
+       95
+      ],
+      "CROWN": [
+       55,
+       35
+      ]
+     },
+     "numbers": {
+      "opaque": 1684,
+      "colours": 39,
+      "black": 0.3129,
+      "black_vs_ref_pts": 0.62,
+      "semi": 0,
+      "audit": {
+       "gaps": 0,
+       "lone": 0,
+       "holes": 0,
+       "keys": 0
+      },
+      "edge_px": 0,
+      "bbox": [
+       26,
+       35,
+       83,
+       95
+      ]
+     },
+     "note": "jordan_defeat f5 (held)"
+    }
+   ],
+   "sheet_numbers": {
+    "black": 0.3133,
+    "colours": 40
+   },
+   "aseprite_roundtrip": "identical"
+  }
+ },
+ "frame": [
+  96,
+  96
+ ],
+ "scale_in_game": 3,
+ "keyline": "#000000",
+ "layout": "horizontal strip, hframes = frames, vframes = 1",
+ "colours": "only Jordan's approved 40 (Assets/Characters/Jordan/jordan_redesign_v2.png)",
+ "black_refs": {
+  "ride": "approved rider layer 28.96% (+-1.5)",
+  "mat": "live jordan_idle f0 30.67% (+-1.5)"
+ },
+ "anchor_meaning": {
+  "SEAT": "the texel that sits on the kaiju RIDER_SEAT",
+  "CROWN": "top of his hair (topmost head texel; middle column of that row)",
+  "HAND": "release texel: where the thrown figure appears (ride_throw f2)",
+  "SOLES": "mat contact point (soles row 95): place on the floor spot",
+  "PIVOT": "body centre (hips) for arcs between SEAT and SOLES",
+  "BODY_BOX": "[x, y, w, h] round every non-effect texel (hurtbox source)",
+  "BOX": "centre of his gold box",
+  "GRIP": "his gripping fist",
+  "STARS": "centre of the daze stars",
+  "TOY": "where kaiju_toy FEET (its pivot (12, 27)) goes when he holds it"
+ },
+ "rig": "scratchpad/jordan_kaiju/rider/rig (jr_*.py), on a scratch copy of art_source/jordan_anims + jordan_v2 (vendor/, verified to rebuild the live idle/summon/taunt/hit/defeat sheets pixel for pixel)"
+}

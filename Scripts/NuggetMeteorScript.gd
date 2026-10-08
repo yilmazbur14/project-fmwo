@@ -2,6 +2,7 @@ extends Node2D
 
 const HitInfo := preload("res://Scripts/HitInfo.gd")
 const ScreenView := preload("res://Scripts/ScreenView.gd")
+const MasonImpactThrottle := preload("res://Scripts/MasonImpactThrottle.gd")
 
 # The damage area: the marker's oval, so a player just outside the drawn marker is never hit. A polygon
 # rather than a capsule, which would bulge past the oval's shoulders.
@@ -95,7 +96,8 @@ func _land() -> void:
 	impact_sprite.show()
 	animation_player.play("impact")
 	hitbox_shape.set_deferred("disabled", false)
-	impact_sfx.play()
+	if MasonImpactThrottle.allow():
+		impact_sfx.play()
 	_shake_screen()
 
 

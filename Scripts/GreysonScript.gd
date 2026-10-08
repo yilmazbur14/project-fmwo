@@ -1,6 +1,6 @@
 extends CharacterBody2D
 
-# Greyson, the second half of FIGHT 03 (Computah's fight). When Computah falls, his gym partner storms the ring,
+# Greyson, the second half of FIGHT 06 (Computah's fight). When Computah falls, his gym partner storms the ring,
 # tears off Computah's cannon arm, straps it on and takes over the fight (GreysonTakeover). ComputahScript hands
 # over by instancing GreysonScene under the Arena, with `computah` set; GreysonTestFightScene starts him on his own
 # (`start_active`), where the takeover jumps straight to its end state.
@@ -31,18 +31,20 @@ const BossHealthBarUI := preload("res://Scripts/BossHealthBarUI.gd")
 const BossBreakGauge := preload("res://Scripts/BossBreakGauge.gd")
 const BreakGaugeUI := preload("res://Scripts/BreakGaugeUI.gd")
 const HypeMeterUI := preload("res://Scripts/GreysonHypeMeterUI.gd")
+const DoomOrb := preload("res://Scripts/GreysonDoomOrb.gd")
 const Layout := preload("res://Scripts/GreysonArtLayout.gd")
 const UI_THEME := preload("res://Assets/UI/ui_theme.tres")
 # What he says once the fight is over, under player_won and player_lost.
 const OUTRO_DIALOGUE := "res://Dialogue/GreysonOutro.dialogue"
-# His fight is Computah's, FIGHT 03: what follows it is looked up by it.
+# His fight is Computah's, FIGHT 06: what follows it is looked up by it.
 const FIGHT_SCENE := "res://Scenes/Bosses/ComputahBossFightScene.tscn"
 # The name on his bar.
 const BAR_NAME := "GREYSON"
 
 #CONSTANTS
-# The plan's H. The pose window's single-bar finisher takes 8 (12 supercharged), and the juggle 5, 3 and 5.
-@export var max_health := 30
+# The plan's H, 30, doubled by the user (2026-09-25) and raised 25% (2026-09-30). The pose window's
+# single-bar finisher takes 19 (30 supercharged), and the juggle 19, 8 and 11.
+@export var max_health := 75
 var boss_health := max_health
 # Every window's cap unless its state has its own `hit_cap` (the Pose's is 8).
 const MAX_HITS_PER_WINDOW := 3
@@ -54,17 +56,21 @@ const CAUTION_RATIO := 0.5
 const HOT_RATIO := 0.25
 
 #HIS HYPE (the spirit bomb's clock, plan section 3.5)
-# Cells, in half-cell steps. Each unhit pose banks one and each spoiled pose drains half (GreysonPose); it carries
-# across cycles, and a full meter fires the spirit bomb.
+# Cells, in half-cell steps. Each unhit pose banks GreysonPose.bank; it carries across cycles, and a full meter fires
+# the spirit bomb.
 const HYPE_MAX := 6.0
 const HYPE_STEP := 0.5
+# Any hit that lands on him, in any window, the finisher's and the juggle's included, empties the meter at once (the
+# user, 2026-09-30: "if he gets hit he goes back to 0"). Off, a spoiled pose drains GreysonPose.spoil instead.
+@export var hit_resets_hype := true
 
 #THE BREAK GAUGE (BossBreakGauge)
 # The rollout's rule with the house N = 8: a read (a parry, or a perfect dodge, of a plate) is an eighth of the
 # gauge, a punch a quarter of a read and a charged one a half, a hit taken one read back and a guard break two. Only
 # plates earn (BREAK_EARNS): his eruptions drain it but never fill it. broken_time is GreysonBroken's window.
-# BREAK_READ is max_value over N. Not 6: with four plates a throw, six reads come in about a cycle and a half rather
-# than two, and a Break skips that cycle's poses, the part of his fight the retune made harder.
+# BREAK_READ is max_value over N. A Break skips that cycle's poses, the part of his fight the retune made harder, so
+# it shouldn't come every throw: of his six plates four or five come at a player who stands their ground and reads
+# them, so 8 reads take them about two throws, and one who gets to all six a throw and a third.
 const BREAK_READS := 8
 const BREAK_READ := 100.0 / BREAK_READS
 const BREAK := {
@@ -120,6 +126,8 @@ var hud_layer: CanvasLayer
 var health_bar: Control
 var gauge_bar: Control
 var hype_meter: Control
+# His meter made physical over his head (GreysonDoomOrb), with the meter from the bar swap on.
+var doom_orb: Node2D
 var hud_fade: Tween
 var break_gauge: Node
 var hints := {}
@@ -134,6 +142,8 @@ var daze_used := false
 var hype := 0.0
 # The final brawl holds his meter where 0 HP left it.
 var hype_frozen := false
+# Each teleport_out() and teleport_in() starts a new one: their sheets only hide and show him for their own.
+var teleport_serial := 0
 # He wears Computah's cannon: from the takeover's attach on, and in the test scene from the start.
 var has_cannon := false
 
@@ -702,7 +712,8 @@ func teleport_out() -> void:
 	set_hurtbox_active(false)
 	play_anim(&"teleport_out")
 	play_sfx(&"teleport_out")
-	play_fx(&"teleport_out", global_position, fx_layer, false, _hide_from_frame.bind(Layout.fx(&"teleport_out").hide_from))
+	teleport_serial += 1
+	play_fx(&"teleport_out", global_position, fx_layer, false, _hide_from_frame.bind(Layout.fx(&"teleport_out").hide_from, teleport_serial))
 
 
 # His feet on `at`, and his sprite back from the in sheet's show_from frame.
@@ -711,16 +722,19 @@ func teleport_in(at: Vector2) -> void:
 	sprite.visible = false
 	play_anim(&"teleport_in")
 	play_sfx(&"teleport_in")
-	play_fx(&"teleport_in", global_position, fx_layer, false, _show_from_frame.bind(Layout.fx(&"teleport_in").show_from))
+	teleport_serial += 1
+	play_fx(&"teleport_in", global_position, fx_layer, false, _show_from_frame.bind(Layout.fx(&"teleport_in").show_from, teleport_serial))
 
 
-func _hide_from_frame(frame: int, from: int) -> void:
-	if frame >= from:
+# `serial` is the teleport the sheet belongs to: a sheet still playing out after the next teleport has begun (a
+# teleport shorter than the sheet) leaves him to that one.
+func _hide_from_frame(frame: int, from: int, serial := -1) -> void:
+	if frame >= from and (serial < 0 or serial == teleport_serial):
 		sprite.visible = false
 
 
-func _show_from_frame(frame: int, from: int) -> void:
-	if frame >= from:
+func _show_from_frame(frame: int, from: int, serial := -1) -> void:
+	if frame >= from and (serial < 0 or serial == teleport_serial):
 		sprite.visible = true
 
 
@@ -786,6 +800,10 @@ func show_hud(time: float) -> void:
 	hype_meter.body = self
 	hud_layer.add_child(hype_meter)
 	hype_meter.position = Layout.HYPE_METER.at
+	if Layout.USE_DOOM_ORB:
+		doom_orb = DoomOrb.new()
+		doom_orb.body = self
+		get_parent().add_child(doom_orb)
 	health_bar.refill_row(0, boss_health, time)
 
 
@@ -934,6 +952,9 @@ func _apply_damage(amount: int, pitch := 1.0) -> int:
 	_hit_feedback()
 	hit_sfx_player.pitch_scale = pitch
 	hit_sfx_player.play()
+	# Before the flinch, so the pose it spoils finds the meter already empty.
+	if hit_resets_hype:
+		reset_hype()
 	if boss_health > 0:
 		state_machine.flinch()
 	else:
@@ -951,7 +972,8 @@ func flinch() -> void:
 
 
 # The player's finisher (PlayerFinisher): a charged third punch in an open window dazes him, once a window, if
-# the state that opened it allows one.
+# the state that opened it allows one. A daze whose mash fizzled or whose uppercut whiffed gives it back
+# (exit_daze): his poses take 8 punches, room for a second POW, and a POW must always daze (the user, 2026-10-06).
 func can_be_dazed() -> bool:
 	if state_machine.in_final_brawl():
 		return _brawl_call(&"can_be_dazed", [], false)
@@ -973,6 +995,7 @@ func exit_daze(finisher_landed: bool) -> void:
 		_brawl_call(&"exit_daze", [finisher_landed], null)
 		return
 	if not finisher_landed:
+		daze_used = false
 		_show_break_stars(true)
 
 

@@ -94,6 +94,9 @@ func _open() -> void:
 	var window: float = window_override if window_override > 0.0 else state_machine.recover_window(reds_parried, reds_missed)
 	if from_break:
 		window = maxf(window, body.BREAK.broken_time)
+	var player: Node2D = state_machine.get_player()
+	if player:
+		window = maxf(window, state_machine.walk_in_time(player.global_position.distance_to(body.global_position)))
 	recover_timer.start(window)
 
 

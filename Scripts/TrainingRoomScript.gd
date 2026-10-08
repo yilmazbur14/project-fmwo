@@ -44,14 +44,14 @@ const DOOR_DWELL := 0.35
 const DANNY_THEME := "res://Assets/Audio/Music/danny_theme.wav"
 
 const REFILL_TIME := 1.2
-const FULL_HEALTH := 6
+const FULL_HEALTH: int = preload("res://Scripts/PlayerHealthArtLayout.gd").CONTAINERS * 2
 
 # The cards own the top 40% of the screen, and they are reference art: worth reading, not worth
 # reading mid-combo. So they get out of the way while the player is practising and come back when
 # they stop. Nothing new is bound and there is no new verb to learn - playing hides them, stopping
 # brings them back, which is the only rule anyone has to work out.
 # The wait before they go is what keeps one stray punch from wiping the screen; the wait before they
-# return is what keeps a beat between combos from flapping them.
+# return is what keeps a short pause between combos from flapping them.
 const CARDS_DIM := 0.15
 const CARDS_DIM_AFTER := 1.5
 const CARDS_BACK_AFTER := 1.2
@@ -104,7 +104,7 @@ const NUDGE_AFTER_PUNCHES := 6
 # One each, the first time the player does the thing. Deliberately not dialogue lines: a balloon
 # would cover the floor and set player.is_talking, which freezes the player mid-practice.
 const BARKS := {
-	punch = "There you go. Three of those in rhythm and the third one HURTS.",
+	punch = "There you go. Three of those and the third one HURTS.",
 	daze = "It's gone dizzy! MASH the two on the prompt, dum dum!",
 	parry = "THAT'S a parry. It's wide open. Hit it.",
 	dodge = "Dashed clean through it. Do that to the yellow ones.",

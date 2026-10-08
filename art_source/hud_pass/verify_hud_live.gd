@@ -64,7 +64,7 @@ func _build() -> void:
 		_hex(pair.rows[1].node.modulate), pair.rows[1].ghost.visible])
 
 	print("-- player containers --")
-	for health in [6, 5, 4, 3, 2, 1, 0]:
+	for health in range(PlayerHealthArtLayout.CONTAINERS * 2, -1, -1):
 		hearts.update_health(health)
 		var names := PackedStringArray()
 		for rect in hearts.containers:

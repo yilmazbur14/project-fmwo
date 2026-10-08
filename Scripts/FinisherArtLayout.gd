@@ -364,11 +364,12 @@ const FINAL_TIER_STAMPS := {
 	"frame_time": 0.09,
 }
 
-# KNIGHT BREAKER!, centred on the HUD above the fight from bar 3 banking until just after the third
-# uppercut lands, then faded. Real seconds.
+# MAX. UPPERCUT! (KNIGHT BREAKER! until 2026-10-07, the user: "instead of knight breaker for an uppercut, canm we
+# change it to Max. Uppercut"; the code keeps the old name), centred on the HUD above the fight from bar 3 banking
+# until just after the third uppercut lands, then faded. Real seconds.
 const USE_FINAL_KNIGHT_BREAKER := true
 const PLACEHOLDER_KNIGHT_BREAKER := {
-	"text": "KNIGHT BREAKER!",
+	"text": "MAX. UPPERCUT!",
 	"size": Vector2(480, 60),
 	"font_size": 44,
 	"outline": 8,

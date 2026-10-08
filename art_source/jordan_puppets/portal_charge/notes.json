@@ -1,0 +1,57 @@
+{
+ "frames": [
+  {
+   "source_frame": 1,
+   "sword_pixels_removed": 2016,
+   "aura_carried_on_behind_it": 47,
+   "keyline_added": 31,
+   "pixels_changed": 2006,
+   "drawn_in_the_footprint": 78,
+   "mirror_axis_x2": 253
+  },
+  {
+   "source_frame": 2,
+   "sword_pixels_removed": 2016,
+   "aura_carried_on_behind_it": 33,
+   "keyline_added": 35,
+   "pixels_changed": 2000,
+   "drawn_in_the_footprint": 68,
+   "mirror_axis_x2": 255
+  }
+ ],
+ "back": [
+  [
+   128,
+   163
+  ],
+  [
+   129,
+   163
+  ]
+ ],
+ "feet": [
+  128,
+  191
+ ],
+ "frame_size": [
+  256,
+  192
+ ],
+ "still": {
+  "portal_screen": [
+   960.0,
+   618.0
+  ],
+  "eric_feet_screen": [
+   1089.3,
+   624.0
+  ],
+  "back_hook_screen": [
+   1090.3,
+   567.0
+  ],
+  "portal": "takeB portal_sword_loop frame 1"
+ },
+ "ship_as": "res://Assets/Characters/Jordan/Puppets/eric/eric_portal_charge.png (+ .aseprite)",
+ "hooks_line": "\t\t&\"eric_portal_charge\": [Vector2(128, 163), Vector2(129, 163)],"
+}

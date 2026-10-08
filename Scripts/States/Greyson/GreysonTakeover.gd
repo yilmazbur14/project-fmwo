@@ -11,7 +11,8 @@ extends State
 # defence suite finds a fight's entrance by that method.
 #
 # THE BEATS, on the shipped takeover sheets (art_source/greyson_fight/gf_ship.py's timings): he shouts off the
-# screen ("COMPUTAH NOOO", the shout sound in place of his blips), walks in in tears through the top gate, says the
+# screen ("COMPUTAH NOOO", the shout sound in place of his blips), walks in in tears through the top gate as the
+# player walks onto their mark under HOME (PLAYER_MARK), clear of the tear and the hurl to come, says the
 # upset line in three beats (grief, fond, fury, a sentence at a time as it types), walks to Computah's cannon side
 # and tears the arm off one-handed - his node on Computah's floor point plus TEAR_SPOT, where his fist lands on the
 # arm's grip, drawn over Computah and over the torn arm (ComputahArtLayout.ARM_PROP) - jams it on, grabs the
@@ -22,7 +23,8 @@ extends State
 # EVERY WAY OUT LANDS ON ONE END STATE (_settle), and finish_cut() is the only way out: the lines' end, the hold,
 # the test scene's start_active, and the fight ending over the top of it (GreysonStateMachine._end_fight). Computah
 # gone from the ring (hidden, out of the fight); Greyson at HOME wearing the cannon, facing the player, targetable, on his own z;
-# Computah's HUD gone and his full, gauge and meter empty; the gates shut; the player free where they stood; his
+# Computah's HUD gone and his full, gauge and meter empty; the gates shut; the player free on their mark (but not when
+# the fight ended over the top of it: there they stay where they stood); his
 # theme started once; the view level, the crowd at rest, no balloon, and nothing of the takeover's own left (the
 # torn arm, the thrown Computah, the roar's FX). A retry plays it all again.
 
@@ -37,6 +39,17 @@ const SPEAKER := "Greyson"
 
 #THE KO
 const KO_BEAT := 0.8
+
+#THE PLAYER'S MARK (px, px/s and seconds; the brawl's walk onto its own mark, GreysonFinalBrawl._walk_player)
+# Under HOME, on the arena's own spawn, so the fight opens as his test scene does: him facing them, and his first
+# plate with a real first leg to fly to them. Left where they finished Computah, beside his hand, it touched them as
+# it left it (the playtest, 2026-10-04; the user's default (f): "the cutscene walks you to a spot below him").
+const PLAYER_MARK := Vector2(959, 900)
+const PLAYER_WALK_SPEED := 650.0
+const PLAYER_WALK_MIN := 0.3
+const PLAYER_WALK_MAX := 1.2
+# Nearer than this to the mark, they are put on it.
+const PLAYER_SNAP := 5.0
 
 #THE WALK IN (seconds and px)
 # He comes in from above the top gate, off the screen, straight down to HOME.
@@ -227,6 +240,7 @@ func greyson_enters() -> void:
 	body.play_anim(&"walk")
 	var walk := create_tween()
 	walk.tween_method(_step_walk.bind(ENTER_FROM, state_machine.HOME), 0.0, 1.0, ENTER_TIME)
+	_walk_player()
 	await _wait(walk)
 	if not _cut_is_live():
 		return
@@ -660,6 +674,9 @@ func finish_cut(route := true) -> void:
 	BossEntrance.close_balloon(state_machine.takeover_balloon)
 	BossEntrance.run_out(waits)
 	state_machine.end_takeover_dialogue()
+	# Before _settle(), which turns him to face them where they end up.
+	if route:
+		_settle_player()
 	_settle()
 	if is_instance_valid(cut):
 		cut.end()
@@ -751,6 +768,51 @@ func _face_player() -> void:
 	var player := _player()
 	if player != null:
 		body.face_toward(player.global_position)
+
+
+#THE PLAYER'S MARK
+
+# Onto their mark on rails while he walks in, then facing up at him: on this node's own tween, so a skip runs it out.
+func _walk_player() -> void:
+	var player := _player()
+	if player == null or not is_instance_valid(cut):
+		return
+	var distance: float = player.global_position.distance_to(PLAYER_MARK)
+	if distance <= PLAYER_SNAP:
+		_player_on_mark()
+		return
+	player.face_point(PLAYER_MARK)
+	cut.play_player_anim(&"walking")
+	var walk := create_tween()
+	walk.tween_method(_step_player.bind(player.global_position), 0.0, 1.0,
+		clampf(distance / PLAYER_WALK_SPEED, PLAYER_WALK_MIN, PLAYER_WALK_MAX))
+	walk.tween_callback(_player_on_mark)
+	waits.append(walk)
+	walk.finished.connect(func() -> void: waits.erase(walk))
+
+
+func _step_player(weight: float, from: Vector2) -> void:
+	var player := _player()
+	if _cut_is_live() and player != null:
+		player.global_position = from.lerp(PLAYER_MARK, weight).round()
+
+
+func _player_on_mark() -> void:
+	var player := _player()
+	if not _cut_is_live() or player == null or not is_instance_valid(cut):
+		return
+	player.global_position = PLAYER_MARK
+	cut.play_player_anim(&"idle_down")
+	player.face_point(state_machine.HOME)
+
+
+# The end state's player, however the takeover ended up there: on their mark, still.
+func _settle_player() -> void:
+	var player := _player()
+	if player == null:
+		return
+	player.global_position = PLAYER_MARK
+	player.velocity = Vector2.ZERO
 
 
 func _player() -> Node:

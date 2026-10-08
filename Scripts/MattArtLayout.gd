@@ -73,6 +73,12 @@ const CROWNS := {
 	&"fury": Vector2(50, 1),
 	&"yell_up_tell": Vector2(48, 14),
 	&"yell_up": Vector2(48, 14),
+	# The Echo Roars (matt_echo.png, the artist's anchors), off the frame each holds: the inhale, the psych's laugh,
+	# the wind-up and the blast's hold.
+	&"echo_inhale": Vector2(48, 1),
+	&"echo_psych": Vector2(48, 2),
+	&"boomburst_windup": Vector2(48, 1),
+	&"boomburst_blast": Vector2(48, 5),
 }
 # The roar's is the middle of its open mouth on frame 1, lip line to lip line, which is also where the
 # rings and the zoom are centred.
@@ -101,6 +107,12 @@ const MOUTHS := {
 	&"yell_up_tell": Vector2(48, 40),
 	# The rings' centre, averaged over the loop's three frames.
 	&"yell_up": Vector2(48, 45),
+	# The Echo Roars, off the frame each holds. Every ring leaves the roar's mouth (48, 51), which the psych's and the
+	# blast's sit within 2 texels of.
+	&"echo_inhale": Vector2(48, 43),
+	&"echo_psych": Vector2(48, 50),
+	&"boomburst_windup": Vector2(48, 43),
+	&"boomburst_blast": Vector2(48, 50),
 }
 # Where the stand-in doll stands in his hand while the doll sheet is off. The drawn sheet has Hong
 # baked into his fist.
@@ -143,6 +155,11 @@ const USE_FINAL_ANIMS := {
 	&"fury": true,
 	&"yell_up_tell": true,
 	&"yell_up": true,
+	# The Echo Roars' sheet (matt_echo.png). Each plays only once its sheet is in (anim()): until then its stand-in.
+	&"echo_inhale": true,
+	&"echo_psych": true,
+	&"boomburst_windup": true,
+	&"boomburst_blast": true,
 }
 
 const PLACEHOLDER_ANIMS := {
@@ -176,6 +193,13 @@ const PLACEHOLDER_ANIMS := {
 	&"fury": {sheet = TALK_SHEET, frames = [14, 15, 14, 15], times = [0.08], loop = true},
 	&"yell_up_tell": {sheet = SHEET_DIR + "matt_yell_tell.png", frames = [0, 1], times = [0.25], loop = false},
 	&"yell_up": {sheet = SHEET_DIR + "matt_roar.png", frames = [1, 2, 3], times = [0.06], loop = true},
+	# The Echo Roars' stand-ins, off his approved sheets: the roar's inhale, the laughing talk pose with its mouth open
+	# for the X's "psych!", the Trueshot's charge for the BOOMBURST's wind-up and the roar for its blast. A roar itself
+	# is always the roar (matt_roar f1-3).
+	&"echo_inhale": {sheet = SHEET_DIR + "matt_roar.png", frames = [0], times = [1.0], loop = false},
+	&"echo_psych": {sheet = TALK_SHEET, frames = [3], times = [1.0], loop = false},
+	&"boomburst_windup": {sheet = SHEET_DIR + "matt_trueshot_charge.png", frames = [0], times = [1.0], loop = false},
+	&"boomburst_blast": {sheet = SHEET_DIR + "matt_roar.png", frames = [1, 2, 3], times = [0.06], loop = true},
 }
 
 # The artists' timings. The mystic cast and the teleport are one sheet each, split at the frame the
@@ -214,6 +238,20 @@ const FINAL_ANIMS := {
 	&"fury": {sheet = SHEET_DIR + "matt_fury.png", frames = [0, 1, 2, 3], times = [0.08], loop = true},
 	&"yell_up_tell": {sheet = SHEET_DIR + "matt_yell_up.png", frames = [0, 1], times = [0.25], loop = false},
 	&"yell_up": {sheet = SHEET_DIR + "matt_yell_up.png", frames = [2, 3, 4], times = [0.06], loop = true},
+	# The Echo Roars: one strip, the cupped-hands inhale, the X's "psych!" and the laugh after it, and the BOOMBURST's
+	# wind-up, blast and hold.
+	&"echo_inhale": {sheet = SHEET_DIR + "matt_echo.png", frames = [0], times = [1.0], loop = false},
+	&"echo_psych": {sheet = SHEET_DIR + "matt_echo.png", frames = [1, 2], times = [0.20, 1.0], loop = false},
+	&"boomburst_windup": {sheet = SHEET_DIR + "matt_echo.png", frames = [3], times = [1.0], loop = false},
+	&"boomburst_blast": {sheet = SHEET_DIR + "matt_echo.png", frames = [4, 5], times = [0.10, 1.0], loop = false},
+}
+# Whose anchors an animation with no crown or mouth of its own borrows: the Echo Roars' stand-ins', until the artist's
+# anchors for matt_echo.png are in.
+const BORROWED_ANCHORS := {
+	&"echo_inhale": &"roar_inhale",
+	&"echo_psych": &"idle",
+	&"boomburst_windup": &"trueshot_charge",
+	&"boomburst_blast": &"roar",
 }
 
 # What each Trueshot station charges and fires in: the front view from the top, the back view from the
@@ -225,6 +263,13 @@ const TRUESHOT_STATION_ANIMS := {
 	&"bottom": {charge = &"trueshot_charge_back", fire = &"trueshot_fire_back"},
 	&"right": {charge = &"trueshot_charge_side", fire = &"trueshot_fire_side"},
 }
+# The arena draws by y, so a player whose sprite stands higher up the screen than his feet draws under him: on a
+# Trueshot station's footprint his 288 px sprite buried them for the whole shot (from the bottom station, a player
+# still on their spawn mark, the 2026-10-04 playtest). While the player's sprite overlaps his there, his
+# self_modulate alpha eases to this over STATION_SEE_THROUGH_TIME, and back once they are clear
+# (MattTrueshotBarrage), the way Carter's beam clones do.
+const STATION_SEE_THROUGH := 0.35
+const STATION_SEE_THROUGH_TIME := 0.12
 
 #THE GLASS ROW
 # Where a stomp lands, by the step of the animation that lands it: the slam's dust and the fury's puffs
@@ -294,6 +339,39 @@ const GLASS_HINT := {
 
 # The white ring that pops off a player who mashed through the Deafening Yell.
 const RESIST_RING := {from_radius = 24.0, to_radius = 120.0, width = 6.0, color = Color("#FFFFFF"), time = 0.30, points = 48}
+
+#THE ECHO ROARS (MattEchoRingScript draws every ring in code, in px)
+# A roar is the approved yell ring - its core, flanks and edge, the fainter ring behind - with a rim in his roar red
+# outside it; its echo is the same at echo_alpha. A ghost (the X) is the pale steel of Carter's X (demon_feint.png's
+# fill and shade), dashed into `arcs` arcs each `fill` of its share of the circle. A punish is hot white, beating
+# like Josh's punish glow, with no badge. The BOOMBURST is a gold wall: its bright leading edge, which is all that
+# touches, the gold body `depth` behind it and a dark back. A circle gets a point every `chord` px of it.
+const ECHO_RINGS := {
+	chord = 20.0, min_points = 32, max_points = 330, fade = 0.06, echo_alpha = 0.8,
+	red = {core = Color("#F2F3FF"), core_width = 9.0, flank = Color("#C4C9FA"), flank_width = 15.0, edge = Color("#4F4D96"),
+		edge_width = 21.0, trail_gap = 36.0, trail_alpha = 0.45, rim = Color("#FF4A58"), rim_width = 6.0, rim_gap = 14.0},
+	ghost = {core = Color("#E6ECF2"), core_width = 9.0, edge = Color("#9BADB7"), edge_width = 15.0, arcs = 24, fill = 0.55,
+		alpha = 0.5},
+	punish = {color = Color("#FFFFFF"), width = 14.0, glow = Color(1.0, 1.0, 1.0, 0.55), glow_width = 36.0, beat = [0.82, 1.18],
+		beat_time = 0.07},
+	boomburst = {edge = Color("#FFF3A8"), edge_width = 10.0, body = Color("#FFCB3C"), depth = 90.0, inner = Color("#C87414"),
+		inner_width = 10.0},
+}
+# Carter's pale X (Josh's Monte wears it too) over him for a silent roar: stepped through ignite and peak to a hold that
+# never pulses, and its fade frame as the ghost is born, gone in `out`. Its tip stands where a badge's would.
+const FEINT_MARK := {texture = "res://Assets/Characters/Carter/Demon/demon_feint.png", hframes = 4,
+	frame_size = Vector2(24, 24), pivot = Vector2(12, 12), scale = 3.0, steps = {ignite = 0, peak = 1, hold = 2, fade = 3},
+	ignite_time = 0.05, peak_time = 0.04, out = 0.05}
+# Under the player at the fight's first BOOMBURST, in the Glass Row hint's style: from its yellow badge until
+# `hold_after` past its touch.
+const ECHO_HINT := {text = "DASH THROUGH THE GOLD!", font_size = 33, outline = 6, color = Color("#F2F3FF"),
+	outline_color = Color("#332F68"), offset = Vector2(0, 66), fade = 0.2, hold_after = 1.0}
+# What a bitten X puts up beside him, in Josh's and Carter's word style: `offset` from HOME, its x turned the other way
+# on every other bite. `box` is the word as drawn, outline included; it must stay clear of `badge_rect` round the
+# badge's tip.
+const PSYCH_WORD := {text = "PSYCH!", offset = Vector2(-260, -160), time = 0.9, font_size = 92, color = Color(1.0, 0.36, 0.3),
+	outline = 10, from_scale = 0.7, to_scale = 1.0, grow_time = 0.16, box = Vector2(300, 100),
+	badge_rect = Rect2(-52, -104, 104, 104)}
 
 #THE JUGGLE (the Break's tiered uppercut; BossJuggled reads exactly this shape)
 # A sheet of its own: its frame is not his 96x96 and its origin is not his feet, so its texels go through
@@ -555,6 +633,13 @@ const SFX := {
 	&"deafen_yell": {stream = SFX_DIR + "matt_deafen_yell.wav", pitch = 1.0, volume_db = 0.0},
 	&"ear_ring": {stream = SFX_DIR + "matt_ear_ring.wav", pitch = 1.0, volume_db = -14.0},
 	&"resist": {stream = SFX_DIR + "matt_resist.wav", pitch = 1.0, volume_db = -6.0},
+	# The Echo Roars, stand-ins off his own set until their synthesized set (`final`) is in (sfx_stream).
+	&"echo_inhale": {stream = SFX_DIR + "matt_yell_tell.wav", pitch = 0.85, volume_db = -6.0},
+	&"echo_roar": {stream = SFX_DIR + "matt_roar.wav", final = SFX_DIR + "matt_echo_roar.wav", pitch = 1.1, volume_db = -3.0},
+	&"echo_echo": {stream = SFX_DIR + "matt_yell.wav", final = SFX_DIR + "matt_echo_echo.wav", pitch = 0.9, volume_db = -12.0},
+	&"echo_psych": {stream = SFX_DIR + "matt_yell_tell.wav", final = SFX_DIR + "matt_echo_psych.wav", pitch = 1.4, volume_db = -8.0},
+	&"boomburst": {stream = SFX_DIR + "matt_deafen_yell.wav", final = SFX_DIR + "matt_boomburst.wav", pitch = 1.0, volume_db = 0.0},
+	&"echo_punish": {stream = SFX_DIR + "matt_boom_hit.wav", pitch = 1.0, volume_db = -2.0},
 }
 
 # Bolts come back off the ropes from everywhere at once, so the bounce is its own round-robin, each
@@ -564,7 +649,8 @@ const BOUNCE_PITCH_JITTER := 0.08
 # How many players a sound gets, for the ones that overlap themselves. A late answer to one boom and a
 # quick one to the next can come closer together than boom_answer is long, and the booms fire closer
 # together than boom_fire is long.
-const SFX_VOICES := {&"mystic_bounce": BOUNCE_VOICES, &"fury_stomp": 3, &"glass_land": 3, &"boom_answer": 2, &"boom_fire": 2}
+const SFX_VOICES := {&"mystic_bounce": BOUNCE_VOICES, &"fury_stomp": 3, &"glass_land": 3, &"boom_answer": 2, &"boom_fire": 2,
+	&"echo_roar": 3, &"echo_echo": 2}
 # boom_form is sped up to end as its boom fires, but no higher than this: past it the roar's build turns
 # into a squeak, so on a shorter charge it is cut at the fire instead.
 const BOOM_FORM_MAX_PITCH := 1.6
@@ -576,9 +662,15 @@ const THEME_DB := -5.0
 
 
 static func anim(anim_name: StringName) -> Dictionary:
-	if USE_FINAL_ANIMS.get(anim_name, false):
+	if uses_final_anim(anim_name):
 		return FINAL_ANIMS[anim_name]
 	return PLACEHOLDER_ANIMS[anim_name]
+
+
+# Its flag on and its sheet in: a sheet that hasn't shipped yet keeps the stand-in rather than failing to load.
+static func uses_final_anim(anim_name: StringName) -> bool:
+	return USE_FINAL_ANIMS.get(anim_name, false) and FINAL_ANIMS.has(anim_name) \
+		and ResourceLoader.exists(FINAL_ANIMS[anim_name].sheet)
 
 
 # The animation a Trueshot station plays for `which`, &"charge" or &"fire": its own view if that sheet's
@@ -596,6 +688,14 @@ static func talk(pose: StringName) -> Dictionary:
 		return {sheet = TALK_SHEET, frames = TALK_POSES.get(pose, TALK_POSES[&"friendly"]), motion = &"RESET"}
 	var frame := 1 if PLACEHOLDER_TALK_ROAR_POSES.has(pose) else 0
 	return {sheet = MATT_SHEET, frames = [frame, frame], motion = &"talk"}
+
+
+# A sound's stream: its own synthesized take once that file is in, its stand-in until then.
+static func sfx_stream(key: StringName) -> String:
+	var spec: Dictionary = SFX[key]
+	if spec.has("final") and ResourceLoader.exists(spec.final):
+		return spec.final
+	return spec.stream
 
 
 static func fx(key: StringName) -> Dictionary:
@@ -624,14 +724,18 @@ static func local_rect(rect: Rect2) -> Rect2:
 
 
 static func crown(anim_name: StringName) -> Vector2:
-	if USE_FINAL_ANIMS.get(anim_name, false) and CROWNS.has(anim_name):
+	if uses_final_anim(anim_name) and CROWNS.has(anim_name):
 		return CROWNS[anim_name]
+	if BORROWED_ANCHORS.has(anim_name):
+		return crown(BORROWED_ANCHORS[anim_name])
 	return PLACEHOLDER_CROWN
 
 
 static func mouth(anim_name: StringName) -> Vector2:
-	if USE_FINAL_ANIMS.get(anim_name, false) and MOUTHS.has(anim_name):
+	if uses_final_anim(anim_name) and MOUTHS.has(anim_name):
 		return MOUTHS[anim_name]
+	if BORROWED_ANCHORS.has(anim_name):
+		return mouth(BORROWED_ANCHORS[anim_name])
 	return PLACEHOLDER_MOUTH
 
 

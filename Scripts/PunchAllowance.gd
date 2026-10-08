@@ -1,11 +1,12 @@
 extends RefCounted
 
-# What one opening lets the player's punches take off a boss: the damage a clean combo deals there,
-# however the punches actually came. It replaces a cap on landed punches, which a broken combo spent
-# before its POW: the charged punch was refused, that reset the combo, and every punch after it was
-# refused too, silently, for the rest of an opening that still looked wide open.
-# Spent in damage, a combo broken early leaves room for the combo started after it, and nothing can
-# take more than a clean combo would: its POW is cut down to what is left. The combo's own numbers
+# What one opening lets the player's punches take off a boss: the damage a clean chain of its cap's
+# punches deals (clean_chain), wherever in the combo the punches fall. The combo has no timing and
+# carries its count from one opening into the next (PlayerCombo), so an opening can start anywhere in
+# it: on its POW, or with a POW due that is cut down to what is left. Spent in damage, nothing can take
+# more than the chain would. It replaced a cap on landed punches, which a combo broken before its POW
+# spent back when the combo had timing: the charged punch was refused, and every punch after it too,
+# silently, for the rest of an opening that still looked wide open. The combo's own numbers
 # (PlayerCombo.hits_to_charge and charged_damage) are these.
 # A boss keeps one (`var punches := PunchAllowance.new()`) and asks it in take_punch(), handing it his
 # own count of punches landed this opening. His window states zero that count as each opening starts,

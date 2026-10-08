@@ -11,12 +11,12 @@ const SPEC := {
 	"home": Vector2(960, 620),
 	"light": &"matt_mystic_shot",
 	"strong": &"",
-	"foreign": &"josh_card_throw",
+	"foreign": &"eric_quake_wave_v2",
 	"punish_state": "Recover",
 	"broken_state": "Broken",
-	"cycle_states": ["MysticVolley", "GlassRow"],
+	"cycle_states": ["MysticVolley", "GlassRow", "EchoRoars"],
 	"defeated_state": "Defeated",
-	"reads_to_break": 8,
+	"reads_to_break": preload("res://Scripts/MattScript.gd").BREAK_READS,
 	"art": "res://Scripts/MattArtLayout.gd",
 	"juggle_via": "clip",
 	"drives_player": true,
@@ -26,6 +26,7 @@ const SPEC := {
 # The yell case raises his yell chance, and a window's spot and bonus are only ever taken by the window.
 static func reset(t) -> void:
 	t.sm.yell_chance = 0.0
+	t.sm.yell_counter_enabled = false
 	t.sm.recover_spot = t.sm.HOME
 	t.sm.recover_bonus = 0.0
 
@@ -39,6 +40,7 @@ static func entry_cases(t) -> Array:
 	var spent = sm.states["Spent"]
 	var recover = sm.states["Recover"]
 	var glass = sm.states["GlassRow"]
+	var echo = sm.states["EchoRoars"]
 	# His first cast's teleport, a bolt already flying: whether a later cast finds a spot, and so teleports
 	# while his own bolt is still out, is up to his rng and the player's corner.
 	var teleport_with_a_bolt := func():
@@ -48,10 +50,15 @@ static func entry_cases(t) -> Array:
 		t.spawn_matt_bolt(Vector2(960, 300), Vector2.from_angle(deg_to_rad(22.5)), false)
 		sm.on_child_transition(sm.current_state, "Spent")
 	var yell_tell := func():
+		# Off in the live game (yell_counter_enabled); a Break through its tell is still a moment worth holding.
+		sm.yell_counter_enabled = true
 		sm.yell_chance = 1.0
 		sm.windows_opened = sm.yell_from_window
 		sm.on_child_transition(sm.current_state, "Recover")
 		recover.on_punch_landed(recover.yell_on_hit)
+	var echo_string := func():
+		sm.plan_echo(false)
+		sm.on_child_transition(sm.current_state, "EchoRoars")
 	var glass_booms := func():
 		sm.cycle_booms = 5
 		sm.cycle_deafen = false
@@ -67,6 +74,8 @@ static func entry_cases(t) -> Array:
 		["spent, a bolt still flying", spent_with_a_bolt, func():
 			return sm.current_state == spent and spent.beat == spent.Beat.WAIT and not sm.live_bolts().is_empty()],
 		["his window, the yell's tell up", yell_tell, func(): return sm.current_state == recover and recover.yell == recover.Yell.TELL],
+		["the Echo Roars, mid-string with rings out", echo_string, func():
+			return sm.current_state == echo and echo.beat == echo.Beat.STRINGS and not sm.live_echo_rings().is_empty()],
 		["the Glass Row, sealed in its booms (forced)", glass_booms, func():
 			return sm.current_state == glass and glass.beat == glass.Beat.BOOMS and glass.boom != null and t.player.lock_seals_guard],
 	]

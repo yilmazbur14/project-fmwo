@@ -39,6 +39,11 @@ const SCENES := {
 	# Greyson, fight 03's second half, on his own: his test scene starts him active at HOME, the takeover's end
 	# state, with Computah already down. greyson_takeover plays the takeover in Computah's fight instead.
 	"greyson": "res://Scenes/Bosses/GreysonTestFightScene.tscn",
+	# Jordan's last phase, the Puppet Master: a scene of its own after his finale (FIGHT 10 still).
+	"jordan_god": "res://Scenes/Bosses/JordanGodFightScene.tscn",
+	# Liam's own phase on its own: his test scene starts him at the takeover's end state, on his pillar at the top of the
+	# ring with Bixby already gone. liam_takeover plays the takeover in the real fight instead.
+	"liam_elements": "res://Scenes/Bosses/LiamTestFightScene.tscn",
 }
 
 const DEFENSE_BINDINGS_PATH := "user://input_bindings_defense_tests.cfg"
@@ -58,9 +63,9 @@ var fight := "eric"
 var tier := "normal"
 # Eric's pacing (EricPacing.version) for smoke and approach: 1 or 2, or 0 for the one that ships.
 var ver := 0
-# Which of Liam's phases smoke, blocks and approach drive: 0 for the fight as it starts, 2 for his
-# enraged cycle (enrage_liam). His health never moves in those modes - the player is parked and never
-# punches him - so the Inferno would otherwise get no coverage at all.
+# Where in Liam's rotation smoke, blocks and approach start him: 0 for the fight as it starts, 2 for his
+# Inferno's cycle (rotate_liam_to_inferno), the last of his rotation, which those modes would otherwise
+# reach late in their window, if at all.
 var phase := 0
 
 # The modes written against Eric's fight as it was (EricPacing V1): they run on it, whatever ships. With
@@ -347,6 +352,8 @@ func _main() -> void:
 	load(PLAYER_DEFENSE).BLOCKING_ENABLED = blocking_arg == "on" or (blocking_arg != "off" and BLOCKING_MODES.has(mode))
 	match mode:
 		"stamina": await test_stamina()
+		"stamina_costs": await load("res://art_source/defense_tests/stamina/costs.gd").run(self)
+		"tired_popup": await load("res://art_source/defense_tests/stamina/tired.gd").run(self)
 		"baseline": await test_baseline()
 		"block_eric": await test_block_eric()
 		"behind": await test_behind()
@@ -360,6 +367,9 @@ func _main() -> void:
 		"parry_rules": await test_parry_rules()
 		"no_block": await test_no_block()
 		"broken_combo": await load("res://art_source/defense_tests/combo/broken_combo.gd").run(self)
+		"combo_art": await load("res://art_source/defense_tests/combo/combo_art.gd").run(self)
+		"combo_reset": await load("res://art_source/defense_tests/combo/combo_reset.gd").run(self)
+		"pow_always_dazes": await load("res://art_source/defense_tests/combo/pow_always_dazes.gd").run(self)
 		"stagger": await test_stagger()
 		"stagger_chain": await test_stagger_chain()
 		"stagger_win": await test_stagger_end(true)
@@ -400,6 +410,10 @@ func _main() -> void:
 		"carter_hud": await test_carter_hud()
 		"messatsu": await test_messatsu()
 		"messatsu_live": await test_messatsu_live()
+		"carter_recover_spot": await load("res://art_source/defense_tests/carter/recover_spot.gd").run(self)
+		"carter_caster_see_through": await load("res://art_source/defense_tests/carter/caster_see_through.gd").run(self)
+		"carter_strike_iframes": await load("res://art_source/defense_tests/carter/strike_iframes.gd").run(self)
+		"carter_chain": await load("res://art_source/defense_tests/carter/chain.gd").run(self)
 		"auto_finisher": await test_auto_finisher()
 		"auto_kill": await test_auto_kill()
 		"tells": await test_tells()
@@ -424,12 +438,20 @@ func _main() -> void:
 		"juggle": await test_juggle()
 		"juggle_kill": await test_juggle_kill()
 		"juggle_super": await test_juggle_super()
+		"mash_rates": await load("res://art_source/defense_tests/mash/rates.gd").run(self)
 		"gauge_extra": await test_gauge_extra()
 		"mason_contact": await test_mason_contact()
 		"mason_combined": await test_mason_combined()
 		"mason_bots": await test_mason_bots()
+		"mason_back_rope": await test_mason_back_rope()
+		"mason_pitch": await load(MASON_MODES + "pitch.gd").run(self)
+		"mason_rain": await load(MASON_MODES + "rain.gd").run(self)
 		"reflect_auto_v2": await test_reflect_auto_v2()
+		"eric_window_daze": await load("res://art_source/defense_tests/eric/window_daze.gd").run(self)
 		"sword_gate": await test_sword_gate()
+		"sword_path": await load(ERIC_MODES_DIR + "sword_path.gd").run(self)
+		"slam_point": await load(ERIC_MODES_DIR + "slam_point.gd").run(self)
+		"entrance_hud": await load(ERIC_MODES_DIR + "entrance_hud.gd").run(self)
 		"mine_trap": await test_mine_trap()
 		"mine_mash": await test_mine_mash()
 		"computah_overload": await test_computah_overload()
@@ -451,8 +473,17 @@ func _main() -> void:
 		"drift": await test_drift()
 		"inferno": await test_inferno()
 		"combined": await test_combined()
+		"spin_tell": await test_spin_tell()
+		"bixby_flyby": await load(BIXBY_MODES + "flyby.gd").run(self)
+		"bixby_inside": await load(BIXBY_MODES + "inside.gd").run(self)
+		"spin_reach": await test_spin_reach()
 		"static_dodge": await test_static_dodge()
 		"josh_layout": await test_josh_layout()
+		"josh_wild_cards": await load(JOSH_MODES + "wild_cards.gd").run(self)
+		"josh_summon": await load(JOSH_MODES + "summon.gd").run(self)
+		"josh_hands": await load(JOSH_MODES + "hands.gd").run(self)
+		"josh_guns": await load(JOSH_MODES + "guns.gd").run(self)
+		"josh_monte": await load(JOSH_MODES + "monte.gd").run(self)
 		"matt_pass_through": await test_matt_pass_through()
 		"matt_bounces": await test_matt_bounces()
 		"matt_trueshot": await test_matt_trueshot()
@@ -464,6 +495,24 @@ func _main() -> void:
 		"matt_glass_release": await test_matt_glass_release()
 		"matt_deafen": await test_matt_deafen()
 		"matt_glass_bots": await test_matt_glass_bots()
+		"matt_scream": await load(MATT_MODES + "scream.gd").run(self)
+		"matt_glass_rows": await load(MATT_MODES + "glass_rows.gd").run(self)
+		"matt_deafen_rate": await load(MATT_MODES + "deafen_rate.gd").run(self)
+		"matt_spots": await load(MATT_MODES + "spots.gd").run(self)
+		"matt_badge": await load(MATT_MODES + "badge.gd").run(self)
+		"matt_yell_chain": await load(MATT_MODES + "yell_chain.gd").run(self)
+		"matt_cover": await load(MATT_MODES + "cover.gd").run(self)
+		"matt_echo": await load(MATT_MODES + "echo.gd").run(self)
+		"matt_echo_gaps": await load(MATT_MODES + "echo_gaps.gd").run(self)
+		"matt_echo_disc": await load(MATT_MODES + "echo_disc.gd").run(self)
+		"matt_echo_parry": await load(MATT_MODES + "echo_parry.gd").run(self)
+		"matt_echo_boomburst": await load(MATT_MODES + "echo_boomburst.gd").run(self)
+		"matt_echo_feint": await load(MATT_MODES + "echo_feint.gd").run(self)
+		"matt_echo_stamina": await load(MATT_MODES + "echo_stamina.gd").run(self)
+		"matt_echo_lazy": await load(MATT_MODES + "echo_lazy.gd").run(self)
+		"matt_echo_rotation": await load(MATT_MODES + "echo_rotation.gd").run(self)
+		"matt_echo_bots": await load(MATT_MODES + "echo_bots.gd").run(self)
+		"matt_break_only": await load(MATT_MODES + "break_only.gd").run(self)
 		"burak_shots": await test_burak_shots()
 		"burak_cutlass": await test_burak_cutlass()
 		"burak_entrance": await test_burak_entrance()
@@ -472,20 +521,50 @@ func _main() -> void:
 		"burak_volley": await test_burak_volley()
 		"burak_ramp": await test_burak_ramp()
 		"burak_bots": await test_burak_bots()
+		"burak_hint": await load("res://art_source/defense_tests/burak/hint.gd").run(self)
+		"burak_laugh_auto": await load("res://art_source/defense_tests/burak/laugh_auto.gd").run(self)
 		"danny_entrance": await load(DANNY_MODES + "entrance.gd").run(self)
 		"danny_sleep": await load(DANNY_MODES + "sleep.gd").run(self)
 		"danny_spit": await load(DANNY_MODES + "spit.gd").run(self)
 		"danny_headbutt": await load(DANNY_MODES + "headbutt.gd").run(self)
 		"danny_slams": await load(DANNY_MODES + "slams.gd").run(self)
 		"danny_sumo": await load(DANNY_MODES + "sumo.gd").run(self)
+		"danny_bump": await load(DANNY_MODES + "bump.gd").run(self)
 		"greyson_takeover": await load(GREYSON_MODES + "takeover.gd").run(self)
+		"greyson_takeover_mark": await load(GREYSON_MODES + "takeover_mark.gd").run(self)
 		"greyson_plates": await load(GREYSON_MODES + "plates.gd").run(self)
 		"greyson_slams": await load(GREYSON_MODES + "slams.gd").run(self)
 		"greyson_poses": await load(GREYSON_MODES + "poses.gd").run(self)
 		"greyson_race": await load(GREYSON_MODES + "race.gd").run(self)
 		"greyson_bomb": await load(GREYSON_MODES + "bomb.gd").run(self)
 		"greyson_brawl": await load(GREYSON_MODES + "brawl.gd").run(self)
-		"bounds": await load(RING_MODES + "bounds.gd").run(self)
+		"greyson_orb": await load(GREYSON_MODES + "orb.gd").run(self)
+		"jordan_finale": await load(JORDAN_MODES + "finale.gd").run(self)
+		"jordan_god": await run_mode_file(JORDAN_MODES + "god.gd")
+		"jordan_maze": await run_mode_file(JORDAN_MODES + "maze.gd")
+		"jordan_kegs": await run_mode_file(JORDAN_MODES + "kegs.gd")
+		"jordan_portals": await run_mode_file(JORDAN_MODES + "portals.gd")
+		"jordan_circle": await run_mode_file(JORDAN_MODES + "circle.gd")
+		"jordan_kaiju": await run_mode_file(JORDAN_MODES + "kaiju.gd")
+		"jordan_final_beam": await run_mode_file(JORDAN_MODES + "final_beam.gd")
+		"jordan_wheel": await run_mode_file(JORDAN_MODES + "wheel.gd")
+		"bounds":await load(RING_MODES + "bounds.gd").run(self)
+		"crowd_murmur": await run_mode_file(RING_MODES + "murmur.gd")
+		"liam_takeover": await run_mode_file(LIAM_MODES + "takeover.gd")
+		"liam_waves": await run_mode_file(LIAM_MODES + "waves.gd")
+		"liam_pillar": await run_mode_file(LIAM_MODES + "pillar.gd")
+		"liam_window": await run_mode_file(LIAM_MODES + "window.gd")
+		"liam_ice": await run_mode_file(LIAM_MODES + "ice.gd")
+		"liam_tremors": await run_mode_file(LIAM_MODES + "tremors.gd")
+		"liam_maze_bot": await run_mode_file(LIAM_MODES + "maze_bot.gd")
+		"liam_zip": await run_mode_file(LIAM_MODES + "zip.gd")
+		"liam_firestorm": await run_mode_file(LIAM_MODES + "firestorm.gd")
+		"liam_firestorm_bot": await run_mode_file(LIAM_MODES + "firestorm_bot.gd")
+		"liam_lunge": await run_mode_file(LIAM_MODES + "lunge.gd")
+		"liam_loop": await run_mode_file(LIAM_MODES + "loop.gd")
+		"liam_tsunami_gate": await run_mode_file(LIAM_MODES + "gate.gd")
+		"liam_firestorm_gate": await run_mode_file(LIAM_MODES + "firestorm_gate.gd")
+		"champion_ending": await run_mode_file(ENDING_MODES + "champion.gd")
 		_: log_p("unknown mode " + mode)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(DEFENSE_BINDINGS_PATH))
 	log_p("RESULT mode=%s fails=%d" % [mode, fails])
@@ -507,7 +586,8 @@ func test_stamina() -> void:
 	press(KEY_RIGHT)
 	tap(KEY_W)
 	await wait(1)
-	check(is_equal_approx(defense.stamina, 85.0), "a dash costs 15 (%.2f)" % defense.stamina)
+	var after_dash: float = defense.max_stamina - defense.dash_stamina_cost
+	check(is_equal_approx(defense.stamina, after_dash), "a dash costs a third of the bar, %.2f (%.2f)" % [defense.dash_stamina_cost, defense.stamina])
 	await wait(4)
 	release(KEY_RIGHT)
 	log_p("dash moved %.1f px" % (player.global_position.x - x0))
@@ -523,15 +603,17 @@ func test_stamina() -> void:
 			first_regen = since
 		stamina_at[snappedf(since, 0.0001)] = defense.stamina
 	log_p("regen first seen %.4f s after the spend" % first_regen)
-	check(first_regen >= 0.6 - 0.001 and first_regen <= 0.6 + 1.0 / 60.0 + 0.001, "regen starts 0.6 s after the spend (%.4f)" % first_regen)
+	var delay: float = defense.stamina_regen_delay
+	check(first_regen >= delay - 0.001 and first_regen <= delay + 1.0 / 60.0 + 0.001, "regen starts %.2f s after the spend (%.4f)" % [delay, first_regen])
 	var mid := 0.0
 	for since in stamina_at:
-		if since >= 0.9 and mid == 0.0:
+		if since >= delay + 0.3 and mid == 0.0:
 			mid = since
-	var expected := 85.0 + 35.0 * (mid - 0.6 + 1.0 / 60.0)
+	var rate: float = defense.max_stamina / defense.stamina_refill_time
+	var expected := after_dash + rate * (mid - delay + 1.0 / 60.0)
 	log_p("stamina %.3f at %.4f s (expected about %.3f)" % [stamina_at[mid], mid, expected])
-	check(absf(stamina_at[mid] - expected) <= 35.0 / 60.0 + 0.01, "refills at 35/s")
-	await wait_until(func(): return defense.stamina >= 100.0, 120)
+	check(absf(stamina_at[mid] - expected) <= rate / 60.0 + 0.01, "refills at %.2f/s" % rate)
+	await wait_until(func(): return defense.stamina >= 100.0, 240)
 	check(bar.bar.value == 100.0, "bar back to full")
 
 	log_p("-- refused dash")
@@ -701,15 +783,9 @@ func test_block_eric() -> void:
 	# stamina the way it always was - it just has to say so now.
 	defense.clear_guard_break()
 	defense._set_stamina(100.0)
+	# It only hurts where it lands, so they stay on the spot it is aimed at.
 	await settle_player(Vector2(972, 800))
-	var throw_state: Node = sm.states["SwordThrow"]
-	# The flying sword is drawn, and hurts, 177 px above its landing spot: step into its path.
-	var step_in := func():
-		if is_instance_valid(throw_state.sword) and throw_state.sword.flying and not throw_state.sword.returning and player.global_position.y == 800.0:
-			player.global_position = Vector2(972, 650)
-	process_frame.connect(step_in)
 	await attack("SwordThrow")
-	process_frame.disconnect(step_in)
 	log_p("events %s" % [events.map(func(e): return "%s %s %.3f st %.1f" % [e.kind, e.id, e.t, e.stamina])])
 	var sword_blocks := events_of("BLOCKED", &"eric_thrown_sword")
 	check(sword_blocks.size() >= 1 and is_equal_approx(sword_blocks[0].stamina, 65.0), "the sword block costs 35")
@@ -768,7 +844,7 @@ func test_behind() -> void:
 	await wait(70)
 	clear_iframes()
 	events.clear()
-	log_p("-- returning sword from behind")
+	log_p("-- returning sword, through them from behind")
 	var sword: Node2D = load("res://Scenes/Bosses/EricThrownSwordScene.tscn").instantiate()
 	# The sword reports its own hits, so it needs to know who it is flying at and who threw it.
 	sword.player = player
@@ -782,23 +858,30 @@ func test_behind() -> void:
 	var catch_centre: Vector2 = boss.to_global(layout.frame_local(layout.THROW_CATCH_CENTRE, boss.sprite.flip_h))
 	var ground_y: float = boss.frame_point(Vector2(0, layout.FEET_ROW)).y
 	sword.recall(catch_centre, ground_y, 0.0, true)
+	var crossed := [false]
+	var watch_back := func():
+		if is_instance_valid(sword) and sword.flying and sword._reaches(player.hurtBox):
+			crossed[0] = true
+	physics_frame.connect(watch_back)
 	await wait(40)
-	log_p("events %s" % [events.map(func(e): return "%s %s" % [e.kind, e.id])])
-	check(events_of("HIT", &"eric_thrown_sword").size() == 1 and events_of("BLOCKED").is_empty(), "returning sword from behind hits")
+	physics_frame.disconnect(watch_back)
+	log_p("its reach crossed them %s; events %s" % [crossed[0], events.map(func(e): return "%s %s" % [e.kind, e.id])])
+	check(crossed[0] and events.is_empty(), "a returning sword goes right through them and hurts nothing: it has no mark to say where it flies")
 	await wait(70)
 	clear_iframes()
 	events.clear()
-	log_p("-- thrown sword from the front")
+	log_p("-- thrown sword, landing on them")
 	var sword2: Node2D = load("res://Scenes/Bosses/EricThrownSwordScene.tscn").instantiate()
 	sword2.player = player
 	sword2.thrower = boss
 	var hand: Vector2 = boss.frame_point(layout.THROW_RELEASE_PIXEL)
 	sm.add_hazard(sword2, Vector2(hand.x, ground_y))
-	# Aimed at the player's own feet: the blade dives into its landing spot, so it comes down
-	# through whoever is standing there rather than passing over their head.
+	# Aimed at where they stand, since it only hurts where it lands: it comes down point first, so the
+	# guard takes it from any side.
 	sword2.throw(hand, ground_y, player.global_position)
-	await wait(40)
-	check(events_of("BLOCKED", &"eric_thrown_sword").size() == 1 and events_of("HIT").is_empty(), "sword from the front blocked")
+	await wait_until(func(): return not sword2.flying, 120)
+	await wait(2)
+	check(events_of("BLOCKED", &"eric_thrown_sword").size() == 1 and events_of("HIT").is_empty(), "the sword landing on them is blocked")
 	release(KEY_SHIFT)
 
 
@@ -1120,6 +1203,28 @@ func track_parries() -> void:
 	defense.parried.connect(func(hit, point, staggered, streak): parries.append({"t": defense.clock, "id": hit.attack_id, "staggered": staggered, "stamina": defense.stamina, "streak": streak}))
 
 
+# Every drop in the stamina bar from here on, to the thousandth: what a run paid, whatever the refill or a
+# test's own top-ups did around it.
+var spends: Array = []
+
+
+func track_spends() -> void:
+	spends.clear()
+	var last := [defense.stamina]
+	defense.stamina_changed.connect(func(value: float, _max_value: float):
+		if value < last[0] - 0.0001:
+			spends.append(snappedf(last[0] - value, 0.001))
+		last[0] = value)
+
+
+# `count` whiffs, as track_spends() records them.
+func whiffs(count: int) -> Array:
+	var want := []
+	want.resize(count)
+	want.fill(snappedf(defense.parry_whiff_cost, 0.001))
+	return want
+
+
 func test_parry_projectiles() -> void:
 	await load_eric()
 	health_ok()
@@ -1189,6 +1294,10 @@ func test_parry_rules() -> void:
 	track()
 	track_parries()
 	await settle_player(Vector2(972, 800))
+	# Each case from a full bar, so no press is refused for want of stamina: this is which presses parry,
+	# and what the rest cost is read off track_spends().
+	var full := func(): defense._set_stamina(defense.max_stamina)
+	track_spends()
 	var results := []
 	log_p("-- fresh press parries")
 	press(KEY_SHIFT)
@@ -1203,6 +1312,7 @@ func test_parry_rules() -> void:
 	release(KEY_SHIFT)
 	await wait(40)
 	log_p("-- a press whose window has passed doesn't parry")
+	full.call()
 	press(KEY_SHIFT)
 	# The window is measured in game time, which a freeze slows, so wait for the window itself.
 	await past_window()
@@ -1210,6 +1320,7 @@ func test_parry_rules() -> void:
 	release(KEY_SHIFT)
 	await wait(40)
 	log_p("-- mashing: presses 0.2 s apart")
+	full.call()
 	for i in 3:
 		press(KEY_SHIFT)
 		await wait(6)
@@ -1223,6 +1334,7 @@ func test_parry_rules() -> void:
 	release(KEY_SHIFT)
 	await wait(40)
 	log_p("-- guard held from earlier")
+	full.call()
 	press(KEY_SHIFT)
 	await wait(60)
 	clear_iframes()
@@ -1230,6 +1342,7 @@ func test_parry_rules() -> void:
 	release(KEY_SHIFT)
 	await wait(40)
 	log_p("-- after mashing stops for 0.5 s, a press parries again")
+	full.call()
 	press(KEY_SHIFT)
 	await wait(3)
 	clear_iframes()
@@ -1239,12 +1352,16 @@ func test_parry_rules() -> void:
 	log_p("results %s (1 HIT, 2 BLOCKED, 3 PARRIED), blocking %s" % [results, "on" if blocking() else "off"])
 	check(results == [3, 3, late, late, late, 3], "parry, re-armed parry, then the late press, the mash and the held guard all %s, then a parry" % ("blocked" if blocking() else "hit"))
 	# (step 4b tests below)
+	await wait(roundi(defense.parry_window * 60.0) + 10)
+	log_p("spends %s" % [spends])
 	if blocking():
 		check(player.playerHealth == 100, "no damage")
-		check(is_equal_approx(defense.stamina, 100.0 - 60.0) or defense.stamina > 40.0, "only the three blocks cost stamina (%.1f)" % defense.stamina)
+		var block: float = snappedf(catalogue_block_cost(&"eric_quake_wave"), 0.001)
+		check(spends == [block, block, block], "only the three blocks cost stamina (%s)" % [spends])
 	else:
 		check(player.playerHealth == 97, "the three that weren't parried each cost a half-heart (%d)" % player.playerHealth)
-		check(defense.stamina == defense.max_stamina, "and nothing cost stamina (%.1f)" % defense.stamina)
+		# The late press, the four mashed and the held one parried nothing; the three parries were free.
+		check(spends == whiffs(6), "and each of the six presses that parried nothing cost a missed parry, the parries nothing (%s)" % [spends])
 
 
 # The game as it ships, with blocking off (PlayerDefense.BLOCKING_ENABLED): the guard is only the parry's
@@ -1279,7 +1396,7 @@ func test_no_block() -> void:
 	release(KEY_SHIFT)
 	await wait(40)
 
-	log_p("-- a held guard takes the hits, pays nothing and never breaks")
+	log_p("-- a held guard takes the hits, pays only its press's missed parry and never breaks")
 	await settle_player(Vector2(972, 800))
 	health_ok()
 	defense._set_stamina(defense.max_stamina)
@@ -1293,15 +1410,18 @@ func test_no_block() -> void:
 	release(KEY_SHIFT)
 	log_p("a light hit then five heavy ones on a held guard: %s, stamina %.1f" % [landed, defense.stamina])
 	check(landed == [1, 1, 1, 1, 1, 1] and events_of("BLOCKED").is_empty(), "a light and five heavy hits all land (%s)" % [landed])
-	check(defense.stamina == defense.max_stamina and not defense.is_guard_broken, "none of it cost stamina, and the guard never broke (%.1f)" % defense.stamina)
+	check(is_equal_approx(defense.stamina, defense.max_stamina - defense.parry_whiff_cost) and not defense.is_guard_broken, "the press cost its missed parry and nothing more, and the guard never broke (%.1f)" % defense.stamina)
 	health_ok()
 	await wait(40)
 
 	log_p("-- holding it never pauses the refill")
+	defense._set_stamina(defense.max_stamina)
+	press(KEY_SHIFT)
+	# Its missed parry paid first: from here on only the held key is under test.
+	await past_window()
 	defense._spend(60.0)
 	var low: float = defense.stamina
-	press(KEY_SHIFT)
-	await wait(roundi((defense.stamina_regen_delay + 0.5) * 60.0))
+	await wait(roundi((defense.stamina_regen_delay + 1.0) * 60.0))
 	check(not defense.is_regen_paused() and defense.stamina > low + 10.0, "the bar refills with the key held (%.1f -> %.1f)" % [low, defense.stamina])
 	release(KEY_SHIFT)
 	await wait(40)
@@ -1415,7 +1535,7 @@ func test_stagger() -> void:
 	release(KEY_SHIFT)
 	check(await wait_until(func(): return boss.boss_health < before - 1, 400), "the supercharged uppercut connects")
 	log_p("supercharged uppercut dealt %d, hype %.0f" % [before - 1 - boss.boss_health, hype.hype])
-	check(before - 1 - boss.boss_health == roundi(full * finisher.supercharged_damage_ratio), "the supercharged damage")
+	check(before - 1 - boss.boss_health == roundi(full * finisher.finisher_damage_ratio * finisher.SUPERCHARGE_MULTIPLIER), "the supercharged damage")
 	check(not hype.is_full(), "it spent the meter (%.0f)" % hype.hype)
 	check(await wait_until(func(): return finisher.phase == FINISHER_OFF, 300), "and it ends the same way")
 	sm.downed_state_timer.stop()
@@ -1706,6 +1826,9 @@ func test_dash_recovery() -> void:
 	track_parries()
 	# Eric's fight y-sorts, which rests the player's frame on an offset of its own.
 	var sprite_rest: Vector2 = player.sprite.offset
+	# Each case from a full bar: a dash is a third of it, and this is about what follows a dash, not whether
+	# the bar has one in it (stamina_costs).
+	var full := func(): defense._set_stamina(defense.max_stamina)
 	log_p("-- locked out while recovering")
 	await settle_player(Vector2(500, 700))
 	var started: float = defense.clock
@@ -1739,6 +1862,7 @@ func test_dash_recovery() -> void:
 	log_p("-- a parry during recovery cancels it")
 	await settle_player(Vector2(972, 760))
 	await wait(20)
+	full.call()
 	await dash(KEY_LEFT)
 	release(KEY_LEFT)
 	check(defense.is_dash_recovering(), "recovering")
@@ -1758,6 +1882,7 @@ func test_dash_recovery() -> void:
 	defense.dash_recovery_time = 0.6
 	await settle_player(Vector2(972, 760))
 	await wait(20)
+	full.call()
 	await dash(KEY_LEFT)
 	release(KEY_LEFT)
 	press(KEY_SHIFT)
@@ -1775,12 +1900,14 @@ func test_dash_recovery() -> void:
 	log_p("-- the finisher and a grab clear it")
 	await settle_player(Vector2(972, 700))
 	await wait(30)
+	full.call()
 	await dash(0)
 	check(defense.is_dash_recovering(), "recovering")
 	player.begin_finisher()
 	check(not defense.is_dash_recovering(), "begin_finisher clears it")
 	player.is_finishing = false
 	await wait(30)
+	full.call()
 	await dash(0)
 	check(defense.is_dash_recovering(), "recovering")
 	player.grab()
@@ -2172,8 +2299,10 @@ func catalogue_block_cost(id: StringName) -> float:
 	return defense.heavy_block_cost if entry.weight == CATALOG.Weight.HEAVY else defense.light_block_cost
 # Hits that land inside the i-frames on purpose, because the player is held and cannot dodge, or, for
 # Captain Burak's keg blasts, because the bill is one hit for every keg left, one after another, and for
-# his pistol pair, so a hit on the first shot never swallows the second's parry.
-const IGNORES_IFRAMES := [&"eric_bear_hug_squeeze", &"computah_slam", &"burak_barrel_blast", &"burak_shot"]
+# his pistol pair, so a hit on the first shot never swallows the second's parry. Danny's rope slam lands just
+# after the belly bump's own hit, on a player he has sealed and is carrying into the ropes.
+const IGNORES_IFRAMES := [&"eric_bear_hug_squeeze", &"computah_slam", &"burak_barrel_blast", &"burak_shot",
+	&"danny_rope_slam"]
 
 const SMOKE_SPOTS := {
 	"eric": Vector2(972, 700),
@@ -2199,7 +2328,7 @@ func test_smoke() -> void:
 	var settled := await clear_intro(fight)
 	if settled != "":
 		log_p("%s's intro ended in %s" % [fight, settled])
-	enrage_liam()
+	rotate_liam_to_inferno()
 	player.playerHealth = 1000
 	track()
 	track_parries()
@@ -2260,7 +2389,11 @@ func test_smoke() -> void:
 			hugs.pop_back()
 		log_p("bear hugs that finished: %s%s" % [hugs, ", and one still holding at the cut-off" if cut_short else ""])
 		check(not hugs.is_empty() or cut_short, "he got a bear hug in")
-		check(hugs.all(func(count): return count == 3), "every bear hug that finished squeezed three times (%s)" % [hugs])
+		# The fight's first hug squeezes hug_first_squeezes times, every later one hug_squeezes. The first is
+		# always red, so it is always a grab here.
+		var pacing = load(ERIC_PACING)
+		var wanted := range(hugs.size()).map(func(k): return pacing.value("hug_first_squeezes" if k == 0 else "hug_squeezes"))
+		check(hugs == wanted, "every bear hug that finished squeezed %d times, the fight's first %d (%s)" % [pacing.value("hug_squeezes"), pacing.value("hug_first_squeezes"), hugs])
 	if fight == "carter":
 		check(ids.has(&"wrestler_punish"), "punching a wrestler still hurts")
 	if fight == "liam" and phase == 2:
@@ -2269,16 +2402,17 @@ func test_smoke() -> void:
 	elif fight == "liam":
 		check(ids.has(&"bixby_quake_ring") and ids.has(&"bixby_sonic_beam") and not ids.has(&"bixby_quake_burst"),
 			"his combined attack lands its quake rings and its beams, and plants no crack (%s)" % [ids.keys()])
+		check(ids.get(&"bixby_flyby_breath", 0) >= 2, "his flyby lands on a still player, once a pass")
 
 
 # What each attack should cost the guard, and what should never be blockable at all.
-const UNBLOCKABLE := [&"computah_beam", &"computah_chase", &"computah_slam", &"computah_overload_blast", &"wrestler_punish", &"eric_quake_ring", &"eric_bear_hug_squeeze", &"mason_poo_contact", &"bixby_inferno", &"bixby_ember", &"bixby_quake_ring", &"bixby_sonic_beam", &"matt_yell", &"matt_glass", &"burak_barrel_blast", &"burak_cutlass", &"danny_quake_ring", &"danny_headbutt", &"greyson_plate", &"greyson_eruption", &"greyson_brawl_hook_l", &"greyson_brawl_hook_r", &"greyson_brawl_straight", &"greyson_brawl_straight_unguarded"]
+const UNBLOCKABLE := [&"computah_beam", &"computah_chase", &"computah_slam", &"computah_overload_blast", &"wrestler_punish", &"eric_quake_ring", &"eric_bear_hug_squeeze", &"mason_poo_contact", &"bixby_inferno", &"bixby_ember", &"bixby_quake_ring", &"bixby_sonic_beam", &"bixby_flyby_breath", &"bixby_flyby_fire",&"matt_yell", &"matt_glass", &"burak_barrel_blast", &"burak_cutlass", &"danny_quake_ring", &"danny_headbutt", &"greyson_plate", &"greyson_eruption", &"greyson_brawl_hook_l", &"greyson_brawl_hook_r", &"greyson_brawl_straight", &"greyson_brawl_straight_unguarded", &"josh_hand_slam", &"josh_gun_beam", &"josh_monte_strike", &"josh_monte_punish"]
 
 
 func test_blocks() -> void:
 	await load_fight(fight, STATE_INTROS.has(fight))
 	await clear_intro(fight)
-	enrage_liam()
+	rotate_liam_to_inferno()
 	player.playerHealth = 1000
 	track()
 	track_parries()
@@ -2291,8 +2425,13 @@ func test_blocks() -> void:
 	var staged := false
 	var guarded_frames := 0
 	var frames_run := 0
+	# Danny's landings leave puddles that root feet still on them as they arm, and a root seals the guard: his
+	# blocker steps off each one, as a player must (danny/blocks.gd).
+	var stepper = load(DANNY_MODES + "blocks.gd").new() if fight == "danny" else null
 	while defense.clock - start < 45.0 and not player.fight_over:
 		frames_run += 1
+		if stepper:
+			spot = stepper.next_spot(self, spot)
 		player.global_position = spot
 		if defense.is_guarding():
 			guarded_frames += 1
@@ -2312,6 +2451,9 @@ func test_blocks() -> void:
 	for e in events_of("HIT"):
 		hit_ids[e.id] = hit_ids.get(e.id, 0) + 1
 	log_p("%s blocked %s, hit %s, guard up for %d of %d frames%s" % [fight, costs, hit_ids, guarded_frames, frames_run, " (the fight ended early)" if player.fight_over else ""])
+	if stepper:
+		log_p("stepped off %d puddles as they armed" % stepper.steps)
+		stepper.clear_floor(self)
 	check(guarded_frames > frames_run * 0.9, "the guard stayed up through the fight (%d of %d frames)" % [guarded_frames, frames_run])
 	for id in costs:
 		var want: float = catalogue_block_cost(id)
@@ -2332,7 +2474,7 @@ func test_blocks() -> void:
 	await past_window()
 	clear_iframes()
 	defense.stamina = defense.max_stamina
-	var front := front_hit(&"josh_card_throw", dummy_source())
+	var front := front_hit(&"mason_poo_blast", dummy_source())
 	clear_iframes()
 	defense.stamina = defense.max_stamina
 	var side := side_hit(&"wrestler_charge", dummy_source())
@@ -2348,15 +2490,6 @@ func test_blocks() -> void:
 	check(side == 1, "a charge from the side hits")
 	check(omni == 2, "a blast on top of the player is blocked from any facing")
 	check(above == 2, "a sky attack is blocked whatever the facing")
-
-	if fight == "liam":
-		var breaths := blocks.filter(func(e): return e.id == &"bixby_fire_breath")
-		var gaps := []
-		for i in range(1, breaths.size()):
-			gaps.append(snappedf(breaths[i].t - breaths[i - 1].t, 0.01))
-		log_p("fire breath block gaps: %s" % [gaps])
-		for gap in gaps:
-			check(gap >= 1.0 - 0.02, "the fire stream costs stamina once a second (%.2f)" % gap)
 
 
 # ------------------------------------------------------------------ uppercut knockback and recovery
@@ -2442,6 +2575,9 @@ func test_knockback_boss() -> void:
 	var finisher: Node = player.get_node("Finisher")
 	boss = current_scene.get_node(PUNISH_WINDOWS[key][0])
 	var bsm: Node = boss.state_machine
+	# Matt's finisher is his Break's alone (MattScript.can_be_dazed); this knob gives his window its old daze.
+	if key == "matt":
+		boss.daze_in_recover = true
 	hype._set_hype(100.0)
 	bsm.on_child_transition(bsm.current_state, PUNISH_WINDOWS[key][1])
 	await wait(5)
@@ -2800,17 +2936,26 @@ const WINDUP_READS := {
 	# release; and from the station nearest the player the wave has almost no flight at all.
 	&"matt_trueshot": 0.350,
 	# His yell in the punish window: the ring blows out from his mouth, so its read is the yellow tell
-	# before it, MattStateMachine.yell_tell.
-	&"matt_yell": 0.400,
+	# before it, MattStateMachine.yell_tell (0.40 until the 2026-10-04 tuning: matt_yell_chain).
+	&"matt_yell": 0.580,
+	# The Echo Roars' rings blow out from his mouth: a roar's read is its badge, a beat (echo_red_lead_beats at 152
+	# bpm), and the BOOMBURST's a beat and a half. Documentation while approach pins him to the Ezreal set; their own
+	# modes hold them (matt_echo, matt_echo_gaps).
+	&"matt_echo": 0.395,
+	&"matt_boomburst": 0.592,
 	# Captain Burak's pistol pair: each ball is slowed to take at least 0.40 s to reach the point it was
 	# aimed at (his plan's number), and that floor is its read, held to the window as a wind-up is.
 	&"burak_shot": 0.400,
 	# His cutlass strikes the step its wind-up ends, so its read is that wind-up: 0.55 s held under the
 	# red badge.
 	&"burak_cutlass": 0.550,
-	# Danny's Sumo Smash lands where he latched, and the red badge over the marked spot is up from the latch:
-	# DannyBossSlams' latch-to-impact, 0.12 s of latch and the 0.28 s drop.
-	&"danny_butt_slam": 0.400,
+	# Danny's Sumo Smash lands where he latched, and the badge over the marked spot is up from the latch:
+	# DannyBossSlams' latch-to-impact. The big fifth, under the red badge, 0.20 s of latch and the 0.35 s drop; each
+	# hop, under the yellow ring and its splash zone, 0.12 s of latch and the 0.28 s drop.
+	&"danny_butt_slam": 0.550,
+	&"danny_hop_slam": 0.400,
+	# His belly bump's read is its wind-up under the red badge, before the run (DannyBossBellyBump.windup_time).
+	&"danny_belly_bump": 0.800,
 	# His headbutt's read is its wind-up under the red badge, from the crouch to the launch; the 0.22 s flight
 	# after it is shorter than the parry window by design (his plan's section 6).
 	&"danny_headbutt": 0.550,
@@ -2818,6 +2963,25 @@ const WINDUP_READS := {
 	# reach the player's feet as it left his hand (GreysonThrow.min_flight, his plan's number), and that floor is
 	# its read, held to the window as a wind-up is.
 	&"greyson_plate": 0.400,
+	# Josh's Hand Slam lands where the hand locked, and the red badge over the spot is up from the lock: its
+	# lock-to-impact, 0.13 s of lock and the 0.23 s drop (JoshCardsStateMachine.hand_lock_time + hand_drop_time).
+	&"josh_hand_slam": 0.360,
+	# Josh's Gun Hands: each beam's band is drawn, with the yellow badge on it over the player, for the whole charge
+	# before it fires (JoshCardsStateMachine.gun_charge_time), and the beam comes off hands parked at the sides of the
+	# ring: that charge is its read.
+	&"josh_gun_beam": 1.00,
+	# Josh's Portal Monte: the real him's red badge is up over its small gate from its mark to its contact, show and
+	# dash (JoshCardsStateMachine.monte_show + monte_dash), and the figure lunging out of it is that read's end.
+	&"josh_monte_strike": 0.54,
+	# Mason's Nugget Fastball: the strong red badge goes up as he comes set and the ball reaches the player a fixed beat
+	# later, aimed where they're heading (MasonPitch: release_after + fastball_flight, release_after + changeup_flight).
+	# The ball reports its own hits, so its read is that badge.
+	&"mason_fastball": 0.42,
+	&"mason_changeup": 0.64,
+	# Beast Bixby's Flyby: its hits come off a Node2D, the pass's fire, so what is read is the floor projection, up for
+	# BixbyBeastStateMachine.flyby_telegraph_time before the front sweeps.
+	&"bixby_flyby_breath": 1.000,
+	&"bixby_flyby_fire": 1.000,
 }
 
 
@@ -2830,7 +2994,7 @@ func test_approach() -> void:
 		pin_eric(ver)
 	await load_fight(fight, STATE_INTROS.has(fight))
 	await clear_intro(fight)
-	enrage_liam()
+	rotate_liam_to_inferno()
 	player.playerHealth = 100000
 	var born := {}
 	var approaches := {}
@@ -3261,6 +3425,9 @@ func test_parry_rearm() -> void:
 	var presses := []
 	defense.block_pressed.connect(func(credited: bool): presses.append(credited))
 	await settle_player(Vector2(972, 800))
+	# Each case from a full bar: this is which presses count, and a bar run dry would refuse them
+	# (stamina_costs is what they cost).
+	var full := func(): defense._set_stamina(defense.max_stamina)
 
 	log_p("-- every press is reported, credited or not")
 	press(KEY_SHIFT)
@@ -3274,6 +3441,7 @@ func test_parry_rearm() -> void:
 	check(presses == [true, false], "a fresh press counts, one inside the mash lockout does not (%s)" % [presses])
 
 	log_p("-- rearm_parry excuses the next press only")
+	full.call()
 	presses.clear()
 	defense.rearm_parry()
 	press(KEY_SHIFT)
@@ -3288,6 +3456,7 @@ func test_parry_rearm() -> void:
 
 	log_p("-- what it means for a clone: a whiff at one, then the next one parried")
 	await wait(40)
+	full.call()
 	# A whiffed press, as at a clone that never swung.
 	press(KEY_SHIFT)
 	await wait(3)
@@ -3302,6 +3471,7 @@ func test_parry_rearm() -> void:
 	await wait(3)
 	release(KEY_SHIFT)
 	await wait(12)
+	full.call()
 	# The fight opens the next clone: the carryover is wiped.
 	defense.rearm_parry()
 	var rearmed: int = await parry_once()
@@ -3310,6 +3480,7 @@ func test_parry_rearm() -> void:
 
 	log_p("-- but an early press inside the clone's own window still loses it")
 	await wait(40)
+	full.call()
 	defense.rearm_parry()
 	# The player reads it too early: the press is credited but its window has passed by the hit.
 	press(KEY_SHIFT)
@@ -3322,6 +3493,7 @@ func test_parry_rearm() -> void:
 
 	log_p("-- end_parry_streak is callable from a fight")
 	await wait(40)
+	full.call()
 	defense.rearm_parry()
 	check(await parry_once() == 3, "a parry to build a streak")
 	check(defense.parry_streak > 0, "a streak is running (%d)" % defense.parry_streak)
@@ -3637,21 +3809,33 @@ func test_status() -> void:
 	await wait(90)
 	check(defense.stamina > settled, "the bar refills again once it is over (%.0f -> %.0f)" % [settled, defense.stamina])
 
-	log_p("-- the drain breaks a guard that is up when the bar runs out")
-	# Without blocking the guard is only up for the parry window, so the bar is all but out already,
-	# and spent just now so the refill can't top it up before the drain starts.
 	if blocking():
+		log_p("-- the drain breaks a guard that is up when the bar runs out")
 		defense._set_stamina(40.0)
+		press(KEY_SHIFT)
+		await wait(6)
+		check(defense.is_guarding(), "guarding")
+		player.apply_status(&"stamina_drain", 5.0)
+		check(await wait_until(func(): return defense.is_guard_broken, 300), "the drain broke the guard")
+		release(KEY_SHIFT)
+		log_p("guard broken with %.0f stamina at %.2f s" % [defense.stamina, defense.clock])
+		await wait_until(func(): return not defense.is_guard_broken, 300)
 	else:
-		defense._spend(defense.stamina - 1.0)
-	press(KEY_SHIFT)
-	await wait(6)
-	check(defense.is_guarding(), "guarding")
-	player.apply_status(&"stamina_drain", 5.0)
-	check(await wait_until(func(): return defense.is_guard_broken, 300), "the drain broke the guard")
-	release(KEY_SHIFT)
-	log_p("guard broken with %.0f stamina at %.2f s" % [defense.stamina, defense.clock])
-	await wait_until(func(): return not defense.is_guard_broken, 300)
+		# Without blocking the guard is only the parry's stance, up for its window, and a press needs its missed
+		# parry in the bar, more than the drain takes in one window. So the drain never breaks it, and nor does
+		# the whiff that empties the bar under the drain as the window closes.
+		log_p("-- the drain never breaks the parry's stance")
+		defense._spend(defense.stamina - (defense.parry_whiff_cost + 1.0))
+		press(KEY_SHIFT)
+		await wait(1)
+		player.apply_status(&"stamina_drain", 5.0)
+		await wait(1)
+		var stance: bool = defense.is_guarding()
+		await past_window()
+		await wait(30)
+		release(KEY_SHIFT)
+		log_p("the stance up %s; now %.1f in the bar, the guard broken %s" % [stance, defense.stamina, defense.is_guard_broken])
+		check(stance and defense.stamina <= 0.001 and not defense.is_guard_broken, "the stance comes up, its whiff empties the bar under the drain, and nothing breaks")
 	player.clear_statuses()
 	await wait(30)
 	clear_iframes()
@@ -3759,6 +3943,34 @@ func parry_once(id := &"eric_quake_wave") -> int:
 	release(KEY_SHIFT)
 	await wait(8)
 	return result
+
+
+# One perfect dodge of a dash_through attack, as gauge_fights/greyson.gd's: a fresh dash, and the hit
+# inside its immunity. Whether it paid out.
+func perfect_dodge_once(id: StringName) -> bool:
+	await wait_until(func(): return not defense.is_dash_recovering() and not defense.is_dash_cooling_down() \
+		and defense.clock - defense.last_perfect_dodge_time >= defense.perfect_dodge_cooldown + 0.05, 240)
+	# Past the gap a dash's immunity needs from the last one.
+	await wait(40)
+	var got := [false]
+	var on_dodge := func(hit: RefCounted): got[0] = got[0] or hit.attack_id == id
+	defense.perfect_dodged.connect(on_dodge)
+	clear_iframes()
+	tap(KEY_W)
+	await wait_until(func(): return player.is_dodging, 20)
+	await wait(2)
+	omni_hit(id, dummy_source())
+	defense.perfect_dodged.disconnect(on_dodge)
+	await wait_until(func(): return not player.is_dodging, 30)
+	await wait(4)
+	return got[0]
+
+
+# A read of a gauge spec's light attack: parried, or dashed through for one nothing guards (light_read).
+func read_light(spec: Dictionary) -> bool:
+	if spec.get("light_read", "parry") == "dodge":
+		return await perfect_dodge_once(spec.light)
+	return await parry_once(spec.light) == 3
 
 
 # Breaks the player's guard from a nearly empty bar: with blocking, by blocking `id` past the parry
@@ -4344,12 +4556,15 @@ func dash_phases(moves: Array) -> Array:
 
 # Presses dash on every frame until a second dash starts: the frames between the two dashes' starts.
 # A dash starts when the player goes from not dashing to dashing; today a press during a dash is taken
-# too, and re-aims it, but it doesn't start another.
-func mash_gap() -> int:
+# too, and re-aims it, but it doesn't start another. `keep_full` holds the bar full for the spacing alone:
+# today's dash pays again for every press during one, which a third of the bar a dash can't cover.
+func mash_gap(keep_full := false) -> int:
 	tap(KEY_W)
 	await wait_until(func(): return player.is_dodging, 20)
 	var was_dodging := true
 	for i in 90:
+		if keep_full:
+			defense._set_stamina(defense.max_stamina)
 		tap(KEY_W)
 		await physics_frame
 		if player.is_dodging and not was_dodging:
@@ -4716,6 +4931,9 @@ func test_dash_recovery_v2() -> void:
 
 # Mashes dash for `seconds` with right held, pressing every `every` frames: how many frames dash
 # immunity was up, how many presses were taken, when each dash started, and how far it all went.
+# On a bar kept full: what is compared is the two dashes' own spacing and immunity, and at a third of the
+# bar a dash, today's would run dry inside its first dash (it pays again for every press during one), so
+# the bar would be all a run measured (stamina_costs has what the bar allows).
 func mash_run(seconds: float, every: int) -> Dictionary:
 	var immunity = load("res://Scripts/DashImmunity.gd")
 	var catalog = load("res://Scripts/AttackCatalog.gd")
@@ -4736,6 +4954,7 @@ func mash_run(seconds: float, every: int) -> Dictionary:
 	var x: float = player.global_position.x
 	press(KEY_RIGHT)
 	for i in frames:
+		defense._set_stamina(defense.max_stamina)
 		if i % every == 0:
 			tap(KEY_W)
 		await physics_frame
@@ -4781,9 +5000,13 @@ func test_dash_spam_v2() -> void:
 		log_p("%-28s %2d dashes from %2d presses taken, gaps %s; dash immunity up %3d of %d frames (%.1f%%); covered %.0f px (%.0f%% of walking)" % [name, run.dashes, run.taken, str(run.gaps.slice(0, 8)), run.immune, run.frames, 100.0 * run.immune / run.frames, run.covered, 100.0 * run.covered / walked])
 	var today: Dictionary = runs["today, mashed"]
 	var v2: Dictionary = runs["v2, mashed"]
-	check(today.gaps.size() > 0 and LEGACY_MASH_PERIOD_FRAMES.has(today.gaps[0]) and v2.gaps.size() > 0 and v2.gaps[0] == MASH_PERIOD_FRAMES, "mashed, v2 dashes as often as today: every %d frames until the bar runs dry (today %d)" % [MASH_PERIOD_FRAMES, today.gaps[0] if today.gaps.size() > 0 else -1])
+	check(today.gaps.size() > 0 and LEGACY_MASH_PERIOD_FRAMES.has(today.gaps[0]) and v2.gaps.size() > 0 and v2.gaps[0] == MASH_PERIOD_FRAMES, "mashed, v2 dashes as often as today: every %d frames (today %d)" % [MASH_PERIOD_FRAMES, today.gaps[0] if today.gaps.size() > 0 else -1])
 	check(v2.taken == v2.dashes and today.taken > today.dashes, "today a press during a dash is taken and paid for again; v2 takes none (%d of %d against %d of %d)" % [v2.taken, v2.dashes, today.taken, today.dashes])
-	check(v2.immune <= today.immune, "mashing v2 is never immune for longer than mashing today (%d frames against %d)" % [v2.immune, today.immune])
+	# Against one dash rather than against today: on the full bar these runs keep, today's own re-aims spoil its
+	# first dash's gap (DashImmunity), where v2 takes no press during a dash and keeps it. That one dash is all
+	# mashing buys.
+	var one_dash: int = ceili(CATALOG.DASH_IMMUNITY_TIME * 60.0) + 1
+	check(v2.immune <= one_dash, "mashing v2 is never immune for longer than one dash is (%d frames, one dash %d; today %d)" % [v2.immune, one_dash, today.immune])
 	check(runs.values().all(func(run: Dictionary): return float(run.immune) / run.frames < 0.35), "no way of dashing keeps dash immunity up for even 35% of the time")
 
 
@@ -4940,7 +5163,7 @@ func test_dash_parry() -> void:
 	check(through == 4 and dodges.size() == 1 and parries.is_empty(), "dodged, never parried (%d)" % through)
 	await dash_parry_reset()
 
-	log_p("-- a late press cancels the dash and buys %s, not a parry" % ("a block" if blocking() else "nothing"))
+	log_p("-- a late press cancels the dash and buys %s, not a parry" % ("a block" if blocking() else "only its missed parry's cost"))
 	stretch_dash(40)
 	await dash_ready()
 	var bar: float = defense.stamina
@@ -4951,8 +5174,8 @@ func test_dash_parry() -> void:
 	var late := front_hit(&"eric_quake_wave", dummy_source())
 	log_p("stamina %.0f -> %.0f, result %d" % [bar, defense.stamina, late])
 	check(late == unparried(), "past the window it isn't parried (%d)" % late)
-	var late_cost: float = defense.dash_stamina_cost + (defense.light_block_cost if blocking() else 0.0)
-	check(is_equal_approx(bar - defense.stamina, late_cost), "and it costs %.0f in all: the dash%s (%.1f)" % [late_cost, " and the block" if blocking() else "", bar - defense.stamina])
+	var late_cost: float = defense.dash_stamina_cost + (defense.light_block_cost if blocking() else defense.parry_whiff_cost)
+	check(is_equal_approx(bar - defense.stamina, late_cost), "and it costs %.0f in all: the dash and %s (%.1f)" % [late_cost, "the block" if blocking() else "the missed parry", bar - defense.stamina])
 	player.dodge_time = dash_length
 	await dash_parry_reset()
 
@@ -5043,12 +5266,11 @@ func test_dash_parry() -> void:
 	var throw_state: Node = sm.states["SwordThrow"]
 	check(await wait_until(func(): return is_instance_valid(throw_state.sword), 200), "he throws it")
 	var sword: Node2D = throw_state.sword
-	var sword_hitbox: Area2D = sword.get_node("Hitbox")
-	var shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
 	var off_a_cancel := [false]
 	var note := func(_hit, _point, _staggered, _streak): off_a_cancel[0] = player.dash_cancelled and not player.is_dodging
 	defense.parried.connect(note)
-	await wait_until(func(): return sword_hitbox.global_position.distance_to(shape.global_position) < 108.0 + 27.0 + sword.speed * 0.10, 200)
+	# The dash goes on the frame its ring lights, a parry window before it lands, and the press cancels it.
+	await wait_until(func(): return is_instance_valid(sword.mark) and mark_lit(sword.mark), 200)
 	defense._set_stamina(defense.max_stamina)
 	tap(KEY_W)
 	await wait_until(func(): return player.is_dodging, 20)
@@ -5066,7 +5288,7 @@ func test_dash_parry() -> void:
 	await load_quiet("josh")
 	check(not player.dash_parry, "Josh's fight leaves the dash parry off")
 	var still := await dash_then_press()
-	var elsewhere := front_hit(&"josh_card_throw", dummy_source())
+	var elsewhere := front_hit(&"mason_poo_blast", dummy_source())
 	log_p("the same press in the same dash there: still dashing %s, result %d" % [still[0], elsewhere])
 	check(still[0] and elsewhere == 1, "the press leaves the dash alone and the hit lands (%d)" % elsewhere)
 
@@ -5110,7 +5332,7 @@ func test_dash_legacy() -> void:
 	log_p("-- mashing")
 	await dash_ready()
 	await settle_player(DASH_CENTRE)
-	var gap: int = await mash_gap()
+	var gap: int = await mash_gap(true)
 	check(LEGACY_MASH_PERIOD_FRAMES.has(gap), "mashed dashes come %s frames apart (%d)" % [LEGACY_MASH_PERIOD_FRAMES, gap])
 
 	log_p("-- the direction is read on the press, as it always was")
@@ -5312,6 +5534,9 @@ func punch_reach_v2() -> void:
 		for kind in PUNCH_SPOTS:
 			await settle_player(punch_spot(facing, hurt, PUNCH_SPOTS[kind]).round())
 			await wait(8)
+			# Each its own first punch: the combo carries its count (PlayerCombo), and every third would
+			# be the gold POW.
+			player.combo.reset()
 			var seen := await watched_punch()
 			var lands: bool = kind != "whiff"
 			log_p("%s %s: dealt %d, box %s, swoosh %s, whooshes %d, star rows %s at %s, star frames in the hit-stop %s" % [name, kind, seen.dealt, seen.box, seen.frames, seen.whooshes, seen.star_rows, seen.star_at, seen.stopped_frames])
@@ -5329,9 +5554,10 @@ func punch_reach_v2() -> void:
 				check(seen.star_rows.is_empty(), "%s %s: no star" % [name, kind])
 			await wait(20)
 
-	log_p("-- three punches on the beat: the third, charged, star is the gold one")
+	log_p("-- three punches: the third, charged, star is the gold one")
 	await settle_player(punch_spot(player.Facing.UP, hurt, PUNCH_SPOTS.hit).round())
 	await wait(40)
+	player.combo.reset()
 	var star: Sprite2D = punch_fx().get_node("Star")
 	var rows := []
 	for n in 3:
@@ -5405,6 +5631,7 @@ func punch_reach_v2() -> void:
 	await settle_player(punch_spot(player.Facing.UP, hurt, PUNCH_SPOTS.hit).round())
 	await wait(40)
 	boss.daze_used = false
+	player.combo.reset()
 	for n in 3:
 		await swing()
 		await wait(6)
@@ -5449,17 +5676,20 @@ func punch_reach_legacy() -> void:
 # him halfway through something else.
 
 const FRAME_TIME := 1.0 / 60.0
-# The plan's section 1, which EricPacing's V2 column has to match.
+# The plan's section 1, which EricPacing's V2 column has to match, but for his health: the plan's 56,
+# doubled by the user with every boss's (2026-09-25), then raised 25% with them (2026-09-30); and for the
+# 2026-10-05 tuning round's chain of all four attacks and the 2026-10-06 one's chains of five, whirlwinds of
+# four lunges and mostly yellow hugs.
 const V2_PACE := {
-	"max_health": 56, "attacks_per_chain": 3, "rage_attacks_per_chain": 4,
+	"max_health": 140, "attacks_per_chain": 5, "rage_attacks_per_chain": 5,
 	"rage_chain_health_ratio": 0.40, "attack_gap": 0.25, "rage_attack_gap": 0.15, "recovery_rest": 0.25,
 	"window_time": 2.0, "rage_window_time": 1.6, "slam_tell_time": 0.36, "delayed_slam_chance": 0.4,
-	"whirl_windup": 0.45, "rage_whirl_windup": 0.40, "whirl_lunges": 2, "rage_whirl_lunges": 3,
+	"whirl_windup": 0.45, "rage_whirl_windup": 0.40, "whirl_lunges": 4, "rage_whirl_lunges": 4,
 	"whirl_lunge_time": 0.5, "whirl_lunge_speed": 1000.0, "rage_whirl_lunge_speed": 1150.0,
 	"whirl_reaim_time": 0.35, "rage_whirl_reaim_time": 0.30, "whirl_dizzy_time": 0.8,
 	"rage_whirl_dizzy_time": 0.6, "planted_time": 0.5, "rage_planted_time": 0.35,
 	"hug_charge_time": 0.55, "rage_hug_charge_time": 0.45, "hug_stumble_time": 0.7,
-	"hug_yellow_chance": 0.5, "broken_time": 3.0, "rage_broken_time": 2.6,
+	"hug_yellow_chance": 0.65, "broken_time": 3.0, "rage_broken_time": 2.6,
 }
 # Every tell's floor: a red timing tell is 1.5x the parry window, a single-answer read 0.40 s, and a
 # colour decision 0.40 s with its margin.
@@ -5528,8 +5758,8 @@ func impact_seen(attack_name: String) -> bool:
 # ---- the punch
 
 # feel_v2 lands a punch as the arm reaches full extension; today's lands once the boss's hurtbox reports
-# it after the swing: f+16 against f+24 from the press. Either way a swing resolves once, and the beat
-# window after it is PlayerFeel's.
+# it after the swing: f+16 against f+24 from the press. Either way a swing resolves once, and one that
+# reaches nothing is known missed (PlayerCombo.punch_missed) with the combo's count carried on through it.
 func test_punch_contact() -> void:
 	await load_eric()
 	park_eric()
@@ -5543,8 +5773,6 @@ func test_punch_contact() -> void:
 	var hurtbox: Area2D = boss.get_node("Hurtbox")
 	var landed := []
 	player.combo.punch_landed.connect(func(_target, dealt, _charged): landed.append([Engine.get_physics_frames(), dealt]))
-	var windows := []
-	player.combo.beat_window_changed.connect(func(open): windows.append([open, player.combo.clock - player.combo.swing_end_time]))
 	for v2 in [true, false]:
 		player.feel_v2 = v2
 		var name := "feel_v2" if v2 else "today's"
@@ -5552,7 +5780,6 @@ func test_punch_contact() -> void:
 		place_under(hurtbox)
 		await wait(40)
 		landed.clear()
-		windows.clear()
 		var pressed := Engine.get_physics_frames()
 		tap(KEY_Q)
 		await wait_until(func(): return player.state_machine.current_state.name == "Punching", 10)
@@ -5561,32 +5788,38 @@ func test_punch_contact() -> void:
 		var pending: bool = player.combo.report_pending()
 		await wait(40)
 		var at: int = landed[0][0] - pressed if not landed.is_empty() else -1
-		log_p("%s: landed %d frames after the press, %d resolve(s); a report pending as the swing ended: %s; beat window %s" % [name, at, landed.size(), pending, windows])
+		log_p("%s: landed %d frames after the press, %d resolve(s); a report pending as the swing ended: %s" % [name, at, landed.size(), pending])
 		check(at == (16 if v2 else 24), "%s: the punch resolves at f+%d (f+%d)" % [name, 16 if v2 else 24, at])
 		check(landed.size() == 1 and landed[0][1] == 1, "%s: once for the swing, for 1 (%s)" % [name, landed])
 		check(pending != v2, "%s: %s" % [name, "nothing waits on a report" if v2 else "the report is waited on"])
-		var offset: float = feel("combo_window_offset")
-		var length: float = feel("combo_window_length")
-		var opened: Array = windows.filter(func(w): return w[0])
-		var closed: Array = windows.filter(func(w): return not w[0])
-		check(opened.size() == 1 and absf(opened[0][1] - offset) <= FRAME_TIME + 0.001, "%s: the beat window opens %.2f s after the swing (%s)" % [name, offset, opened])
-		check(closed.size() == 1 and absf(closed[0][1] - offset - length) <= FRAME_TIME + 0.001, "%s: and stays open %.2f s (%s)" % [name, length, closed])
 
-	log_p("-- feel_v2: a whiff lands nothing and ends the combo with its swing")
+	log_p("-- a whiff lands nothing, is known missed by its report's time, and the count carries on through it")
+	var missed := []
+	player.combo.punch_missed.connect(func(): missed.append(Engine.get_physics_frames()))
+	for v2 in [true, false]:
+		player.feel_v2 = v2
+		var name := "feel_v2" if v2 else "today's"
+		player.fit_punch_hitbox()
+		place_under(hurtbox)
+		await wait(40)
+		player.combo.reset()
+		await swing()
+		check(player.combo.count == 1, "%s: a landed punch starts a combo (%d)" % [name, player.combo.count])
+		await settle_player(player.global_position + Vector2(0, 200))
+		landed.clear()
+		missed.clear()
+		await wait(6)
+		tap(KEY_Q)
+		await wait_until(func(): return player.state_machine.current_state.name == "Punching", 10)
+		while player.state_machine.current_state.name == "Punching":
+			await physics_frame
+		var ended := Engine.get_physics_frames()
+		await wait(6)
+		log_p("%s: the whiff ended on frame %d, known missed on %s" % [name, ended, missed])
+		check(landed.is_empty() and missed.size() == 1 and absi(missed[0] - ended) <= player.combo.REPORT_FRAMES,
+			"%s: the whiff landed nothing, and was known missed once, by the time a report would be in (%s)" % [name, missed])
+		check(player.combo.count == 1 and not player.combo.swing_open, "%s: the count carries on through it (%d)" % [name, player.combo.count])
 	player.feel_v2 = true
-	player.fit_punch_hitbox()
-	place_under(hurtbox)
-	await wait(40)
-	await swing()
-	check(player.combo.count == 1, "a landed punch starts a combo (%d)" % player.combo.count)
-	await settle_player(player.global_position + Vector2(0, 200))
-	landed.clear()
-	await wait(6)
-	tap(KEY_Q)
-	await wait_until(func(): return player.state_machine.current_state.name == "Punching", 10)
-	while player.state_machine.current_state.name == "Punching":
-		await physics_frame
-	check(landed.is_empty() and player.combo.count == 0 and not player.combo.swing_open, "the whiff landed nothing, and the combo is over as its swing ends (count %d)" % player.combo.count)
 
 
 # ---- the y-sort
@@ -5690,16 +5923,29 @@ func test_v2_cadence() -> void:
 			drift.append("%s %s, plan %s" % [key, pacing.value(key), V2_PACE[key]])
 	check(pacing.is_v2() and drift.is_empty(), "EricPacing's V2 numbers are the plan's (%s)" % [drift])
 	check(pacing.value("window_state") == "Winded" and pacing.value("delayed_slam_holds") == [0.20, 0.35], "a chain ends in Winded, and a delayed slam holds 0.20 or 0.35 s")
-	check(boss.max_health == 56 and boss.boss_health == 56, "56 health, and he starts on it (%d of %d)" % [boss.boss_health, boss.max_health])
+	check(boss.max_health == 140 and boss.boss_health == 140, "140 health, and he starts on it (%d of %d)" % [boss.boss_health, boss.max_health])
 
-	log_p("-- 3 attacks a chain, 4 from 40% down")
-	for health in [23, 22]:
+	log_p("-- %d attacks a chain, %d from 40%% down" % [pacing.value("attacks_per_chain"), pacing.value("rage_attacks_per_chain")])
+	for health in [57, 56]:
 		boss.boss_health = health
 		sm.start_chain(5.0)
 		var count: int = sm.chain.size() + 1
 		sm.rest_timer.stop()
-		check(count == (3 if health == 23 else 4), "at %d of 56 (%.0f%%) a chain is %d attacks" % [health, 100.0 * health / 56.0, count])
-	boss.boss_health = 56
+		var wanted: int = pacing.value("attacks_per_chain" if health == 57 else "rage_attacks_per_chain")
+		check(count == wanted, "at %d of 140 (%.1f%%) a chain is %d attacks (%d)" % [health, 100.0 * health / 140.0, wanted, count])
+	# Longer than his four attacks, a chain goes round again: all four first, and never one twice running.
+	var rounds_ok := true
+	for i in 40:
+		sm.start_chain(5.0)
+		sm.rest_timer.stop()
+		var whole: Array = [sm.last_attack] + sm.chain
+		var first_four: Array = whole.slice(0, mini(4, whole.size()))
+		var repeats := range(1, whole.size()).any(func(k): return whole[k] == whole[k - 1])
+		if repeats or first_four.size() != mini(4, whole.size()) or sm.ATTACKS.any(func(a): return whole.size() >= 4 and not first_four.has(a)):
+			rounds_ok = false
+			log_p("chain %s" % [whole])
+	check(rounds_ok, "40 chains: each opens on all four of his attacks, and none repeats one twice running")
+	boss.boss_health = 140
 	sm.chain = []
 	sm.on_child_transition(sm.current_state, "Idle")
 
@@ -5735,7 +5981,7 @@ func test_v2_cadence() -> void:
 
 	log_p("-- whole chains: the gaps between attacks, the Winded window, the rest after it")
 	var hurtbox: Area2D = boss.get_node("Hurtbox")
-	for health in [56, 1]:
+	for health in [140, 1]:
 		boss.global_position = Vector2(960, 380)
 		await settle_player(Vector2(1500, 900))
 		boss.boss_health = health
@@ -5746,7 +5992,8 @@ func test_v2_cadence() -> void:
 			if states.is_empty() or states[-1][1] != name:
 				states.append([defense.clock, name])
 			if name == "Winded" and states[-1][0] < defense.clock:
-				winded_open[0] = winded_open[0] and hurtbox.monitoring and not boss.can_be_dazed()
+				# A POW dazes him there with daze_in_windows (the user, 2026-10-05), and never without it.
+				winded_open[0] = winded_open[0] and hurtbox.monitoring and boss.can_be_dazed() == boss.daze_in_windows
 		physics_frame.connect(probe)
 		sm.start_chain(0.0)
 		var rage_now: float = sm.rage
@@ -5770,7 +6017,7 @@ func test_v2_cadence() -> void:
 		log_p("rage %.2f, %d attacks: %s; gaps %s (%.3f), Winded %.3f (%.3f), rest %.3f (%.2f)" % [rage_now, chain_length, states.map(func(s): return s[1]), gaps, gap, winded, window, rest, pacing.value("recovery_rest")])
 		check(gaps.size() == chain_length - 1 and gaps.all(func(g): return absf(g - gap) <= FRAME_TIME + 0.001), "rage %.2f: %.3f s between attacks" % [rage_now, gap])
 		check(absf(winded - window) <= FRAME_TIME + 0.001, "rage %.2f: the chain ends in %.2f s Winded (%.3f)" % [rage_now, window, winded])
-		check(winded_open[0], "rage %.2f: open to punches all through it, and never dazed there" % rage_now)
+		check(winded_open[0], "rage %.2f: open to punches all through it, and %s" % [rage_now, "a POW dazes him there" if boss.daze_in_windows else "never dazed there"])
 		check(absf(rest - pacing.value("recovery_rest")) <= FRAME_TIME + 0.001, "rage %.2f: then %.2f s before the next chain (%.3f)" % [rage_now, pacing.value("recovery_rest"), rest])
 		sm.chain = []
 		sm.rest_timer.stop()
@@ -5848,7 +6095,8 @@ func test_delayed_slam() -> void:
 	var eligible_held: Array = eligible.filter(func(s): return s.held_frames > 0)
 	log_p("%d slams, %d held %s; at full health %d of %d eligible slams held (%.0f%%)" % [slams.size(), held.size(), held.map(func(s): return "a%d %.2f s" % [s.attack, s.held_frames * FRAME_TIME]), eligible_held.size(), eligible.size(), 100.0 * eligible_held.size() / maxf(eligible.size(), 1.0)])
 	log_p("tell leads %s" % [slams.map(func(s): return snappedf(s.lead, 0.001))])
-	check(slams.size() == 12 * 2 + 4 * 3, "every slam of 16 attacks was seen (%d)" % slams.size())
+	var wanted_slams: int = 12 * roundi(pacing.raged("slams", 0.0)) + 4 * roundi(pacing.raged("slams", 1.0))
+	check(slams.size() == wanted_slams, "every slam of 16 attacks was seen (%d of %d)" % [slams.size(), wanted_slams])
 	check(slams.filter(func(s): return s.attack == 0 and s.held_frames > 0).is_empty(), "the fight's first slam attack never holds")
 	check(per_attack.values().all(func(n): return n == 1), "no attack holds more than one slam (%s)" % [per_attack])
 	check(held.all(func(s): return pacing.value("delayed_slam_holds").has(s.hold) and absf(s.held_frames * FRAME_TIME - s.hold) <= FRAME_TIME + 0.001), "each hold is 0.20 or 0.35 s")
@@ -5922,6 +6170,12 @@ func test_whirl_lunges() -> void:
 			var speed := step.length() / FRAME_TIME
 			var aim: Vector2 = s[0].target - s[0].sweep
 			var heading: Vector2 = s[mini(6, s.size() - 1)].at - s[0].at
+			# A lunge that starts against the ropes (the last of four enraged, at a player outside his area)
+			# runs along them: it keeps its length, and stays in his area.
+			var at_ropes: bool = s.slice(0, mini(7, s.size())).any(func(x): return not whirl.LUNGE_AREA.grow(-1.0).has_point(x.at))
+			if at_ropes:
+				check(absf(lasted.call(run) - pacing.value("whirl_lunge_time")) <= FRAME_TIME + 0.001 and s.all(func(x): return whirl.LUNGE_AREA.grow(1.0).has_point(x.at) and x.spinning), "rage %.0f: a lunge from the ropes lasts %.2f s and stays in his area, spinning (%.3f s)" % [rage, pacing.value("whirl_lunge_time"), lasted.call(run)])
+				continue
 			check(absf(lasted.call(run) - pacing.value("whirl_lunge_time")) <= FRAME_TIME + 0.001 and absf(speed - pacing.raged("whirl_lunge_speed", rage)) < 1.0, "rage %.0f: a lunge lasts %.2f s at %.0f px/s (%.3f s, %.0f px/s)" % [rage, pacing.value("whirl_lunge_time"), pacing.raged("whirl_lunge_speed", rage), lasted.call(run), speed])
 			check(absf(rad_to_deg(aim.angle_to(heading))) < 2.0 and s.all(func(x): return x.spinning), "rage %.0f: straight at where the player stood as it began, spinning (%.1f deg off)" % [rage, rad_to_deg(aim.angle_to(heading))])
 		# A re-aim after a lunge that met the player can hold longer, until the next one is dodgeable.
@@ -6027,15 +6281,16 @@ func test_whirl_lunges() -> void:
 	health_ok()
 	await wait(10)
 
-	log_p("-- the mark's commit frame ends when the blade arrives, at any range")
+	log_p("-- the mark's commit frame ends as the blade lands, at any range")
 	# The release leaves from wherever his last lunge put him, usually on top of them; the toss he winds
-	# up himself leaves from his own spot. The blade is 108 px across and dives in tip first, so a short
-	# throw reaches them with a third of its flight still to run: the mark has to say so.
+	# up himself leaves from his own spot. Either way it only hurts them as it lands, so that is the
+	# moment the ring times the press off.
 	for case in [["his release, from where the lunges leave him", "Whirlwind"], ["his own toss, from his spot", "SwordThrow"]]:
 		boss.global_position = Vector2(700, 400)
 		await settle_player(Vector2(1480, 700))
 		health_ok()
 		clear_iframes()
+		# Through his lunges, which are their own dodge check above.
 		player.is_invincible = true
 		sm.chain = []
 		sm.rest_timer.stop()
@@ -6049,17 +6304,20 @@ func test_whirl_lunges() -> void:
 		var span: float = flung.from_ground.distance_to(flung.to_ground) if out else 0.0
 		var window: float = defense.parry_window / flight if out else 0.0
 		var slack: float = FRAME_TIME / flight + 0.01 if out else 0.0
-		var reach := -1.0
+		var reach := [-1.0]
+		var on_hit := func(hit):
+			if hit.attack_id == &"eric_thrown_sword" and reach[0] < 0.0:
+				reach[0] = flung.elapsed / flung.duration
+		defense.hit_taken.connect(on_hit)
+		# Out of his hands, nothing but the blade is left to reach them.
+		clear_iframes()
 		while out and is_instance_valid(flung) and flung.flying and not flung.returning:
-			if reach < 0.0 and flung.get_node("Hitbox").get_overlapping_areas().has(player.hurtBox):
-				reach = flung.elapsed / flight
 			await physics_frame
-		log_p("%s: %.0f px over %.2f s, the blade reaches them at %.2f of the flight, the commit frame lights at %.2f, the window is %.2f of it" % [case[0], span, flight, reach, commit, window])
-		check(out and reach >= 0.0, "%s: the blade reaches a player standing on the mark" % case[0])
-		if out and reach >= 0.0:
-			# Or the whole flight is the window, for a throw from right on top of them.
-			var on_time: bool = absf(reach - commit - window) <= slack or (commit <= 0.0 and reach <= window + slack)
-			check(on_time, "%s: it arrives a parry window after the commit frame lights (%.3f of the flight against %.3f)" % [case[0], reach - commit, window])
+		defense.hit_taken.disconnect(on_hit)
+		log_p("%s: %.0f px over %.2f s, the blade reaches them at %.2f of the flight, the commit frame lights at %.2f, the window is %.2f of it" % [case[0], span, flight, reach[0], commit, window])
+		check(out and reach[0] == 1.0, "%s: the blade reaches a player standing on the mark as it lands" % case[0])
+		if out and reach[0] >= 0.0:
+			check(absf(reach[0] - commit - window) <= slack, "%s: it lands a parry window after the commit frame lights (%.3f of the flight against %.3f)" % [case[0], reach[0] - commit, window])
 		await wait_until(func(): return sm.current_state.name == "Winded", 400)
 		sm.downed_state_timer.stop()
 		sm.on_child_transition(sm.current_state, "Idle")
@@ -6085,7 +6343,8 @@ func test_whirl_lunges() -> void:
 		check(case[3] == 0 or (lunges.size() > 1 and lunges[0].hits == 0), "%s: the lunge before it falls short, so it is met standing" % case[0])
 		check(not mine.is_empty() and not mine.dash.is_empty() and mine.hits == 0, "%s: one dash from standing clears it" % case[0])
 
-	log_p("-- both lunges of one whirlwind, each dashed: the re-aim leaves the second dash its immunity")
+	var count: int = roundi(pacing.raged("whirl_lunges", 0.0))
+	log_p("-- all %d lunges of one whirlwind, each dashed: the re-aim leaves every dash after the first its immunity" % count)
 	# A dash is only immune DASH_IMMUNITY_COOLDOWN after the last one, and a second lunge can start on top
 	# of a player who has just dashed through the first; the diagonals are where it used to.
 	var pairs := [
@@ -6100,19 +6359,49 @@ func test_whirl_lunges() -> void:
 	]
 	for case in pairs:
 		for lead in [3, 8]:
-			var lunges: Array = await dash_lunges(case[1], case[2], [0, 1], lead)
-			var both: bool = lunges.size() == 2 and lunges.all(func(l): return not l.dash.is_empty())
-			var gap: float = lunges[1].pressed_at - lunges[0].pressed_at if both else -1.0
+			var lunges: Array = await dash_lunges(case[1], case[2], range(count), lead)
+			var every: bool = lunges.size() == count and lunges.all(func(l): return not l.dash.is_empty())
+			var gap := INF if every else -1.0
+			if every:
+				for k in range(1, count):
+					gap = minf(gap, lunges[k].pressed_at - lunges[k - 1].pressed_at)
 			log_p("%s, dashing %d frames ahead: %s" % [case[0], lead, lunges.map(lunge_line)])
-			check(both and lunges.all(func(l): return l.hits == 0) and gap >= catalog.DASH_IMMUNITY_COOLDOWN, "%s, dashing %d frames ahead: both lunges dashed through, %.2f s apart" % [case[0], lead, gap])
+			check(every and lunges.all(func(l): return l.hits == 0) and gap >= catalog.DASH_IMMUNITY_COOLDOWN, "%s, dashing %d frames ahead: all %d lunges dashed through, at least %.2f s apart" % [case[0], lead, count, gap])
+
+	# Fairness (2026-10-06): every lunge asks for a dash, a third of the bar, so the whirlwind's wind-up and
+	# each re-aim wait until the player's bar can pay for the next one (EricWhirlwind._dash_affordable).
+	log_p("-- coming in with any stamina, the wind-up waits until the first dash can be paid for")
+	await settle_player(Vector2(960, 900))
+	boss.global_position = Vector2(960, 380)
+	sm.chain = []
+	await wait(45)
+	defense._spend(defense.stamina)
+	sm.on_child_transition(sm.current_state, "Whirlwind")
+	await wait(2)
+	var held: bool = whirl.phase == whirl.Phase.HOLD and tell_node() == null and not boss.get_node("WhirlwindArea2D").monitoring
+	var wound := await wait_until(func(): return whirl.phase == whirl.Phase.WINDUP, 600)
+	check(held and wound and defense.can_afford(defense.dash_stamina_cost), "on an empty bar he stands, harmless and with no tell, and winds up once a dash can be paid for (%.0f)" % defense.stamina)
+	await wait_until(func(): return sm.current_state.name == "Winded", 900)
+	sm.downed_state_timer.stop()
+	sm.on_child_transition(sm.current_state, "Idle")
+	clear_iframes()
+	health_ok()
+	for spent in [100.0, 80.0, 50.0]:
+		log_p("-- all %d lunges dashed, coming in %.0f stamina down" % [count, spent])
+		for case in pairs:
+			var lunges: Array = await dash_lunges(case[1], case[2], range(count), 8, spent)
+			var every: bool = lunges.size() == count and lunges.all(func(l): return not l.dash.is_empty())
+			log_p("%s, %.0f down: %s" % [case[0], spent, lunges.map(lunge_line)])
+			check(every and lunges.all(func(l): return l.hits == 0), "%s, coming in %.0f stamina down: all %d lunges dashed through" % [case[0], spent, count])
 
 
 # One whirlwind at full health from `eric_at` on a player standing at `spot`, who dashes out of the
 # lunges numbered in `dash_for` (from 0), lead_frames before the sweep would reach them, and stands still
 # through the rest. A lunge they don't dash for can hit them; its
 # i-frames are cleared as the next lunge starts, so it can't shelter them from that one. Returns each
-# lunge's angle, the dash taken and how long before contact, and the hits it landed.
-func dash_lunges(eric_at: Vector2, spot: Vector2, dash_for: Array, lead_frames: int) -> Array:
+# lunge's angle, the dash taken and how long before contact, and the hits it landed. `spent` is stamina they
+# spend on the frame before the whirlwind starts, as a player who came in off a dash or a missed parry has.
+func dash_lunges(eric_at: Vector2, spot: Vector2, dash_for: Array, lead_frames: int, spent := 0.0) -> Array:
 	var whirl: Node = sm.states["Whirlwind"]
 	var sweep: CollisionShape2D = boss.get_node("WhirlwindArea2D/CollisionShape2D")
 	var radii: Vector2 = Vector2.ONE * sweep.shape.radius * sweep.global_scale.abs()
@@ -6123,16 +6412,22 @@ func dash_lunges(eric_at: Vector2, spot: Vector2, dash_for: Array, lead_frames: 
 	defense._set_stamina(defense.max_stamina)
 	# Past DashImmunity's gap from any earlier dash, so the first dash here is a clean one.
 	await wait(45)
+	# Back on their spot after the wait: with three lunges a whirlwind, the case before can leave them
+	# moving off it.
+	await settle_player(spot)
 	events.clear()
 	sm.rage = 0.0
 	sm.chain = []
 	await process_frame
+	if spent > 0.0:
+		defense._spend(spent)
 	sm.on_child_transition(sm.current_state, "Whirlwind")
 	var lunges := []
 	var last_left := -1
 	var held_keys := []
 	var release_in := 0
-	for i in 400:
+	# Long enough for a wind-up and re-aims held for the bar to refill (EricWhirlwind._dash_affordable).
+	for i in 900:
 		if release_in > 0:
 			release_in -= 1
 			if release_in == 0:
@@ -6351,7 +6646,8 @@ func test_hug_mixup() -> void:
 		var charge_stumble := await time_stumble(hug, hurtbox)
 		release(KEY_SHIFT)
 		log_p("%s: events %s, health %d, stumble %s" % [answer, events.map(func(e): return "%s %s" % [e.kind, e.id]), player.playerHealth, charge_stumble])
-		check(hug.yellow and events_of("HIT", &"eric_shoulder_charge").size() == 1 and player.playerHealth == 99 and events_of("BLOCKED").is_empty() and parries.is_empty(), "yellow, %s: it lands, for 1" % answer)
+		var charge_damage: int = catalogue_damage(&"eric_shoulder_charge")
+		check(hug.yellow and events_of("HIT", &"eric_shoulder_charge").size() == 1 and player.playerHealth == 100 - charge_damage and events_of("BLOCKED").is_empty() and parries.is_empty(), "yellow, %s: it lands, for %d" % [answer, charge_damage])
 		check(not player.is_grabbed and absf(charge_stumble[0] - pacing.value("hug_stumble_time")) <= FRAME_TIME + 0.001 and charge_stumble[1], "yellow, %s: holds no one, and ends in the %.2f s stumble, open to punches (%.3f s)" % [answer, pacing.value("hug_stumble_time"), charge_stumble[0]])
 		sm.on_child_transition(sm.current_state, "Idle")
 		await wait(60)
@@ -6440,7 +6736,8 @@ func test_hug_reach() -> void:
 		log_p("yellow, %s: rushed %.3f s to %s, live on the way %s, stumbled %s, events %s, dodges %s, health %d" % [answer, seen.arrive - seen.rush, seen.to, seen.live_early, seen.stumbled, events.map(func(e): return "%s %s" % [e.kind, e.id]), dodges.map(func(d): return d.id), player.playerHealth])
 		check(not seen.live_early and seen.to.distance_to(far_from) > old_reach, "yellow, %s: he crossed the ring to them, harmless on the way" % answer)
 		if answer == "stand":
-			check(events_of("HIT", &"eric_shoulder_charge").size() == 1 and player.playerHealth == 99 and not seen.grabbed, "yellow, standing: it lands, for 1, and holds no one")
+			var charge_damage: int = catalogue_damage(&"eric_shoulder_charge")
+			check(events_of("HIT", &"eric_shoulder_charge").size() == 1 and player.playerHealth == 100 - charge_damage and not seen.grabbed, "yellow, standing: it lands, for %d, and holds no one" % charge_damage)
 		else:
 			check(events_of("HIT").is_empty() and player.playerHealth == 100, "yellow, dashed just before it lands: it misses")
 			check(dodges.any(func(d): return d.id == &"eric_shoulder_charge"), "and the dash is a perfect dodge (%s)" % [dodges.map(func(d): return d.id)])
@@ -6579,25 +6876,29 @@ func test_break_gauge() -> void:
 	var gauge_art: Dictionary = load("res://Scripts/EricArtLayout.gd").break_gauge()
 	var drawn: bool = gauge_art.has("frame")
 	check(ui != null and ui.position == gauge_art.position and ui.size == gauge_art.size, "%s at %s, %s" % [gauge_art.size, gauge_art.position, "on the top rope" if drawn else "under his health bar"])
-	check(gauge.max_value == 100.0 and gauge.value == 0.0, "it holds 100 and starts empty")
+	# His own numbers (EricScript.BREAK), on the gauge he built.
+	var spec: Dictionary = boss.BREAK
+	var off_table := spec.keys().filter(func(k): return gauge.get(k) != spec[k])
+	check(off_table.is_empty(), "his own BREAK numbers are the gauge's (%s off)" % [off_table])
+	check(gauge.max_value == spec.max_value and gauge.value == 0.0, "it holds %.0f and starts empty" % spec.max_value)
 	await settle_player(Vector2(972, 800))
 
 	log_p("-- what fills it")
-	check(await parry_once(&"eric_quake_wave_v2") == 3 and gauge.value == 15.0, "a parry: 15 (%.0f)" % gauge.value)
+	check(await parry_once(&"eric_quake_wave_v2") == 3 and gauge.value == spec.parry_gain, "a parry: %.0f (%.0f)" % [spec.parry_gain, gauge.value])
 	clear_iframes()
 	await wait(40)
 	press(KEY_SHIFT)
 	await wait(3)
 	var grab_parry := front_hit(&"eric_bear_hug_grab_v2", dummy_source())
 	release(KEY_SHIFT)
-	check(grab_parry == 3 and gauge.value == 35.0, "a parry of his red grab: 20 (%.0f)" % gauge.value)
+	check(grab_parry == 3 and gauge.value == spec.parry_gain + spec.grab_parry_gain, "a parry of his red grab: %.0f (%.0f)" % [spec.grab_parry_gain, gauge.value])
 	clear_iframes()
 	defense._set_stamina(defense.max_stamina)
 	await wait(60)
 	var ring := spawn_ring(player.global_position + Vector2(372, 0))
 	await ring_close(ring, 0.05)
 	tap(KEY_W)
-	check(await wait_until(func(): return dodges.size() > 0, 30) and gauge.value == 47.0, "a perfect dodge: 12 (%.0f)" % gauge.value)
+	check(await wait_until(func(): return dodges.size() > 0, 30) and gauge.value == spec.parry_gain + spec.grab_parry_gain + spec.perfect_dodge_gain, "a perfect dodge: %.0f (%.0f)" % [spec.perfect_dodge_gain, gauge.value])
 	await wait(60)
 	clear_iframes()
 	sm.downed_state_timer.start(60.0)
@@ -6613,29 +6914,31 @@ func test_break_gauge() -> void:
 		steps.append(gauge.value - before)
 		if i < 2:
 			await wait(6)
-	check(steps == [8.0, 8.0, 14.0], "punches that land: 8 each, 14 for the charged third (%s)" % [steps])
+	check(steps == [spec.punch_gain, spec.punch_gain, spec.charged_punch_gain], "punches that land: %.0f each, %.0f for the charged third (%s)" % [spec.punch_gain, spec.charged_punch_gain, steps])
 	sm.on_child_transition(sm.current_state, "Idle")
 	await settle_player(Vector2(972, 800))
 
 	log_p("-- what drains it")
+	# Topped up past both drains, so each shows whole.
+	gauge.add(spec.hit_loss + spec.guard_break_loss)
 	var before_hit: float = gauge.value
 	front_hit(&"eric_quake_wave_v2", dummy_source())
-	check(gauge.value == before_hit - 20.0, "a hit: -20 (%.0f -> %.0f)" % [before_hit, gauge.value])
+	check(gauge.value == maxf(before_hit - spec.hit_loss, 0.0), "a hit: -%.0f (%.0f -> %.0f)" % [spec.hit_loss, before_hit, gauge.value])
 	player.take_grab_damage()
-	check(gauge.value == before_hit - 20.0, "a squeeze in his grab costs nothing more: the grab was the hit (%.0f)" % gauge.value)
+	check(gauge.value == maxf(before_hit - spec.hit_loss, 0.0), "a squeeze in his grab costs nothing more: the grab was the hit (%.0f)" % gauge.value)
 	clear_iframes()
 	health_ok()
 	await wait(40)
 	var before_break: float = gauge.value
 	await break_guard(&"eric_quake_wave_v2")
-	check(defense.is_guard_broken and gauge.value == before_break - 35.0, "a guard break: -35 (%.0f -> %.0f)" % [before_break, gauge.value])
+	check(defense.is_guard_broken and gauge.value == before_break - spec.guard_break_loss, "a guard break: -%.0f (%.0f -> %.0f)" % [spec.guard_break_loss, before_break, gauge.value])
 	defense.clear_guard_break()
 	clear_iframes()
 	await wait(45)
 
 	log_p("-- what isn't his counts for nothing")
 	var before_other: float = gauge.value
-	check(await parry_once(&"josh_card_throw") == 3, "someone else's attack parried")
+	check(await parry_once(&"mason_poo_blast") == 3, "someone else's attack parried")
 	clear_iframes()
 	front_hit(&"wrestler_charge", dummy_source())
 	clear_iframes()
@@ -6679,6 +6982,8 @@ func test_break_gauge() -> void:
 		broke[0] += 1
 		var pieces_out: bool = (ui.shatter.visible and ui.shatter.frame == 0 and ui.word_sheet.visible) if drawn else (ui.word_label.visible and not ui.shards.is_empty())
 		shattered[0] = pieces_out and ui.bar.value == 0.0)
+	# One parry short of full, whatever his parry is worth.
+	gauge.add(spec.max_value - spec.parry_gain - gauge.value)
 	await parry_once(&"eric_quake_wave_v2")
 	await wait(2)
 	log_p("gauge %.0f locked %s, state %s, broke %d" % [gauge.value, gauge.locked, sm.current_state.name, broke[0]])
@@ -6913,29 +7218,34 @@ func test_break_entry() -> void:
 		check(await wait_until(func(): return sm.current_state == broken and broken.retrieving, 120), "down, he lies a beat and gets up for it")
 		check(await wait_until(attacking, 300) and absf(defense.clock - crashed_at - finisher.juggle_recovery) <= 3.0 * FRAME_TIME, "his next attack %.1f s after the crash, sword and all (%.3f)" % [finisher.juggle_recovery, defense.clock - crashed_at])
 
-	log_p("-- the opener: the combo on the beat starts the finisher; left alone it fizzles and the chance goes")
+	log_p("-- the opener: the combo starts the finisher; left alone it fizzles and the chance goes")
 	await reset_break(home)
 	await settle_player(Vector2(700, 800))
 	gauge.value = 95.0
 	gauge.add(10.0)
 	await wait(2)
 	await wait_until(func(): return not player.is_action_locked, 120)
+	player.combo.reset()
 	var health: int = boss.boss_health
 	for i in 3:
 		await swing()
 		if i < 2:
 			await wait(6)
-	check(await wait_until(func(): return finisher.phase == FINISHER_DAZED and finisher.prompt_visible, 120), "3 on the beat daze him: the finisher's prompt is up")
+	check(await wait_until(func(): return finisher.phase == FINISHER_DAZED and finisher.prompt_visible, 120), "3 punches daze him: the finisher's prompt is up")
 	check(boss.boss_health == health - 4 and not broken.stars.visible, "the combo dealt 1 + 1 + 2, and the finisher's stars take over from his")
 	await wait_until(func(): return finisher.phase == FINISHER_OFF, 400)
 	check(sm.current_state == broken and broken.stars.visible, "the fizzle leaves him Broken for the rest of his time")
 	await wait_until(func(): return sm.current_state != broken, 300)
 	check(boss.boss_health == health - 4, "then he gets up, the uppercut never came")
 
-	log_p("-- the parried sword: +35 that fills the gauge breaks him instead of the uppercut")
+	# The parry's gain and the reflect's together, his own numbers (EricScript.BREAK).
+	var reads: float = gauge.parry_gain + gauge.reflect_gain
+	var auto_uppercut: bool = pacing.value("reflect_auto_uppercut")
+	log_p("-- the parried sword: the reflect that fills the gauge breaks him; one that doesn't %s" % ("fires its own uppercut" if auto_uppercut else "staggers him plainly"))
 	for fill in [true, false]:
 		await reset_break(home)
-		gauge.value = 50.0 if fill else 0.0
+		gauge.value = gauge.max_value - reads if fill else 0.0
+		var from: float = gauge.value
 		events.clear()
 		await settle_player(Vector2(1480, 700))
 		sm.chain = []
@@ -6947,13 +7257,19 @@ func test_break_entry() -> void:
 		press(KEY_SHIFT)
 		var outcome := await wait_until(func(): return sm.current_state.name == ("Broken" if fill else "ParryStaggered"), 300)
 		release(KEY_SHIFT)
-		log_p("from %.0f: %s, gauge %.0f, finisher phase %d" % [50.0 if fill else 0.0, sm.current_state.name, gauge.value, finisher.phase])
+		log_p("from %.0f: %s, gauge %.0f, finisher phase %d" % [from, sm.current_state.name, gauge.value, finisher.phase])
 		if fill:
-			check(outcome and finisher.phase == FINISHER_OFF, "from 50: parry 15 and the reflect's 35 fill it: a Break, and no uppercut fires")
-		else:
-			check(outcome and sm.states["ParryStaggered"].from_reflect and gauge.value == 50.0, "from 0: 15 and 35 make 50, and the reflect's own uppercut fires as before")
+			check(outcome and finisher.phase == FINISHER_OFF, "from %.0f: the parry's %.0f and the reflect's %.0f fill it: a Break, and no uppercut fires" % [from, gauge.parry_gain, gauge.reflect_gain])
+		elif auto_uppercut:
+			check(outcome and sm.states["ParryStaggered"].from_reflect and gauge.value == reads, "from 0: %.0f and %.0f make %.0f, and the reflect's own uppercut fires" % [gauge.parry_gain, gauge.reflect_gain, reads])
 			check(await wait_until(func(): return finisher.phase != FINISHER_OFF, 60), "the finisher takes it")
 			await wait_until(func(): return finisher.phase == FINISHER_OFF, 400)
+		else:
+			check(outcome and not sm.states["ParryStaggered"].from_reflect and gauge.value == reads, "from 0: %.0f and %.0f make %.0f, and he is staggered plainly" % [gauge.parry_gain, gauge.reflect_gain, reads])
+			var fired := await wait_until(func(): return finisher.phase != FINISHER_OFF, 60)
+			# No uppercut of its own; a POW of the player's still dazes him there with daze_in_windows.
+			check(not fired and boss.can_be_dazed() == boss.daze_in_windows, "no uppercut fires on its own, and a POW %s" % ("would daze him" if boss.daze_in_windows else "can't daze him"))
+			await wait_until(func(): return sm.current_state.name != "ParryStaggered", 400)
 
 	log_p("-- what can't break him")
 	await reset_break(home)
@@ -7006,10 +7322,10 @@ func reset_break(home: Vector2) -> void:
 
 const FINISHER_CHARGING := 3
 const FINISHER_JUGGLE_FALL := 6
-# The plan's rates for the three bars, in alternating presses a second.
-const TIER_RATES := [7.0, 9.4, 10.9]
+# The rates for the three bars, in alternating presses a second: the user's 6, 8 and 10 (2026-10-04) as fitted.
+const TIER_RATES := [5.8, 8.0, 9.7]
 # Presses every this many frames at 60 fps reach each tier, and every one more doesn't.
-const TIER_PASS_FRAMES := [8, 6, 5]
+const TIER_PASS_FRAMES := [10, 7, 6]
 # How many press intervals every pass and fail keeps clear of its bar's window.
 const TIER_MARGIN := 1.3
 # The juggle's peaks before they are fitted to his headroom, in px: the first two uppercuts' and the
@@ -7056,8 +7372,8 @@ func mash_tiered(every: int, gate_off := true) -> int:
 
 # The meter model, frame by frame at 60 fps with a press every `every` frames (none for 0), stopping
 # after `stop_after` frames if that's set. `windows` stands in for the finisher's.
-func model_mash(finisher: Node, every: int, banked_at_start := 0, stop_after := -1, windows: Array = []) -> Dictionary:
-	var meter = load("res://Scripts/FinisherTierMeter.gd").new(finisher.tier_gain, finisher.tier_drains, finisher.tier_windows if windows.is_empty() else windows, finisher.tier_start_grace, finisher.tier_idle_stop, banked_at_start)
+func model_mash(finisher: Node, every: int, stop_after := -1, windows: Array = []) -> Dictionary:
+	var meter = load("res://Scripts/FinisherTierMeter.gd").new(finisher.tier_gain, finisher.tier_drains, finisher.tier_windows if windows.is_empty() else windows, finisher.tier_start_grace, finisher.tier_idle_stop)
 	var banked_at := []
 	var last_press := -1.0
 	for f in 7200:
@@ -7111,7 +7427,7 @@ func test_mash_tiers() -> void:
 		var window: float = finisher.tier_windows[bar]
 		var margins := []
 		for frames in [TIER_PASS_FRAMES[bar], TIER_PASS_FRAMES[bar] + 1]:
-			var run: Dictionary = model_mash(finisher, frames, 0, -1, open_windows)
+			var run: Dictionary = model_mash(finisher, frames, -1, open_windows)
 			# MashCurve's top can hold a rate short of a bar for good. For the fail that is as clear of the
 			# window as it gets; for the pass it is a miss.
 			if run.banked_at.size() <= bar:
@@ -7132,14 +7448,10 @@ func test_mash_tiers() -> void:
 		check(absf(rate - TIER_RATES[bar]) <= 0.3, "bar %d from about %.1f presses a second (%.2f)" % [bar + 1, TIER_RATES[bar], rate])
 
 	log_p("-- stopping, and starting")
-	var stopped: Dictionary = model_mash(finisher, 5, 0, 36)
+	var stopped: Dictionary = model_mash(finisher, 5, 36)
 	check(stopped.tier == 1 and absf(stopped.resolved_at - stopped.last_press - finisher.tier_idle_stop) <= 1.0 / 60.0 + 0.001, "stopping after bar 1 keeps it: the mash ends %.1f s after the last press (tier %d at %.3f)" % [finisher.tier_idle_stop, stopped.tier, stopped.resolved_at])
 	var idle: Dictionary = model_mash(finisher, 0)
 	check(idle.tier == 0 and absf(idle.resolved_at - finisher.tier_start_grace - finisher.tier_windows[0]) <= 1.0 / 60.0 + 0.001, "never pressed, it fizzles when bar 1's window runs out %.1f s after the prompt (%.3f)" % [finisher.tier_start_grace + finisher.tier_windows[0], idle.resolved_at])
-	var hyped: Dictionary = model_mash(finisher, 0, 1)
-	check(hyped.tier == 1, "full hype banks bar 1 before the first press, and keeps it untouched (tier %d)" % hyped.tier)
-	var hyped_mash: Dictionary = model_mash(finisher, TIER_PASS_FRAMES[1], 1)
-	check(hyped_mash.tier >= 2, "then bar 2 at bar 2's rate (tier %d)" % hyped_mash.tier)
 
 
 # Real presses, the real-time press gate on, and the keys the mash shares with moving and guarding.
@@ -7181,14 +7493,14 @@ func test_mash_tiers_live() -> void:
 	await wait_until(func(): return finisher.phase == FINISHER_OFF, 400)
 	await wait(60)
 
-	log_p("-- the bumpers, a press every 6 frames: two bars")
+	log_p("-- the bumpers, a press every %d frames: two bars" % TIER_PASS_FRAMES[1])
 	banks.clear()
 	check(await break_into_prompt(), "the prompt again")
 	var pair := [JOY_BUTTON_LEFT_SHOULDER, JOY_BUTTON_RIGHT_SHOULDER]
 	var presses := 0
 	var i := 0
 	while finisher.phase == FINISHER_DAZED or finisher.phase == FINISHER_CHARGING:
-		if i % 6 == 0:
+		if i % TIER_PASS_FRAMES[1] == 0:
 			pad_tap(pair[presses % 2])
 			presses += 1
 		i += 1
@@ -7263,7 +7575,7 @@ func test_juggle() -> void:
 		before = hit.health
 	log_p("hits %s, dealt %s, lift scale %.2f" % [hits.map(func(h): return snappedf(h.t, 0.001)), dealt, finisher.lift_scale])
 	check(hits.size() == 3 and hits[2].last, "three uppercuts, the third the last")
-	check(dealt == [8, 6, 8], "8, 6 and 8 of his 56 (%s)" % [dealt])
+	check(dealt == [35, 14, 21], "35, 14 and 21 of his 140 (%s)" % [dealt])
 	var gaps := []
 	for k in range(1, hits.size()):
 		gaps.append(hits[k].t - hits[k - 1].t)
@@ -7303,7 +7615,7 @@ func test_juggle_kill() -> void:
 	var finisher: Node = player.get_node("Finisher")
 	check(await break_into_prompt(), "a Break and the opener put up the prompt")
 	# The damage the uppercuts before this one deal, and one more.
-	boss.boss_health = [1, 9, 15][n - 1]
+	boss.boss_health = [1, 36, 50][n - 1]
 	var hits := []
 	finisher.juggle_hit.connect(func(index, last): hits.append({"index": index, "last": last, "health": boss.boss_health, "at": boss.global_position}))
 	var states := []
@@ -7325,7 +7637,8 @@ func test_juggle_kill() -> void:
 	check(moved >= 0.0 and moved < 1.0, "the killing uppercut doesn't shove him (%.1f px)" % moved)
 
 
-# A full hype meter: bar 1 banked before the first press, the last uppercut 0.10 more, the hype spent once.
+# A full hype meter: nothing banked before the first press, tier 2 at bar 2's rate, and the last uppercut carrying
+# SUPERCHARGE_MULTIPLIER - 1 of both bars, so the juggle pays 1.6 times its 35%; the hype spent once.
 func test_juggle_super() -> void:
 	await load_eric_v2()
 	health_ok()
@@ -7335,20 +7648,23 @@ func test_juggle_super() -> void:
 	hype.hype_spent.connect(func(): spends[0] += 1)
 	hype._set_hype(100.0)
 	check(await break_into_prompt(), "a Break and the opener put up the prompt")
-	check(finisher.supercharged and finisher.tier_meter.banked == 1 and finisher.meter == 1.0, "bar 1 is banked before the first press")
+	check(finisher.supercharged and finisher.tier_meter.banked == 0 and finisher.meter == 0.0, "supercharged, and nothing is banked before the first press")
 	var health := [boss.boss_health]
 	var dealt := []
 	finisher.juggle_hit.connect(func(_index, _last):
 		dealt.append(health[0] - boss.boss_health)
 		health[0] = boss.boss_health)
-	await mash_tiered(6)
+	await mash_tiered(TIER_PASS_FRAMES[1])
 	await wait_until(func(): return finisher.phase == FINISHER_OFF, 400)
 	log_p("tiers %d, dealt %s, spends %d" % [finisher.juggle_tiers, dealt, spends[0]])
-	check(dealt == [8, 11], "tier 2 at bar 2's rate, the last uppercut 0.10 more: 8 and 11 (%s)" % [dealt])
+	check(dealt == [35, 43], "tier 2 at bar 2's rate, the last uppercut 0.6 of both bars more: 35 and 43, 1.6 times 35 + 14 (%s)" % [dealt])
 	check(spends[0] == 1 and not hype.is_full(), "the hype spent once (%d)" % spends[0])
 
 
-# His parried sword flung back into him: a tier-1 juggle with no prompt, or a Break if its +35 fills the gauge.
+# His parried sword flung back into him: a Break if the parry's and the reflect's gains fill the gauge, and
+# otherwise what EricPacing's reflect_auto_uppercut says. On (V1's way): a tier-1 juggle with no prompt.
+# Off (V2's since the 2026-10-04 tuning round): a plain stagger, open to punches, with no uppercut of its
+# own; a POW dazes him there like any punish window with EricScript.daze_in_windows (2026-10-05).
 func test_reflect_auto_v2() -> void:
 	await load_eric_v2()
 	health_ok()
@@ -7356,9 +7672,13 @@ func test_reflect_auto_v2() -> void:
 	var throw_state: Node = sm.states["SwordThrow"]
 	var gauge: Node = boss.break_gauge
 	var home: Vector2 = boss.global_position
+	var reads: float = gauge.parry_gain + gauge.reflect_gain
+	var auto_uppercut: bool = load(ERIC_PACING).value("reflect_auto_uppercut")
+	log_p("the reflect's own uppercut is %s" % ("on" if auto_uppercut else "off"))
 	for fill in [false, true]:
 		await reset_break(home)
-		gauge.value = 50.0 if fill else 0.0
+		gauge.value = gauge.max_value - reads if fill else 0.0
+		var from: float = gauge.value
 		var prompts := [0]
 		var on_prompt := func(): prompts[0] += 1
 		finisher.prompt_shown.connect(on_prompt)
@@ -7370,35 +7690,45 @@ func test_reflect_auto_v2() -> void:
 		sm.chain = []
 		sm.on_child_transition(sm.current_state, "SwordThrow")
 		await wait_until(func(): return is_instance_valid(throw_state.sword), 200)
-		var blade: Area2D = throw_state.sword.get_node("Hitbox")
-		var body: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
-		await wait_until(func(): return blade.global_position.distance_to(body.global_position) < 108.0 + 27.0 + throw_state.sword.speed * 0.07, 200)
+		var sword: Node2D = throw_state.sword
+		# On the frame its ring lights, a parry window before it lands, and held until it comes down:
+		# the guard drops with the key.
+		await wait_until(func(): return is_instance_valid(sword.mark) and mark_lit(sword.mark), 200)
 		press(KEY_SHIFT)
-		await wait(6)
+		await wait_until(func(): return not is_instance_valid(sword) or not sword.flying, 60)
 		release(KEY_SHIFT)
 		if fill:
-			check(await wait_until(func(): return sm.current_state.name == "Broken", 300), "from 50: the parry's 15 and the reflect's 35 break him")
+			check(await wait_until(func(): return sm.current_state.name == "Broken", 300), "from %.0f: the parry's %.0f and the reflect's %.0f break him" % [from, gauge.parry_gain, gauge.reflect_gain])
 			await wait(60)
 			check(hits.is_empty() and finisher.phase == FINISHER_OFF, "and no juggle fires on its own")
-		else:
+		elif auto_uppercut:
+			var share: int = roundi(boss.max_health * finisher.juggle_shares[0])
 			check(await wait_until(func(): return sm.current_state.name == "Juggled", 300), "from 0: the reflect juggles him")
 			await wait_until(func(): return finisher.phase == FINISHER_OFF, 400)
 			check(prompts[0] == 0 and hits == [[0, true]], "one uppercut, the last, and no prompt (%s)" % [hits])
-			check(health - boss.boss_health == 1 + 8 and gauge.value == 50.0, "his sword's 1 and the uppercut's 8, and the gauge at 50 (%d, %.0f)" % [health - boss.boss_health, gauge.value])
+			check(health - boss.boss_health == 1 + share and gauge.value == reads, "his sword's 1 and the uppercut's %d, and the gauge at %.0f (%d, %.0f)" % [share, reads, health - boss.boss_health, gauge.value])
 			check(await wait_until(func(): return sm.current_state.name == "Broken" and sm.states["Broken"].retrieving, 120), "down, he gets up for the sword the uppercut knocked away")
+		else:
+			var staggered := await wait_until(func(): return sm.current_state.name == "ParryStaggered", 300)
+			check(staggered and not sm.states["ParryStaggered"].from_reflect, "from 0: the reflect staggers him, plainly (%s)" % sm.current_state.name)
+			check(health - boss.boss_health == throw_state.REFLECT_DAMAGE and gauge.value == reads, "his sword's %d, and the gauge at %.0f (%d, %.0f)" % [throw_state.REFLECT_DAMAGE, reads, health - boss.boss_health, gauge.value])
+			check(boss.get_node("Hurtbox").monitoring and boss.can_be_dazed() == boss.daze_in_windows, "open to punches, and a POW %s" % ("would daze him" if boss.daze_in_windows else "can't daze him"))
+			await wait(90)
+			check(prompts[0] == 0 and hits.is_empty() and finisher.phase == FINISHER_OFF and boss.boss_health == health - throw_state.REFLECT_DAMAGE, "no prompt, no uppercut, nothing more off him (%s)" % [hits])
+			check(await wait_until(func(): return sm.current_state.name != "ParryStaggered", 400), "and he gets up again (%s)" % sm.current_state.name)
 		finisher.prompt_shown.disconnect(on_prompt)
 		finisher.juggle_hit.disconnect(on_hit)
 
 
-# ------------------------------------------------------------------ the thrown sword's hot window
+# ------------------------------------------------------------------ the thrown sword and its mark
 
 # Where the player stands for the throw, and so the spot he aims it at and the mark lands on.
 const SWORD_SPOT := Vector2(1480, 700)
-# Far enough up-arena to put them back inside the blade's path with the throw still in the air, and
-# no further than one dash and a step: what a player who read the mark and moved actually covers.
+# Far enough up-arena to put them inside the blade's path with the throw still in the air, and no
+# further than one dash and a step: what a player who read the mark and moved actually covers.
 const SWORD_STEP := Vector2(-212.0, -212.0)
-# Beside the blade's path early on, for the dash that gets nothing: the blade sweeps this spot and is
-# clear of it again well before its mark's commit frame lights.
+# Beside the blade's path early on, for the dash that gets nothing: the blade sweeps this spot long
+# before it lands.
 const SWORD_EARLY := Vector2(1111, 433)
 
 
@@ -7422,38 +7752,39 @@ func mark_lit(mark: Node2D) -> bool:
 	return mark.target_ring.default_color == mark.spec.commit_color
 
 
-# Watches one outgoing throw the whole way in, on the flight's own clock: the progress the blade
-# first covers the player's hurtbox at, the progress it first covers the ghost a dash left behind,
-# the progress the ring lights its commit frame on, the progress a hit or a perfect dodge resolves
-# on, and how far the drawn blade ever strays from the curve _contact_progress() put it on.
+# Whether the parry aura still lights a thrown sword's blade, rather than being on its way out.
+func sword_glows(thrown: Node2D) -> bool:
+	var parry_tell: Script = load("res://Scripts/ParryTell.gd")
+	return thrown.sword.get_children().any(func(child): return child.get_script() == parry_tell and not child.fading)
+
+
+# Watches one outgoing throw the whole way in, on the flight's own clock: the progress the ring lights
+# its commit frame on, the progress the blade's reach first covers the player's hurtbox and the ghost a
+# dash left behind, and the progress the blade's own hit or perfect dodge resolves on, read as it
+# resolves.
 func fly_out(sword: Node2D) -> Dictionary:
-	var blade: Area2D = sword.get_node("Hitbox")
-	var body: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
-	var radius: float = blade.get_node("CollisionShape2D").shape.radius
-	var seen := {"cover": -1.0, "lit": -1.0, "hit": -1.0, "ghost": -1.0, "dodge": -1.0, "drift": 0.0}
-	var health: int = player.playerHealth
-	var had_dodges: int = dodges.size()
+	var seen := {"cover": -1.0, "lit": -1.0, "hit": -1.0, "ghost": -1.0, "dodge": -1.0}
+	var on_hit := func(hit):
+		if hit.attack_id == &"eric_thrown_sword" and seen.hit < 0.0:
+			seen.hit = sword.elapsed / sword.duration
+	var on_dodge := func(hit):
+		if hit.attack_id == &"eric_thrown_sword" and seen.dodge < 0.0:
+			seen.dodge = sword.elapsed / sword.duration
+	defense.hit_taken.connect(on_hit)
+	defense.perfect_dodged.connect(on_dodge)
 	# To the end of the outgoing leg, however it ends: a parry stops it dead and the throw flings it
 	# back, which is a flight of its own on a clock of its own.
 	while is_instance_valid(sword) and sword.flying and not sword.returning and not sword.reflecting:
 		var t: float = sword.elapsed / sword.duration
-		var rect: Rect2 = body.global_transform * body.shape.get_rect()
-		var at: Vector2 = blade.global_position
-		if seen.cover < 0.0 and at.clamp(rect.position, rect.end).distance_to(at) <= radius:
+		if seen.cover < 0.0 and sword._reaches(player.hurtBox):
 			seen.cover = t
 		if seen.lit < 0.0 and is_instance_valid(sword.mark) and mark_lit(sword.mark):
 			seen.lit = t
-		if seen.hit < 0.0 and player.playerHealth < health:
-			seen.hit = t
-		if seen.ghost < 0.0 and defense.ghost_active:
-			var ghost: CollisionShape2D = player.dodge_ghost.get_node("CollisionShape2D")
-			var left: Rect2 = ghost.global_transform * ghost.shape.get_rect()
-			if at.clamp(left.position, left.end).distance_to(at) <= radius:
-				seen.ghost = t
-		if seen.dodge < 0.0 and dodges.size() > had_dodges:
-			seen.dodge = t
-		seen.drift = maxf(seen.drift, sword._blade_at(t).distance_to(at))
+		if seen.ghost < 0.0 and defense.ghost_active and sword._reaches(player.dodge_ghost):
+			seen.ghost = t
 		await physics_frame
+	defense.hit_taken.disconnect(on_hit)
+	defense.perfect_dodged.disconnect(on_dodge)
 	return seen
 
 
@@ -7465,11 +7796,11 @@ func sword_reset() -> void:
 	await wait(6)
 
 
-# His thrown sword promises a spot and a moment: EricSwordMark's ring closes onto the landing spot and
-# lights its commit frame exactly PlayerDefense.parry_window before the blade reaches the player. The
-# blade has to keep that promise, because the ring is the whole read - it may only hurt them from the
-# frame that ring goes hot, never wherever it happens to clip them on the way in. The recall and the
-# flung-back sword have no mark and are not gated: they are aimed at Eric.
+# His thrown sword keeps the promise its floor mark makes: EricSwordMark's ring closes onto the spot the
+# blade lands on and lights its commit frame exactly PlayerDefense.parry_window before it lands there,
+# and the blade hurts nobody until it does - not a player on the mark, whom its reach is over well before
+# it lands, and not one who moved off the mark into its path. Nothing hurts them after that either: the
+# recall has no mark, and the flung-back sword is theirs. sword_path stands them all along the flight.
 func test_sword_gate() -> void:
 	await load_eric_v2()
 	hold_gauge()
@@ -7481,46 +7812,55 @@ func test_sword_gate() -> void:
 	var throw_state: Node = sm.states["SwordThrow"]
 	var window: float = defense.parry_window
 
-	log_p("-- the blade, the ring and the prediction all run off one clock")
+	log_p("-- the ring lights a parry window before the blade lands, on the spot it lands on")
 	await settle_player(SWORD_SPOT)
 	var sword: Node2D = await throw_sword()
-	var contact: float = sword._contact_progress()
-	var duration: float = sword.duration
-	var hot: float = sword.hot_from
-	var step: float = 1.0 / 60.0 / duration
-	log_p("duration %.3f s at %.0f px/s, contact %.4f, hot from %.4f, mark commit %.4f; the %.2f s window is %.4f of the flight, and the dive covers %.0f%% of its %.0f px path" % [duration, sword.speed, contact, hot, sword.mark.commit_at, window, window / duration, 100.0 * minf(sword.DIVE_TIME * sword.speed / sword.from_ground.distance_to(sword.to_ground), 1.0), sword.from_ground.distance_to(sword.to_ground)])
-	check(is_equal_approx(hot, maxf(contact - window / duration, 0.0)), "the blade goes hot a parry window of flight before it reaches them (%.4f)" % hot)
-	check(is_equal_approx((contact - hot) * duration, window), "which is %.3f s of air, the window itself" % ((contact - hot) * duration))
-	check(is_instance_valid(sword.mark) and sword.mark.commit_at == hot, "and the ring's commit frame is that same number, not one of its own")
+	var commit: float = sword.mark.commit_at if is_instance_valid(sword.mark) else -1.0
+	var step: float = 1.0 / 60.0 / sword.duration
+	log_p("duration %.3f s at %.0f px/s over its %.0f px path, mark commit %.4f; the %.2f s window is %.4f of the flight" % [sword.duration, sword.speed, sword.from_ground.distance_to(sword.to_ground), commit, window, window / sword.duration])
+	check(is_equal_approx((1.0 - commit) * sword.duration, window), "the ring's commit frame is a parry window of flight before it lands (%.3f s)" % ((1.0 - commit) * sword.duration))
+	check(sword.mark.global_position.distance_to(sword.to_ground) < 0.01, "and the ring is on the very spot it lands on (%s against %s)" % [sword.mark.global_position, sword.to_ground])
 	var standing := await fly_out(sword)
-	log_p("standing still: covered from %.4f, ring lit %.4f, hit %.4f, blade off its predicted curve by at most %.4f px" % [standing.cover, standing.lit, standing.hit, standing.drift])
-	check(standing.drift < 0.01, "the drawn blade rides the curve _contact_progress() walks, dive and all (%.4f px)" % standing.drift)
-	check(standing.lit >= hot and standing.lit - hot < step, "the ring lights on the first frame at or past the hot mark (%.4f)" % standing.lit)
-	check(standing.hit >= 0.0 and standing.hit >= standing.lit, "a player who stays on the spot is hit, and never before the ring lit (%.4f against %.4f)" % [standing.hit, standing.lit])
-	check(standing.cover >= hot, "standing on the spot there is nothing to gate: it only covers them inside the window (%.4f)" % standing.cover)
+	log_p("standing still: its reach over them from %.4f, ring lit %.4f, hit %.4f" % [standing.cover, standing.lit, standing.hit])
+	check(standing.lit >= commit and standing.lit - commit < step, "the ring lights on the first frame at or past it (%.4f)" % standing.lit)
+	check(standing.hit == 1.0, "a player who stays on the spot is hit as it lands, and not before (%.4f)" % standing.hit)
+	check(standing.cover >= 0.0 and standing.cover < 1.0, "though its reach was over them from %.4f of the flight: it is held back all the way down" % standing.cover)
+
+	log_p("-- it plants, and comes back to his hand through them harmless")
 	check(await wait_until(func(): return is_instance_valid(throw_state.sword) and throw_state.sword.returning, 300), "it plants and he calls it back")
-	check(throw_state.sword.hot_from == 0.0 and throw_state.sword.get_node("Hitbox").monitoring, "the recall is ungated and still live: it is aimed at Eric and has no mark to keep faith with")
+	var back: Node2D = throw_state.sword
+	check(is_instance_valid(back) and not sword_glows(back), "no longer lit as a parry: nothing on its way back can be")
+	# Where its reach passes halfway home, put there the moment it leaves the mat.
+	var halfway: Vector2 = back.from_ground.lerp(back.to_ground, 0.5) - Vector2(0, lerpf(back.from_height, back.to_height, 0.5) + back.ARC_HEIGHT)
+	player.global_position = halfway
+	clear_iframes()
+	var unhurt: int = player.playerHealth
+	var crossed := [false]
+	var watch_back := func():
+		if is_instance_valid(back) and back.returning and back.flying and back._reaches(player.hurtBox):
+			crossed[0] = true
+	physics_frame.connect(watch_back)
+	await wait_until(func(): return not is_instance_valid(back) or not back.flying, 120)
+	physics_frame.disconnect(watch_back)
+	log_p("stood at %s: its reach crossed them %s, health %d -> %d" % [halfway, crossed[0], unhurt, player.playerHealth])
+	check(crossed[0] and player.playerHealth == unhurt, "its reach goes right through them on the way back, and hurts nothing")
 	await sword_reset()
 
-	log_p("-- it does not hurt them mid-flight, away from the mark")
+	log_p("-- off the mark, it passes through them on its way in and never hurts them")
 	# Standing in for a player who read the ring and moved 300 px up-arena while the blade was out.
 	await settle_player(SWORD_SPOT)
 	sword = await throw_sword()
-	hot = sword.hot_from
 	player.global_position = SWORD_SPOT + SWORD_STEP
 	var moved := await fly_out(sword)
-	log_p("moved %s: covered from %.4f, ring lit %.4f, hit %.4f, hot from %.4f" % [SWORD_STEP, moved.cover, moved.lit, moved.hit, hot])
-	check(moved.cover >= 0.0 and moved.cover < hot, "the blade does pass through them early, so there is something to gate (%.4f before %.4f)" % [moved.cover, hot])
-	check(moved.hit >= 0.0, "they are still hit: gated, not switched off")
-	check(moved.hit >= hot, "but only from the hot mark on (%.4f)" % moved.hit)
-	check(moved.hit == moved.lit, "which is the very frame the ring lit (%.4f against %.4f)" % [moved.hit, moved.lit])
-	log_p("the hit landed %.3f s later into the flight than the blade first covered them" % ((moved.hit - moved.cover) * duration))
+	log_p("moved %s: its reach over them from %.4f, ring lit %.4f, hit %.4f" % [SWORD_STEP, moved.cover, moved.lit, moved.hit])
+	check(moved.cover >= 0.0 and moved.cover < 1.0, "the blade's reach does pass through them on its way in (%.4f)" % moved.cover)
+	check(moved.hit < 0.0, "and it never hurts them, there or where it lands: they were not on the mark")
 	await sword_reset()
 
-	log_p("-- a press on the frame the ring lights still catches it in the air")
+	log_p("-- a press on the frame the ring lights catches it as it lands")
 	await settle_player(SWORD_SPOT)
 	sword = await throw_sword()
-	var unhurt: int = player.playerHealth
+	unhurt = player.playerHealth
 	var caught: int = parries.size()
 	# reflect() overwrites the flight, so the spot it was going to land on is kept here.
 	var aimed_at: Vector2 = sword.to_ground
@@ -7532,27 +7872,22 @@ func test_sword_gate() -> void:
 	check(parries[-1].id == &"eric_thrown_sword" and player.playerHealth == unhurt, "it is the sword that was parried, and it never touches them (%s)" % [parries.map(func(p): return p.id)])
 	check(not is_instance_valid(sword.mark), "the mark it cancelled went with it, so nothing lands there")
 	check(await wait_until(func(): return is_instance_valid(throw_state.sword) and throw_state.sword.reflecting, 60), "and it is flung back at him")
-	var short_of: float = sword.from_ground.distance_to(aimed_at)
-	check(short_of > 50.0, "from where they caught it, %.0f px short of the spot it was aimed at" % short_of)
-	check(sword.hot_from == 0.0 and not sword.get_node("Hitbox").monitoring, "the flung-back sword is the player's: ungated, and harmless to them")
+	check(sword.from_ground.distance_to(aimed_at) < 1.0, "from the spot it was aimed at, where they caught it (%s against %s)" % [sword.from_ground, aimed_at])
+	check(await wait_until(func(): return not is_instance_valid(throw_state.sword), 120) and player.playerHealth == unhurt, "and it is spent on him without touching them: the flung-back sword is theirs")
 	await sword_reset()
 
-	log_p("-- a dash off the spot is still a perfect dodge")
+	log_p("-- a dash off the spot as it comes down is a perfect dodge")
 	defense.last_perfect_dodge_time = -INF
 	await settle_player(SWORD_SPOT)
 	sword = await throw_sword()
-	hot = sword.hot_from
-	var body: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
-	var edge: Area2D = sword.get_node("Hitbox")
-	var lead: float = 108.0 + 27.0 + sword.speed * 0.07
-	await wait_until(func(): return not sword.flying or edge.global_position.distance_to(body.global_position) < lead, 300)
+	# Late enough that the ghost the dash leaves is still up when the blade goes into it.
+	await wait_until(func(): return not sword.flying or sword.duration - sword.elapsed < defense.perfect_dodge_window - 0.05, 300)
 	press(KEY_DOWN)
 	tap(KEY_W)
 	var dodged := await fly_out(sword)
 	release(KEY_DOWN)
-	log_p("dashed clear: ghost covered %.4f, dodge %.4f, hit %.4f, hot from %.4f" % [dodged.ghost, dodged.dodge, dodged.hit, hot])
-	check(dodged.dodge >= 0.0 and dodges[-1].id == &"eric_thrown_sword", "the blade passing the ghost they left pays a perfect dodge (%s)" % [dodges.map(func(d): return d.id)])
-	check(dodged.dodge >= hot, "on the same gate as the damage, so the reward is inside the window too (%.4f)" % dodged.dodge)
+	log_p("dashed clear: the ghost under its reach from %.4f, dodge %.4f, hit %.4f" % [dodged.ghost, dodged.dodge, dodged.hit])
+	check(dodged.dodge == 1.0 and dodges[-1].id == &"eric_thrown_sword", "the blade going into the spot they left pays a perfect dodge as it lands (%.4f, %s)" % [dodged.dodge, dodges.map(func(d): return d.id)])
 	check(dodged.hit < 0.0, "and no hit")
 	await sword_reset()
 
@@ -7561,17 +7896,16 @@ func test_sword_gate() -> void:
 	var had: int = dodges.size()
 	await settle_player(SWORD_SPOT)
 	sword = await throw_sword()
-	hot = sword.hot_from
-	# Off to one side of the blade's path, near enough that it sweeps the spot they leave while the
-	# ghost is still up and far enough that it is clear of it again before the ring goes hot.
+	# Off to one side of the blade's path, near enough that its reach sweeps the spot they leave while
+	# the ghost is still up, long before it lands.
 	player.global_position = SWORD_EARLY
 	await wait_until(func(): return not sword.flying or sword.elapsed >= 0.10, 60)
 	press(KEY_DOWN)
 	tap(KEY_W)
 	var early := await fly_out(sword)
 	release(KEY_DOWN)
-	log_p("dashed early: ghost covered %.4f, dodge %.4f, hit %.4f, hot from %.4f" % [early.ghost, early.dodge, early.hit, hot])
-	check(early.ghost >= 0.0 and early.ghost < hot, "the blade does sweep the ghost they left, before the ring lit (%.4f before %.4f)" % [early.ghost, hot])
+	log_p("dashed early: the ghost under its reach from %.4f, dodge %.4f, hit %.4f" % [early.ghost, early.dodge, early.hit])
+	check(early.ghost >= 0.0 and early.ghost < 1.0, "its reach does sweep the ghost they left, early in its flight (%.4f)" % early.ghost)
 	check(dodges.size() == had, "and pays no perfect dodge for it (%d)" % (dodges.size() - had))
 	check(early.hit < 0.0, "nor hurts them")
 	await sword_reset()
@@ -7580,21 +7914,18 @@ func test_sword_gate() -> void:
 	sm.rage = 1.0
 	await settle_player(SWORD_SPOT)
 	sword = await throw_sword()
-	hot = sword.hot_from
-	log_p("enraged: %.0f px/s over %.3f s, contact %.4f, hot from %.4f, mark commit %.4f; the window is %.4f of this flight, and the dive covers %.0f%% of its %.0f px path" % [sword.speed, sword.duration, sword._contact_progress(), hot, sword.mark.commit_at, window / sword.duration, 100.0 * minf(sword.DIVE_TIME * sword.speed / sword.from_ground.distance_to(sword.to_ground), 1.0), sword.from_ground.distance_to(sword.to_ground)])
-	check(is_equal_approx(hot, maxf(sword._contact_progress() - window / sword.duration, 0.0)), "the window is worked out from this flight, not a fraction carried over from the last one (%.4f)" % hot)
-	check(is_instance_valid(sword.mark) and sword.mark.commit_at == hot, "and the ring is on it as before")
+	commit = sword.mark.commit_at if is_instance_valid(sword.mark) else -1.0
+	log_p("enraged: %.0f px/s over %.3f s, mark commit %.4f; the window is %.4f of this flight" % [sword.speed, sword.duration, commit, window / sword.duration])
+	check(is_equal_approx((1.0 - commit) * sword.duration, window), "the window is worked out from this flight (%.4f)" % commit)
 	var raged := await fly_out(sword)
-	log_p("enraged, standing still: covered from %.4f, ring lit %.4f, hit %.4f, off its predicted curve by at most %.4f px" % [raged.cover, raged.lit, raged.hit, raged.drift])
-	check(raged.drift < 0.01, "a faster blade still rides the curve it is predicted on (%.4f px)" % raged.drift)
-	check(raged.hit >= 0.0 and raged.hit >= raged.lit, "and still hits no earlier than the ring lit (%.4f against %.4f)" % [raged.hit, raged.lit])
+	log_p("enraged, standing still: its reach over them from %.4f, ring lit %.4f, hit %.4f" % [raged.cover, raged.lit, raged.hit])
+	check(raged.hit == 1.0 and raged.cover >= 0.0 and raged.cover < 1.0, "a faster blade still only hurts them as it lands (%.4f), its reach over them from %.4f" % [raged.hit, raged.cover])
 	sm.rage = 0.0
 	await sword_reset()
 
-	log_p("-- the whirlwind's own release is gated the same way, on its own tell")
-	# Across the ring from him, so his lunges cannot close the whole gap and the release has a flight
-	# to gate; the spin ends on a throw either way. His own lunges are the read up to it, and the
-	# wind-up before it is WHIRL_TELL_TIME's, not the mark's.
+	log_p("-- the whirlwind's own release lands the same way, on its own mark")
+	# Across the ring from him, so his lunges cannot close the whole gap and the release has a flight to
+	# watch; the spin ends on a throw either way.
 	boss.global_position = Vector2(300, 450)
 	await settle_player(Vector2(1780, 470))
 	sm.chain = []
@@ -7604,12 +7935,16 @@ func test_sword_gate() -> void:
 	sm.on_child_transition(sm.current_state, "Whirlwind")
 	check(await wait_until(func(): return is_instance_valid(throw_state.sword), 600), "the spin ends in a throw")
 	var spun: Node2D = throw_state.sword
-	log_p("spin release: plants %s, returns harmless %s, hot from %.4f, mark commit %.4f" % [spun.plants, spun.returns_harmless, spun.hot_from, spun.mark.commit_at if is_instance_valid(spun.mark) else -1.0])
-	check(not spun.plants and spun.returns_harmless, "it skips off the mat and comes back harmless, as it did")
-	check(spun.hot_from > 0.0 and is_instance_valid(spun.mark) and spun.mark.commit_at == spun.hot_from, "and its outgoing leg is gated on the very number its own mark lights on")
-	check(is_equal_approx(spun.hot_from, maxf(spun._contact_progress() - window / spun.duration, 0.0)), "by the same window (%.4f)" % spun.hot_from)
+	var spun_commit: float = spun.mark.commit_at if is_instance_valid(spun.mark) else -1.0
+	log_p("spin release: plants %s, %.3f s, mark commit %.4f" % [spun.plants, spun.duration, spun_commit])
+	check(not spun.plants and is_equal_approx((1.0 - spun_commit) * spun.duration, window), "it skips off the mat, and its ring lights a parry window before it lands (%.4f)" % spun_commit)
+	# Whatever his lunges did, the blade is all that is left to reach them.
+	clear_iframes()
+	var released := await fly_out(spun)
+	log_p("spin release, standing still: its reach over them from %.4f, hit %.4f" % [released.cover, released.hit])
+	check(released.hit == 1.0, "a player on its mark is hit as it lands, and not before (%.4f)" % released.hit)
 	check(await wait_until(func(): return not is_instance_valid(throw_state.sword) or throw_state.sword.returning, 300), "and it still comes back")
-	check(not throw_state.sword.get_node("Hitbox").monitoring, "harmless on the way back, as before")
+	check(not is_instance_valid(throw_state.sword) or not sword_glows(throw_state.sword), "no longer lit as a parry on the way back")
 
 
 # ------------------------------------------------------------------ pace_bot
@@ -7721,7 +8056,7 @@ func _bot_window_open(state: String) -> bool:
 	return false
 
 
-# Up beside his hurtbox, then a combo on the beat, for as long as the window stays open.
+# Up beside his hurtbox, then a combo, for as long as the window stays open.
 func _bot_punish(profile: Dictionary, bot: Dictionary) -> void:
 	var spot := _bot_punch_spot()
 	for i in 40:
@@ -7764,9 +8099,12 @@ func _bot_threat(profile: Dictionary, bot: Dictionary) -> String:
 				nearest = minf(nearest, hazard.collision_map[numpad].global_position.distance_to(at))
 			if nearest < 1150.0 * 0.07 + 40.0 and _bot_reads(profile, bot, hazard):
 				return "parry"
-		elif script_path.ends_with("EricThrownSwordScript.gd") and hazard.flying and not hazard.returning:
-			var blade: Area2D = hazard.get_node("Hitbox")
-			if blade.monitoring and blade.global_position.distance_to(at) < 108.0 + 27.0 + hazard.speed * 0.07 and _bot_reads(profile, bot, hazard):
+		elif script_path.ends_with("EricThrownSwordScript.gd") and hazard.flying and not hazard.returning and not hazard.reflecting:
+			# It only hurts where it lands: parry on its lit ring, when standing where it comes down.
+			var box: Rect2 = body.global_transform * body.shape.get_rect()
+			var reach: float = hazard.get_node("Hitbox/CollisionShape2D").shape.radius
+			var lands_on: bool = hazard.to_ground.clamp(box.position, box.end).distance_to(hazard.to_ground) <= reach
+			if lands_on and is_instance_valid(hazard.mark) and mark_lit(hazard.mark) and _bot_reads(profile, bot, hazard):
 				return "parry"
 		elif script_path.ends_with("EricQuakeRingScript.gd"):
 			var gap := absf(hazard.global_position.distance_to(at) - hazard.radius)
@@ -8254,7 +8592,7 @@ func test_pause_restart() -> void:
 	check(is_equal_approx(Engine.time_scale, 1.0), "time scale is 1 (%.3f)" % Engine.time_scale)
 	check(view.zoom == 1.0 and root.canvas_transform == Transform2D.IDENTITY, "the view is back to normal")
 	check(boss.boss_health == full, "Eric is on full health again (%d of %d)" % [boss.boss_health, full])
-	check(player.playerHealth == 6, "and so is the player (%d)" % player.playerHealth)
+	check(player.playerHealth == 8, "and so is the player (%d)" % player.playerHealth)
 	check(freeze.freeze(self, [player.get_parent()]), "and the next finisher can still freeze the fight")
 	freeze.unfreeze(self)
 
@@ -8640,7 +8978,9 @@ func test_entrance() -> void:
 #     "body": his body's path under the fight scene,
 #     "home": where he is parked: somewhere he may stand, with room over his head for a juggle and
 #             beside him for the player,
-#     "light": one of his own attacks, parried, blocked and landed: it has to fill and drain,
+#     "light": one of his own attacks, read and landed: it has to fill and drain,
+#     "light_read": OPTIONAL, "dodge" for a light attack nothing guards, read by dashing through it (a
+#                   perfect dodge); without it, "parry",
 #     "strong": the one worth grab_parry_gain, or &"" for none,
 #     "foreign": an attack that isn't his at all,
 #     "punish_state": his ordinary punish window, where punches are measured,
@@ -8675,8 +9015,33 @@ const GAUGE_FIGHTS_DIR := "res://art_source/defense_tests/gauge_fights/"
 const DANNY_MODES := "res://art_source/defense_tests/danny/"
 # Greyson's, the same way.
 const GREYSON_MODES := "res://art_source/defense_tests/greyson/"
+# Jordan's, the same way.
+const JORDAN_MODES := "res://art_source/defense_tests/jordan/"
+# His last phase's, which three coders write at once (the Puppet Master: god.gd, maze.gd, kegs.gd): a mode whose file
+# isn't written yet says so and fails, rather than calling run() on nothing and hanging the run.
+func run_mode_file(path: String) -> void:
+	if not ResourceLoader.exists(path):
+		check(false, "%s: %s is not written yet" % [mode, path])
+		return
+	await load(path).run(self)
+
+
 # The ring's own modes, the same way: what keeps the player inside the ropes, across every fight.
 const RING_MODES := "res://art_source/defense_tests/ring/"
+# Eric's own modes, the same way, for the ones that don't live in this file.
+const ERIC_MODES_DIR := "res://art_source/defense_tests/eric/"
+# Matt's modes added since the user's 2026-09-27 playtest, the same way.
+const MATT_MODES := "res://art_source/defense_tests/matt/"
+# Josh's, the same way, since his rework of 2026-09-28.
+const JOSH_MODES := "res://art_source/defense_tests/josh/"
+# Mason's, the same way, since his Nugget Fastball of 2026-10-04.
+const MASON_MODES := "res://art_source/defense_tests/mason/"
+# Beast Bixby's, the same way, since his Flyby of 2026-09-29 (liam/ is left for Liam's own phase).
+const BIXBY_MODES := "res://art_source/defense_tests/bixby/"
+# Liam's own phase, after Bixby coughs him up (2026-09-29), the same way.
+const LIAM_MODES := "res://art_source/defense_tests/liam/"
+# The game's ending after god-Jordan (the champion cutscene and its credits), the same way.
+const ENDING_MODES := "res://art_source/defense_tests/ending/"
 # The longest the VS card may take to come up once a state intro is over.
 const VS_CARD_WAIT_FRAMES := 60
 
@@ -8825,9 +9190,11 @@ func test_break_gauge_fight() -> void:
 	await settle_player(Vector2(500, 700))
 
 	log_p("-- what fills it")
-	# A light attack that is one of his strong parries too is worth what a strong parry is.
-	var light_gain: float = gauge.grab_parry_gain if spec.light in gauge.strong_parry_ids else gauge.parry_gain
-	check(await parry_once(spec.light) == 3 and is_equal_approx(gauge.value, light_gain), "a parry of %s: %.3f (%.3f)" % [spec.light, light_gain, gauge.value])
+	# A light attack that is one of his strong parries too is worth what a strong parry is; one read by
+	# dashing through it, what a perfect dodge is.
+	var read_by: String = "perfect dodge" if spec.get("light_read", "parry") == "dodge" else "parry"
+	var light_gain: float = gauge.perfect_dodge_gain if read_by == "perfect dodge" else (gauge.grab_parry_gain if spec.light in gauge.strong_parry_ids else gauge.parry_gain)
+	check(await read_light(spec) and is_equal_approx(gauge.value, light_gain), "a %s of %s: %.3f (%.3f)" % [read_by, spec.light, light_gain, gauge.value])
 	clear_iframes()
 	defense._set_stamina(defense.max_stamina)
 	await wait(40)
@@ -8903,14 +9270,14 @@ func test_break_gauge_fight() -> void:
 	var broke := [0]
 	gauge.broke.connect(func(): broke[0] += 1)
 	gauge.value = gauge.max_value - light_gain
-	check(await parry_once(spec.light) == 3, "the parry that fills it")
+	check(await read_light(spec), "the %s that fills it" % read_by)
 	await wait(2)
 	log_p("gauge %.0f locked %s, state %s, broke %d" % [gauge.value, gauge.locked, sm.current_state.name, broke[0]])
 	check(broke[0] == 1 and gauge.value == 0.0 and gauge.locked and sm.current_state.name == broken_state, "breaks him, and it empties")
 	await wait_until(func(): return not player.is_action_locked, 120)
 	clear_iframes()
 	await wait(40)
-	check(await parry_once(spec.light) == 3 and gauge.value == 0.0, "a parry now fills nothing (%.0f)" % gauge.value)
+	check(await read_light(spec) and gauge.value == 0.0, "a %s now fills nothing (%.0f)" % [read_by, gauge.value])
 
 	log_p("-- it fills again %.0f s after he is back up" % gauge.unlock_delay)
 	await wait_until(func(): return sm.current_state.name != broken_state, 400)
@@ -9040,6 +9407,10 @@ func test_juggle_fight() -> void:
 	var juggled: Node = sm.states["Juggled"]
 	check(await break_into_prompt_fight(spec), "a Break and the opener put up the prompt")
 	check(finisher.tiered, "the Break's mash is the tiered one")
+	# Past the phase floor, as juggle_kill is: three bars are half his health, which from a full bar reaches a floor at
+	# half, and the cut there is the floor's business, not this mode's.
+	if "phase_two" in boss:
+		boss.phase_two = true
 	var want := []
 	for k in 3:
 		want.append(maxi(1, roundi(boss.get_max_health() * finisher.juggle_shares[k])))
@@ -9326,6 +9697,7 @@ func test_burak_shots() -> void:
 			check(not values.is_empty() and values[0] == 30.0 and breaks[0] == 1 and broken, "the gauge 30, then 60 breaks him (%s)" % [values])
 		"block":
 			log_p("-- a held guard: %s" % ("both BLOCKED for 20 stamina each, and the gauge never moves" if blocking() else "no answer without blocking, so both land"))
+			track_spends()
 			var run := await burak_run_shots(["block", "block"])
 			var blocks := events_of("BLOCKED", &"burak_shot")
 			log_p("blocks %s, parries %d, gauge %s" % [blocks.map(func(b): return b.stamina), parries.size(), values])
@@ -9333,7 +9705,8 @@ func test_burak_shots() -> void:
 			if blocking():
 				check(blocks.size() == 2 and is_equal_approx(blocks[-1].stamina, defense.max_stamina - 40.0) and events_of("HIT").is_empty() and parries.is_empty(), "2 BLOCKED, -40 stamina")
 			else:
-				check(events_of("HIT", &"burak_shot").size() == 2 and player.playerHealth == 998 and blocks.is_empty() and parries.is_empty() and defense.stamina == defense.max_stamina, "2 HITs through the held guard, a half-heart each, and no stamina spent")
+				check(events_of("HIT", &"burak_shot").size() == 2 and player.playerHealth == 998 and blocks.is_empty() and parries.is_empty() and spends == whiffs(1),
+					"2 HITs through the held guard, a half-heart each, and nothing spent but the press's missed parry (%s)" % [spends])
 			check(values.is_empty() and gauge.value == 0.0 and breaks[0] == 0, "and the gauge stays 0")
 		"hit":
 			log_p("-- no answer: both land for half a heart, and each drains 20 from 30: 10, then 0, not under")
@@ -9620,7 +9993,10 @@ func test_mason_contact() -> void:
 	var hits := contact_hits()
 	log_p("held in the squat over the player: hits at %s s, in %s" % [hits.map(func(e): return snappedf(e.t - start, 0.001)), hit_in])
 	check(hits.size() == 4 and hit_in.all(func(s): return s == "PooSquat"), "hit as the line starts, then each time the i-frames run out: 4 in 3.55 s (%d)" % hits.size())
-	check(not hits.is_empty() and hits[0].t - start <= FRAME_TIME + 0.001, "the first on the line's first frame, with no entry to report it (%.3f s)" % (hits[0].t - start if not hits.is_empty() else -1.0))
+	# The cycle's first squat leaves a player already in him alone for sm.cycle_contact_grace (eating ends with them
+	# punching him); a line's first frame otherwise.
+	var grace: float = sm.cycle_contact_grace
+	check(not hits.is_empty() and hits[0].t - start >= grace - 0.001 and hits[0].t - start <= grace + 2.0 * FRAME_TIME + 0.001, "the first as the cycle's %.2f s contact grace runs out, with no entry to report it (%.3f s)" % [grace, hits[0].t - start if not hits.is_empty() else -1.0])
 	var gaps := []
 	for i in range(1, hits.size()):
 		gaps.append(snappedf(hits[i].t - hits[i - 1].t, 0.001))
@@ -9735,9 +10111,9 @@ const MASON_BOT_DIRECTIONS := [Vector2.ZERO, Vector2(1, 0), Vector2(1, 1), Vecto
 const MASON_BOT_DASH := 250.0
 const MASON_BOT_DASH_TIME := 8.0 / 60.0
 const MASON_BOT_SPEED := 600.0
-# The most one attack may cost the bot, from a full bar of six half-hearts.
+# The most one attack may cost the bot, from a full bar of eight half-hearts (six until 2026-09-30).
 const MASON_BOT_MAX_HITS := 2
-const MASON_FULL_HEALTH := 6
+const MASON_FULL_HEALTH := 8
 # The floor a player's body can stand on and the grid it is read on, as the tuning script reads them
 # (art_source/mason_tuning/verify_mason_tuning.gd), but with the player's own hurtbox.
 const MASON_STAND_AREA := Rect2(117, 132, 1686, 816)
@@ -9959,8 +10335,9 @@ func mason_check_attack(case: String, ended: bool, needs_overlap: bool) -> void:
 	var landings: Array = log.nuggets.values().filter(func(n): return n.landed >= 0.0).map(func(n): return n.landed)
 	landings.sort()
 	var slams: Array = log.slams
-	var drops: int = sm.elbow_drops[1]
-	check(ended and sm.current_state.name == "AwaitDelivery", "%s: it plays out and hands over to the delivery (%s)" % [case, sm.current_state.name])
+	var drops: int = sm.elbow_drops[sm.cycle_phase]
+	var next: String = log.get("next", "AwaitDelivery")
+	check(ended and sm.current_state.name == next, "%s: it plays out and hands over to %s (%s)" % [case, next, sm.current_state.name])
 	check(slams.size() == drops and log.marks.size() == drops, "%s: all %d of Carter's drops come down (%d marks, %d slams)" % [case, drops, log.marks.size(), slams.size()])
 	if landings.is_empty() or slams.is_empty():
 		check(false, "%s: the rain and Carter both came (%d landings, %d slams)" % [case, landings.size(), slams.size()])
@@ -9972,7 +10349,7 @@ func mason_check_attack(case: String, ended: bool, needs_overlap: bool) -> void:
 	log_p("%s: %d nuggets landed from %.2f to %.2f s and %d slams from %.2f to %.2f s; %d landings before the first slam, then %s between each and the next; his marker and nugget markers down together on %d frames" % [case, landings.size(), landings[0], landings[-1], slams.size(), slams[0].t, slams[-1].t, first_before, between, log.both_up])
 	check(first_before > 0 and between.all(func(n): return n > 0) and log.both_up > 0, "%s: they overlap: nuggets land before his first slam and between every two, with their markers down alongside his" % case)
 	log_p("%s: free standing cells (%.0f px grid): %d of %d at worst (%.2f s), its biggest open patch %d; %.0f%% free on average; %.0f%% of the floor under a marker at some point; the furthest a cell under a nugget marker was from a free one %.0f px (%.2f s)" % [case, MASON_GRID_STEP, log.worst_free, log.cells, log.worst_at, log.worst_patch, 100.0 * log.free_sum / maxf(log.samples * log.cells, 1.0), 100.0 * log.covered.size() / maxf(log.cells, 1.0), log.furthest, log.furthest_at])
-	check(log.worst_free > 0 and log.furthest / MASON_BOT_SPEED <= sm.nugget_warning[1] - MASON_BOT_REACTION, "%s: at every moment there is somewhere free to stand, and it is a walk from anywhere under a nugget marker that fits in its warning less a reaction (%.0f px)" % [case, log.furthest])
+	check(log.worst_free > 0 and log.furthest / MASON_BOT_SPEED <= sm.states["NuggetShower"].warning - MASON_BOT_REACTION, "%s: at every moment there is somewhere free to stand, and it is a walk from anywhere under a nugget marker that fits in its warning less a reaction (%.0f px)" % [case, log.furthest])
 	var clear := mason_clearances()
 	log_p("%s: the nearest a nugget landed to a slam was %.3f s before one and %.3f s after its hitbox; %d landed during one" % [case, clear.before, clear.after, clear.inside])
 	check(clear.inside == 0 and clear.before >= sm.slam_clear_before - 0.001 and clear.after >= sm.slam_clear_after - 0.001, "%s: no nugget lands within %.2f s before a slam or %.2f s after its hitbox, anywhere on the mat" % [case, sm.slam_clear_before, sm.slam_clear_after])
@@ -10130,7 +10507,7 @@ func mason_bot_plan() -> void:
 	# it keeps out, as a player would rather than walk in on a slam.
 	var here: Vector2 = player.global_position
 	var threats: Array = mason_bot.known.filter(func(k): return now - k.seen >= MASON_BOT_REACTION and not (mason_bot.parry and k.kind == "carter" and mason_bot_reach(here, k) < 1.0))
-	var can_dash: bool = defense.stamina >= defense.dash_stamina_cost and not defense.is_dash_cooling_down() and not defense.is_dash_recovering()
+	var can_dash: bool = defense.can_afford(defense.dash_stamina_cost) and not defense.is_dash_cooling_down() and not defense.is_dash_recovering()
 	var best := {"cost": INF, "dir": Vector2.ZERO, "dash": false}
 	for dir: Vector2 in MASON_BOT_DIRECTIONS:
 		for move_for: float in ([0.0] if dir == Vector2.ZERO else [0.1, 0.2, 0.35, 0.5, 0.8]):
@@ -10219,19 +10596,22 @@ func test_mason_combined() -> void:
 	var theirs := func(id): return id == &"mason_nugget" or id == &"carter_elbow_drop"
 
 	log_p("-- phase one takes turns, phase two has the one attack")
-	check(sm.FINISHERS[0] == [["CallCarter"], ["NuggetShower"]] and not sm.carter_in_shower[0], "phase one still takes turns between Carter and the nuggets, each on its own")
-	check(sm.FINISHERS[1] == [["NuggetShower"]] and sm.carter_in_shower[1], "phase two's one finisher is the shower with Carter called into it")
+	var firsts: Array = sm.FINISHERS[0].map(func(turn): return sm.resolve_attack(turn[0]))
+	check(firsts == ["NuggetShower" if sm.carter_rain else "CallCarter", "NuggetShower"] and sm.FINISHERS[0][0][0] == "CarterRain" and not sm.carter_in_shower[0], "phase one still takes turns between Carter (his light rain under him while carter_rain is on) and the nuggets (%s)" % [firsts])
+	check(sm.FINISHERS[1].size() == 1 and sm.FINISHERS[1][0][0] == "NuggetShower" and sm.carter_in_shower[1], "phase two's one finisher is the shower with Carter called into it")
+	check(sm.FINISHERS.all(func(turns): return turns.all(func(turn): return turn[-1] == "Pitch")), "and every cycle's attack is followed by his pitches (%s)" % [sm.FINISHERS])
 
 	log_p("-- a real phase-two cycle into it, the player standing still")
 	await mason_ready_combined(MASON_STAND_AT)
 	hold_break_gauge(boss)
 	sm.start_cycle()
-	check(sm.cycle_phase == 1 and sm.finishers == ["NuggetShower"], "the cycle's finisher is the shower (%s)" % [sm.finishers])
+	check(sm.cycle_phase == 1 and sm.finishers == ["NuggetShower", "Pitch"], "the cycle's finisher is the shower, then his pitches (%s)" % [sm.finishers])
 	sm.lines_done = sm.lines_per_cycle[1] - 1
 	var handed := await wait_until(func(): return sm.current_state.name == "NuggetShower", 400)
 	check(handed and shower.with_carter, "its last line hands over to the shower, with Carter called in")
 	hits.clear()
 	mason_new_log()
+	mason_log.next = "AwaitDelivery" if sm.resolve_attack("Pitch").is_empty() else "Pitch"
 	physics_frame.connect(mason_record)
 	var ended := await wait_until(func(): return sm.current_state.name != "NuggetShower", 900)
 	physics_frame.disconnect(mason_record)
@@ -10257,7 +10637,7 @@ func test_mason_combined() -> void:
 	var freed := await wait_until(func(): return not player.is_action_locked, 120)
 	check(freed and not player.lock_seals_guard and not player.scripted_pose and not player.is_posed(), "the Break: the player is theirs again once the drive is over")
 	var again := await wait_until(func(): return sm.current_state.name == "PooSquat", 400)
-	check(again and sm.cycle_phase == 1 and sm.finishers == ["NuggetShower"], "the Break: he gets up into a phase-two cycle with the combined attack still to come")
+	check(again and sm.cycle_phase == 1 and sm.finishers == ["NuggetShower", "Pitch"], "the Break: he gets up into a phase-two cycle with the combined attack still to come")
 
 	log_p("-- paused mid-attack")
 	await mason_ready_combined(MASON_STAND_AT)
@@ -10374,6 +10754,9 @@ func test_mason_combined() -> void:
 
 const MASON_CYCLES := [[false, 0], [false, 1], [true, 0], [true, 1]]
 const MASON_LINE_IDS := [&"mason_poo_blast", &"mason_poo_contact"]
+# His pitches after the attack (MasonPitch): this bot never parries, and walking out of a fastball is the read the
+# pitch takes away, so they are counted on their own and expected to land.
+const MASON_PITCH_IDS := [&"mason_fastball", &"mason_changeup", &"mason_quick_pitch"]
 
 
 func test_mason_bots() -> void:
@@ -10414,14 +10797,133 @@ func test_mason_bots() -> void:
 			physics_frame.disconnect(mason_bot_frame)
 			mason_bot_hold(Vector2.ZERO)
 		var from_lines: int = hits.filter(func(id): return MASON_LINE_IDS.has(id)).size()
-		var from_finisher: int = hits.size() - from_lines
-		totals.append([from_lines, from_finisher])
+		var from_pitch: int = hits.filter(func(id): return MASON_PITCH_IDS.has(id)).size()
+		var from_finisher: int = hits.size() - from_lines - from_pitch
+		totals.append([from_lines, from_finisher, from_pitch])
 		var dead_at: String = "never" if hit_times.size() < MASON_FULL_HEALTH else "%.2f s in" % (hit_times[MASON_FULL_HEALTH - 1] - started)
-		log_p("phase %d, %d lines then %s%s: the lines hit %d times and the finisher %d %s%s; a full bar of %d would run out %s" % [2 if phase_two else 1, lines, finisher, " with Carter in it" if phase_two else "", from_lines, from_finisher, hits, "" if still else ", %d dashes" % mason_bot.dashes, MASON_FULL_HEALTH, dead_at])
+		log_p("phase %d, %d lines then %s%s: the lines hit %d times, the finisher %d and the pitches %d %s%s; a full bar of %d would run out %s" % [2 if phase_two else 1, lines, finisher, " with Carter in it" if phase_two else "", from_lines, from_finisher, from_pitch, hits, "" if still else ", %d dashes" % mason_bot.dashes, MASON_FULL_HEALTH, dead_at])
 		check(through, "phase %d, cycle %d plays through to the delivery" % [2 if phase_two else 1, i + 1])
 		if not still:
-			check(from_lines <= MASON_BOT_MAX_HITS and from_finisher <= MASON_BOT_MAX_HITS and hits.size() < MASON_FULL_HEALTH, "the bot comes through the lines and the %s with at most %d hits each, alive from full health (%d and %d)" % [finisher, MASON_BOT_MAX_HITS, from_lines, from_finisher])
-	log_p("hits per cycle, lines then finisher: %s" % [totals])
+			check(from_lines <= MASON_BOT_MAX_HITS and from_finisher <= MASON_BOT_MAX_HITS and from_lines + from_finisher < MASON_FULL_HEALTH, "the bot comes through the lines and the %s with at most %d hits each, alive from full health (%d and %d; the pitches %d)" % [finisher, MASON_BOT_MAX_HITS, from_lines, from_finisher, from_pitch])
+	log_p("hits per cycle, lines, finisher, pitches: %s" % [totals])
+
+
+# ------------------------------------------------------------------ Carter's drops along the back rope
+# His landed pose is kept under the back rope (CarterElbowDropScript.landing_bounds), and that alone left a
+# strip along it, and the two top corners, that no drop of his reached: a player standing there was never
+# hit (playtest 2026-10-04). A landing short of a player there now comes up until it reaches into them
+# (_reach_past_back_rope). Every spot below is a still player pinned through a whole call, with Mason on
+# his wall column and at his top walk limit; the open floor still has every drop marked on the player; and
+# a drop over the back rope is answered the way his badge says, by a parry a beat before the slam, at both
+# phases' timings.
+
+const MASON_ROPE_SPOTS := [Vector2(117, 132), Vector2(560, 132), Vector2(960, 140), Vector2(1400, 148), Vector2(1803, 132), Vector2(117, 190), Vector2(1803, 196), Vector2(1442, 156)]
+const MASON_ROPE_OPEN := Vector2(760, 640)
+
+
+# One call of Carter's at `phase`'s timings with the player pinned at `spot`, pressing the parry
+# MASON_BOT_PARRY_LEAD before every slam (`parry` 1), every other one from the first (2) or none (0): what
+# landed, what was parried, and how far each drop reached into them (under 1 reaches).
+func mason_rope_call(spot: Vector2, phase: int, parry: int) -> Dictionary:
+	var out := {"hits": 0, "parried": 0, "drops": 0, "on_player": 0, "reach": []}
+	var on_hit := func(hit):
+		if hit.attack_id == &"carter_elbow_drop":
+			out.hits += 1
+	var on_parry := func(hit, _point, _staggered, _streak):
+		if hit.attack_id == &"carter_elbow_drop":
+			out.parried += 1
+	defense.hit_taken.connect(on_hit)
+	defense.parried.connect(on_parry)
+	await settle_player(spot)
+	# Where the walls let them stand: a spot written into the rope is pushed back out of it.
+	var stand: Vector2 = player.global_position
+	clear_iframes()
+	sm.cycle_phase = phase
+	sm.finishers = []
+	var marked := {}
+	var guard := {"press": INF, "release": INF}
+	var hurt_shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var follow := func():
+		var now: float = defense.clock
+		player.global_position = stand
+		player.velocity = Vector2.ZERO
+		# Every other slam left unanswered lands, and its i-frames would swallow the next: off, so only the
+		# hit source decides.
+		if parry == 2:
+			clear_iframes()
+		for drop in hazards_of("CarterElbowDropScript.gd"):
+			var id: int = drop.get_instance_id()
+			var up: bool = drop.target_sprite.visible
+			if up and not marked.get(id, false):
+				out.drops += 1
+				var hurt: Rect2 = hurt_shape.global_transform * hurt_shape.shape.get_rect()
+				if drop.global_position.distance_to(player.global_position) < 0.5:
+					out.on_player += 1
+				out.reach.append(snappedf(((drop.global_position.clamp(hurt.position, hurt.end) - drop.global_position) / (drop.hit_size() / 2.0)).length(), 0.001))
+				if parry == 1 or (parry == 2 and out.drops % 2 == 1):
+					var lands: float = now + drop.telegraph_time + drop.dive_time
+					guard.press = lands - MASON_BOT_PARRY_LEAD
+					guard.release = lands + drop.hitbox_active_time + MASON_BOT_GUARD_AFTER
+			marked[id] = up
+		if parry == 0:
+			return
+		if now >= guard.press:
+			guard.press = INF
+			press(KEY_SHIFT)
+		elif now >= guard.release:
+			guard.release = INF
+			release(KEY_SHIFT)
+	physics_frame.connect(follow)
+	sm.on_child_transition(sm.current_state, "CallCarter")
+	await wait_until(func(): return sm.current_state.name != "CallCarter", 1800)
+	physics_frame.disconnect(follow)
+	release(KEY_SHIFT)
+	defense.hit_taken.disconnect(on_hit)
+	defense.parried.disconnect(on_parry)
+	return out
+
+
+func test_mason_back_rope() -> void:
+	fight = "mason"
+	if not await load_gauged():
+		return
+	log_p("-- a still player along the back rope and in its corners")
+	for mason_at in [MASON_COMBINED_AT, Vector2(960, sm.WALK_Y_MIN)]:
+		for spot in MASON_ROPE_SPOTS:
+			await reset_gauged(fight_spec.home)
+			hold_break_gauge(boss)
+			boss.global_position = mason_at
+			var call: Dictionary = await mason_rope_call(spot, 0, 0)
+			log_p("Mason at %s, player at %s: %d of %d drops hit, reach %s" % [mason_at, spot, call.hits, call.drops, call.reach])
+			check(call.drops == sm.elbow_drops[0] and call.hits == call.drops, "Mason at %s, a still player at %s is hit by every drop (%d of %d)" % [mason_at, spot, call.hits, call.drops])
+			check(call.reach.all(func(r): return r < 1.0), "and every drop marked there reaches into them (%s)" % [call.reach])
+	log_p("-- the open floor is unchanged")
+	await reset_gauged(fight_spec.home)
+	hold_break_gauge(boss)
+	boss.global_position = MASON_COMBINED_AT
+	var open: Dictionary = await mason_rope_call(MASON_ROPE_OPEN, 0, 0)
+	check(open.drops == sm.elbow_drops[0] and open.on_player == open.drops and open.hits == open.drops, "a still player at %s: every drop marked on them, and landing (%d, %d of %d)" % [MASON_ROPE_OPEN, open.on_player, open.hits, open.drops])
+	log_p("-- and still answered by the parry his badge promises, %.2f s before each slam" % MASON_BOT_PARRY_LEAD)
+	for phase in 2:
+		for spot in [MASON_ROPE_SPOTS[0], MASON_ROPE_SPOTS[2], MASON_ROPE_SPOTS[4]]:
+			await reset_gauged(fight_spec.home)
+			hold_break_gauge(boss)
+			boss.global_position = MASON_COMBINED_AT
+			var parried: Dictionary = await mason_rope_call(spot, phase, 1)
+			log_p("phase %d at %s: %d of %d drops parried, %d hit" % [phase + 1, spot, parried.parried, parried.drops, parried.hits])
+			check(parried.drops == sm.elbow_drops[phase] and parried.parried == parried.drops and parried.hits == 0, "phase %d, at %s every drop over the back rope is parried (%d of %d, %d hits)" % [phase + 1, spot, parried.parried, parried.drops, parried.hits])
+	# Every slam of a call came off one area, which a parry absorbs for a second, and phase two's come 0.89 s
+	# apart: the slam after a parried one went through the player untouched, neither hit nor parried. Each
+	# slam is its own source now (CarterElbowDropScript._fresh_hitbox).
+	log_p("-- each slam is judged on its own: every other one parried, the rest land")
+	for phase in 2:
+		await reset_gauged(fight_spec.home)
+		hold_break_gauge(boss)
+		boss.global_position = MASON_COMBINED_AT
+		var alternate: Dictionary = await mason_rope_call(MASON_ROPE_OPEN, phase, 2)
+		var halves: int = sm.elbow_drops[phase] / 2
+		log_p("phase %d on the open floor: %d parried, %d hit, of %d" % [phase + 1, alternate.parried, alternate.hits, alternate.drops])
+		check(alternate.drops == sm.elbow_drops[phase] and alternate.parried == halves and alternate.hits == alternate.drops - halves, "phase %d: the %d slams pressed for are parried and the %d after them land (%d parried, %d hit)" % [phase + 1, halves, alternate.drops - halves, alternate.parried, alternate.hits])
 
 
 # ------------------------------------------------------------------ Carter's Beam Rush
@@ -10440,7 +10942,7 @@ const STRIKE_SHOW := 0.36
 const STRIKE_DASH := 0.08
 const STRIKE_GAP := 0.06
 const STRIKE_REACH := 120.0
-const STRIKE_FROM := 0.15
+const STRIKE_FROM := 0.30
 const STRIKE_CLEAR := 0.30
 const BEAM_RECOVER_BREAK := 5.0
 const BEAM_RECOVER_SPENT := 1.5
@@ -10530,9 +11032,10 @@ func test_beam_rush() -> void:
 
 	log_p("-- a volley's tell and its escape")
 	var to_hit: float = n.beam_escape + n.messatsu_travel
-	log_p("the lines lock %.2f s before the heads land and the beams start to hurt; the yellow badge is up %.2f s of that, %.2f s before they do" % [to_hit, n.messatsu_tell, n.messatsu_tell + n.messatsu_travel])
-	check(n.beam_escape >= n.messatsu_tell, "the tell comes after the lock, inside the escape (%.2f s of %.2f)" % [n.messatsu_tell, n.beam_escape])
-	check(n.messatsu_tell + n.messatsu_travel >= 0.36, "and it is up at the read floor or over it before they hurt (%.2f s)" % (n.messatsu_tell + n.messatsu_travel))
+	# The badge goes up on the lock itself (tuning 2026-10-04), so the whole escape is under it;
+	# beam_rush_live watches it go up on the lock's frame.
+	log_p("the lines lock %.2f s before the heads land and the beams start to hurt, and the yellow badge goes up with them" % to_hit)
+	check(to_hit >= 0.36, "the badge is up at the read floor or over it before they hurt (%.2f s)" % to_hit)
 
 	# By the user's call the Beam Rush's beams are escaped and never parried: his strike is the one parry
 	# in the attack.
@@ -10608,6 +11111,9 @@ func test_beam_rush() -> void:
 	check(latest >= n.strike_from, "every charge has room for him (%.2f to %.2f s)" % [n.strike_from, latest])
 	check(after_hit > window and before_hit > window, "so his blow never lands with a beam")
 	check(before_hit >= to_hit + n.strike_clear - 0.0001, "and a player who stood rooted to parry it still has the whole escape ahead of them")
+	# The strike doesn't pass the i-frames, so a beam hit on the last live frame of the volley before it must have run
+	# out its i-frames by his blow, or they swallow an on-time parry (tuning 2026-10-04; carter_strike_iframes plays it).
+	check(after_hit > player.invincibility_timer.wait_time + 1.0 / 60.0, "and the i-frames a beam's last possible hit leaves are over before his earliest blow (%.2f s against %.2f)" % [after_hit, player.invincibility_timer.wait_time])
 
 	log_p("-- what the attack costs a player who never moves")
 	var catalog: Dictionary = CATALOG.get_attack(&"carter_teleport_strike")
@@ -10621,7 +11127,11 @@ func test_beam_rush() -> void:
 		since_live += iframes
 	var landing: int = n.beam_volleys * per_volley
 	log_p("in a beam all the %.2f s it hurts, against %.2f s of i-frames: %d hits a volley and %d in all, and his strike %.2f s after the beams before it stopped hurting" % [n.beam_live, iframes, per_volley, landing, after_hit])
-	check(landing + 1 >= 6, "a player who never moves dies to it (%d beam hits and the strike against 6 half-hearts)" % landing)
+	# The user's call (2026-09-30), once the player had four hearts: standing still no longer kills, it leaves them on
+	# half a heart.
+	var taken: int = landing * CATALOG.get_attack(RUSH_BEAM_ID).damage + catalog.damage
+	var full: int = load("res://Scripts/PlayerHealthArtLayout.gd").CONTAINERS * 2
+	check(taken == full - 1, "a player who never moves survives it on half a heart (%d beam hits and the strike: %d of %d half-hearts)" % [landing, taken, full])
 
 
 # Where the four's lines run when they lock on a player whose hurtbox centre is `at`: from each one's
@@ -10746,6 +11256,9 @@ func press_at_beam_rush_landing(rush: Node, v: int) -> bool:
 func test_beam_rush_live() -> void:
 	var rush: Node = await load_carter_akuma()
 	check(rush != null, "his fight carries a BeamRush state")
+	# The rush's own ending, his window, is what this holds it to; in his combo it hands on to the Messatsu
+	# instead (chain_attacks, which carter_chain covers).
+	sm.chain_attacks = false
 	var gauge: Node = boss.break_gauge
 	check(gauge != null, "and a Break gauge")
 	# next_attack() is read after start_cycle() has counted the cycle, so cycle 1 is cycles_started 1.
@@ -10754,8 +11267,10 @@ func test_beam_rush_live() -> void:
 	sm.cycles_started = 2
 	check(sm.next_attack() == "BeamRush", "and this one comes second")
 	sm.cycles_started = 3
-	check(sm.next_attack() == "Messatsu", "the Messatsu third")
+	check(sm.next_attack() == "BeamRush", "and again third (tuning 2026-10-06)")
 	sm.cycles_started = 4
+	check(sm.next_attack() == "Messatsu", "the Messatsu fourth")
+	sm.cycles_started = 5
 	check(sm.next_attack() == "RagingDemon", "and back to the barrage, strictly, rather than by a random pick")
 	sm.cycles_started = 0
 	track()
@@ -10772,7 +11287,7 @@ func test_beam_rush_live() -> void:
 	check(await start_beam_rush(rush), "the rush is running, his strike put 0.30 s into the second charge")
 	check(is_equal_approx(gauge.value, 0.0) and not gauge.locked, "the gauge reads 0 on entry and takes fills (%.0f)" % gauge.value)
 	check(rush.casters.size() == 4, "four clones are up (%d)" % rush.casters.size())
-	var seen := {"locks": [], "locked_at": [], "off": 0.0, "fired": {}, "moved": 0, "strike": [], "blow": -1.0, "away": 0}
+	var seen := {"locks": [], "locked_at": [], "off": 0.0, "fired": {}, "moved": 0, "strike": [], "blow": -1.0, "away": 0, "badges": []}
 	var watch := func() -> void:
 		if sm.current_state != rush:
 			return
@@ -10780,6 +11295,10 @@ func test_beam_rush_live() -> void:
 			seen.locks.append(rush.lock_point)
 			seen.locked_at.append(defense.clock)
 			seen.off = maxf(seen.off, rush.lock_point.distance_to(player_centre()))
+			# The first step the lock is seen on: the yellow badge has to be up over it already, with the whole
+			# escape still to run.
+			var badge: Node = boss.clone_layer.get_node_or_null("ParryTell%d" % rush.lock_ring.get_instance_id())
+			seen.badges.append(snappedf(badge.time_left, 0.001) if badge != null and badge.dodge else -1.0)
 		if rush.beat == rush.Beat.STRING:
 			var now := []
 			for caster in rush.casters:
@@ -10812,6 +11331,7 @@ func test_beam_rush_live() -> void:
 	check(left, "the attack ended on its own with no input")
 	check(seen.locks.size() == BEAM_VOLLEYS, "after three volleys, and not on a clock (%d)" % seen.locks.size())
 	check(seen.off <= 1.0, "each locked onto the player's hurtbox centre where they stood")
+	check(seen.badges.size() == BEAM_VOLLEYS and seen.badges.all(func(b): return b >= BEAM_ESCAPE - 2.5 / 60.0), "each volley's yellow badge went up over the lock on the frame its lines locked, for the whole %.2f s escape (time left on it then: %s)" % [BEAM_ESCAPE, seen.badges])
 	check(seen.moved == 0, "and no beam moved off its latched line once it fired")
 	check(beams.size() == BEAM_VOLLEYS * per_volley, "a still player where four cross takes one hit at a time, %d a volley over the %.2f s the beams hurt: %d" % [per_volley, BEAM_LIVE, beams.size()])
 	check(not gaps.is_empty() and gaps.all(func(g): return absf(g - iframes) <= 1.5 / 60.0), "spaced by the i-frames, %.2f s (%s)" % [iframes, gaps])
@@ -10821,7 +11341,8 @@ func test_beam_rush_live() -> void:
 	check(blow_to_lock >= STRIKE_CLEAR - 0.001, "its blow landed %.2f s before that volley's lines locked" % blow_to_lock)
 	check(seen.away == 0, "and he stood back where he started from then on")
 	check(sm.current_state.name == "Recover", "into his punish window")
-	check(is_equal_approx(sm.recover_timer.wait_time, BEAM_RECOVER_SPENT), "an attack simply sat through earns the short window: %.2f s" % sm.recover_timer.wait_time)
+	var walk_in: float = sm.walk_in_time(player.global_position.distance_to(boss.global_position))
+	check(absf(sm.recover_timer.wait_time - maxf(BEAM_RECOVER_SPENT, walk_in)) <= 0.02, "an attack simply sat through earns the short window, or the walk in from where the player stands if that is longer: %.2f s (walk in %.2f s)" % [sm.recover_timer.wait_time, walk_in])
 	check(get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), "nothing is left on the mat")
 
 	log_p("-- a player who parries his strike rooted, then walks out of every volley's lines as they lock")
@@ -10880,15 +11401,15 @@ func test_beam_rush_live() -> void:
 	check(inside and dashed_hits == 0, "still in them as they went live, and not hit (%d)" % dashed_hits)
 	check(dodges.size() > dodged_before and dodges[-1].id == RUSH_BEAM_ID, "a perfect dodge through the beam")
 
-	log_p("-- his strike is the attack's one read: with seven carried in, its parry breaks him and ends it on the spot")
+	log_p("-- his strike is the attack's one read: with all but one read carried in, its parry breaks him and ends it on the spot")
 	sm.recover_timer.stop()
 	sm.on_child_transition(sm.current_state, "Idle")
 	sm.beat_timer.stop()
 	await settle_player(Vector2(959, 800))
 	clear_iframes()
-	# His gauge is fight-long and carries over between attacks: seven reads come in from the attacks before.
+	# His gauge is fight-long and carries over between attacks: all but one read comes in from the attacks before.
 	gauge.locked = false
-	gauge.value = 7.0 * boss.BREAK_READ
+	gauge.value = (boss.BREAK_READS - 1) * boss.BREAK_READ
 	var parried := []
 	# PlayerCombatFx._attack_art flicks the first visible Sprite2D among a parried source's siblings, and
 	# its handler runs before this one, so a hit source parented beside a sprite shows here as one of the
@@ -10900,19 +11421,32 @@ func test_beam_rush_live() -> void:
 			if rush.casters[c].figure.self_modulate != Color.WHITE:
 				flicked.append(c + 1))
 	check(await start_beam_rush(rush, 0, 0.3), "a fourth rush is running with %.1f in the gauge, his strike in the first charge" % gauge.value)
+	# Taken now: the Break frees the ring with the rest of the attack.
+	var lock_id: int = rush.lock_ring.get_instance_id()
+	var frames := {"broke": -1, "ended": -1}
+	var on_broke := func() -> void:
+		if frames.broke < 0:
+			frames.broke = Engine.get_physics_frames()
+	var on_frame := func() -> void:
+		if frames.broke >= 0 and frames.ended < 0 and sm.current_state != rush:
+			frames.ended = Engine.get_physics_frames()
+	gauge.broke.connect(on_broke)
+	physics_frame.connect(on_frame)
 	var answered: bool = await parry_beam_rush_strike(rush)
 	await wait(1)
-	var lock_badge: Node = boss.clone_layer.get_node_or_null("ParryTell%d" % rush.lock_ring.get_instance_id())
-	log_p("parried %s; the attack in volley %d, beat %s" % [parried, rush.volley, rush.Beat.keys()[rush.beat]])
+	gauge.broke.disconnect(on_broke)
+	physics_frame.disconnect(on_frame)
+	var lock_badge: Node = boss.clone_layer.get_node_or_null("ParryTell%d" % lock_id)
+	log_p("parried %s; the attack over %d frame(s) after the Break, in %s" % [parried, frames.ended - frames.broke, sm.current_state.name])
 	check(answered and parried == [&"carter_teleport_strike"], "his strike, parried")
 	check(flicked.is_empty(), "and no parry flashed or knocked one of the four at the top (clones %s)" % [flicked])
-	check(rush.broke and rush.volley == 0 and rush.beat == rush.Beat.END, "it broke him, and the attack ended on the spot")
+	check(rush.broke and frames.ended >= 0 and frames.ended - frames.broke <= 2, "it broke him, and the attack is over within two frames (%d)" % (frames.ended - frames.broke))
 	check(messatsu_badge() == null and lock_badge == null, "with no badge left, over him or over the lock")
-	check(not rush.lock_ring.visible and rush.casters.all(func(c): return not c.ball.visible and not c.aim_line.visible), "and no line, ball or lock ring left up")
-	check(await wait_until(func(): return sm.current_state.name == "Recover", 240), "into his window")
+	check(rush.casters.is_empty() and not is_instance_valid(rush.lock_ring), "and no clone, line, ball or lock ring left up")
+	check(sm.current_state.name == "Recover", "straight into his window")
 	check(is_equal_approx(sm.recover_timer.wait_time, BEAM_RECOVER_BREAK), "the long window a Break earns: %.2f s" % sm.recover_timer.wait_time)
 	check(sm.current_state.from_break and boss.can_be_juggled(), "and it is a Break's window, which pays the tiered finisher")
-	check(get_nodes_in_group(sm.HAZARD_GROUP).is_empty() and rush.casters.is_empty(), "and nothing is left on the mat")
+	check(get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), "and nothing is left on the mat")
 
 	log_p("-- a player beaten in the middle of it leaves nothing behind")
 	sm.recover_timer.stop()
@@ -11086,7 +11620,7 @@ func test_carter_hud() -> void:
 	demon.feints = fakes
 	demon.reds_total = sm.clone_count - 3
 	physics_frame.connect(watch)
-	await wait_until(func(): return sm.current_state.name == "Recover", 1200)
+	await wait_until(func(): return sm.current_state != demon, 1500)
 	physics_frame.disconnect(watch)
 	var red_marks := samples.filter(func(s): return not s.feint).map(func(s): return s.mark)
 	var fake_marks := samples.filter(func(s): return s.feint).map(func(s): return s.mark)
@@ -11143,7 +11677,7 @@ func test_carter_hud() -> void:
 	var strike_badge: Node = messatsu_badge()
 	var strike_rect := carter_drawn_rect(strike_badge.sprite) if strike_badge else Rect2()
 	check(strike_badge != null and carter_hud_gap(strike_rect, hud) > 0.0, "his badge is clear of the bar and in view (%s)" % [strike_rect])
-	check(await wait_until(func(): return rush.beat == rush.Beat.TELL, 600), "the lines lock on them")
+	check(await wait_until(func(): return rush.beat == rush.Beat.LOCK, 600), "the lines lock on them")
 	await wait(2)
 	var lock_badge: Node = boss.clone_layer.get_node_or_null("ParryTell%d" % rush.lock_ring.get_instance_id())
 	var lock_rect := carter_drawn_rect(lock_badge.sprite) if lock_badge else Rect2()
@@ -11224,7 +11758,7 @@ const MESSATSU_CHARGE := 1.20
 const MESSATSU_TELL := 0.30
 const MESSATSU_TRAVEL := 0.10
 const MESSATSU_TICK := 0.50
-const MESSATSU_HITS := 6
+const MESSATSU_HITS := 7
 const MESSATSU_REARM_DELAY := 0.08
 const MESSATSU_PULSE_TRAVEL := 0.30
 const MESSATSU_END_HOLD := 0.20
@@ -11234,9 +11768,11 @@ const MESSATSU_HIT_WIDTH := 360.0
 const MESSATSU_BACK := 60.0
 const MESSATSU_MIN_AIM := 40.0
 # What his punish window comes to for a string sat through and for a perfect one (recover_window() on
-# six missed and six parried), and the damage six parries bank with the perfect bonus.
+# all of it missed and all of it parried), and the damage a perfect string banks with the perfect bonus:
+# seven hits and recover_base 1.5 since the 2026-10-05 tuning (six and 3.0 before).
+# No window is shorter than walking in from where the player stands (CarterStateMachine.walk_in_time).
 const MESSATSU_WINDOW_STILL := 1.5
-const MESSATSU_WINDOW_PERFECT := 4.2
+const MESSATSU_WINDOW_PERFECT := 2.9
 const MESSATSU_BANKED_PERFECT := 4
 # Where the live modes put him and stand the player: 900 px apart, so the beam comes in about 10
 # degrees off level and a dash straight up is across it.
@@ -11324,7 +11860,7 @@ func test_messatsu() -> void:
 	check(forgiven == [3], "a press %.2f s late for the last hit, then one in the window, parries the next (%s)" % [late[0], forgiven])
 	check(unforgiven == [unparried()], "which only the rearm makes true: %s without it" % [unforgiven])
 
-	log_p("-- six hits %.2f s apart on a player who does nothing" % tick)
+	log_p("-- %d hits %.2f s apart on a player who does nothing" % [MESSATSU_HITS, tick])
 	player.playerHealth = 100
 	var landed := []
 	for k in MESSATSU_HITS:
@@ -11332,7 +11868,7 @@ func test_messatsu() -> void:
 			await wait(clone_frames(tick))
 		landed.append(omni_hit(MESSATSU_ID, dummy_source()))
 	log_p("  %s, health %d" % [landed, player.playerHealth])
-	check(landed.count(1) == MESSATSU_HITS, "all six land through each other's i-frames (%s)" % [landed])
+	check(landed.count(1) == MESSATSU_HITS, "all %d land through each other's i-frames (%s)" % [MESSATSU_HITS, landed])
 	check(player.playerHealth == 100 - MESSATSU_HITS * entry.damage, "for %d half-hearts, a full health bar (%d left of 100)" % [MESSATSU_HITS * entry.damage, player.playerHealth])
 	clear_iframes()
 	health_ok()
@@ -11452,7 +11988,7 @@ func start_messatsu(m: Node, spot := MESSATSU_CARTER_SPOT) -> bool:
 	sm.on_child_transition(sm.current_state, "Idle")
 	sm.beat_timer.stop()
 	m.spot_override = spot
-	sm.cycles_started = 2
+	sm.cycles_started = sm.ATTACK_ROTATION.find(MESSATSU_STATE)
 	sm.start_cycle()
 	return sm.current_state == m
 
@@ -11553,13 +12089,13 @@ func test_messatsu_live() -> void:
 		return
 
 	var order := []
-	for cycle in range(1, 5):
+	for cycle in range(1, 6):
 		sm.cycles_started = cycle
 		order.append(sm.next_attack())
 	sm.cycles_started = 0
-	check(order == ["RagingDemon", "BeamRush", MESSATSU_STATE, "RagingDemon"], "his rotation is the barrage, the Beam Rush, the Messatsu, then the barrage again (%s)" % [order])
+	check(order == ["RagingDemon", "BeamRush", "BeamRush", MESSATSU_STATE, "RagingDemon"], "his rotation is the barrage, the Beam Rush twice, the Messatsu, then the barrage again (%s)" % [order])
 
-	log_p("-- a player who presses nothing: the dark, the lights, six hits")
+	log_p("-- a player who presses nothing: the dark, the lights, %d hits" % MESSATSU_HITS)
 	player.playerHealth = 9999
 	await settle_player(MESSATSU_PLAYER_SPOT)
 	var hurt: int = events_of("HIT", MESSATSU_ID).size()
@@ -11623,10 +12159,11 @@ func test_messatsu_live() -> void:
 	for i in range(1, hits.size()):
 		gaps.append(snappedf(hits[i].t - hits[i - 1].t, 0.001))
 	log_p("%d hits, %s s apart; the window %.2f s" % [hits.size(), gaps, sm.recover_timer.wait_time])
-	check(hits.size() == MESSATSU_HITS, "exactly six hits land on a still player (%d)" % hits.size())
+	check(hits.size() == MESSATSU_HITS, "exactly %d hits land on a still player (%d)" % [MESSATSU_HITS, hits.size()])
 	check(gaps.all(func(gap): return absf(gap - MESSATSU_TICK) <= 1.5 / 60.0), "%.2f s apart (%s)" % [MESSATSU_TICK, gaps])
 	check(is_equal_approx(m.aim_angle, angle) and m.aim_origin == origin, "and the aim never moved after the fire")
-	check(is_equal_approx(sm.recover_timer.wait_time, MESSATSU_WINDOW_STILL), "a string sat through earns the short window: %.2f s" % sm.recover_timer.wait_time)
+	var walk_in: float = sm.walk_in_time(player.global_position.distance_to(boss.global_position))
+	check(absf(sm.recover_timer.wait_time - maxf(MESSATSU_WINDOW_STILL, walk_in)) <= 0.02, "a string sat through earns the short window, or the walk in from where the player stands if that is longer: %.2f s (walk in %.2f s)" % [sm.recover_timer.wait_time, walk_in])
 	check(get_nodes_in_group(sm.HAZARD_GROUP).is_empty(), "nothing is left on the mat")
 	check(not boss.dark_stage.visible and boss.curtain.modulate.a == 0.0, "no dark is left up")
 	check(is_equal_approx(boss.music_player.volume_db, boss.music_base_db), "the music is back to %.1f dB" % boss.music_base_db)
@@ -11634,7 +12171,7 @@ func test_messatsu_live() -> void:
 	check(not boss.sprite.flip_h, "he is facing the way he always stands")
 	check(messatsu_badge() == null, "and there is no badge over his head")
 
-	log_p("-- six parries")
+	log_p("-- %d parries" % MESSATSU_HITS)
 	await settle_player(MESSATSU_PLAYER_SPOT)
 	clear_iframes()
 	boss.boss_health = boss.max_health
@@ -11651,9 +12188,10 @@ func test_messatsu_live() -> void:
 	check(await wait_until(func(): return sm.current_state.name == "Recover", 300), "into his punish window")
 	var got: Array = parries.slice(parried_before)
 	log_p("parried %d (%s), banked %d, window %.2f s" % [m.parried, got.map(func(p): return p.id), boss.max_health - boss.boss_health, sm.recover_timer.wait_time])
-	check(m.parried == MESSATSU_HITS and got.size() == MESSATSU_HITS and got.all(func(p): return p.id == MESSATSU_ID and not p.staggered), "all six parried, and none of them staggers him")
+	check(m.parried == MESSATSU_HITS and got.size() == MESSATSU_HITS and got.all(func(p): return p.id == MESSATSU_ID and not p.staggered), "all %d parried, and none of them staggers him" % MESSATSU_HITS)
 	check(boss.boss_health == boss.max_health - MESSATSU_BANKED_PERFECT, "a perfect string banks %d (%d taken)" % [MESSATSU_BANKED_PERFECT, boss.max_health - boss.boss_health])
-	check(is_equal_approx(sm.recover_timer.wait_time, MESSATSU_WINDOW_PERFECT), "and earns a %.1f s window (%.2f s)" % [MESSATSU_WINDOW_PERFECT, sm.recover_timer.wait_time])
+	var walk_in_perfect: float = sm.walk_in_time(player.global_position.distance_to(boss.global_position))
+	check(absf(sm.recover_timer.wait_time - maxf(MESSATSU_WINDOW_PERFECT, walk_in_perfect)) <= 0.02, "and earns a %.1f s window, or the walk in from where the player stands if that is longer (%.2f s, walk in %.2f s)" % [MESSATSU_WINDOW_PERFECT, sm.recover_timer.wait_time, walk_in_perfect])
 
 	log_p("-- a player who turtles behind the guard")
 	await settle_player(MESSATSU_PLAYER_SPOT)
@@ -12283,6 +12821,8 @@ func mash_out(trapped: Node, pair: Array, every: int) -> bool:
 
 const OVERLOAD_BLAST := &"computah_overload_blast"
 const DASH_IMMUNITY := "res://Scripts/DashImmunity.gd"
+# REACHABILITY's steady player: a press this long after each swing ends.
+const OVERLOAD_STEADY_GAP := 0.10
 
 
 func overload() -> Node:
@@ -12296,10 +12836,11 @@ func begin_overload() -> Node:
 	return overload()
 
 
-# Back to a standing start with his health, his gauge and the mat all clean, so one section can never
-# decide the next one.
+# Back to a standing start with his health, his gauge, the mat and the combo's count all clean, so one
+# section can never decide the next one.
 func overload_reset() -> void:
 	await park_computah()
+	player.combo.reset()
 	boss.boss_health = boss.max_health
 	if boss.break_gauge:
 		boss.break_gauge.locked = false
@@ -12337,15 +12878,18 @@ func overload_reach() -> float:
 
 
 # THE BOT. It rushes him from where it stands and punches until the charge resolves, the way a player
-# does: the walk held all the way in, then presses either on the combo's own beat window (a rhythm
-# player) or as fast as the game will take them (a masher). Nothing is teleported and nothing is
-# handed to it - what it measures is whether the attack is winnable from where it started.
-func rush_and_punch(on_beat: bool, max_frames := 400) -> Dictionary:
+# does: the walk held all the way in, then a press `gap` seconds after each swing ends (a steady
+# player), or with no gap as fast as the game will take them (a masher). The combo has no timing
+# (PlayerCombo), so the pace is all the gap changes. Nothing is teleported and nothing is handed to it -
+# what it measures is whether the attack is winnable from where it started.
+func rush_and_punch(gap := 0.0, max_frames := 400) -> Dictionary:
 	var out := {"damage": 0, "seconds": 0.0, "presses": 0, "contact": -1.0, "arrived": -1.0,
 		"reach": overload_reach(), "from": player.global_position.distance_to(boss.global_position)}
 	var start: float = defense.clock
 	var ov: Node = overload()
 	var walking := true
+	var was_punching := false
+	var ended_at := -INF
 	press(KEY_LEFT)
 	for i in max_frames:
 		if sm.current_state != ov or ov.phase != ov.Phase.CHARGE:
@@ -12354,14 +12898,13 @@ func rush_and_punch(on_beat: bool, max_frames := 400) -> Dictionary:
 			walking = false
 			out.arrived = defense.clock - start
 			release(KEY_LEFT)
-		if not walking:
-			var punching: bool = player.state_machine.current_state.name == "Punching"
-			# A rhythm player waits for the beat window; with no combo yet there is no window to wait
-			# for, so the opening punch is thrown either way.
-			var beat: bool = player.combo.window_open or player.combo.count == 0
-			if not punching and (beat or not on_beat):
-				tap(KEY_Q)
-				out.presses += 1
+		var punching: bool = player.state_machine.current_state.name == "Punching"
+		if was_punching and not punching:
+			ended_at = defense.clock
+		was_punching = punching
+		if not walking and not punching and defense.clock - ended_at >= gap - 0.001:
+			tap(KEY_Q)
+			out.presses += 1
 		if out.contact < 0.0 and boss.damage_this_window > 0:
 			out.contact = defense.clock - start
 		out.damage = maxi(out.damage, boss.damage_this_window)
@@ -12382,9 +12925,9 @@ func test_computah_overload() -> void:
 	var needed: int = sm.overload_threshold
 	log_p("threshold %d half-hearts, hit cap %d, %.2f s, from %.0f px, every %d cycles"
 		% [needed, sm.overload_hit_cap, sm.overload_time, sm.overload_start_range, sm.overload_every_cycles])
-	# take_punch() returns 0 past the cap, and a punch that returns 0 makes PlayerCombo.resolve_punch()
-	# call reset(): a cap anywhere near the threshold leaves the player hitting a boss that has stopped
-	# reacting with a combo that has silently died. THE THRESHOLD ENDS THE CHARGE, NEVER THE CAP.
+	# take_punch() returns 0 past the cap, which refuses the punch (PlayerCombo.punch_refused): a cap
+	# anywhere near the threshold leaves the player hitting a boss that has stopped taking anything while
+	# the charge runs on. THE THRESHOLD ENDS THE CHARGE, NEVER THE CAP.
 	check(sm.overload_hit_cap > needed, "overload_hit_cap (%d) strictly exceeds the %d punches the threshold needs at 1 damage each" % [sm.overload_hit_cap, needed])
 	check(sm.overload_hit_cap > boss.MAX_HITS_PER_WINDOW, "and it is not the window's usual cap of %d" % boss.MAX_HITS_PER_WINDOW)
 	check(needed <= boss.max_health / 4, "the threshold is a check, not a second health bar (%d of %d)" % [needed, boss.max_health])
@@ -12392,7 +12935,7 @@ func test_computah_overload() -> void:
 	log_p("-- the catalogue entry: a full heart, and no answer of any kind")
 	var halves: int = load("res://Scripts/PlayerHealthArtLayout.gd").CONTAINERS * 2
 	log_p("%s: %s" % [OVERLOAD_BLAST, catalogue])
-	check(blast_damage == 2 and halves == 6, "one full heart: damage %d of the player's %d halves" % [blast_damage, halves])
+	check(blast_damage == 2 and halves == 8, "one full heart: damage %d of the player's %d halves" % [blast_damage, halves])
 	check(not catalogue.blockable and not catalogue.parryable and not catalogue.dash_through, "no guard, no parry, no dash")
 	check(not catalogue.tell and not catalogue.dodge_tell, "and NEITHER tell: a badge is an answer key, and this has no answer")
 	check(catalogue.hype_loss, "hype_loss stays on: no grab took a toll first, so the blast IS the toll")
@@ -12490,7 +13033,7 @@ func test_computah_overload() -> void:
 		if sm.current_state == ov and boss.can_be_dazed():
 			dazeable[0] = true
 	physics_frame.connect(watch_daze)
-	var run := await rush_and_punch(false)
+	var run := await rush_and_punch()
 	log_p("put in %d of %d in %.2f s over %d presses" % [run.damage, needed, run.seconds, run.presses])
 	check(run.damage >= needed, "the threshold is reached (%d of %d)" % [run.damage, needed])
 	check(ov.phase == ov.Phase.BROKEN, "which breaks the charge rather than the hit cap ending it (%d)" % ov.phase)
@@ -12509,19 +13052,19 @@ func test_computah_overload() -> void:
 	boss.break_gauge = null
 	await settle_player(boss.global_position + Vector2(300, -60))
 	await begin_overload()
-	run = await rush_and_punch(false)
+	run = await rush_and_punch()
 	check(await wait_until(func(): return sm.current_state.name == "Punish", 200), "the fallback window opens (%d damage in)" % run.damage)
 	check(is_equal_approx(sm.states["Punish"].window_time, sm.overload_break_window), "on overload_break_window (%.2f s)" % sm.states["Punish"].window_time)
 	boss.break_gauge = gauge
 
-	log_p("-- REACHABILITY: from exactly overload_start_range, both ways of punching clear it")
-	for on_beat in [true, false]:
+	log_p("-- REACHABILITY: from exactly overload_start_range, mashed and steady punching both clear it")
+	for gap in [0.0, OVERLOAD_STEADY_GAP]:
 		await overload_reset()
-		var how := "on the beat" if on_beat else "mashing"
+		var how := "mashing" if gap == 0.0 else "a press %.2f s after each swing" % gap
 		await settle_player(overload_start_spot())
 		await wait(4)
 		await begin_overload()
-		run = await rush_and_punch(on_beat)
+		run = await rush_and_punch(gap)
 		var spare: float = sm.overload_time - run.seconds
 		log_p("%s from %.0f px: reach %.0f px, arrived at %.2f s, first contact %.2f s, %d of %d in %.2f s over %d presses (%.2f s spare of %.2f)"
 			% [how, run.from, run.reach, run.arrived, run.contact, run.damage, needed, run.seconds, run.presses, spare, sm.overload_time])
@@ -12768,7 +13311,7 @@ func test_drift() -> void:
 
 
 # ------------------------------------------------------------------ beast Bixby's Inferno
-# BixbyBeastInferno, forced from his hover with nothing else queued, on a fixed seed, five times over with the
+# BixbyBeastInferno, forced from his hover with nothing else queued, on a fixed seed, six times over with the
 # player somewhere different for each breath. A process gets one ending, so the player dying mid-pull
 # (tier=death) and him beaten on the rope (tier=defeated) are runs of their own. The geometry is
 # BixbyInfernoArtLayout's, the numbers BixbyBeastStateMachine's.
@@ -12791,6 +13334,8 @@ const INFERNO_LANDING_REACH := 114.0
 # it is back where they were a second ago.
 const INFERNO_CIRCLE_CENTRE := Vector2(960, 600)
 const INFERNO_CIRCLE_RADIUS := 280.0
+# How far in from the side ropes a player strafing the bottom rope starts and stops.
+const INFERNO_STRAFE_INSET := 40.0
 # "Roughly three quarters" of the ring, the user's own rough figure: with the perch art's apex the approved
 # cone covers 68%.
 const INFERNO_COVERAGE_RANGE := Vector2(0.65, 0.80)
@@ -12818,6 +13363,9 @@ var inf_land_player := Vector2.INF
 # have settled by then.
 var inf_perched_since := -1.0
 var inf_left_rope_at := -1.0
+# The last frame his Flyby was going: it fades the bar itself (bixby_flyby tier=draw checks that), so the HUD isn't
+# held to full off the rope until it has settled after one.
+var inf_flyby_seen_at := -INF
 var inf_perched_frames := 0
 var inf_perch_wrong := []
 var inf_hud_wrong := []
@@ -12986,6 +13534,8 @@ func watch_inferno() -> void:
 func watch_perch() -> void:
 	var clock: float = boss.fight_clock
 	var perched := on_rope()
+	if sm.current_state == sm.states.get("Flyby"):
+		inf_flyby_seen_at = clock
 	if perched and inf_perched_since < 0.0:
 		inf_perched_since = clock
 	elif not perched and inf_perched_since >= 0.0:
@@ -12999,7 +13549,7 @@ func watch_perch() -> void:
 		if clock - inf_perched_since >= settle and absf(hud_alpha() - sm.inferno_hud_fade_alpha) > 0.001:
 			inf_hud_wrong.append("f%d on the rope %.2f s, HUD at %.3f" % [Engine.get_physics_frames(), clock - inf_perched_since, hud_alpha()])
 		watch_perch_floor()
-	elif inf_left_rope_at >= 0.0 and clock - inf_left_rope_at >= settle and absf(hud_alpha() - 1.0) > 0.001:
+	elif inf_left_rope_at >= 0.0 and clock - inf_left_rope_at >= settle and clock - inf_flyby_seen_at >= settle and absf(hud_alpha() - 1.0) > 0.001:
 		inf_hud_wrong.append("f%d off the rope %.2f s, HUD at %.3f" % [Engine.get_physics_frames(), clock - inf_left_rope_at, hud_alpha()])
 
 
@@ -13222,14 +13772,18 @@ func start_inferno_run(what: String) -> bool:
 func test_inferno() -> void:
 	seed(INFERNO_SEED)
 	await load_liam()
-	# Five Infernos' dodges and windows in one fight add up to a Break, which would cut a run short.
+	# His hovers held, as combined, spin_tell and spin_reach hold them: force_inferno() waits 900 frames for a hover,
+	# and a Flyby's cycle, with its landing, recovery and takeoff, runs longer than that.
+	sm.hover_time = 600.0
+	sm.hover_between_attacks = 600.0
+	# Six Infernos' dodges and windows in one fight add up to a Break, which would cut a run short.
 	hold_break_gauge(boss)
 	track()
 	track_dodges()
 	var fireball: Dictionary = CATALOG.get_attack(&"bixby_fireball")
 	var breath: Dictionary = CATALOG.get_attack(&"bixby_inferno")
 	var ember: Dictionary = CATALOG.get_attack(&"bixby_ember")
-	check(fireball.damage == 1 and fireball.blockable and fireball.weight == CATALOG.Weight.LIGHT and fireball.from_above and fireball.dodge_tell and not fireball.dash_through, "bixby_fireball is catalogued as mason_nugget is (%s)" % [fireball])
+	check(fireball.damage == 2 and fireball.blockable and fireball.weight == CATALOG.Weight.LIGHT and fireball.from_above and fireball.dodge_tell and not fireball.dash_through, "bixby_fireball is catalogued as mason_nugget is, at a full heart (the tuning round of 2026-10-04) (%s)" % [fireball])
 	check(breath.damage == 2 and not breath.blockable and not breath.parryable and breath.dodge_tell and not breath.tell and not breath.dash_through, "bixby_inferno: a full heart, no guard, no parry, no dash through, a yellow tell (%s)" % [breath])
 	check(ember.damage == 1 and ember.dash_through and not ember.blockable and not ember.parryable and not ember.tell and not ember.dodge_tell and not ember.bypass_invincibility, "bixby_ember: half a heart, no guard, no badge, dashed through, spaced by the i-frames (%s)" % [ember])
 	if tier == "death":
@@ -13245,9 +13799,10 @@ func test_inferno() -> void:
 	await inferno_run_three()
 	await inferno_run_four()
 	await inferno_run_five()
+	await inferno_run_six()
 	physics_frame.disconnect(watch_inferno)
-	log_p("%d markers over the five runs, %.1f px at most from the player's feet as each appeared" % [inf_marker_offsets.size(), inf_marker_offsets.max()])
-	check(inf_marker_offsets.size() == 5 * sm.inferno_fireballs and inf_marker_offsets.max() <= sm.inferno_track_scatter + 1.0, "every marker of every run tracked the player, within %.0f px" % sm.inferno_track_scatter)
+	log_p("%d markers over the six runs, %.1f px at most from the player's feet as each appeared" % [inf_marker_offsets.size(), inf_marker_offsets.max()])
+	check(inf_marker_offsets.size() == 6 * sm.inferno_fireballs and inf_marker_offsets.max() <= sm.inferno_track_scatter + 1.0, "every marker of every run tracked the player, within %.0f px" % sm.inferno_track_scatter)
 	log_p("%d frames on the rope; off the middle or mirrored on %s; the HUD not settled where it should be on %s" % [inf_perched_frames, inf_perch_wrong.slice(0, 5), inf_hud_wrong.slice(0, 5)])
 	check(inf_perched_frames > 0 and inf_perch_wrong.is_empty(), "every frame on the rope, he is on its middle facing down, never mirrored")
 	check(inf_hud_wrong.is_empty(), "the HUD is at %.2f whenever he has been on the rope %.2f s, and back to full whenever he has been off it that long" % [sm.inferno_hud_fade_alpha, boss.HUD_FADE_TIME])
@@ -13634,16 +14189,40 @@ func inferno_run_five() -> void:
 	check(await reach_phase(inf.Phase.INHALE, 900), "the shower starts")
 	await settle_player(inf.pull_target() + Vector2(0, 15))
 	clear_iframes()
-	var hits_before := events_of("HIT", &"bixby_fireball").size()
+	var hits_before := events_of("HIT").size()
+	var health: int = player.playerHealth
 	var set_off: float = defense.clock
 	var from_y: float = player.global_position.y
+	# How much further from the floor under him the player is on each frame than on the one before.
+	var gained: Array = []
+	var was := [player.global_position.distance_to(inf.pull_target())]
+	var measure := func():
+		var now: float = player.global_position.distance_to(inf.pull_target())
+		gained.append(now - was[0])
+		was[0] = now
+	physics_frame.connect(measure)
 	press(KEY_DOWN)
-	# Straight down the ring, away from him, until the bottom rope stops them: pinned there, the pull lifts
-	# them a step off it every frame, so they come to rest a few px short of the floor's edge.
-	await wait_until(func(): return player.global_position.y >= sm.PLAYER_FLOOR.end.y - 8.0 or inf.phase != inf.Phase.INHALE, 600)
+	# Straight down the ring, away from him, until the bottom rope stops them or the shower ends. Pinned
+	# against the rope, the pull lifts them a frame's worth of itself off it every frame, so they come to
+	# rest that much and a little more short of the floor's edge.
+	var at_rope: float = sm.PLAYER_FLOOR.end.y - 8.0 - sm.inferno_pull_speed * FRAME_TIME
+	await wait_until(func(): return player.global_position.y >= at_rope or inf.phase != inf.Phase.INHALE, 600)
 	var stopped: float = defense.clock
 	release(KEY_DOWN)
-	var walk_hits: Array = events_of("HIT", &"bixby_fireball").slice(hits_before)
+	physics_frame.disconnect(measure)
+	var walked: float = stopped - set_off
+	var walk_hits: Array = events_of("HIT").slice(hits_before)
+	var gaps := []
+	for i in range(1, walk_hits.size()):
+		gaps.append(snappedf(walk_hits[i].t - walk_hits[i - 1].t, 0.001))
+	var iframes: float = player.invincibility_timer.wait_time
+	var owed := 0
+	for e in walk_hits:
+		owed += catalogue_damage(e.id)
+	# The press is taken a frame or so after it is made: from their first step on.
+	var first_step: int = gained.find_custom(func(g): return g > 0.0)
+	var steps: Array = gained.slice(first_step) if first_step >= 0 else []
+	var least: float = steps.min() if not steps.is_empty() else -1.0
 	var dropped_on_the_way: Array = inf_fireballs.values().filter(func(r): return r.seen > set_off and r.seen <= stopped)
 	dropped_on_the_way.sort_custom(func(a, b): return a.seen < b.seen)
 	var apart := []
@@ -13651,10 +14230,15 @@ func inferno_run_five() -> void:
 		apart.append(dropped_on_the_way[i].pos.distance_to(dropped_on_the_way[i - 1].pos))
 	var behind: Array = inf_fireballs.values().filter(func(r): return r.landed > set_off and r.landed <= stopped and r.has("landed_feet")).map(func(r): return r.pos.distance_to(r.landed_feet))
 	var average := func(values: Array) -> float: return values.reduce(func(sum, v): return sum + v, 0.0) / maxi(values.size(), 1)
-	var net: float = (player.global_position.y - from_y) / (stopped - set_off)
-	log_p("walked straight away from him for %.2f s at %.0f px/s net: %d fireball hits, markers %.0f px apart on average, %d landed while walking, %.0f to %.0f px behind their feet (%.0f on average)" % [stopped - set_off, net, walk_hits.size(), average.call(apart), behind.size(), behind.min() if not behind.is_empty() else -1.0, behind.max() if not behind.is_empty() else -1.0, average.call(behind)])
-	check(walk_hits.size() <= 1, "walking straight away against the pull, 0 or 1 fireball hits (%d)" % walk_hits.size())
-	check(not behind.is_empty() and behind.min() > INFERNO_LANDING_REACH, "every one that lands while they walk lands behind them, clear of their feet (%.0f px at the least)" % (behind.min() if not behind.is_empty() else -1.0))
+	var net: float = (player.global_position.y - from_y) / walked
+	var floor_net: float = player.SPEED - sm.inferno_pull_speed
+	log_p("walked straight away from him for %.2f s at %.0f px/s net, %.2f px further from him a frame at the least: %d hits %s at %s, gaps %s, health %d -> %d; markers %.0f px apart on average, %d landed while walking, %.0f to %.0f px from their feet (%.0f on average)" % [walked, net, least, walk_hits.size(), walk_hits.map(func(e): return e.id), walk_hits.map(func(e): return snappedf(e.t - set_off, 0.001)), gaps, health, player.playerHealth, average.call(apart), behind.size(), behind.min() if not behind.is_empty() else -1.0, behind.max() if not behind.is_empty() else -1.0, average.call(behind)])
+	# Walking straight out no longer gets away from the shower (the user, 2026-09-29: a harder pull means moving
+	# sideways or dashing), but it still gains ground, and what it costs is spaced by the i-frames.
+	check(net >= floor_net - 1.0, "walking straight away still makes ground: %.0f px/s net, at least the %.0f walking speed less the pull leaves" % [net, floor_net])
+	check(not steps.is_empty() and least >= 0.0, "and the pull never drags them back toward him, on any frame (%.2f px a frame at the least)" % least)
+	check(gaps.all(func(g): return g >= iframes - 0.001) and walk_hits.size() <= floori(walked / iframes) + 1, "its hits are one per %.1f s i-frame window at most: %d in %.2f s, gaps %s" % [iframes, walk_hits.size(), walked, gaps])
+	check(health - player.playerHealth == owed, "and nothing stacks: %d health lost for their catalogued %d" % [health - player.playerHealth, owed])
 	check(await reach_phase(inf.Phase.WINDUP, 900), "the wind-up")
 	# Inside the cone's right slant by INFERNO_EDGE_DEPTH, dashing right out of it.
 	var rect := hurtbox_at(Vector2(960, 300))
@@ -13691,6 +14275,41 @@ func inferno_run_five() -> void:
 	var record: Dictionary = inf_embers.get(ember.get_instance_id(), {})
 	log_p("stood in the ember at %s as it caught (hurting from %.3f): hits at %s" % [ember.global_position, record.get("hurt", -1.0), caught.map(func(e): return snappedf(e.t, 0.001))])
 	check(caught.size() == 1 and absf(caught[0].t - record.get("hurt", -1.0)) <= FRAME_TIME + 0.0001, "hit on the frame it catches, with no entry to report it")
+
+
+# Moving across the pull is what beats the shower now that walking straight out of it doesn't: the length of
+# the bottom rope, with DOWN held against the pull's lift.
+func inferno_run_six() -> void:
+	if not await start_inferno_run("run 6: strafing the length of the bottom rope through the shower"):
+		return
+	# The last run's embers are still burning along the rope, and one would hand out i-frames that hide a fireball.
+	for ember in burning_embers():
+		ember.burn_out()
+	check(await reach_phase(inf.Phase.INHALE, 900), "the shower starts")
+	var start := Vector2(sm.PLAYER_FLOOR.position.x + INFERNO_STRAFE_INSET, sm.PLAYER_FLOOR.end.y)
+	await settle_player(start)
+	clear_iframes()
+	var hits_before := events_of("HIT").size()
+	var set_off: float = defense.clock
+	var arrived := [INF]
+	var strafe := func():
+		if arrived[0] == INF:
+			for k in [KEY_RIGHT, KEY_DOWN]:
+				if not Input.is_physical_key_pressed(k):
+					press(k)
+			if player.global_position.x >= sm.PLAYER_FLOOR.end.x - INFERNO_STRAFE_INSET:
+				arrived[0] = defense.clock
+				release(KEY_RIGHT)
+				release(KEY_DOWN)
+		await physics_frame
+	await shower_hits(strafe)
+	var until: float = minf(arrived[0], defense.clock)
+	var all_hits: Array = events_of("HIT").slice(hits_before)
+	var on_the_way: Array = all_hits.filter(func(e): return e.t <= until)
+	var landed: Array = inf_fireballs.values().filter(func(r): return r.landed > set_off and r.landed <= until and r.has("landed_feet")).map(func(r): return r.pos.distance_to(r.landed_feet))
+	log_p("strafed the bottom rope from %s for %.2f s%s: %d hits on the way, %d fireballs landed on the way, %.0f to %.0f px from their feet; %d hits stood at the far end after" % [start, until - set_off, "" if arrived[0] != INF else " (the shower ended first)", on_the_way.size(), landed.size(), landed.min() if not landed.is_empty() else -1.0, landed.max() if not landed.is_empty() else -1.0, all_hits.size() - on_the_way.size()])
+	check(on_the_way.is_empty(), "strafing across the pull beats the shower: no hit on the way (%d)" % on_the_way.size())
+	check(not landed.is_empty() and landed.min() > INFERNO_LANDING_REACH, "every fireball that lands on the way lands clear of their feet (%.0f px at the least)" % (landed.min() if not landed.is_empty() else -1.0))
 
 
 # tier=death: a player at 1 health is killed by an aimed fireball mid-pull, and the outro stands him down.
@@ -13738,6 +14357,8 @@ func inferno_defeated() -> void:
 	check(await reach_phase(inf.Phase.VOLLEY, 300), "he is on the rope, spitting")
 	await wait(10)
 	check(is_equal_approx(hud_alpha(), sm.inferno_hud_fade_alpha), "the HUD is faded (%.3f)" % hud_alpha())
+	# His own defeat's outro, as before Liam took the rest of the fight over (liam_takeover plays that).
+	boss.liam_follows = false
 	boss.boss_health = 1
 	boss._apply_damage(1)
 	check(await wait_until(func(): return sm.current_state.name == "Defeated", 30), "he is beaten")
@@ -13752,19 +14373,18 @@ func inferno_defeated() -> void:
 	check(outro and is_equal_approx(hud_alpha(), 1.0), "and still at full as the win's outro plays")
 
 
-# phase=2 for Liam's fight in smoke, blocks and approach: his health down to the Inferno's gate while his
-# opening takeoff is still rising, so his first cycle is the enraged one and opens on the Inferno. Nothing
-# in those modes ever takes his health, so without it the Inferno would get no run in them at all. The
-# perch and the HUD over it are watched from here to check_liam_perch().
-func enrage_liam() -> void:
+# phase=2 for Liam's fight in smoke, blocks and approach: his rotation moved on to the Inferno's cycle while
+# his opening takeoff is still rising, so his first cycle is the Inferno and the rest of the rotation follows
+# it. It is the last of his cycles, which those modes would otherwise reach late in their window, if at all.
+# The perch and the HUD over it are watched from here to check_liam_perch().
+func rotate_liam_to_inferno() -> void:
 	if fight != "liam" or phase != 2:
 		return
 	boss = current_scene.get_node(LIAM_BEAST)
 	sm = boss.state_machine
 	inf = sm.states["Inferno"]
-	boss.boss_health = floori(boss.max_health * sm.inferno_health_gate)
-	boss._refresh_health_bar()
-	log_p("liam enraged: health %d of %d, still in %s" % [boss.boss_health, boss.max_health, sm.current_state.name])
+	sm.cycles_started = sm.ATTACK_CYCLES.find_custom(func(cycle: Array) -> bool: return cycle.has("Inferno"))
+	log_p("liam's rotation moved on to cycle %d of %d, %s, still in %s" % [sm.cycles_started + 1, sm.ATTACK_CYCLES.size(), sm.ATTACK_CYCLES[sm.cycles_started], sm.current_state.name])
 	physics_frame.connect(watch_perch)
 
 
@@ -13837,9 +14457,9 @@ func test_combined() -> void:
 func cb_check_catalogue() -> void:
 	log_p("-- the catalogue")
 	var ring: Dictionary = CATALOG.get_attack(&"bixby_quake_ring")
-	check(ring.damage == 1 and ring.dash_through and not ring.blockable and not ring.parryable and not ring.tell
+	check(ring.damage == 2 and ring.dash_through and not ring.blockable and not ring.parryable and not ring.tell
 		and not ring.dodge_tell and not ring.no_perfect_dodge and not ring.bypass_invincibility,
-		"bixby_quake_ring: half a heart, dashed through and a PERFECT DODGE when it is, no guard, no parry, no badge (%s)" % [ring])
+		"bixby_quake_ring: a full heart (the tuning round of 2026-10-04), dashed through and a PERFECT DODGE when it is, no guard, no parry, no badge (%s)" % [ring])
 
 
 # A dash measured the way a ring meets it: from its first frame of movement, the frame after the one its
@@ -14076,7 +14696,7 @@ func cb_check_parked() -> void:
 	log_p("-- standing still")
 	log_p("standing at %s took %d hits: %s" % [SMOKE_SPOTS["liam"], hits.size(), ids])
 	check(ids.has(&"bixby_quake_ring") and ids.has(&"bixby_sonic_beam"), "standing still is hit by the rings and by the beams")
-	check(hits.all(func(e): return catalogue_damage(e.id) == 1), "half a heart each")
+	check(hits.all(func(e): return catalogue_damage(e.id) == 2), "a full heart each (the tuning round of 2026-10-04)")
 
 
 # The room between rings, from the knobs. The spin's are far enough apart to stand between. The pounds'
@@ -14091,7 +14711,7 @@ func cb_check_room() -> void:
 	var pound_gap: float = sm.combined_pound_interval * v - band
 	var impact: float = cb_art.time_to_step(&"pound", cb_art.POUND_IMPACT_STEP)
 	var third: float = (sm.combined_pounds - 1) * sm.combined_pound_interval + impact
-	var first_spin: float = sm.combined_pounds * sm.combined_pound_interval + cb_art.anim_time(&"spin_up") + sm.combined_spin_ring_interval
+	var first_spin: float = sm.combined_pounds * sm.combined_pound_interval + sm.combined_spin_tell + sm.combined_spin_ring_interval
 	var group_gap: float = (first_spin - third) * v - band
 	log_p("between the spin's rings %.0f px of floor: %.0f broadside against a %.0f px wide foot, %.0f across the screen against a %.0f px deep one" % [spin_gap, spin_gap, foot.x, spin_gap * f, foot.y])
 	log_p("between the pounds' last ring and the spin's first %.0f px of floor; between two of the pounds' %.0f" % [group_gap, pound_gap])
@@ -14206,7 +14826,9 @@ func cb_check_circling() -> void:
 	log_p("%d runs: %d hits; beam clearance after every ring dash %s; stamina never below %.0f; %d refused dashes; %d beams crossed inside a ring dash's immunity" % [CB_SPOTS.size(), total_hits, landings, worst_stamina, refused[0], through_beams])
 	check(total_hits == 0, "circling with the beams and dashing through each ring as it comes takes no hits, from %d starts" % CB_SPOTS.size())
 	check(not landings.is_empty() and landings.min() >= 0, "a ring never leaves the player in a beam: clear of every one once each dash's immunity is over (%d px at the least)" % (landings.min() if not landings.is_empty() else -1))
-	check(refused[0] == 0 and worst_stamina >= defense.dash_stamina_cost, "and the stamina always had the next dash in it (never below %.0f)" % worst_stamina)
+	# Never short: every dash it wanted came out. Not a dash in reserve as well, as when a dash was 15 of the bar:
+	# at a third of it (2026-09-27) the worst run spends nearly all of it.
+	check(refused[0] == 0, "and never short of stamina: no dash it wanted was refused (the bar never below %.0f)" % worst_stamina)
 
 
 # One frame of one ring's art, against the artist's rules worked out here again rather than read off the
@@ -14284,11 +14906,11 @@ func cb_held_dir() -> Vector2:
 
 
 # The rings on the floor and the ones still to come, as [centre, radius, seconds from now it starts from
-# there, speed]: the pounds' on their impacts, the spin's on its beat.
+# there, speed, still to be born]: the pounds' on their impacts, the spin's on its beat.
 func cb_rings_ahead() -> Array:
 	var out := []
 	for ring in hazards_of(CB_RING_SCRIPT):
-		out.append([ring.global_position, ring.radius, 0.0, ring.speed])
+		out.append([ring.global_position, ring.radius, 0.0, ring.speed, ring.hurts_inside_at_birth and not ring.born])
 	var feet: Vector2 = boss.ground_position
 	var r0: float = cb_layout.RING_START_RADIUS
 	var v: float = sm.quake_ring_speed
@@ -14297,15 +14919,15 @@ func cb_rings_ahead() -> Array:
 		cb.Phase.DESCENT, cb.Phase.BRACE:
 			var first: float = sm.combined_windup + impact - (cb.elapsed if cb.phase == cb.Phase.BRACE else 0.0)
 			for i in sm.combined_pounds:
-				out.append([feet, r0, first + i * sm.combined_pound_interval, v])
+				out.append([feet, r0, first + i * sm.combined_pound_interval, v, true])
 		cb.Phase.POUNDS:
 			var next: float = impact - cb.elapsed + (sm.combined_pound_interval if cb.impact_done else 0.0)
 			for i in sm.combined_pounds - cb.pounds_done + (0 if cb.impact_done else 1):
-				out.append([feet, r0, next + i * sm.combined_pound_interval, v])
+				out.append([feet, r0, next + i * sm.combined_pound_interval, v, true])
 		cb.Phase.SPIN_UP:
-			out.append([feet, r0, cb_art.anim_time(&"spin_up") - cb.elapsed + sm.combined_spin_ring_interval, v])
+			out.append([feet, r0, sm.combined_spin_tell - cb.elapsed + sm.combined_spin_ring_interval, v, true])
 		cb.Phase.SPIN:
-			out.append([feet, r0, sm.combined_spin_ring_interval - cb.ring_clock, v])
+			out.append([feet, r0, sm.combined_spin_ring_interval - cb.ring_clock, v, true])
 	return out
 
 
@@ -14327,7 +14949,9 @@ func cb_ring_gap(at: Vector2, rings: Array, after: float) -> float:
 		var y1 := (at.y + 42.0 - c.y) / f
 		var near := Vector2(clampf(0.0, x0, x1), clampf(0.0, y0, y1)).length()
 		var far := maxf(maxf(Vector2(x0, y0).length(), Vector2(x1, y0).length()), maxf(Vector2(x0, y1).length(), Vector2(x1, y1).length()))
-		if near <= radius + hw and far >= radius - hw:
+		# On the frame it is born (give or take one) his ring catches everything inside it too (hurts_inside_at_birth).
+		var birth: bool = ring[4] and after - ring[2] <= 2.0 / 60.0
+		if near <= radius + hw and (birth or far >= radius - hw):
 			return -1.0
 		gap = minf(gap, (near - radius - hw) if near > radius + hw else (radius - hw - far))
 	return gap * f
@@ -14341,48 +14965,44 @@ func cb_loop_ahead(step: int, into: float) -> Array:
 
 
 # The beams `ahead` physics frames from now as [origin, screen angle, length], glued to his maws as the
-# sweep glues them: lit on spin_up's second frame at its angles, the jump onto the loop swept, then gliding
-# on with his drawn clock.
+# sweep glues them: lit once the spin's warning is over, on the loop step it picked, then gliding on with
+# his drawn clock. Before the warning picks it, the step it would pick with the player where they are.
 func cb_beams_ahead(ahead: int) -> Array:
 	var sweep = cb.sweep
 	if is_instance_valid(sweep) and sweep.fading:
 		return []
 	var t := ahead / 60.0
-	var lit_frame: int = cb_art.ANIMS[&"spin_up"].frames[-1]
-	var lit_step: float = cb_art.time_to_step(&"spin_up", cb_art.SPIN_BEAMS_STEP)
 	var lit_in := INF
 	match cb.phase:
 		cb.Phase.BRACE:
-			lit_in = sm.combined_windup - cb.elapsed + sm.combined_pounds * sm.combined_pound_interval + lit_step
+			lit_in = sm.combined_windup - cb.elapsed + sm.combined_pounds * sm.combined_pound_interval + sm.combined_spin_tell
 		cb.Phase.POUNDS:
-			lit_in = (sm.combined_pounds - cb.pounds_done + 1) * sm.combined_pound_interval - cb.elapsed + lit_step
+			lit_in = (sm.combined_pounds - cb.pounds_done + 1) * sm.combined_pound_interval - cb.elapsed + sm.combined_spin_tell
 		cb.Phase.SPIN_UP:
-			lit_in = lit_step - cb.elapsed
+			lit_in = sm.combined_spin_tell - cb.elapsed
 	var mouths := []
 	if boss.current_anim == &"spin":
 		mouths = cb_loop_ahead(boss.anim_step, boss.anim_clock + t)
-	elif cb.phase == cb.Phase.SPIN_UP or (not is_instance_valid(sweep) and lit_in < INF):
+	elif lit_in < INF:
 		if t < lit_in:
 			return []
-		var looping_in: float = lit_in + cb_art.anim_time(&"spin_up") - lit_step
-		if t < looping_in:
-			mouths = cb_layout.MOUTH_ANCHORS[lit_frame]
-		elif t < looping_in + 1.0 / 60.0:
-			for head in cb_layout.MOUTH_ANCHORS[lit_frame]:
-				for turn in [0.0, 5.0, 10.0, 15.0, 20.0]:
-					mouths.append([head[0] + turn, head[1], head[2], head[3]])
-		else:
-			mouths = cb_loop_ahead(cb._widest_gap_step(), t - looping_in)
+		mouths = cb_loop_ahead(cb.entry_step if cb.phase == cb.Phase.SPIN_UP else cb._widest_gap_step(), t - lit_in)
 	elif is_instance_valid(sweep):
 		mouths = cb_layout.MOUTH_ANCHORS.get(boss.drawn_frame_of(cb_art.SPIN_SHEET), [])
 	var out := []
-	var full: float = cb_layout.BEAM_REACH * cb_layout.SCALE
 	for mouth in mouths:
 		var origin: Vector2 = boss.feet_position() + cb_art.local(Vector2(mouth[1], mouth[2]))
 		var az := deg_to_rad(mouth[0])
 		var angle: float = cb_layout.beam_angle(az)
-		out.append([origin, angle, minf(full * cb_layout.beam_length(az), cb_room_to_ropes(origin, angle))])
+		out.append([origin, angle, cb_reach(az, origin, angle)])
 	return out
+
+
+# How far a full-grown beam runs: to the ropes, whichever way it points; only a mouth outside them keeps the
+# drawn length the art reads at.
+func cb_reach(az: float, origin: Vector2, angle: float) -> float:
+	var room := cb_room_to_ropes(origin, angle)
+	return room if room < INF else cb_layout.BEAM_REACH * cb_layout.SCALE * cb_layout.beam_length(az)
 
 
 func cb_room_to_ropes(from: Vector2, angle: float) -> float:
@@ -14461,7 +15081,7 @@ func cb_choose() -> Dictionary:
 	var beams := []
 	for k in CB_HORIZON + 1:
 		beams.append(cb_beams_ahead(k))
-	var stamina_ok: bool = defense.stamina >= defense.dash_stamina_cost
+	var stamina_ok: bool = defense.can_afford(defense.dash_stamina_cost)
 	var can_dash: bool = since >= cooldown and not defense.is_dash_cooling_down() and stamina_ok
 	var ring_now := false
 	for d in [Vector2.ZERO, (target - at).sign()]:
@@ -14519,23 +15139,636 @@ func cb_choose() -> Dictionary:
 	return best
 
 
+# ------------------------------------------------------------------ the spin's warning
+# The bands beast Bixby's beams will come out along, lit on the floor for combined_spin_tell before they do
+# (BixbySonicLanesScript), on his combined attack forced from his hover as the combined mode forces it: where
+# the bands lie against where the beams then come out, how long before, the cue, and a player caught standing
+# in one as they light, played with real arrow keys and dashes. The quake rings are swept off the floor as
+# they come: a ring's hit would hand the player i-frames the beams would then be ignored through.
+
+const ST_LANES_SCRIPT := "BixbySonicLanesScript.gd"
+const ST_SWEEP_SCRIPT := "BixbySonicSweepScript.gd"
+const CB_SWEEP_SCRIPT_PATH := "res://Scripts/BixbySonicSweepScript.gd"
+# How long a player takes to see the bands light and start moving.
+const ST_REACTION := 0.25
+# How long into the spin a player who got off their band must go on untouched: one still walking the way
+# they went, a reaction's worth of the sweep they can see by then; one who stopped on the side the beams
+# turn away from, a second; and how long one who stayed is watched for.
+const ST_AFTER := 0.3
+const ST_AFTER_TRAILING := 1.0
+const ST_AFTER_STAYING := 0.5
+# How far past a band's edge a player walking off it goes before stopping.
+const ST_CLEAR := 40.0
+# Where the player waits for his hover: he lands the attack by them, so each lays the bands somewhere else.
+const ST_SPOTS: Array[Vector2] = [Vector2(960, 900), Vector2(600, 820), Vector2(1320, 820), Vector2(960, 640)]
+# Where on a band's middle line the player is caught, as shares of its length out from his maw.
+const ST_ALONG := [0.7, 0.6, 0.5, 0.8, 0.4]
+
+
+func test_spin_tell() -> void:
+	await load_liam()
+	await skip_vs_card()
+	hold_break_gauge(boss)
+	# His hovers last until an attack is forced from them, so no fire breath lays solid fire in the way.
+	sm.hover_time = 600.0
+	sm.hover_between_attacks = 600.0
+	cb = sm.states["Combined"]
+	cb_layout = load(CB_LAYOUT)
+	cb_art = load(CB_BEAST_LAYOUT)
+	track()
+	var lead: float = sm.combined_spin_tell
+	check(lead >= 0.5 and lead <= 0.7, "the warning is %.2f s, inside 0.5-0.7 s" % lead)
+	await st_check_warning()
+	var plans := ["stay", "walk_trailing", "walk_leading", "dash_trailing"]
+	for i in plans.size():
+		await st_check_caught(plans[i], i)
+	await st_check_break()
+	cb_steer(Vector2.ZERO)
+
+
+func st_sweep_rings() -> void:
+	for ring in hazards_of(CB_RING_SCRIPT):
+		ring.queue_free()
+
+
+# His combined attack from his hover over `spot`, the rings swept off as they come, up to the first frame its
+# bands are seen: whether it got there.
+func st_to_warning(spot: Vector2) -> bool:
+	if not await cb_force(spot):
+		return false
+	return await wait_until(func():
+		st_sweep_rings()
+		return not hazards_of(ST_LANES_SCRIPT).is_empty(), 600)
+
+
+# The beams `into` seconds after they come out, glued to his maws on the loop step the warning picked, as
+# cb_beams_ahead has them: [origin, screen angle, length].
+func st_beams_at(into: float) -> Array:
+	var out := []
+	for mouth in cb_loop_ahead(cb.entry_step, into):
+		var origin: Vector2 = boss.feet_position() + cb_art.local(Vector2(mouth[1], mouth[2]))
+		var az := deg_to_rad(mouth[0])
+		var angle: float = cb_layout.beam_angle(az)
+		out.append([origin, angle, cb_reach(az, origin, angle)])
+	return out
+
+
+# Which of LANE_LOOKS the bands are showing.
+func st_look(lanes: Node) -> int:
+	if lanes.rims.is_empty():
+		return -1
+	var rim: Line2D = lanes.rims[0]
+	for i in cb_layout.LANE_LOOKS.size():
+		if rim.default_color == cb_layout.LANE_LOOKS[i][1] and rim.width == cb_layout.LANE_LOOKS[i][2]:
+			return i
+	return -1
+
+
+# One attack stood through at ST_SPOTS[0]: what lights, when, where and with what, and how the beams come out
+# over it.
+func st_check_warning() -> void:
+	log_p("-- the warning")
+	if not await st_to_warning(ST_SPOTS[0]):
+		check(false, "the combined attack reaches its warning")
+		return
+	var lanes: Node = hazards_of(ST_LANES_SCRIPT)[0]
+	var bands: Array = lanes.bands.duplicate()
+	var cue: AudioStreamPlayer = cb.windup_sfx_player
+	var cue_path := str(cue.stream.resource_path) if cue.stream else ""
+	log_p("the bands light on loop step %d with him at %s: %s" % [cb.entry_step, boss.ground_position, bands.map(func(b): return [b[0].round(), snappedf(rad_to_deg(b[1]), 0.1), roundi(b[2])])])
+	check(cb.phase == cb.Phase.SPIN_UP and boss.current_anim == &"spin_charge" and boss.drawn_frame_of(cb_art.SPIN_SHEET) == 0,
+		"they light as the pounds end, with him crouched on spin_up's first frame")
+	check(cue.playing and cue_path.ends_with("laser_charge.ogg"), "to the wind-up's charge (%s)" % cue_path)
+	check(cb_tell_up(), "under the yellow ring")
+	check(lanes.get_parent() == sm.ground_layer(), "on his shadow's layer, under everyone standing on the floor")
+
+	var expected := st_beams_at(0.0)
+	var off := 0.0
+	for i in mini(bands.size(), expected.size()):
+		off = maxf(off, maxf(bands[i][0].distance_to(expected[i][0]), absf(bands[i][2] - expected[i][2])))
+		off = maxf(off, rad_to_deg(absf(angle_difference(bands[i][1], expected[i][1]))))
+	check(bands.size() == 3 and expected.size() == 3 and off < 0.01,
+		"three bands, each where a beam out of a maw on that step runs, to the ropes (%.4f off)" % off)
+	# The drawn fills: nothing outside the ropes, and every point of every band inside them covered.
+	var outside := 0
+	var fills := []
+	for fill in lanes.fills:
+		var drawn := PackedVector2Array()
+		for point in fill.polygon:
+			var at: Vector2 = fill.get_global_transform() * point
+			drawn.append(at)
+			if not sm.ROPES.grow(0.5).has_point(at):
+				outside += 1
+		fills.append(drawn)
+	var uncovered := 0
+	var sampled := 0
+	var half: float = cb_layout.BEAM_HIT_THICKNESS * cb_layout.SCALE / 2.0 - 1.0
+	for band in bands:
+		var along := Vector2.from_angle(band[1])
+		var d := 2.0
+		while d < band[2] - 1.0:
+			for across in [-half, 0.0, half]:
+				var point: Vector2 = band[0] + along * d + along.orthogonal() * across
+				if not sm.ROPES.grow(-1.0).has_point(point):
+					continue
+				sampled += 1
+				if not fills.any(func(poly): return Geometry2D.is_point_in_polygon(point, poly)):
+					uncovered += 1
+			d += 10.0
+	check(outside == 0 and sampled > 0 and uncovered == 0,
+		"drawn as the bands, cut at the ropes: %d points of %d sampled uncovered, %d drawn outside" % [uncovered, sampled, outside])
+
+	var t := 0
+	var looks: Array = []
+	var lead_in_at := -1
+	var live_at := -1
+	var gone_at := -1
+	var entered_on := -1
+	var hits0 := events_of("HIT", &"bixby_sonic_beam").size()
+	var hits_in_lead := 0
+	var aim_off := [-1.0, -1.0]
+	while t < 300 and sm.current_state == cb:
+		st_sweep_rings()
+		if live_at < 0:
+			if is_instance_valid(lanes) and not lanes.fading:
+				looks.append(st_look(lanes))
+			if lead_in_at < 0 and boss.current_anim == &"spin_up":
+				lead_in_at = t
+			if is_instance_valid(cb.sweep):
+				live_at = t
+				entered_on = boss.anim_step if boss.current_anim == &"spin" else -1
+				hits_in_lead = events_of("HIT", &"bixby_sonic_beam").size() - hits0
+		if live_at >= 0 and aim_off[0] < 0.0 and is_instance_valid(cb.sweep) and cb.sweep.aimed:
+			aim_off = [0.0, 0.0]
+			for beam in cb.sweep.beams:
+				var px := INF
+				var deg := INF
+				for band in bands:
+					px = minf(px, beam.global_position.distance_to(band[0]))
+					deg = minf(deg, rad_to_deg(absf(angle_difference(cb_layout.floor_azimuth(beam.global_rotation), cb_layout.floor_azimuth(band[1])))))
+				aim_off = [maxf(aim_off[0], px), maxf(aim_off[1], deg)]
+		if live_at >= 0 and gone_at < 0 and not is_instance_valid(lanes):
+			gone_at = t
+		if gone_at >= 0 and aim_off[0] >= 0.0:
+			break
+		await physics_frame
+		t += 1
+	var runs := []
+	for look in looks:
+		if runs.is_empty() or runs[-1][0] != look:
+			runs.append([look, 0])
+		runs[-1][1] += 1
+	var lead_frames := roundi(sm.combined_spin_tell * 60.0)
+	log_p("the looks, as [look, frames]: %s; the lead-in from frame %d; the beams out on frame %d on loop step %d, %.2f px and %.2f deg of the floor off the bands; the bands gone on frame %d" % [runs, lead_in_at, live_at, entered_on, aim_off[0], aim_off[1], gone_at])
+	check(absi(live_at - lead_frames) <= 1, "the beams come out %d frames after the bands light (%.3f s, the warning %.3f s)" % [live_at, live_at / 60.0, sm.combined_spin_tell])
+	check(hits_in_lead == 0, "and nothing of the beams hurts before they do (%d hits)" % hits_in_lead)
+	check(entered_on == cb.entry_step and aim_off[0] >= 0.0 and aim_off[0] <= 3.0 and aim_off[1] <= 1.0,
+		"they come out on the step the warning picked, on the bands to a frame's turn (%.2f px, %.2f deg)" % [aim_off[0], aim_off[1]])
+	check(absi(lead_in_at - roundi((sm.combined_spin_tell - cb_art.anim_time(&"spin_up")) * 60.0)) <= 1,
+		"his lead-in plays out of the crouch so that it ends as they come out")
+	var flashing := runs.slice(2).all(func(r): return r[0] == 2 or r[0] == 3)
+	check(runs.size() >= 4 and runs[0][0] == 0 and runs[1][0] == 1 and runs[2][0] == 2 and flashing
+		and absi(runs[0][1] - lead_frames / 4) <= 1 and absi(runs[1][1] - lead_frames / 4) <= 1,
+		"lit in the shower markers' contract: two looks a quarter of the warning each, then the last two flashing")
+	check(gone_at >= 0 and gone_at - live_at <= ceili(cb_layout.LANE_FADE_TIME * 60.0) + 2,
+		"and they fade out under the beams as they grow (%d frames)" % (gone_at - live_at))
+
+
+# A player caught standing in a band as it lights, on its middle line, playing `plan`, from the first of
+# ST_SPOTS where somewhere suits it: `stay` stays; `walk_trailing` waits out a reaction, then walks straight off
+# it with the arrow keys to the side the beams turn away from and stops ST_CLEAR past its edge;
+# `walk_leading` walks off it the other way, toward the side they turn to, and keeps going into the spin;
+# `dash_trailing` dashes off it to the side they turn away from after the same reaction. Band `first` is
+# tried first, so the plans between them stand in all three.
+func st_check_caught(plan: String, first: int) -> void:
+	log_p("-- caught standing in a band as it lights: %s" % plan)
+	for spot in ST_SPOTS:
+		if not await st_to_warning(spot):
+			check(false, "the combined attack reaches its warning from %s" % spot)
+			return
+		var pick := st_pick(plan, first)
+		if pick.is_empty():
+			log_p("from %s, nowhere on a band suits %s: next spot" % [spot, plan])
+			continue
+		await st_play(plan, pick)
+		return
+	check(false, "somewhere on a band to be caught for %s" % plan)
+
+
+# Where the player is caught for `plan`, and the keys they go with: the first point on a band's middle line
+# (ST_ALONG) where the whole way they go stays on the floor and, from the moment the beams come out until
+# the watch is over, clear of every beam as cb_beams_ahead has them. {} for none. How many were turned down
+# for the beams is logged.
+func st_pick(plan: String, first: int) -> Dictionary:
+	var bands := st_beams_at(0.0)
+	var in_the_way := 0
+	for n in bands.size():
+		var i := (first + n) % bands.size()
+		var band: Array = bands[i]
+		var along := Vector2.from_angle(band[1])
+		for share in ST_ALONG:
+			var at: Vector2 = band[0] + along * band[2] * share
+			if not sm.PLAYER_FLOOR.grow(-20.0).has_point(at):
+				continue
+			if plan == "stay":
+				return {"at": at, "band": i, "dir": Vector2.ZERO}
+			# The beams turn with his heads, which is the way their screen angle grows (beam_angle).
+			var away := along.rotated((PI if plan.ends_with("leading") else -PI) / 2.0)
+			var keys := st_keys(away, plan.begins_with("dash"))
+			var path := st_path(plan, at, keys, band)
+			if path.is_empty():
+				continue
+			if not st_path_clear(path):
+				in_the_way += 1
+				continue
+			if in_the_way > 0:
+				log_p("%d places on the bands turned down first: the beams would reach the way off them" % in_the_way)
+			return {"at": at, "band": i, "dir": keys}
+	if in_the_way > 0:
+		log_p("%d places on the bands turned down: the beams would reach the way off them" % in_the_way)
+	return {}
+
+
+# The arrow keys that go most nearly `dir`: a walk's axes are separate, a dash's are normalised. Between two
+# that push as hard, the one nearer its way.
+func st_keys(dir: Vector2, dash: bool) -> Vector2:
+	var best := Vector2.ZERO
+	var most := -INF
+	for d in CB_DIRS:
+		var push := d.dot(dir) / (d.length() if dash else 1.0) + 0.001 * d.normalized().dot(dir)
+		if push > most:
+			most = push
+			best = d
+	return best
+
+
+# Where the player is on each frame from the bands being seen until the watch is over, going the way `plan`
+# does on `keys`, or [] if it leaves the floor. A walk moves from the frame after the keys go down; a dash
+# covers its whole reach in its moving frames, then stands.
+func st_path(plan: String, at: Vector2, keys: Vector2, band: Array) -> Array:
+	var lead := roundi(sm.combined_spin_tell * 60.0)
+	var react := roundi(ST_REACTION * 60.0)
+	var after := roundi((ST_AFTER_TRAILING if plan.ends_with("trailing") else ST_AFTER) * 60.0)
+	var walk: float = load("res://Scripts/PlayerScript.gd").SPEED / 60.0
+	var dash_frames := ceili(player.dodge_time * 60.0 - 0.001)
+	var dash_step: float = load("res://Scripts/PlayerScript.gd").DODGE_SPEED / 60.0
+	var floor_area: Rect2 = sm.PLAYER_FLOOR
+	var q := at
+	var moving := true
+	var out := []
+	for k in lead + after + 2:
+		var going := k - react - 1
+		if moving and going >= 0:
+			if plan.begins_with("dash"):
+				if going < dash_frames:
+					q += keys.normalized() * dash_step
+				else:
+					moving = false
+			elif plan == "walk_trailing" and cb_beam_gap(q, [band]) >= ST_CLEAR:
+				moving = false
+			else:
+				q += keys * walk
+				if plan == "walk_leading" and k >= lead + after:
+					moving = false
+		if not floor_area.has_point(q):
+			return []
+		out.append(q)
+	return out
+
+
+# Whether a path from st_path stays clear of every beam from the frame they come out to the end of the watch.
+func st_path_clear(path: Array) -> bool:
+	var lead := roundi(sm.combined_spin_tell * 60.0)
+	for k in range(lead, path.size()):
+		if cb_beam_gap(path[k], st_beams_at((k - lead) / 60.0)) < 0.0:
+			return false
+	return true
+
+
+# Plays `pick` from the frame the bands are seen: the player put on its band's middle line, then held there,
+# walked off it after ST_REACTION or dashed off it. When they were off their band, where they were as the beams
+# came out, and every beam hit, against when the beams came out.
+func st_play(plan: String, pick: Dictionary) -> void:
+	var band: Array = st_beams_at(0.0)[pick.band]
+	var lead := roundi(sm.combined_spin_tell * 60.0)
+	var react := roundi(ST_REACTION * 60.0)
+	var after := ST_AFTER_STAYING if plan == "stay" else (ST_AFTER_TRAILING if plan.ends_with("trailing") else ST_AFTER)
+	player.global_position = pick.at
+	player.velocity = Vector2.ZERO
+	clear_iframes()
+	defense._set_stamina(defense.max_stamina)
+	var started_in := cb_beam_gap(pick.at, [band])
+	# How far inside the band's hit edge they stand, across it, as the sweep tests the player's body.
+	var across: float = cb_layout.BEAM_HIT_THICKNESS * cb_layout.SCALE / 2.0 + load(CB_SWEEP_SCRIPT_PATH).PLAYER_RADIUS
+	var depth: float = across - absf((pick.at - band[0]).rotated(-band[1]).y)
+	var hits0 := events_of("HIT", &"bixby_sonic_beam").size()
+	var hit_frames := []
+	var k := 0
+	var live := -1
+	var off_at := -1
+	var gap_at_live := 0.0
+	var holding := false
+	var dashed := false
+	while sm.current_state == cb:
+		st_sweep_rings()
+		var at: Vector2 = player.global_position
+		var gap := cb_beam_gap(at, [band])
+		if plan == "stay":
+			player.global_position = pick.at
+			player.velocity = Vector2.ZERO
+		elif k == react:
+			cb_steer(pick.dir)
+			holding = true
+			if plan.begins_with("dash"):
+				tap(KEY_W)
+		elif holding:
+			dashed = dashed or player.is_dodging
+			var done := false
+			if plan.begins_with("dash"):
+				done = dashed and not player.is_dodging
+			elif plan == "walk_trailing":
+				done = gap >= ST_CLEAR
+			else:
+				done = live >= 0 and k >= live + roundi(ST_AFTER * 60.0)
+			if done:
+				cb_steer(Vector2.ZERO)
+				holding = false
+		if off_at < 0 and gap >= 0.0:
+			off_at = k
+		if live < 0 and is_instance_valid(cb.sweep):
+			live = k
+			gap_at_live = gap
+		var hits: int = events_of("HIT", &"bixby_sonic_beam").size() - hits0
+		while hit_frames.size() < hits:
+			hit_frames.append(k)
+		if live >= 0 and k > live + roundi(after * 60.0):
+			break
+		await physics_frame
+		k += 1
+	cb_steer(Vector2.ZERO)
+	var before := hit_frames.filter(func(f): return live < 0 or f <= live)
+	log_p("caught at %s on band %d, %.1f px inside its hit edge, going %s: off it on frame %s, the beams out on frame %d with them %.0f px clear of it, beam hits on frames %s" % [pick.at.round(), pick.band, depth, pick.dir, off_at, live, gap_at_live, hit_frames])
+	check(started_in < 0.0 and live >= 0, "caught standing in the band as it lit, and the beams came out")
+	check(before.is_empty(), "no beam hit before the beams came out (%s)" % [before])
+	if plan == "stay":
+		var grow := ceili(cb_layout.BEAM_GROW_TIME * 60.0)
+		check(not hit_frames.is_empty() and hit_frames[0] > live and hit_frames[0] <= live + grow + 3,
+			"staying put, hit once they are out, not before: frame %s, %d after the bands lit" % [hit_frames.slice(0, 1), lead])
+		return
+	check(off_at >= 0 and off_at < live, "off the band %d frames after it lit, %.2f s before the beams came out" % [off_at, (live - off_at) / 60.0])
+	check(hit_frames.is_empty(), "and never hit, to %.1f s into the spin" % after)
+
+
+# A Break in the middle of the warning takes the bands and the ring down with everything else, and no beam
+# comes out.
+func st_check_break() -> void:
+	log_p("-- a Break mid-warning")
+	if not await st_to_warning(ST_SPOTS[0]):
+		check(false, "the combined attack reaches its warning")
+		return
+	await wait(roundi(sm.combined_spin_tell * 30.0))
+	sm.enter_broken()
+	await wait(2)
+	var left: int = hazards_of(ST_LANES_SCRIPT).size() + hazards_of(ST_SWEEP_SCRIPT).size()
+	check(sm.current_state.name == "Broken" and left == 0 and not cb_tell_up(),
+		"Broken halfway through it, the bands and the yellow ring are gone at once (%s, %d left)" % [sm.current_state.name, left])
+	await wait(roundi(sm.combined_spin_tell * 60.0))
+	check(hazards_of(ST_SWEEP_SCRIPT).is_empty(), "and no beam comes out where they were")
+
+
+# ------------------------------------------------------------------ the spin's full-length beams
+# The user, 2026-09-28: his spin's beams reach the full length of the arena. His combined attack forced from his
+# hover with him put down off the middle, and played through with real arrow keys and dashes, rings and all, on
+# the real rules: anything of his touching the player inside a dash's immunity is dodged, and a beam or ring
+# dodged that way is a PERFECT DODGE, which pays the dash back. On every frame a beam is full grown it runs right
+# up to the ropes, and how much further that is than the length the art used to be drawn at is logged. Then three
+# players: one who waits out at the edge and never moves, hit now that the edge is in reach; one who waits there
+# and dashes through each beam and ring as it is about to reach them; and one who stays close to him and moves
+# with the gap between his beams, where they sweep slowly, dashing through the rings that come their way.
+
+# [where he comes down, the edge the player waits at]: a side away from him, both ways, and the bottom rope under
+# him, each out of his beams' old drawn reach for part of the spin.
+const SR_RUNS := [[Vector2(450, 640), Vector2(1760, 700)], [Vector2(1470, 640), Vector2(160, 760)],
+	[Vector2(958, 470), Vector2(958, 915)]]
+# How far ahead the players look, in physics frames.
+const SR_HORIZON := 40
+# The close player's loop round his maws: [out to either side, below, above] of the point they orbit, in px.
+const SR_CLOSE_ORBIT := Vector3(180.0, 170.0, 100.0)
+
+
+func test_spin_reach() -> void:
+	await load_liam()
+	await skip_vs_card()
+	hold_break_gauge(boss)
+	sm.hover_time = 600.0
+	sm.hover_between_attacks = 600.0
+	cb = sm.states["Combined"]
+	cb_layout = load(CB_LAYOUT)
+	cb_art = load(CB_BEAST_LAYOUT)
+	track()
+	track_dodges()
+	var refused := [0]
+	defense.stamina_refused.connect(func(): refused[0] += 1)
+	var plans := {}
+	for plan in ["edge_still", "edge_dash", "close"]:
+		log_p("-- %s" % plan)
+		plans[plan] = []
+		for run in SR_RUNS:
+			var r := await sr_play(plan, run[0], run[1])
+			if r.is_empty():
+				check(false, "his combined attack starts from his hover with him at %s" % run[0])
+				continue
+			plans[plan].append(r)
+			log_p("  him at %s, the player %s: %d beam hits, %d ring hits; %d dashes, %d perfect dodges (%d of them beams); stamina down to %.0f; the beams reached up to %.0f px, %.0f past the old drawn length, and were at most %.2f px off the ropes" % [r.him, r.at, r.beam_hits, r.ring_hits, r.dashes, r.perfect, r.perfect_beams, r.low, r.longest, r.beyond_old, r.reach_off])
+	var every: Array = plans.edge_still + plans.edge_dash + plans.close
+	var off: float = every.map(func(r): return r.reach_off).max()
+	check(every.all(func(r): return r.beam_frames > 0) and off < 1.0,
+		"every full-grown beam, on every frame, runs right up to the ropes and no further (%.2f px off at most)" % off)
+	check(plans.edge_still.all(func(r): return r.beyond_old > 0.0 and r.beam_hits > 0),
+		"waiting at the edge is no longer out of reach: every edge was beyond the old drawn length for part of the spin, and the beams hit there (%s)" % [plans.edge_still.map(func(r): return r.beam_hits)])
+	for plan in ["edge_dash", "close"]:
+		var runs: Array = plans[plan]
+		log_p("%s: hits %s, dashes %s, perfect dodges %s, stamina low points %s" % [plan, runs.map(func(r): return r.beam_hits + r.ring_hits), runs.map(func(r): return r.dashes), runs.map(func(r): return r.perfect), runs.map(func(r): return roundi(r.low))])
+	log_p("%d dashes refused for stamina in all" % refused[0])
+	var cost: float = defense.dash_stamina_cost
+	check(plans.edge_dash.size() == SR_RUNS.size() and plans.edge_dash.all(func(r): return r.beam_hits + r.ring_hits == 0 and r.perfect >= r.dashes - 1),
+		"waiting at the edge and dashing through each beam and ring as it comes is never hit, every dash but at most one an attack a PERFECT DODGE that pays it back (%s dashes, %s perfect)" % [plans.edge_dash.map(func(r): return r.dashes), plans.edge_dash.map(func(r): return r.perfect)])
+	check(plans.close.size() == SR_RUNS.size() and plans.close.all(func(r): return r.beam_hits + r.ring_hits <= 1),
+		"staying close to him with the gap between his beams is hit once an attack at the most (%s)" % [plans.close.map(func(r): return r.beam_hits + r.ring_hits)])
+	check(refused[0] == 0 and (plans.edge_dash + plans.close).all(func(r): return r.low >= cost - 0.001),
+		"and neither ever wants a dash the stamina can't pay for: the bar never below one dash (%.0f)" % (plans.edge_dash + plans.close).map(func(r): return r.low).min())
+	cb_steer(Vector2.ZERO)
+
+
+# His next hover held with the player at `at` until the last attack's rings have rolled off the floor, him put down
+# over `him`, then the combined attack with nothing queued behind it.
+func sr_force(him: Vector2, at: Vector2) -> bool:
+	cb_steer(Vector2.ZERO)
+	if not await wait_until(func(): return sm.current_state.name == "Hover", 1200):
+		return false
+	var hover: Node = sm.states["Hover"]
+	for i in 1800:
+		hover.elapsed = 0.0
+		player.global_position = at
+		player.velocity = Vector2.ZERO
+		if i >= 30 and hazards_of(CB_RING_SCRIPT).is_empty():
+			break
+		await physics_frame
+	var bounds: Rect2 = boss.ground_bounds(0.0)
+	boss.ground_position = him.clamp(bounds.position, bounds.end)
+	boss.place()
+	clear_iframes()
+	defense._set_stamina(defense.max_stamina)
+	sm.attacks = []
+	sm.on_child_transition(sm.current_state, "Combined")
+	return sm.current_state == cb
+
+
+# One combined attack with him at `him`, the player playing `plan` from `edge` (or beside him, close): what hit
+# them, what they dodged, their dashes and stamina, and his beams' reach on every frame they were full grown.
+func sr_play(plan: String, him: Vector2, edge: Vector2) -> Dictionary:
+	if not await sr_force(him, him + Vector2(0, -20) if plan == "close" else edge):
+		return {}
+	var events0 := events.size()
+	var dodges0 := dodges.size()
+	var dashes := 0
+	var low: float = defense.stamina
+	var reach_off := 0.0
+	var longest := 0.0
+	var beyond_old := 0.0
+	var beam_frames := 0
+	while sm.current_state == cb:
+		var act := {"kind": "walk", "dir": Vector2.ZERO}
+		match plan:
+			"edge_dash":
+				act = sr_choose(edge)
+			"close":
+				act = sr_choose(sr_close_target())
+		cb_steer(act.dir)
+		if act.kind == "dash":
+			tap(KEY_W)
+			dashes += 1
+		await physics_frame
+		low = minf(low, defense.stamina)
+		var sweep = cb.sweep
+		if is_instance_valid(sweep) and not sweep.fading and sweep.clock >= cb_layout.BEAM_GROW_TIME:
+			for beam in sweep.beams:
+				var length: float = (beam.get_node("CollisionShape2D").shape as RectangleShape2D).size.x
+				var room := cb_room_to_ropes(beam.global_position, beam.global_rotation)
+				var az: float = cb_layout.floor_azimuth(beam.global_rotation)
+				var old: float = minf(cb_layout.BEAM_REACH * cb_layout.SCALE * cb_layout.beam_length(az), room)
+				reach_off = maxf(reach_off, absf(length - room))
+				longest = maxf(longest, length)
+				beyond_old = maxf(beyond_old, length - old)
+				beam_frames += 1
+	cb_steer(Vector2.ZERO)
+	var hits := events.slice(events0).filter(func(e): return e.kind == "HIT")
+	var perfect := dodges.slice(dodges0)
+	return {"him": boss.ground_position.round(), "at": edge, "beam_hits": hits.filter(func(e): return e.id == &"bixby_sonic_beam").size(),
+		"ring_hits": hits.filter(func(e): return e.id == &"bixby_quake_ring").size(), "dashes": dashes,
+		"perfect": perfect.size(), "perfect_beams": perfect.filter(func(d): return d.id == &"bixby_sonic_beam").size(),
+		"low": low, "reach_off": reach_off, "longest": longest, "beyond_old": beyond_old, "beam_frames": beam_frames}
+
+
+# Where the close player heads: just in front of his feet, inside where his rings start (each catches them there as it
+# is born, so sr_choose answers it), until he spins; then the
+# middle of the gap between his beams on SR_CLOSE_ORBIT round his maws, a little ahead of it.
+func sr_close_target() -> Vector2:
+	var feet: Vector2 = boss.ground_position
+	var beams := cb_beams_ahead(0)
+	if cb.phase != cb.Phase.SPIN or beams.is_empty():
+		return feet + Vector2(0, -20)
+	var maws: Vector2 = boss.feet_position() + cb_art.local(cb_layout.SPIN_CENTRE)
+	var mine := rad_to_deg(cb_layout.floor_azimuth((player.global_position - maws).angle()))
+	var front := rad_to_deg(cb_layout.floor_azimuth(beams[0][1]))
+	var azimuth := mine - fposmod(mine - front, 120.0) + 70.0
+	var dir := Vector2.from_angle(cb_layout.beam_angle(deg_to_rad(azimuth)))
+	var r := 1.0 / Vector2(dir.x / SR_CLOSE_ORBIT.x, dir.y / (SR_CLOSE_ORBIT.y if dir.y > 0.0 else SR_CLOSE_ORBIT.z)).length()
+	return (maws + dir * r).clamp(sm.PLAYER_FLOOR.position, sm.PLAYER_FLOOR.end)
+
+
+# The move this frame for a player making for `target`: standing and the eight walks and, when something of his is
+# about to reach them, the eight dashes, each played SR_HORIZON frames ahead over the real rings and beams, a dash
+# standing once its landing beat is over. Whatever of his touches them inside a dash's immunity is dodged, as the
+# game has it; outside it, it lands, unless it comes late enough for the next dash to answer it (when there is the
+# stamina for one), so they dash only as something is about to reach them and never spend the dash they will need.
+# The fewest landings, then the nearest `target`, then no dash.
+func sr_choose(target: Vector2) -> Dictionary:
+	if player.is_dodging or defense.is_dash_recovering():
+		return {"kind": "walk", "dir": cb_held_dir()}
+	var walk: float = load("res://Scripts/PlayerScript.gd").SPEED / 60.0
+	var dash: float = load("res://Scripts/PlayerScript.gd").DODGE_SPEED / 60.0
+	var dash_frames := ceili(player.dodge_time * 60.0 - 0.001)
+	var immune_frames := roundi(CATALOG.DASH_IMMUNITY_TIME * 60.0) + 1
+	var landing_beat: int = dash_frames + 1 + floori(defense.dash_recovery_time_v2 * 60.0)
+	var cooldown := roundi(defense.dash_cooldown_v2 * 60.0)
+	var cost: float = defense.dash_stamina_cost
+	var first := cb_step(player.global_position, cb_held_dir(), walk)
+	var rings := cb_rings_ahead()
+	var beams := []
+	for k in SR_HORIZON + 1:
+		beams.append(cb_beams_ahead(k))
+	var soon := false
+	for k in range(2, 6):
+		if cb_ring_gap(first, rings, k / 60.0) < 0.0 or cb_beam_gap(first, beams[k]) < 0.0:
+			soon = true
+	var options := [{"kind": "walk", "dir": Vector2.ZERO}]
+	for d in CB_DIRS:
+		options.append({"kind": "walk", "dir": d})
+	if soon and bot_can_dash():
+		for d in CB_DIRS:
+			options.append({"kind": "dash", "dir": d})
+	var wait := maxi(0, ceili((defense.dash_ready_at - defense.clock) * 60.0))
+	var best := {}
+	var best_score := INF
+	for option in options:
+		var q := first
+		var landed := 0.0
+		var next_dash := SR_HORIZON + 1
+		if option.kind == "dash" and defense.stamina >= 2.0 * cost - 0.001:
+			next_dash = cooldown + 2
+		elif option.kind == "walk" and defense.stamina >= cost - 0.001:
+			next_dash = wait + 2
+		for k in range(2, SR_HORIZON + 1):
+			var immune := false
+			if option.kind == "walk":
+				q = cb_step(q, option.dir, walk)
+			else:
+				if k <= dash_frames + 1:
+					q = cb_step(q, option.dir.normalized(), dash)
+				immune = k <= immune_frames
+			if not immune and k < next_dash + 3 and (cb_ring_gap(q, rings, k / 60.0) < 0.0 or cb_beam_gap(q, beams[k]) < 0.0):
+				landed += 1.0 / k
+		var score := landed * 100000.0 + q.distance_to(target) + (300.0 if option.kind == "dash" else 0.0)
+		if score < best_score:
+			best_score = score
+			best = option
+	return best
+
+
+# Whether a bot can dash on this frame: not dashing, not landing or cooling down from the last one, and the stamina
+# for it.
+func bot_can_dash() -> bool:
+	return not player.is_dodging and not defense.is_dash_recovering() and not defense.is_dash_cooling_down() \
+		and defense.stamina >= defense.dash_stamina_cost
+
+
 # ------------------------------------------------------------------ Josh against his redrawn sheets
 # Every final sheet of his is drawn facing right. On the ground he faces the player, and what is traced
 # off his poses mirrors with him: the box the player punches while he recovers, the daze stars over his
-# hat and where a card bomb leaves his hand. His entrance's flick at the camera starts on the pose's own
-# flick step, and a bomb only leaves his hand on the step his drop lets go of it.
+# hat, and the hand his Wild Cards' clones throw from. His entrance's flick at the camera starts on the
+# pose's own flick step. Each clone is drawn facing where it throws, holding the throw's wind-up, and he
+# stands on it drawn the same way; they throw on the throw's release steps.
 
 const JOSH_BODY := "Arena/JoshCardsScene/JoshCardsCharacterBody"
 const JOSH_ART := "res://Scripts/JoshArtLayout.gd"
-const JOSH_BOMB_SCRIPT := "res://Scripts/JoshCardBombScript.gd"
 const JOSH_SPOT := Vector2(960, 640)
 # Where the player waits out his entrance: on his left, so it is drawn mirrored.
 const JOSH_INTRO_PLAYER := Vector2(600, 900)
-const JOSH_BOMBS_WANTED := 6
-# How far to either side of the player he is put down to recover, and how far short of his landing
-# point a dive starts, riding away from the player.
+# His clones' spots, either side of the player at JOSH_SPOT in turn, so they face both ways.
+const JOSH_CLONE_SPOTS: Array[Vector2] = [Vector2(500, 500), Vector2(1400, 500), Vector2(500, 800), Vector2(1400, 800), Vector2(1500, 640)]
+# How far to either side of the player he is put down to recover.
 const JOSH_RECOVER_OFFSET := 260.0
-const JOSH_DIVE_SHORT := 40.0
 
 
 func test_josh_layout() -> void:
@@ -14571,30 +15804,52 @@ func test_josh_layout() -> void:
 	player.global_position = JOSH_SPOT
 	log_p("his intro ended in %s" % await clear_intro("josh"))
 
-	log_p("-- his card bombs, through a real storm")
+	log_p("-- his Wild Cards, through a whole cycle")
 	player.playerHealth = 1000
-	var bomb_script: Script = load(JOSH_BOMB_SCRIPT)
-	var spawned := []
-	boss.floor_layer.child_entered_tree.connect(func(node: Node) -> void:
-		if node.get_script() == bomb_script:
-			spawned.append({"bomb": node, "flip": boss.sprite.flip_h, "air": boss.air.global_position})
-	)
-	var drops := []
-	var start: float = defense.clock
-	while drops.size() < JOSH_BOMBS_WANTED and defense.clock - start < 30.0:
-		player.global_position = JOSH_SPOT
+	# The card's end would start a cycle of its own over this one.
+	await skip_vs_card()
+	stop_boss_timers()
+	sm.on_child_transition(sm.current_state, "Idle")
+	var wild: Node = sm.states["WildCards"]
+	var hold: Dictionary = art.anim(&"wild_hold")
+	var throw_anim: Dictionary = art.anim(&"throw")
+	wild.forced_spots.assign(JOSH_CLONE_SPOTS)
+	await settle_player(JOSH_SPOT)
+	var clones_seen := []
+	var thrown := {}
+	# His cycle alternates his Hand Slam with Wild Cards since 2026-09-29: this cycle is Wild Cards, and Wild
+	# Cards alone, its Gun Hands pinned off (josh_guns tests them).
+	if "ATTACK_ORDER" in sm:
+		sm.ATTACK_ORDER.assign(["WildCards"])
+		sm.cycles_started = 0
+	if "wild_guns" in sm:
+		sm.wild_guns = false
+	# One attack, then his Recover (two run before each window since 2026-10-04).
+	if "attacks_per_window" in sm:
+		sm.attacks_per_window = 1
+	sm.start_cycle()
+	while sm.current_state == wild:
+		for k in range(clones_seen.size(), wild.clones.size()):
+			var clone: Object = wild.clones[k]
+			clones_seen.append({"flip": clone.flip, "faces": clone.aimed_at.x < clone.feet.x, "drawn": clone.figure.flip_h,
+				"sheet": clone.figure.texture.resource_path, "frame": clone.figure.frame, "tint": clone.figure.modulate,
+				"hands": clone.lanes.map(func(lane): return lane.origin - clone.feet),
+				"josh": [boss.current_anim, boss.sprite.flip_h, boss.ground_position == clone.feet]})
+		if wild.beat == wild.Beat.VOLLEY and not wild.scattered:
+			for clone in wild.clones:
+				if is_instance_valid(clone.figure):
+					thrown[clone.figure.frame] = true
 		await physics_frame
-		# The frame each of these appeared on has been drawn by now.
-		for entry in spawned:
-			var drawn: Node2D = entry.bomb.card
-			drops.append({"anim": boss.current_anim, "step": boss.anim_step, "flip": entry.flip, "hand": drawn.global_position - entry.air})
-		spawned.clear()
-	log_p("%d bombs, mirrored %s: %s" % [drops.size(), drops.map(func(d): return d.flip), drops])
-	check(drops.size() >= 3, "he drops bombs (%d)" % drops.size())
-	var early := drops.filter(func(d): return d.anim != &"bomb" or d.step != art.BOMB_RELEASE_STEP)
-	check(early.is_empty(), "each one leaves his hand on the step his drop lets go of it, %d, never on the wind-up before it (%s)" % [art.BOMB_RELEASE_STEP, early])
-	var astray := drops.filter(func(d): return d.hand.distance_to(art.local(art.HAND_BOMB, d.flip)) > 3.0)
-	check(astray.is_empty(), "from his hand where that step draws it, mirrored with him (%s)" % [astray])
+	wild.forced_spots.clear()
+	log_p("clones [flip, drawn, frame, josh]: %s; thrown on frames %s" % [clones_seen.map(func(c): return [c.flip, c.drawn, c.frame, c.josh]), thrown.keys()])
+	var flips: Array = clones_seen.map(func(c): return c.flip)
+	check(clones_seen.size() == sm.wild_clones and flips.has(true) and flips.has(false), "all %d clones, facing both ways" % sm.wild_clones)
+	check(clones_seen.all(func(c): return c.drawn == c.faces and c.flip == c.faces), "each drawn facing where it throws, mirrored when that is left")
+	check(clones_seen.all(func(c): return c.sheet == hold.sheet and c.frame == hold.frames[0] and c.tint == art.WILD_CLONE_TINT), "on the throw's wind-up, tinted as a clone")
+	check(clones_seen.all(func(c): return c.hands.all(func(h): return h.distance_to(art.local(art.HAND_THROW, c.flip)) < 0.01)), "its lanes leave its hand where the throw's release draws it, mirrored with it")
+	check(clones_seen.all(func(c): return c.josh[0] == &"wild_hold" and c.josh[1] == c.flip and c.josh[2]), "and he stands on each as it appears, in the same pose, drawn the same way")
+	var release_frames: Array = art.WILD_RELEASE_STEPS.map(func(s): return throw_anim.frames[s])
+	check(not thrown.is_empty() and thrown.keys().all(func(f): return release_frames.has(f)) and thrown.has(release_frames[0]), "throwing, they draw the throw's release steps %s (%s)" % [art.WILD_RELEASE_STEPS, thrown.keys()])
 
 	log_p("-- the rest drives his states by hand")
 	sm.set_process(false)
@@ -14605,22 +15860,6 @@ func test_josh_layout() -> void:
 	for hazard in live_hazards():
 		hazard.queue_free()
 	await wait(2)
-
-	for josh_right in [true, false]:
-		var side := "right" if josh_right else "left"
-		sm.on_child_transition(sm.current_state, "Idle")
-		await settle_player(JOSH_SPOT)
-		boss.ground_position = JOSH_SPOT + Vector2((sm.throw_distance - JOSH_DIVE_SHORT) * (1.0 if josh_right else -1.0), 0.0)
-		boss.height = sm.glider_height
-		boss.flying_left = not josh_right
-		boss.fly_velocity = Vector2.ZERO
-		boss.place()
-		sm.on_child_transition(sm.current_state, "Dismount")
-		sm.set_physics_process(true)
-		var landed := await wait_until(func(): return boss.current_anim == &"dismount", 180)
-		sm.set_physics_process(false)
-		log_p("landed on the player's %s at %s, mirrored %s" % [side, boss.global_position, boss.sprite.flip_h])
-		check(landed and boss.sprite.flip_h == josh_right, "landing on the player's %s while riding away from them, he steps off the card facing them" % side)
 
 	var finisher: Node = player.get_node("Finisher")
 	var stars_at := {}
@@ -14657,6 +15896,23 @@ func test_josh_layout() -> void:
 		await wait(30)
 	var mirror_of_right := Vector2(-stars_at["right"].x, stars_at["right"].y)
 	check(stars_at["left"].distance_to(mirror_of_right) < 0.5, "one side's stars are the mirror of the other's (%s, %s)" % [stars_at["left"], stars_at["right"]])
+
+	# The tuning round of 2026-10-04: he sorted on his feet and the player's sprite on a point 3 px over theirs, so a
+	# player up to 3 px in front of him was drawn behind him.
+	log_p("-- the y-sort: the player beside him, their feet a few px behind or in front of his")
+	sm.on_child_transition(sm.current_state, "Idle")
+	boss.ground_position = JOSH_SPOT
+	boss.place()
+	await settle_player(JOSH_SPOT + Vector2(30, 0))
+	var feet_below: float = area_rect(player.hurtBox).end.y - player.global_position.y
+	var sorted := []
+	for ahead in [-40.0, -5.0, -1.0, 1.0, 3.0, 5.0, 40.0]:
+		await settle_player(Vector2(JOSH_SPOT.x + 30.0, boss.global_position.y + ahead - feet_below))
+		var feet: float = area_rect(player.hurtBox).end.y
+		sorted.append([feet - boss.global_position.y, player.sprite.global_position.y > boss.sort_point.global_position.y])
+	log_p("[player's feet in front of his by, the player drawn in front]: %s" % [sorted])
+	check(boss.y_sort_enabled and boss.air.get_parent() == boss.sort_point, "everything of him drawn sorts on his sort point")
+	check(sorted.all(func(s): return s[1] == (s[0] > 0.0)), "the player is drawn in front of him exactly when their feet are in front of his (%s)" % [sorted])
 
 
 # ------------------------------------------------------------------ no perfect dodge off a static floor hazard
@@ -14706,8 +15962,8 @@ func test_static_dodge() -> void:
 	var hit_info: GDScript = load("res://Scripts/HitInfo.gd")
 
 	log_p("-- the catalogue")
-	var still := [&"bixby_ember", &"computah_mine"]
-	var moving := [&"mason_poo_contact", &"bixby_sonic_beam", &"bixby_quake_ring", &"eric_whirlwind_v2", &"bixby_fireball", &"bixby_inferno", &"josh_card_throw", &"mason_poo_blast", &"funko_blast", &"computah_beam"]
+	var still := [&"bixby_ember", &"computah_mine", &"bixby_flyby_fire"]
+	var moving := [&"mason_poo_contact", &"bixby_sonic_beam", &"bixby_flyby_breath",&"bixby_quake_ring", &"eric_whirlwind_v2", &"bixby_fireball", &"bixby_inferno", &"josh_wild_card", &"josh_hand_slam", &"josh_gun_beam", &"mason_poo_blast", &"funko_blast", &"computah_beam"]
 	check(still.all(func(id): return CATALOG.get_attack(id).no_perfect_dodge), "no_perfect_dodge on the hazards lying still on the floor: %s" % [still])
 	check(moving.all(func(id): return not CATALOG.get_attack(id).no_perfect_dodge), "and on nothing that moves: %s" % [moving])
 	check(CATALOG.get_attack(&"bixby_ember").dash_through, "an ember is still dashed through")
@@ -14853,13 +16109,19 @@ func matt_glass_mode() -> bool:
 
 
 # Every other Matt mode was written for the Ezreal set: the rotation is pinned to the volley and phase
-# two is never reached, so none of them meets a Glass Row.
+# two is never reached, so none of them meets a Glass Row - a Break doesn't start it either
+# (phase_two_at_break) - and the set opens its own window rather than running on into the Echo Roars
+# (echo_after_ezreal). The Echo Roars' own modes (matt_echo*) are pinned to the Echo Roars instead.
 func park_matt_glass() -> void:
 	var body: Node = current_scene.get_node_or_null(MATT_BODY)
 	if body:
 		var pinned: Array[String] = ["MysticVolley"]
+		if mode.begins_with("matt_echo"):
+			pinned = ["EchoRoars"]
 		body.state_machine.attack_rotation = pinned
 		body.state_machine.phase_two_ratio = -1.0
+		body.state_machine.phase_two_at_break = false
+		body.state_machine.echo_after_ezreal = false
 
 
 # His fight with the lines and the card cut, seeded, and held in his intro until the mode starts it.
@@ -15044,19 +16306,33 @@ func test_matt_pass_through() -> void:
 	var wave: Dictionary = catalog.get_attack(&"matt_trueshot")
 	var yell: Dictionary = catalog.get_attack(&"matt_yell")
 	check(shot.blockable and shot.weight == catalog.Weight.LIGHT and shot.tell and shot.parry_pass_through
-		and not shot.dash_through and not shot.parryable and not shot.dodge_tell and shot.damage == 1 and shot.hype_loss
+		and not shot.dash_through and not shot.parryable and not shot.dodge_tell and shot.damage == 2 and shot.hype_loss
 		and not shot.bypass_invincibility and not shot.no_perfect_dodge and not shot.from_above,
-		"matt_mystic_shot: blockable LIGHT, red, passes through, 1 damage, inside the i-frames' rules, a perfect dodge")
+		"matt_mystic_shot: blockable LIGHT, red, passes through, a whole heart (since 2026-10-05), inside the i-frames' rules, a perfect dodge")
 	check(wave.blockable and wave.weight == catalog.Weight.HEAVY and wave.tell and wave.dash_through and wave.parry_pass_through
-		and not wave.parryable and not wave.dodge_tell and wave.damage == 1 and wave.hype_loss
+		and not wave.parryable and not wave.dodge_tell and wave.damage == 2 and wave.hype_loss
 		and not wave.bypass_invincibility and not wave.no_perfect_dodge and not wave.from_above,
-		"matt_trueshot: blockable HEAVY, red, dashed through, passes through, 1 damage")
+		"matt_trueshot: blockable HEAVY, red, dashed through, passes through, a whole heart (since 2026-10-05)")
 	check(yell.dash_through and yell.dodge_tell and not yell.blockable and not yell.parryable and not yell.tell
 		and not yell.parry_pass_through and yell.damage == 1 and yell.hype_loss and not yell.bypass_invincibility
 		and not yell.no_perfect_dodge, "matt_yell: yellow, a dash or distance only, 1 damage")
 	check(catalog.DEFAULTS.has("parry_pass_through") and catalog.DEFAULTS.parry_pass_through == false, "parry_pass_through defaults off")
-	var passing: Array = catalog.ATTACKS.keys().filter(func(id): return catalog.get_attack(id).parry_pass_through)
-	check(passing.size() == 2 and passing.has(&"matt_mystic_shot") and passing.has(&"matt_trueshot"), "and only his bolts and waves carry it (%s)" % [passing])
+	# Every hit in his fight is catalogued under matt_ (bolts, waves, yell, glass, the Echo Roars' rings). Other fights
+	# carry it by their own design (Liam's tsunami), so only his are held to this.
+	var his: Array = catalog.ATTACKS.keys().filter(func(id): return String(id).begins_with("matt_"))
+	var passing: Array = his.filter(func(id): return catalog.get_attack(id).parry_pass_through)
+	check(passing.size() == 3 and passing.has(&"matt_mystic_shot") and passing.has(&"matt_trueshot") and passing.has(&"matt_echo"),
+		"and of his attacks only his bolts, waves and Echo rings carry it, nothing else in his fight (%s of %s)" % [passing, his])
+	var ring: Dictionary = catalog.get_attack(&"matt_echo")
+	var punish: Dictionary = catalog.get_attack(&"matt_echo_punish")
+	var gold: Dictionary = catalog.get_attack(&"matt_boomburst")
+	check(ring.parryable and ring.tell and ring.parry_pass_through and ring.bypass_invincibility and not ring.blockable
+		and not ring.dash_through and not ring.dodge_tell and ring.damage == 1,
+		"matt_echo: parried, red, passes through, inside the i-frames, 1 damage, never dashed through")
+	check(not punish.parryable and not punish.blockable and not punish.tell and not punish.dodge_tell and not punish.dash_through
+		and punish.bypass_invincibility and punish.damage == 2, "matt_echo_punish: nothing answers it, no badge, inside the i-frames, a whole heart")
+	check(gold.dash_through and gold.dodge_tell and is_equal_approx(gold.dash_immunity, 0.21) and gold.bypass_invincibility
+		and not gold.parryable and not gold.blockable and gold.damage == 3, "matt_boomburst: yellow, dashed through on 0.21 s, inside the i-frames, a heart and a half")
 
 	log_p("-- a parried bolt flies on, whole")
 	var fx: Node = current_scene.get_node("Arena/MainPlayer/FinisherFx")
@@ -15123,9 +16399,11 @@ func test_matt_pass_through() -> void:
 	check(ahead != Vector2.INF, "found a spot in its path inside the ropes")
 	if ahead != Vector2.INF:
 		await settle_player(ahead - (matt_centre() - player.global_position))
-		await wait_until(func(): return not events.is_empty() or not is_instance_valid(bolt), 60)
+		# By id: a lambda called with a freed object in its captures prints an engine error each call.
+		var bolt_id := bolt.get_instance_id()
+		await wait_until(func(): return not events.is_empty() or not is_instance_id_valid(bolt_id), 60)
 		await wait(2)
-		check(events_of("HIT", &"matt_mystic_shot").size() == 1 and player.playerHealth == health - 1, "HIT for a half-heart (%s)" % [events.map(func(e): return "%s %s" % [e.kind, e.id])])
+		check(events_of("HIT", &"matt_mystic_shot").size() == 1 and player.playerHealth == health - shot.damage, "HIT for its %d half-hearts (%s)" % [shot.damage, events.map(func(e): return "%s %s" % [e.kind, e.id])])
 		check(not is_instance_valid(bolt), "and the bolt is gone")
 
 	log_p("-- a held guard %s" % ("blocks it for 20, and it stays whole" if blocking() else "is no answer: it hits"))
@@ -15135,10 +16413,12 @@ func test_matt_pass_through() -> void:
 	clear_iframes()
 	await settle_player(Vector2(900, 700))
 	defense._set_stamina(defense.max_stamina)
+	track_spends()
 	press(KEY_SHIFT)
 	await past_window()
 	var blocked_bolt := spawn_matt_bolt(matt_centre() - heading * 400.0, heading)
-	await wait_until(func(): return not events.is_empty() or not is_instance_valid(blocked_bolt), 90)
+	var blocked_id := blocked_bolt.get_instance_id()
+	await wait_until(func(): return not events.is_empty() or not is_instance_id_valid(blocked_id), 90)
 	await wait(20)
 	release(KEY_SHIFT)
 	if blocking():
@@ -15147,7 +16427,8 @@ func test_matt_pass_through() -> void:
 		check(blocks.size() == 1 and events_of("HIT").is_empty() and is_equal_approx(cost, 20.0), "BLOCKED once for %.0f" % cost)
 		check(is_instance_valid(blocked_bolt) and not blocked_bolt.spent, "and it flies on")
 	else:
-		check(events_of("HIT", &"matt_mystic_shot").size() == 1 and events_of("BLOCKED").is_empty() and defense.stamina == defense.max_stamina, "HIT through the held guard, and no stamina spent")
+		check(events_of("HIT", &"matt_mystic_shot").size() == 1 and events_of("BLOCKED").is_empty() and spends == whiffs(1),
+			"HIT through the held guard, and nothing spent but the press's missed parry (%s)" % [spends])
 	if is_instance_valid(blocked_bolt):
 		blocked_bolt.queue_free()
 
@@ -15212,9 +16493,9 @@ func test_matt_pass_through() -> void:
 					var wave_blocks := events_of("BLOCKED", &"matt_trueshot")
 					check(wave_blocks.size() == 1 and is_equal_approx(defense.max_stamina - wave_blocks[0].stamina, 35.0), "blocked for 35, and it flew on")
 				else:
-					check(events_of("HIT", &"matt_trueshot").size() == 1 and player.playerHealth == 99, "a held guard is no answer: HIT for a half-heart, and it flew on")
+					check(events_of("HIT", &"matt_trueshot").size() == 1 and player.playerHealth == 100 - wave.damage, "a held guard is no answer: HIT for its %d half-hearts, and it flew on" % wave.damage)
 			"hit":
-				check(events_of("HIT", &"matt_trueshot").size() == 1 and player.playerHealth == 99, "HIT for a half-heart, and it flew on")
+				check(events_of("HIT", &"matt_trueshot").size() == 1 and player.playerHealth == 100 - wave.damage, "HIT for its %d half-hearts, and it flew on" % wave.damage)
 		check(forward, "%s: it only ever moved on down its heading - no bounce" % answer)
 		check(not MATT_VIEW.intersects(last_bounds), "%s: it went only once it was off the screen (%s)" % [answer, last_bounds])
 
@@ -15270,11 +16551,11 @@ func test_matt_bounces() -> void:
 		previous = h
 	var edge_gap := minf(minf(absf(last.x - bounds.position.x), absf(last.x - bounds.end.x)), minf(absf(last.y - bounds.position.y), absf(last.y - bounds.end.y)))
 	log_p("reflections %d at %s; last seen %s, %.1f px from a rope; frames outside the ropes %d" % [turns.size(), turns.map(func(t): return Vector2i(t.at)), last, edge_gap, outside])
-	check(turns.size() == 5, "exactly five reflections")
+	check(turns.size() == sm.mystic_bounces, "exactly mystic_bounces (%d) reflections" % sm.mystic_bounces)
 	check(lattice_ok, "every heading on the lattice, never along an axis")
 	check(mirror_ok, "each an exact mirror of the one before")
 	check(outside == 0, "inside the ropes throughout")
-	check(not is_instance_valid(bolt) and edge_gap <= sm.mystic_speed / 60.0 + 1.0, "and it bursts on the sixth rope contact")
+	check(not is_instance_valid(bolt) and edge_gap <= sm.mystic_speed / 60.0 + 1.0, "and it bursts on the rope contact after them")
 
 	log_p("-- a corner is one bounce")
 	var diagonal := Vector2.from_angle(deg_to_rad(45.0))
@@ -15554,6 +16835,8 @@ func matt_window(yell_on := 0) -> Node:
 	var recover: Node = sm.states["Recover"]
 	for hazard in get_nodes_in_group(sm.HAZARD_GROUP):
 		hazard.queue_free()
+	# A combo of its own: the count carries between windows (PlayerCombo), and a POW would come early.
+	player.combo.reset()
 	sm.on_child_transition(sm.current_state, "Recover")
 	if yell_on > 0:
 		recover.yell_on_hit = yell_on
@@ -15563,9 +16846,36 @@ func matt_window(yell_on := 0) -> Node:
 
 func test_matt_yell() -> void:
 	await load_matt()
+	# His window's old daze (Break-only since 2026-10-04): "never dazeable through the tell" and the daze after a
+	# dodged yell are rules of a window that can daze.
+	boss.daze_in_recover = true
 	health_ok()
 	track()
 	track_parries()
+
+	log_p("-- the live game never yells (yell_counter_enabled off, the user, 2026-10-04)")
+	var knob_off: bool = not sm.yell_counter_enabled
+	var live_chance: float = sm.yell_chance
+	var planned := 0
+	var told := 0
+	var thrown := false
+	for w in 12:
+		var window: Node = await matt_window()
+		if window.yell_planned:
+			planned += 1
+		place_under(boss.get_finisher_hurtbox())
+		await wait(4)
+		for i in 2:
+			await swing_any()
+			if window.yell != window.Yell.NONE or window.yells > 0:
+				told += 1
+			thrown = thrown or boss.is_launching()
+		boss.boss_health = boss.max_health
+	log_p("12 windows at yell_chance %.2f with the knob off: %d planned, %d tells, thrown %s" % [live_chance, planned, told, thrown])
+	check(knob_off and live_chance > 0.0 and planned == 0 and told == 0 and not thrown,
+		"off by default: no window plans a yell, puts up its badge or throws the player")
+	sm.yell_counter_enabled = true
+	sm.windows_opened = 0
 	track_dodges()
 	var finisher: Node = player.get_node("Finisher")
 	finisher.min_press_interval = 0.0
@@ -15576,9 +16886,11 @@ func test_matt_yell() -> void:
 	place_under(boss.get_finisher_hurtbox())
 	await wait(4)
 	check(not recover.yell_planned, "not planned in window %d" % sm.windows_opened)
+	# Two punches short of the POW, with no miss after them, which he would scream away (matt_scream).
 	for i in 2:
 		await swing_any()
-		await wait(6)
+		if i < 1:
+			await wait(6)
 	await wait(10)
 	check(boss.hits_this_window == 2 and recover.yells == 0, "two punches in and no yell (%d punches, %d yells)" % [boss.hits_this_window, recover.yells])
 
@@ -15885,11 +17197,12 @@ func test_matt_entrance() -> void:
 # The circle walker is a random-movement density bound, not the skill path: it never guards, dashes or
 # reads a tell, so all it measures is how thick the ring gets with everything he throws. It walks every
 # circle and seed his tuning was measured on, and the bound is on all of their cycles together. The
-# fairness guarantee is the parry bot's 0.
+# fairness guarantee is the parry bot's 0. Raised from 2.5 and 4 with his 8/10's thicker volleys (2026-10-06:
+# five casts at every tier, seven bounces), which walk it into 2.89 a cycle, 5 at worst.
 const MATT_CIRCLES := [[Vector2(960, 700), 260.0], [Vector2(960, 620), 300.0], [Vector2(960, 540), 380.0]]
 const MATT_CIRCLE_SEEDS := [MATT_SEED, 1, 2]
-const MATT_CIRCLE_MEAN := 2.5
-const MATT_CIRCLE_WORST := 4
+const MATT_CIRCLE_MEAN := 3.0
+const MATT_CIRCLE_WORST := 5
 
 
 func test_matt_bots() -> void:
@@ -15982,7 +17295,9 @@ const ARROW_KEYS := {&"up": KEY_UP, &"down": KEY_DOWN, &"left": KEY_LEFT, &"righ
 
 
 # A Glass Row from wherever the fight stands: `booms` of them in `sets` (phase two's stomps between them),
-# with the Deafening Yell or not.
+# with the Deafening Yell or not. One set is full health's row: its two rows of glass, B and A, and the plain
+# charge. Phase two's sets are phase two's: four rows, D to A, and its longer charge (matt_glass_rows has the
+# rest).
 func glass_row(booms: int, deafen := false, sets := 1) -> Node:
 	var glass: Node = sm.states["GlassRow"]
 	for hazard in get_nodes_in_group(sm.HAZARD_GROUP):
@@ -15990,6 +17305,8 @@ func glass_row(booms: int, deafen := false, sets := 1) -> Node:
 	sm.cycle_booms = booms
 	sm.cycle_deafen = deafen
 	sm.cycle_sets = sets
+	sm.cycle_glass_rows = sm.glass_rows_by_share[0] if sets == 1 else sm.glass_rows_by_share[-1]
+	sm.cycle_boom_charge_extra = 0.0 if sets == 1 else sm.phase_two_charge_extra
 	sm.on_child_transition(sm.current_state, "GlassRow")
 	return glass
 
@@ -16005,10 +17322,10 @@ func glass_row_centre(k: int) -> Vector2:
 	return sm.row_body_point(k) + reach
 
 
-# What a boom's arrow-to-impact window should be with the player in row k.
+# What a boom's arrow-to-impact window should be with the player in row k, phase two's extra charge and all.
 func glass_window(k: int, dizzy := false) -> float:
 	var charged: float = boss.mouth_point(&"roar").y + sm.boom_spawn_drop + sm.boom_charge_drift
-	var charge: float = sm.boom_charge_wobble if dizzy else sm.boom_charge
+	var charge: float = (sm.boom_charge_wobble if dizzy else sm.boom_charge) + sm.cycle_boom_charge_extra
 	return charge + (glass_row_centre(k).y - charged) / sm.boom_speed
 
 
@@ -16220,15 +17537,15 @@ func test_matt_glass_row() -> void:
 	check(glass.outcomes.all(func(o): return o == &"answered") and clean.get("state") == "Recover"
 		and absf(clean.timer - sm.recover_time - sm.glass_clean_bonus) <= 2.0 / 60.0 + 0.01, "all answered: %.1f s more in the window" % sm.glass_clean_bonus)
 	check(is_equal_approx(hype.hype - hype_before, sm.boom_hype_each * 5.0 + sm.boom_hype_clean), "and the clean run's hype on top")
-	check(glass.glass_top == int(sm.GLASS_ROW.glass_rows[0]) and glass.shoves == 0, "no stomp in phase one's row: the glass stays B and A")
+	check(glass.glass_top == sm.glass_top_row() and glass.glass_top == 4 and glass.stomps == 0, "no stomp in phase one's row: the glass stays B and A")
 	await matt_glass_phase_two()
 
 
-# Phase two's Glass Row (G11): the sets locked at the cycle's top, then a row of fifteen, every boom
-# answered, with a stomp after the fifth and the tenth each laying one more row of glass, its shards'
-# shadows first.
+# Phase two's Glass Row (G11): the sets locked at the cycle's top, then a row of fifteen over its four rows of
+# glass, every boom answered, with a stomp after the fifth and the tenth each bringing shards down onto the
+# glass's front row, their shadows first, and laying no glass.
 func matt_glass_phase_two() -> void:
-	log_p("-- phase two: five booms, a stomp and one more row of glass, twice, then five")
+	log_p("-- phase two: five booms, a stomp and its shards, twice, then five")
 	var pinned: Array[String] = ["GlassRow"]
 	sm.attack_rotation = pinned
 	var locked := []
@@ -16248,6 +17565,7 @@ func matt_glass_phase_two() -> void:
 	var stomps := []
 	var stomp := {}
 	var boom_in_stomp := false
+	var segments := 0
 	while sm.current_state == row:
 		await physics_frame
 		if row.beat != row.Beat.BOOMS:
@@ -16256,6 +17574,7 @@ func matt_glass_phase_two() -> void:
 			pressed[row.boom_index] = true
 			tap(ARROW_KEYS[row.arrows[row.boom_index]])
 		var ground: Node = row.glass_floor
+		segments = ground.segment_rects().size()
 		if row.boom_phase == row.BoomPhase.STOMP:
 			if stomp.is_empty():
 				stomp = {"after": row.outcomes.size(), "start": row.state_clock, "top_before": row.glass_top, "slam": -1.0,
@@ -16274,17 +17593,17 @@ func matt_glass_phase_two() -> void:
 			stomp["whole"] = ground.revealed_count() == ground.segment_rects().size()
 			stomps.append(stomp)
 			stomp = {}
-	log_p("outcomes %s, glass from row %d, shoves %d; stomps %s" % [row.outcomes, row.glass_top, row.shoves, stomps])
+	log_p("outcomes %s, glass from row %d, %d stomps; stomps %s" % [row.outcomes, row.glass_top, row.stomps, stomps])
 	var per_row: int = sm.glass_segments * sm.glass_spread_shards_per_segment
 	check(row.outcomes.size() == 15 and row.outcomes.all(func(o): return o == &"answered") and not boom_in_stomp,
 		"fifteen booms, every one answered, and none of them live through a stomp")
-	check(stomps.map(func(s): return s.after) == [5, 10], "a stomp after the fifth and after the tenth")
-	check(stomps.size() == 2 and stomps.map(func(s): return [s.top_before, s.top_after]) == [[4, 3], [3, 2]] and row.glass_top == 2,
-		"each lays one more row toward the player: B-A, then C-A, then D-A")
+	check(stomps.map(func(s): return s.after) == [5, 10] and row.stomps == 2, "a stomp after the fifth and after the tenth")
+	check(stomps.size() == 2 and stomps.map(func(s): return [s.top_before, s.top_after]) == [[2, 2], [2, 2]] and row.glass_top == 2
+		and segments == sm.glass_segments * 3, "the glass D to A from the start, and neither stomp lays any more (%d segments at the last boom)" % segments)
 	check(stomps.size() == 2 and stomps.all(func(s): return s.took >= 0.8 and s.took <= 1.0), "each about %.2f s long" % (sm.glass_spread_tell + sm.glass_spread_time))
 	check(stomps.size() == 2 and stomps.all(func(s): return s.landed == per_row and s.shadows_for >= sm.glass_shard_fall - 1.0 / 60.0 and s.whole),
-		"its %d shards land on the new row after %.2f s of their shadows, and the row is whole before the next boom" % [per_row, sm.glass_shard_fall])
-	check(row.shoves == 0 and row.row == 0, "a player on row F is never in the way")
+		"its %d shards land on the glass's front row, D, after %.2f s of their shadows" % [per_row, sm.glass_shard_fall])
+	check(row.row == 0, "and the player, every boom answered, stays on row F")
 
 
 func test_matt_glass_damage() -> void:
@@ -16334,28 +17653,32 @@ func test_matt_glass_damage() -> void:
 			player.invincibility_timer.start()
 	check(made_invincible and player.playerHealth == 4, "the glass lands inside the i-frames too (health %d)" % player.playerHealth)
 
-	log_p("-- phase two: the glass grows a row a stomp, and never under the player")
+	log_p("-- phase two: four rows of glass from the start, and the stomps never move the player")
 	var sets: int = sm.phase_two_boom_sets
-	var answer_from := func(first: int) -> Callable:
-		return func(i: int, arrow: StringName) -> Dictionary: return {} if i < first else {"at": 0.05, "key": ARROW_KEYS[arrow]}
 	var answer_until := func(last: int) -> Callable:
 		return func(i: int, arrow: StringName) -> Dictionary: return {"at": 0.05, "key": ARROW_KEYS[arrow]} if i < last else {}
+	var miss_first := func(i: int, arrow: StringName) -> Dictionary: return {} if i == 0 else {"at": 0.05, "key": ARROW_KEYS[arrow]}
 	await glass_bot_reset()
 	var glass_hits_before := events_of("HIT", &"matt_glass").size()
-	var shoved := await glass_bot_row(15, false, answer_from.call(3), sets)
-	log_p("three missed, then every one answered: %s" % [shoved])
-	check(shoved.fails == 3 and shoved.shoves == 2 and shoved.row == 1 and not shoved.glass and shoved.damage == 0
-		and events_of("HIT", &"matt_glass").size() == glass_hits_before, "three missed leave them on row C, which the first stomp turns to glass: shoved to D, then to E by the second, unhurt")
+	var held := await glass_bot_row(15, false, miss_first, sets)
+	log_p("the first missed, then every one answered: %s" % [held])
+	check(held.fails == 1 and held.row == 1 and held.stomps == sets - 1 and not held.glass and held.damage == 0
+		and events_of("HIT", &"matt_glass").size() == glass_hits_before, "one miss knocks them to E, in front of the glass, and they stay there through both stomps, unhurt")
 	await glass_bot_reset()
-	var third := await glass_bot_row(15, false, answer_until.call(5), sets)
-	log_p("the first set answered, then none: %s" % [third])
-	check(third.glass and third.fails == 3 and third.booms == 8 and third.damage == 2 and third.row == 2,
-		"after one stomp the third miss from row F is the glass: a whole heart, back to D, and the barrage ends")
+	var none := await glass_bot_row(15, false, answer_until.call(0), sets)
+	log_p("none answered: %s" % [none])
+	check(none.glass and none.fails == 2 and none.booms == 2 and none.damage == 2 and none.row == 1,
+		"no presses: the second miss is the glass, a whole heart, back to E, and the barrage ends before a stomp")
 	await glass_bot_reset()
-	var second := await glass_bot_row(15, false, answer_until.call(10), sets)
-	log_p("two sets answered, then none: %s" % [second])
-	check(second.glass and second.fails == 2 and second.booms == 12 and second.damage == 2 and second.row == 1,
-		"after two the second is: a whole heart, back to E")
+	var after_one := await glass_bot_row(15, false, answer_until.call(5), sets)
+	log_p("the first set answered, then none: %s" % [after_one])
+	check(after_one.glass and after_one.fails == 2 and after_one.booms == 7 and after_one.damage == 2 and after_one.row == 1,
+		"the first set answered, then none: after the stomp the second miss is the glass, a whole heart, back to E")
+	await glass_bot_reset()
+	var after_two := await glass_bot_row(15, false, answer_until.call(10), sets)
+	log_p("two sets answered, then none: %s" % [after_two])
+	check(after_two.glass and after_two.fails == 2 and after_two.booms == 12 and after_two.damage == 2 and after_two.row == 1,
+		"and after both stomps the same")
 
 	log_p("-- lethal at 2 health")
 	sm.on_child_transition(sm.current_state, "Idle")
@@ -16428,13 +17751,13 @@ func test_matt_glass_release() -> void:
 
 # A phase-two Glass Row, in phase two's sets, mashed at `rate` presses a second (0 for none), every boom
 # answered right 0.3 s after its birth, inside even the plain pace's shortest window, to its end: what the
-# yell, the booms and the stomps did.
+# yell, the booms and the stomps did. The presses fall on the steps at or after k / `rate` from the yell's
+# first, so the rate is the one asked for rather than drifting down to whole steps.
 func deafen_row(rate: float) -> Dictionary:
 	var glass := glass_row(sm.boom_counts_by_tier[sm.tier()], true, sm.phase_two_boom_sets)
 	var seen := {"pair": [], "prompt_up": false, "word": "", "meter": -1.0, "passed": false, "dizzy": false,
 		"stars": false, "wobble_first_boom": -1.0, "prompt_gone": false, "windows": [], "outcomes": [], "wobble_after": -1.0,
 		"stars_after": true, "mashed": 0, "stomps": 0, "wobble_in_stomps": 1.0}
-	var next_press := 0.0
 	var mashed := 0
 	var answered := {}
 	while sm.current_state == glass:
@@ -16448,8 +17771,7 @@ func deafen_row(rate: float) -> Dictionary:
 					var word_label: Label = glass.prompt.word_label if glass.prompt.word_label else glass.prompt.text_label
 					if word_label.visible:
 						seen.word = word_label.text
-				if rate > 0.0 and glass.beat_clock >= next_press:
-					next_press = glass.beat_clock + 1.0 / rate
+				while rate > 0.0 and mashed / rate <= glass.beat_clock + 0.000001:
 					tap(MASH_KEYS[glass.pair[mashed % 2]])
 					mashed += 1
 			"BOOMS":
@@ -16467,7 +17789,7 @@ func deafen_row(rate: float) -> Dictionary:
 					seen.wobble_in_stomps = minf(seen.wobble_in_stomps, boss.wobble_amount())
 	seen.windows = glass.windows.map(func(w): return snappedf(w, 0.001))
 	seen.outcomes = Array(glass.outcomes)
-	seen.stomps = int(sm.GLASS_ROW.glass_rows[0]) - glass.glass_top
+	seen.stomps = glass.stomps
 	await wait(roundi((sm.wobble_out + 0.2) * 60.0))
 	seen.wobble_after = boss.wobble_amount()
 	seen.stars_after = is_instance_valid(glass.stars)
@@ -16487,7 +17809,9 @@ func test_matt_deafen() -> void:
 	var cases := [
 		[boss.max_health, 1, false, "MysticVolley", "GlassRow", false, "phase one: a plain Glass Row"],
 		[half - 2, 0, false, "MysticVolley", "GlassRow", false, "phase two, but the fight's first Glass Row: no yell"],
-		[half - 2, 1, false, "GlassRow", "GlassRow", true, "phase two's opener, forced even straight after a Glass Row"],
+		[half - 2, 1, false, "MysticVolley", "GlassRow", true, "phase two's opener, forced as the next cycle"],
+		# Never two Glass Rows in a row (the Echo Roars' plan, 2026-10-04): straight after one, the opener waits a cycle.
+		[half - 2, 1, false, "GlassRow", "MysticVolley", false, "but never straight after a Glass Row: the rotation first"],
 		[half - 2, 2, true, "GlassRow", "MysticVolley", false, "then the rotation"],
 		[half - 2, 2, true, "MysticVolley", "GlassRow", true, "and every phase-two Glass Row yells"],
 		[half + 1, 1, false, "MysticVolley", "GlassRow", false, "just over half: no yell"],
@@ -16527,16 +17851,17 @@ func test_matt_deafen() -> void:
 	sm.beat_timer.stop()
 	await wait(3)
 
-	log_p("-- 8 presses a second")
+	# Clear of what the mash asks since the user's 2026-09-28 retune, about 8.9 a second (matt_deafen_rate).
+	log_p("-- 10 presses a second")
 	await settle_player(Vector2(700, 800))
-	var fast := await deafen_row(8.0)
+	var fast := await deafen_row(10.0)
 	log_p("%s" % [fast])
 	check(fast.prompt_up and fast.word == "RESIST!", "the RESIST! prompt is up through the yell (%s)" % fast.word)
 	check(fast.passed and is_equal_approx(fast.meter, 1.0) and not fast.dizzy and not fast.stars and is_zero_approx(fast.wobble_first_boom),
-		"8 a second mashes through it: no dizzy, no stars, no wobble")
+		"10 a second mashes through it: no dizzy, no stars, no wobble")
 	check(fast.prompt_gone, "and the prompt is gone by the first boom")
 	var plain_ok: bool = not fast.windows.is_empty() and glass_window_ok(fast.windows[0], 0)
-	check(plain_ok, "its booms charge the usual %.2f s (window %s)" % [sm.boom_charge, fast.windows])
+	check(plain_ok, "its booms charge phase two's usual %.2f s (window %s)" % [sm.boom_charge + sm.cycle_boom_charge_extra, fast.windows])
 	check(fast.stomps == sm.phase_two_boom_sets - 1 and fast.outcomes.size() == 15 and fast.outcomes.all(func(o): return o == &"answered"),
 		"in phase two's sets: %d stomps, and all 15 booms answered (%d)" % [sm.phase_two_boom_sets - 1, fast.stomps])
 
@@ -16551,7 +17876,7 @@ func test_matt_deafen() -> void:
 		check(not slow.passed and slow.dizzy and slow.stars, "%d a second fails: dizzy, with stars" % int(rate))
 		check(slow.wobble_first_boom >= 0.999, "the wobble at full before the first boom (%.3f)" % slow.wobble_first_boom)
 		var dizzy_ok: bool = not slow.windows.is_empty() and glass_window_ok(slow.windows[0], 0, true)
-		check(dizzy_ok, "every charge %.2f s while dizzy (window %s)" % [sm.boom_charge_wobble, slow.windows])
+		check(dizzy_ok, "every charge %.2f s while dizzy (window %s)" % [sm.boom_charge_wobble + sm.cycle_boom_charge_extra, slow.windows])
 		check(slow.stomps == sm.phase_two_boom_sets - 1 and slow.wobble_in_stomps >= 0.999 and slow.outcomes.size() == 15
 			and slow.outcomes.all(func(o): return o == &"answered"), "the wobble full through both stomps, and every boom still answered (%d stomps, %.3f)" % [slow.stomps, slow.wobble_in_stomps])
 		check(is_zero_approx(slow.wobble_after) and not slow.stars_after, "and all of it clears after the barrage (wobble %.3f)" % slow.wobble_after)
@@ -16610,7 +17935,7 @@ func glass_bot_row(booms: int, deafen: bool, plan: Callable, sets := 1) -> Dicti
 	var timer: float = sm.recover_timer.time_left if sm.current_state == sm.states["Recover"] else -1.0
 	return {"outcomes": Array(glass.outcomes), "fails": glass.fails, "glass": glass.glass_hit, "booms": glass.windows.size(),
 		"damage": health_before - player.playerHealth, "timer": snappedf(timer, 0.01), "taps": taps, "wobble_at_taps": wobble_at_taps,
-		"stomps": int(sm.GLASS_ROW.glass_rows[0]) - glass.glass_top, "shoves": glass.shoves, "row": glass.row}
+		"stomps": glass.stomps, "row": glass.row}
 
 
 func glass_bot_reset() -> void:
@@ -16715,15 +18040,18 @@ func test_matt_glass_bots() -> void:
 			var glassed := 0
 			for n in MATT_GLASS_HUMAN_RUNS:
 				var run := await glass_bot_row(top, true, person.call(bot, MATT_GLASS_WOBBLE_READ), sets)
-				log_p("wobble, person %d: %d missed, %d shoved, glass %s; %s" % [n, run.fails, run.shoves, run.glass, run])
+				log_p("wobble, person %d: %d missed, glass %s; %s" % [n, run.fails, run.glass, run])
 				misses.append(run.fails)
 				glassed += 1 if run.glass else 0
 				await glass_bot_reset()
 			log_p("wobble, person: missed per run %s, the glass in %d of %d" % [misses, glassed, MATT_GLASS_HUMAN_RUNS])
 			check(glassed == 0, "a person %.2f s slower to read through it stays out of the glass: missed per run %s" % [MATT_GLASS_WOBBLE_READ, misses])
-			var from_c := await glass_bot_row(top, true, skip_three.call(MATT_GLASS_REACTION + MATT_GLASS_REACTION_SPREAD + MATT_GLASS_WOBBLE_READ), sets)
-			log_p("wobble from row C: %s" % [from_c])
-			check(from_c.fails == 3 and from_c.shoves == 2 and not from_c.glass, "and from row C, shoved clear by both stomps, still no glass")
+			# Phase two's glass is D to A, so E is the last row before it.
+			var slow_read: float = MATT_GLASS_REACTION + MATT_GLASS_REACTION_SPREAD + MATT_GLASS_WOBBLE_READ
+			var skip_one := func(i: int, arrow: StringName) -> Dictionary: return {} if i < 1 else {"at": slow_read, "key": ARROW_KEYS[arrow]}
+			var from_e := await glass_bot_row(top, true, skip_one, sets)
+			log_p("wobble from row E: %s" % [from_e])
+			check(from_e.fails == 1 and from_e.row == 1 and not from_e.glass, "and from row E, one missed on purpose, still no glass through both stomps")
 
 
 # ---- Captain Burak: his powder kegs
@@ -17310,7 +18638,7 @@ func burak_keg_bot(start: Vector2, seed_value: int, dashes: int, breaks: int, re
 			if reaction > 0.0 and to.length() <= 0.5 and not landed:
 				waited_for = target
 			var pick := burak_dash_pick(to)
-			var dash_ready: bool = not defense.is_dash_cooling_down() and defense.stamina >= defense.dash_stamina_cost
+			var dash_ready: bool = not defense.is_dash_cooling_down() and defense.can_afford(defense.dash_stamina_cost)
 			if hop_dashes < dashes and dash_ready and pick[1] + BURAK_DASH_FRAMES * walk < burak_walk(Vector2.ZERO, to):
 				held = BURAK_DASH_KEYS[pick[0]]
 				for code in held:

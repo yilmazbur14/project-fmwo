@@ -238,6 +238,12 @@ func _add_planted_sword() -> void:
 	eric_state_machine.add_hazard(planted_sword, plant_spot + EricArtLayout.SORT_POINT * character_body.scale, false)
 
 
+# Whether his sword is standing where he planted it: an uppercut that catches him away from it leaves it
+# there (EricStateMachine.enter_juggled).
+func sword_planted() -> bool:
+	return is_instance_valid(planted_sword)
+
+
 func _remove_planted_sword() -> void:
 	if is_instance_valid(planted_sword):
 		planted_sword.queue_free()
@@ -267,6 +273,8 @@ func _on_animation_player_animation_finished(anim_name: StringName) -> void:
 			hurtbox.monitoring = true
 			hurtbox.monitorable = true
 			phase = Phase.STUMBLE
+			# A punish window of its own, with its own daze (EricScript.daze_in_windows).
+			character_body.daze_used = false
 			# The stumble frame is held for hug_stumble_time, whatever the clip's own length.
 			animation_player.speed_scale = animation_player.get_animation(&"hug_stumble").length / EricPacing.value("hug_stumble_time")
 			animation_player.play("hug_stumble")
@@ -277,7 +285,7 @@ func _on_animation_player_animation_finished(anim_name: StringName) -> void:
 			phase = Phase.RETURN
 			animation_player.play("hug_return")
 		&"hug_grab":
-			squeezes_left = EricPacing.value("hug_squeezes")
+			squeezes_left = EricPacing.value("hug_first_squeezes" if hugs_started == 1 else "hug_squeezes")
 			_squeeze()
 		&"hug_squeeze":
 			if squeezes_left > 0:

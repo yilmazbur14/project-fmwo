@@ -2,15 +2,21 @@ extends Node2D
 
 # The red mark on the floor under the spot Eric's thrown sword is going to land on: a fixed target
 # ring saying where, a second ring closing onto it saying when, and a commit frame lit for exactly
-# PlayerDefense.parry_window before the blade arrives.
+# PlayerDefense.parry_window before the blade arrives. The ring is drawn the size of what the blade
+# lands on (DefenseHypeArtLayout's SWORD LANDING MARK).
 # It has no clock of its own. The sword pushes its own flight progress in through set_progress(), so
 # the closing ring can't drift from the blade and it stops dead wherever the sword does: a finisher's
 # freeze, a hit-stop, the pause screen.
 # It lives on the fight's floor layer rather than under the sword, so it stays put while the sword
 # flies over it. The sword ends it on every path instead: land() when the blade goes in, cancel()
-# when a parry stops it in the air, and the fight ending frees it with every other hazard.
+# when a parry catches it there, and the fight ending frees it with every other hazard.
 
 const DefenseHypeArtLayout := preload("res://Scripts/DefenseHypeArtLayout.gd")
+
+# The floor inside the ropes, the walls' inner faces (ArenaScene), where EricQuakeRingScript's
+# HURT_AREA stops too. The mark is drawn only there, so a ring laid by a rope never spills onto the
+# crowd, the apron or the HUD past them; no spot a player can stand on is outside it.
+const FLOOR := Rect2(105, 105, 1710, 870)
 
 # The flight progress the commit frame lights at; the sword sets it from the parry window.
 var commit_at := 1.0
@@ -22,11 +28,17 @@ var target_ring: Line2D
 var closing_ring: Line2D
 var impact_step := 0
 var impact_clock := 0.0
+# Draws nothing itself: it only cuts what the mark draws down to FLOOR.
+var floor_clip: Polygon2D
 
 
 func _ready() -> void:
 	set_process(false)
 	spec = DefenseHypeArtLayout.sword_mark()
+	floor_clip = Polygon2D.new()
+	floor_clip.clip_children = CanvasItem.CLIP_CHILDREN_ONLY
+	floor_clip.polygon = PackedVector2Array([to_local(FLOOR.position), to_local(Vector2(FLOOR.end.x, FLOOR.position.y)), to_local(FLOOR.end), to_local(Vector2(FLOOR.position.x, FLOOR.end.y))])
+	add_child(floor_clip)
 	if spec.has("texture"):
 		_build_sprite()
 	else:
@@ -56,7 +68,7 @@ func land() -> void:
 	set_process(true)
 
 
-# Parried in the air, so nothing is going to land there. It leaves the way the tells do.
+# Parried as it came down, so nothing is going to land there. It leaves the way the tells do.
 func cancel() -> void:
 	set_process(false)
 	var fade := create_tween()
@@ -90,17 +102,25 @@ func _build_sprite() -> void:
 	sprite.texture = load(spec.texture)
 	sprite.hframes = spec.hframes
 	sprite.centered = false
-	sprite.offset = -spec.pivot
+	sprite.offset = -_pivot()
 	sprite.scale = Vector2.ONE * spec.scale
-	add_child(sprite)
+	floor_clip.add_child(sprite)
+
+
+# The texel that goes on the mark: spec.pivot, the middle of the sheet's frame. A sheet the editor
+# hasn't reimported yet is still the last one, whose frames are another size; that one goes on its
+# own frame's middle, where its ring is drawn, rather than off the mark by a pivot meant for this one.
+func _pivot() -> Vector2:
+	var frame: Vector2 = sprite.texture.get_size() / Vector2(sprite.hframes, sprite.vframes)
+	return spec.pivot if frame == spec.pivot * 2.0 else (frame / 2.0).floor()
 
 
 func _build_rings() -> void:
 	closing_ring = _ring()
 	closing_ring.width = spec.width * 0.66
 	target_ring = _ring()
-	add_child(closing_ring)
-	add_child(target_ring)
+	floor_clip.add_child(closing_ring)
+	floor_clip.add_child(target_ring)
 
 
 func _ring() -> Line2D:

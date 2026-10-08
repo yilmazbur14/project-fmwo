@@ -1,0 +1,1950 @@
+{
+ "pass_": "attacks 3-4 design approval, v3 (to ADDENDUM3 E.3/E.4), 2026-09-29",
+ "scale": 3,
+ "notes": [
+  "Cells and anchors / pivots follow ADDENDUM3 E.3 / E.4 exactly; frame counts are at or above the minimums and every sheet is read by width (LiamArtLayout.strip_count); times are soft.",
+  "Multi-row sheets: rows are variants / directions / tangent buckets as each entry says; the .aseprite holds the cells row-major, one tag per row.",
+  "Points are in cell texels (x right, y down), anchors on the cell bottom-centre edge as the contract's (48, 96) / (48, 144).",
+  "The lunge's last staff_tip and the impale's first are the same point relative to his feet (47 right, 19 up), so the skewered player never jumps between sheets."
+ ],
+ "sheets": {
+  "liam_blow": {
+   "file": "liam_blow.png",
+   "cell": [
+    96,
+    96
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.15,
+    0.2,
+    0.12,
+    0.16,
+    0.14,
+    0.13
+   ],
+   "play": "once, blow_time 0.9",
+   "optional": false,
+   "anchor": [
+    48,
+    96
+   ],
+   "points": [
+    {
+     "mouth": [
+      43.5,
+      54.0
+     ]
+    },
+    {
+     "mouth": [
+      43.5,
+      52.0
+     ]
+    },
+    {
+     "mouth": [
+      43.5,
+      56.0
+     ]
+    },
+    {
+     "mouth": [
+      43.5,
+      56.0
+     ]
+    },
+    {
+     "mouth": [
+      43.5,
+      55.0
+     ]
+    },
+    {
+     "mouth": [
+      43.5,
+      55.0
+     ]
+    }
+   ],
+   "on_the_pillar": true,
+   "what": "6 frames: inhale, inhale deeper (leaning back, chest up), BLOW (lurching forward, near palm\n    thrust out), blow on, blow tailing off, recover. The gust FX (liam_blow_gust) sits on `mouth`.",
+   "checks": {
+    "frames": [
+     {
+      "frame": 0,
+      "black": 29.73,
+      "colours": 37,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 1,
+      "black": 30.13,
+      "colours": 37,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 2,
+      "black": 30.6,
+      "colours": 37,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 3,
+      "black": 30.57,
+      "colours": 37,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 4,
+      "black": 30.51,
+      "colours": 37,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 5,
+      "black": 30.76,
+      "colours": 37,
+      "numbers": "ok",
+      "perch_box": "ok"
+     }
+    ]
+   }
+  },
+  "liam_ignite": {
+   "file": "liam_ignite.png",
+   "cell": [
+    96,
+    96
+   ],
+   "frames": 5,
+   "rows": 1,
+   "times": [
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06
+   ],
+   "play": "once, ignite_time 0.3",
+   "optional": false,
+   "anchor": [
+    48,
+    96
+   ],
+   "points": [
+    {
+     "staff_tip": [
+      22.5,
+      40.0
+     ]
+    },
+    {
+     "staff_tip": [
+      22.5,
+      39.0
+     ]
+    },
+    {
+     "staff_tip": [
+      21.5,
+      63.5
+     ]
+    },
+    {
+     "staff_tip": [
+      23.0,
+      62.5
+     ]
+    },
+    {
+     "staff_tip": [
+      23.0,
+      62.5
+     ]
+    }
+   ],
+   "on_the_pillar": true,
+   "what": "5 frames: raise (the fire gem wakes), FLARE (the ring bursts into flame), the thrust (the staff\n    swept down and out over the arena - the fire streaks leave the tip here), the hold, the settle.",
+   "checks": {
+    "frames": [
+     {
+      "frame": 0,
+      "black": 30.0,
+      "colours": 36,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 1,
+      "black": 29.14,
+      "colours": 36,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 2,
+      "black": 27.27,
+      "colours": 36,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 3,
+      "black": 28.02,
+      "colours": 36,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 4,
+      "black": 27.68,
+      "colours": 37,
+      "numbers": "ok",
+      "perch_box": "ok"
+     }
+    ]
+   }
+  },
+  "liam_channel": {
+   "file": "liam_channel.png",
+   "cell": [
+    96,
+    96
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.12,
+    0.12,
+    0.12,
+    0.12,
+    0.12,
+    0.12
+   ],
+   "play": "loop 0.12",
+   "optional": false,
+   "anchor": [
+    48,
+    96
+   ],
+   "points": [
+    {
+     "staff_tip": [
+      22.5,
+      40.0
+     ]
+    },
+    {
+     "staff_tip": [
+      22.5,
+      40.0
+     ]
+    },
+    {
+     "staff_tip": [
+      22.5,
+      39.0
+     ]
+    },
+    {
+     "staff_tip": [
+      22.5,
+      39.0
+     ]
+    },
+    {
+     "staff_tip": [
+      22.5,
+      40.0
+     ]
+    },
+    {
+     "staff_tip": [
+      22.5,
+      40.0
+     ]
+    }
+   ],
+   "on_the_pillar": true,
+   "what": "6-frame loop through the firestorm: the staff raised high and blazing, his near palm thrust out\n    over the arena steering the storm, hair tails whipping in the updraft, lenses lit by the fire,\n    a slow bob.",
+   "checks": {
+    "frames": [
+     {
+      "frame": 0,
+      "black": 29.83,
+      "colours": 36,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 1,
+      "black": 29.92,
+      "colours": 36,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 2,
+      "black": 30.46,
+      "colours": 37,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 3,
+      "black": 30.32,
+      "colours": 36,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 4,
+      "black": 29.88,
+      "colours": 36,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 5,
+      "black": 29.91,
+      "colours": 36,
+      "numbers": "ok",
+      "perch_box": "ok"
+     }
+    ]
+   }
+  },
+  "liam_vanish": {
+   "file": "liam_vanish.png",
+   "cell": [
+    96,
+    96
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.12,
+    0.14,
+    0.14,
+    0.14,
+    0.13,
+    0.13
+   ],
+   "play": "once, vanish_time 0.8",
+   "optional": false,
+   "anchor": [
+    48,
+    96
+   ],
+   "points": [
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+   ],
+   "on_the_pillar": true,
+   "what": "6 frames: steam boils up round him (he smirks), it climbs him, he turns to steam from the feet up\n    (70 %), then all of him but the glint of his glasses, then the glint, then nothing but drifting steam.\n    The code also fades his alpha over the last 0.4 s and lowers him on the stump.",
+   "checks": {
+    "frames": [
+     {
+      "frame": 0,
+      "black": 29.75,
+      "colours": 38,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 1,
+      "black": 29.65,
+      "colours": 38,
+      "numbers": "ok",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 2,
+      "black": 12.18,
+      "colours": 35,
+      "numbers": "vanish frame (exempt)",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 3,
+      "black": 0.0,
+      "colours": 5,
+      "numbers": "vanish frame (exempt)",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 4,
+      "black": 2.88,
+      "colours": 6,
+      "numbers": "vanish frame (exempt)",
+      "perch_box": "ok"
+     },
+     {
+      "frame": 5,
+      "black": 0.0,
+      "colours": 2,
+      "numbers": "vanish frame (exempt)",
+      "perch_box": "ok"
+     }
+    ]
+   }
+  },
+  "liam_lunge": {
+   "file": "liam_lunge.png",
+   "cell": [
+    144,
+    96
+   ],
+   "frames": 5,
+   "rows": 1,
+   "times": [
+    0.03,
+    0.02,
+    0.02,
+    0.02,
+    0.03
+   ],
+   "play": "once, lunge_show 0.12 (coil first, full extension last)",
+   "optional": false,
+   "anchor": [
+    48,
+    96
+   ],
+   "points": [
+    {
+     "staff_tip": [
+      67.5,
+      80.0
+     ]
+    },
+    {
+     "staff_tip": [
+      81.5,
+      79.0
+     ]
+    },
+    {
+     "staff_tip": [
+      89.5,
+      78.0
+     ]
+    },
+    {
+     "staff_tip": [
+      93.5,
+      77.0
+     ]
+    },
+    {
+     "staff_tip": [
+      95.0,
+      77.0
+     ]
+    }
+   ],
+   "on_the_pillar": false,
+   "what": "5 frames, 0.12 s: COIL (sunk back on his heels, the staff drawn back at the hip like a bayonet,\n    steam shed off him as he appears), SPRING (driving off the back foot), SMEAR (ghosts of the ring head\n    and speed lines), IMPACT SMEAR (the point arriving), FULL EXTENSION (the hit frame: the lead foot\n    planted, torso leaning in, staff tip 47 texels right of his feet).",
+   "checks": {
+    "frames": [
+     {
+      "frame": 0,
+      "black": 29.61,
+      "colours": 35,
+      "numbers": "ok"
+     },
+     {
+      "frame": 1,
+      "black": 30.16,
+      "colours": 36,
+      "numbers": "ok"
+     },
+     {
+      "frame": 2,
+      "black": 29.56,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 3,
+      "black": 29.55,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 4,
+      "black": 30.05,
+      "colours": 38,
+      "numbers": "ok"
+     }
+    ]
+   },
+   "reach_texels": 47.0
+  },
+  "liam_lunge_whiff": {
+   "file": "liam_lunge_whiff.png",
+   "cell": [
+    144,
+    96
+   ],
+   "frames": 4,
+   "rows": 1,
+   "times": [
+    0.07,
+    0.08,
+    0.08,
+    0.07
+   ],
+   "play": "once, 0.3",
+   "optional": false,
+   "anchor": [
+    48,
+    96
+   ],
+   "points": [
+    {},
+    {},
+    {},
+    {}
+   ],
+   "on_the_pillar": false,
+   "what": "4 frames, 0.3 s: OVERSHOOT (carried past, the point dipping, the back foot kicked up), SKID (heels\n    dug in, dust thrown, staff hauled back), RECOVER (upright, staff at his side, glaring), and the steam\n    gathering round him to take him again.",
+   "checks": {
+    "frames": [
+     {
+      "frame": 0,
+      "black": 30.3,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 1,
+      "black": 28.95,
+      "colours": 35,
+      "numbers": "ok"
+     },
+     {
+      "frame": 2,
+      "black": 30.47,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 3,
+      "black": 27.35,
+      "colours": 38,
+      "numbers": "ok"
+     }
+    ]
+   }
+  },
+  "liam_parried": {
+   "file": "liam_parried.png",
+   "cell": [
+    96,
+    96
+   ],
+   "frames": 4,
+   "rows": 1,
+   "times": [
+    0.06,
+    0.08,
+    0.08,
+    0.08
+   ],
+   "play": "once, 0.3, then downed",
+   "optional": false,
+   "anchor": [
+    48,
+    96
+   ],
+   "points": [
+    {},
+    {},
+    {},
+    {}
+   ],
+   "on_the_pillar": false,
+   "what": "4 frames, 0.3 s, then downed: CLANG (the point knocked up and out on his near side, a spark off\n    the ring, his arms jolted, glasses flashing), STAGGER (a step back, the staff torn out of his hands\n    and spinning up), TOPPLE (tipping back, the staff tumbling down behind him, a sweat drop), SIT\n    (landing on his backside with the staff beside him - downed's first frame follows).",
+   "checks": {
+    "frames": [
+     {
+      "frame": 0,
+      "black": 30.44,
+      "colours": 37,
+      "numbers": "ok"
+     },
+     {
+      "frame": 1,
+      "black": 30.89,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 2,
+      "black": 30.52,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 3,
+      "black": 30.44,
+      "colours": 38,
+      "numbers": "ok"
+     }
+    ]
+   }
+  },
+  "liam_impale": {
+   "file": "liam_impale.png",
+   "cell": [
+    96,
+    144
+   ],
+   "frames": 4,
+   "rows": 1,
+   "times": [
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "play": "once, 0.4",
+   "optional": false,
+   "anchor": [
+    48,
+    144
+   ],
+   "points": [
+    {
+     "staff_tip": [
+      95.0,
+      125.0
+     ]
+    },
+    {
+     "staff_tip": [
+      83.7,
+      77.16
+     ]
+    },
+    {
+     "staff_tip": [
+      61.65,
+      63.96
+     ]
+    },
+    {
+     "staff_tip": [
+      71.5,
+      59.5
+     ]
+    }
+   ],
+   "on_the_pillar": false,
+   "what": "4 frames, 0.4 s: IMPACT (the lunge's hit frame, the player skewered on the point - the same tip\n    as the lunge's last frame), HOIST SMEAR (the staff swung up through a blurred arc with him on it),\n    HOIST (staff near upright, both hands, straining), HELD (staff straight up, the player high over\n    his head: tip 101 texels above his feet).",
+   "checks": {
+    "frames": [
+     {
+      "frame": 0,
+      "black": 30.44,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 1,
+      "black": 29.86,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 2,
+      "black": 30.16,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 3,
+      "black": 30.48,
+      "colours": 38,
+      "numbers": "ok"
+     }
+    ]
+   },
+   "held_tip_px_above_feet": 253.5
+  },
+  "liam_impale_call": {
+   "file": "liam_impale_call.png",
+   "cell": [
+    96,
+    144
+   ],
+   "frames": 2,
+   "rows": 1,
+   "times": [
+    0.15,
+    0.15
+   ],
+   "play": "loop 0.15",
+   "optional": false,
+   "anchor": [
+    48,
+    144
+   ],
+   "points": [
+    {
+     "staff_tip": [
+      71.5,
+      59.5
+     ]
+    },
+    {
+     "staff_tip": [
+      71.5,
+      59.5
+     ]
+    }
+   ],
+   "on_the_pillar": false,
+   "what": "2-frame loop, 0.15: staff held high with the player on it, the far hand cupped at his beard,\n    bellowing up at the sky for Bixby (shout / laugh, head thrown further back on the second).",
+   "checks": {
+    "frames": [
+     {
+      "frame": 0,
+      "black": 30.36,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 1,
+      "black": 30.27,
+      "colours": 38,
+      "numbers": "ok"
+     }
+    ]
+   },
+   "tip_px_above_feet": [
+    253.5,
+    253.5
+   ]
+  },
+  "liam_water_blast": {
+   "file": "liam_water_blast.png",
+   "cell": [
+    144,
+    96
+   ],
+   "frames": 5,
+   "rows": 1,
+   "times": [
+    0.05,
+    0.05,
+    0.05,
+    0.075,
+    0.075
+   ],
+   "play": "once, 0.3 (release frame 3 starts at 0.15)",
+   "optional": false,
+   "anchor": [
+    48,
+    96
+   ],
+   "points": [
+    {},
+    {},
+    {},
+    {
+     "staff_tip": [
+      77.67,
+      24.74
+     ]
+    },
+    {}
+   ],
+   "on_the_pillar": false,
+   "what": "5 frames, 0.3 s, the release on frame 3 (at 0.15 s): YANK (the staff hauled down out of the\n    burning player, who hangs in the air; the water gem wakes), WIND-UP (cocked back over his far\n    shoulder, sinking), SMEAR (whipped round up-forward through a watery blur), RELEASE (pointed up at\n    the player, the gem bursts - the jet leaves the tip), RECOIL (rocked back, water dripping).",
+   "checks": {
+    "frames": [
+     {
+      "frame": 0,
+      "black": 30.65,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 1,
+      "black": 31.0,
+      "colours": 37,
+      "numbers": "ok"
+     },
+     {
+      "frame": 2,
+      "black": 27.95,
+      "colours": 37,
+      "numbers": "ok"
+     },
+     {
+      "frame": 3,
+      "black": 29.47,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 4,
+      "black": 30.01,
+      "colours": 38,
+      "numbers": "ok"
+     }
+    ]
+   }
+  },
+  "liam_teleport": {
+   "file": "liam_teleport.png",
+   "cell": [
+    96,
+    96
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.05
+   ],
+   "play": "once, teleport_time 0.35 (played backward to arrive)",
+   "optional": false,
+   "anchor": [
+    48,
+    96
+   ],
+   "points": [
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+   ],
+   "on_the_pillar": false,
+   "what": "6 frames, 0.35 s (played backward to arrive): the four elements whirl up round him (water, earth,\n    fire, air ribbons), tighten and climb as he breaks up into them, his glasses glint last, the whirl\n    snaps shut into a burst of the four colours, the last glitter falls.",
+   "checks": {
+    "frames": [
+     {
+      "frame": 0,
+      "black": 26.93,
+      "colours": 38,
+      "numbers": "ok"
+     },
+     {
+      "frame": 1,
+      "black": 15.68,
+      "colours": 38,
+      "numbers": "vanish frame (exempt)"
+     },
+     {
+      "frame": 2,
+      "black": 0.41,
+      "colours": 14,
+      "numbers": "vanish frame (exempt)"
+     },
+     {
+      "frame": 3,
+      "black": 3.48,
+      "colours": 13,
+      "numbers": "vanish frame (exempt)"
+     },
+     {
+      "frame": 4,
+      "black": 53.39,
+      "colours": 8,
+      "numbers": "vanish frame (exempt)"
+     },
+     {
+      "frame": 5,
+      "black": 0.0,
+      "colours": 4,
+      "numbers": "vanish frame (exempt)"
+     }
+    ]
+   }
+  },
+  "liam_row_pillar_rise": {
+   "file": "liam_row_pillar_rise.png",
+   "cell": [
+    64,
+    80
+   ],
+   "frames": 5,
+   "rows": 3,
+   "times": [
+    0.06,
+    0.06,
+    0.07,
+    0.07,
+    0.08
+   ],
+   "play": "once over row_rise_time (per pillar)",
+   "optional": false,
+   "pivot": [
+    32,
+    72
+   ],
+   "row_meaning": "rows = 3 variants",
+   "what": "5 frames (the ripple's per-pillar clip): 0 the floor bursts; 1-4 it punches up through its own\n    rubble (10, 18, 26, 32 texels) with chips flying and dust at its foot; stand follows.",
+   "checks": {}
+  },
+  "liam_row_pillar_stand": {
+   "file": "liam_row_pillar_stand.png",
+   "cell": [
+    64,
+    80
+   ],
+   "frames": 1,
+   "rows": 3,
+   "times": [
+    0.2
+   ],
+   "play": "loop (1 frame)",
+   "optional": false,
+   "pivot": [
+    32,
+    72
+   ],
+   "row_meaning": "rows = 3 variants",
+   "what": "The neighbour at full height (1 frame per variant).",
+   "checks": {}
+  },
+  "liam_row_pillar_crumble": {
+   "file": "liam_row_pillar_crumble.png",
+   "cell": [
+    64,
+    80
+   ],
+   "frames": 6,
+   "rows": 3,
+   "times": [
+    0.05,
+    0.06,
+    0.07,
+    0.08,
+    0.1,
+    0.14
+   ],
+   "play": "once over crumble_time",
+   "optional": false,
+   "pivot": [
+    32,
+    72
+   ],
+   "row_meaning": "rows = 3 variants",
+   "what": "6 frames: 0 it splits along its strata; 1 the slab slides off; 2 blocks falling apart; 3 the crash\n    (dust); 4 a heap in the dust; 5 settled rubble, the dust thinning (the row goes down with him).",
+   "checks": {}
+  },
+  "liam_blow_gust": {
+   "file": "liam_blow_gust.png",
+   "cell": [
+    64,
+    48
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08
+   ],
+   "play": "once, 0.5 at the mouth",
+   "optional": false,
+   "pivot": [
+    32,
+    4
+   ],
+   "what": "liam_blow_gust: 64x48, pivot (32, 4) on his lips, n frames once (0.5 s): the breath leaving him -\n    curling streaks pouring down and fanning out, thick and bright near him, their heads winding into\n    little whirls (the tornados to be) as they spread, then the tails trail away.",
+   "checks": {}
+  },
+  "liam_tornado_spin": {
+   "file": "liam_tornado_spin.png",
+   "cell": [
+    48,
+    112
+   ],
+   "frames": 8,
+   "rows": 1,
+   "times": [
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06
+   ],
+   "play": "loop 0.06",
+   "optional": false,
+   "pivot": [
+    24,
+    108
+   ],
+   "what": "n-frame loop: moving air. Liam's tornados for attack 3 (v3): spin (air), ignite, fire, out (+ optional form and spew).\n\nContract (ADDENDUM3 E.4): 48x112 cells, pivot (24, 108) = the base on the floor; the BASE RING (the\ncore the code hurts with, TORNADO_CORE 48x20 px radii) is drawn on rows 100-111, x 8-40 in every\nsheet. The rest of the cell is headroom for tongues, wisps and smoke. Every loop is seamless (all\nmotion is periodic in the loop time t).\n\nAIR reads as moving air: a see-through funnel (a faint body, denser at its silhouette like any volume\nof spray) wound with wispy streaks that sweep round it - the front ones left to right, the back ones,\ndarker, the other way - their leading edges bright and their tails fraying; wisps peel off the rim and\norbit; ice chips ride round it; spray skirts the foot.\n\nFIRE is the same funnel burning: a twisting column of flame, white-hot in its core and low down,\nribbons of brighter flame winding up it, tongues licking off both flanks and the crown and tearing off\ninto small flames, embers and smoke; embers spiral up round it; steam boils off the water at its foot.",
+   "checks": {
+    "base_ring_rows_100_111_x_extent": [
+     [
+      10,
+      37
+     ],
+     [
+      10,
+      37
+     ],
+     [
+      10,
+      37
+     ],
+     [
+      10,
+      37
+     ],
+     [
+      10,
+      37
+     ],
+     [
+      10,
+      37
+     ],
+     [
+      10,
+      37
+     ],
+     [
+      10,
+      37
+     ]
+    ]
+   }
+  },
+  "liam_tornado_ignite": {
+   "file": "liam_tornado_ignite.png",
+   "cell": [
+    48,
+    112
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "play": "once, 0.3",
+   "optional": false,
+   "pivot": [
+    24,
+    108
+   ],
+   "what": "n frames, once: 0 a spark (from Liam's staff) is sucked into the foot; 1-4 the foot catches and\n    fire races up the funnel - a white-hot burning front eating the air, tongues licking up past it -\n    5 the crown catches and the whole column flares with a burst of sparks (then tornado_fire loops).",
+   "checks": {
+    "base_ring_rows_100_111_x_extent": [
+     [
+      10,
+      37
+     ],
+     [
+      13,
+      33
+     ],
+     [
+      8,
+      38
+     ],
+     [
+      8,
+      39
+     ],
+     [
+      8,
+      40
+     ],
+     [
+      8,
+      39
+     ]
+    ],
+    "warm_bright_share_of_flame_texels": 0.572
+   }
+  },
+  "liam_tornado_fire": {
+   "file": "liam_tornado_fire.png",
+   "cell": [
+    48,
+    112
+   ],
+   "frames": 8,
+   "rows": 1,
+   "times": [
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06
+   ],
+   "play": "loop 0.06",
+   "optional": false,
+   "pivot": [
+    24,
+    108
+   ],
+   "what": "n-frame loop: the fire tornado.",
+   "checks": {
+    "base_ring_rows_100_111_x_extent": [
+     [
+      8,
+      39
+     ],
+     [
+      8,
+      40
+     ],
+     [
+      8,
+      39
+     ],
+     [
+      8,
+      39
+     ],
+     [
+      8,
+      40
+     ],
+     [
+      8,
+      39
+     ],
+     [
+      8,
+      39
+     ],
+     [
+      8,
+      39
+     ]
+    ],
+    "warm_bright_share_of_flame_texels": 0.693
+   }
+  },
+  "liam_tornado_out": {
+   "file": "liam_tornado_out.png",
+   "cell": [
+    48,
+    112
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "play": "once, burnout_time 0.6",
+   "optional": false,
+   "pivot": [
+    24,
+    108
+   ],
+   "what": "n frames, once (liam_tornado_out, burnout_time): 0 it gutters (tongues shrink, the column and its\n    burning base dim); 1 it thins and burns through at the waist; 2 the top, cooling, rises away as smoke\n    while the base ring burns low; 3 the water takes the ring with a hiss of steam; 4-5 steam, smoke and\n    the last embers go out.",
+   "checks": {
+    "base_ring_rows_100_111_x_extent": [
+     [
+      8,
+      39
+     ],
+     [
+      8,
+      39
+     ],
+     [
+      9,
+      38
+     ],
+     [
+      8,
+      39
+     ],
+     [
+      13,
+      34
+     ],
+     null
+    ],
+    "warm_bright_share_of_flame_texels": 0.638
+   }
+  },
+  "liam_tornado_form": {
+   "file": "liam_tornado_form.png",
+   "cell": [
+    48,
+    112
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.066,
+    0.066,
+    0.066,
+    0.066,
+    0.066,
+    0.066
+   ],
+   "play": "once, 0.4 (in place of the scale-in; then spin)",
+   "optional": true,
+   "pivot": [
+    24,
+    108
+   ],
+   "what": "n frames, once: the gust lands and a whirl of spray spins up off the ice, then the funnel climbs\n    out of it, widening as it goes, until it stands full height (then tornado_air loops).",
+   "checks": {
+    "base_ring_rows_100_111_x_extent": [
+     [
+      14,
+      30
+     ],
+     [
+      15,
+      32
+     ],
+     [
+      13,
+      34
+     ],
+     [
+      11,
+      37
+     ],
+     [
+      10,
+      37
+     ],
+     [
+      10,
+      37
+     ]
+    ]
+   }
+  },
+  "liam_tornado_spew": {
+   "file": "liam_tornado_spew.png",
+   "cell": [
+    48,
+    112
+   ],
+   "frames": 5,
+   "rows": 1,
+   "times": [
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08
+   ],
+   "play": "once, 0.4, instead of the fire loop as each ring leaves (ring on frame 1)",
+   "optional": true,
+   "pivot": [
+    24,
+    108
+   ],
+   "what": "n frames, once every 1.5 s, drawn INSTEAD of the loop: 0 the column draws in and flares white at\n    the foot; 1 SPEW - a flat ring of flame bursts out of the foot along the floor, chunks of floor\n    thrown; 2-3 the ring races out to the column's edge (radius 20 texels = 60 px, where the quake-ring\n    segments take over), rocks landing; 4 settles back into the loop.",
+   "checks": {
+    "base_ring_rows_100_111_x_extent": [
+     [
+      8,
+      39
+     ],
+     [
+      8,
+      40
+     ],
+     [
+      6,
+      40
+     ],
+     [
+      0,
+      47
+     ],
+     [
+      8,
+      40
+     ]
+    ],
+    "warm_bright_share_of_flame_texels": 0.661
+   }
+  },
+  "liam_fire_streak": {
+   "file": "liam_fire_streak.png",
+   "cell": [
+    24,
+    12
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "play": "loop 0.05",
+   "optional": false,
+   "pivot": [
+    20,
+    6
+   ],
+   "what": "liam_fire_streak: 24x12 flying RIGHT, pivot (20, 6) = its head, n-frame loop (0.05): the spark\n    Liam's fire gem throws at each tornado's base - a white-hot head, flame streaming back off it and\n    tearing into embers behind.",
+   "checks": {
+    "warm_bright_share_of_flame_texels": 0.318
+   }
+  },
+  "liam_wind_streak": {
+   "file": "liam_wind_streak.png",
+   "cell": [
+    24,
+    24
+   ],
+   "frames": 4,
+   "rows": 3,
+   "times": [
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "play": "loop 0.05",
+   "optional": true,
+   "pivot": [
+    12,
+    12
+   ],
+   "row_meaning": "rows 0 / 45 / 90 degrees",
+   "what": "liam_wind_streak (optional; BixbyInferno FINAL_SUCTION's format): 24x24, pivot (12, 12), rows at 0,\n    45 and 90 degrees (right, down-right, down), n-frame loop; each streak flies toward its bright head.\n    It is the firestorm's hot pull, so a spark rides one of them.",
+   "checks": {
+    "warm_bright_share_of_flame_texels": 0.13
+   }
+  },
+  "liam_fire_quake_ring": {
+   "file": "liam_fire_quake_ring.png",
+   "cell": [
+    40,
+    32
+   ],
+   "frames": 8,
+   "rows": 14,
+   "times": [
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08
+   ],
+   "play": "loop 0.08; dying rows once over quake_die_time",
+   "optional": true,
+   "pivot": [
+    20,
+    16
+   ],
+   "row_meaning": "rows 0-6 Bixby's tangent buckets, rows 7-13 the same dying",
+   "what": "40x32, pivot (20, 16) on the crack's centre line at floor level (BixbyCombinedArtLayout's ring\n    contract), rows 1-5 rising to the right. The floor splits along the ring, lava glows in the crack,\n    and flame tongues stand up off it (fire always rises, whatever the tangent), tearing off into embers\n    and smoke on staggered clocks; where the lava meets the water a puff of steam hisses up. The optional dying rows (played once over quake_die_time when the ring reaches its max radius):\n    the tongues shrink and tear off into embers and smoke, the lava in the crack cools from yellow to\n    red to dark, steam hisses off it, and the broken floor is left.",
+   "checks": {
+    "warm_bright_share_of_flame_texels": 0.449
+   }
+  },
+  "liam_melt_rim": {
+   "file": "liam_melt_rim.png",
+   "cell": [
+    16,
+    16
+   ],
+   "frames": 4,
+   "rows": 1,
+   "times": [
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "play": "loop 0.1",
+   "optional": false,
+   "pivot": [
+    8,
+    8
+   ],
+   "what": "liam_melt_rim: 16x16, pivot (8, 8), n-frame loop (0.1): stamped round each melting circle where it\n    lies over the flood - the ice edge going to slush: plates bobbing and shrinking in dark water,\n    bubbles popping, a thread of steam rising off it.",
+   "checks": {}
+  },
+  "liam_steam_tile": {
+   "file": "liam_steam_tile.png",
+   "cell": [
+    128,
+    128
+   ],
+   "frames": 2,
+   "rows": 1,
+   "times": [
+    1.0
+   ],
+   "play": "shader tile: frame 0 = layer 1, frame 1 = layer 2 (use the ALPHA)",
+   "optional": false,
+   "pivot": [
+    0,
+    0
+   ],
+   "what": "liam_steam_tile: 128x128, seamless both ways; frame 0 = the shader's first layer (broad banks of\n    steam), frame 1 = its second (long soft drifts, sampled at another speed so the two never line up).\n    White steam whose ALPHA carries the density (the shader multiplies it by `density`): five alpha\n    bands (0.35 .. 0.95) with an ordered dither on each edge, most of the tile 0.65 and up, so steam_max\n    0.85 covers the arena 70-90 %.",
+   "checks": {}
+  },
+  "liam_steam_wisp": {
+   "file": "liam_steam_wisp.png",
+   "cell": [
+    16,
+    32
+   ],
+   "frames": 8,
+   "rows": 1,
+   "times": [
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "play": "once, 0.8",
+   "optional": false,
+   "pivot": [
+    8,
+    31
+   ],
+   "what": "liam_steam_wisp: 16x32, pivot (8, 31) on the wet floor, n frames once (0.8 s): a thread of vapour\n    lifts off the water, curls as it climbs, lets go of the floor, thins to dashes and is gone.",
+   "checks": {}
+  },
+  "liam_steam_puff": {
+   "file": "liam_steam_puff.png",
+   "cell": [
+    48,
+    48
+   ],
+   "frames": 7,
+   "rows": 1,
+   "times": [
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "play": "once, 0.35",
+   "optional": false,
+   "pivot": [
+    24,
+    44
+   ],
+   "what": "liam_steam_puff: 48x48, pivot (24, 44) at his feet, n frames once (0.35 s): a poof of steam -\n    billows burst out and up round the feet, roll over, and tear apart into scraps (plays for the vanish,\n    the whiff and the teleports; `reverse` plays it backward).",
+   "checks": {}
+  },
+  "liam_lunge_wake": {
+   "file": "liam_lunge_wake.png",
+   "cell": [
+    48,
+    24
+   ],
+   "frames": 4,
+   "rows": 1,
+   "times": [
+    0.04,
+    0.04,
+    0.04,
+    0.04
+   ],
+   "play": "once, 0.15",
+   "optional": false,
+   "pivot": [
+    47,
+    12
+   ],
+   "what": "liam_lunge_wake: 48x24 facing RIGHT, pivot (47, 12) on his back, n frames once (0.15 s): the steam\n    he tears through, swept back behind him in streaks, and speed lines - fading from the far end.",
+   "checks": {}
+  },
+  "liam_sky_fire": {
+   "file": "liam_sky_fire.png",
+   "cell": [
+    32,
+    48
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06
+   ],
+   "play": "loop 0.06, stacked",
+   "optional": true,
+   "pivot": [
+    16,
+    0
+   ],
+   "what": "liam_sky_fire (optional; the default is bixby_flyby_curtain.png stacked): 32x48, stacks seamlessly,\n    pivot (16, 0), n-frame loop (0.06): Bixby's breath pouring straight down - a white-hot core of streaks\n    racing down, flame licking out of both edges and curling up, tearing off into embers.",
+   "checks": {
+    "warm_bright_share_of_flame_texels": 0.691
+   }
+  },
+  "liam_sky_fire_splash": {
+   "file": "liam_sky_fire_splash.png",
+   "cell": [
+    48,
+    32
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06
+   ],
+   "play": "loop 0.06",
+   "optional": false,
+   "pivot": [
+    24,
+    28
+   ],
+   "what": "liam_sky_fire_splash: 48x32, pivot (24, 28) on the top of the impaled player's head, n-frame loop\n    (0.06): where the column lands - the column's end bulges white-hot on his head and the fire splashes\n    out in a crown, the sheets curling up into tongues that tear off; embers flung.",
+   "checks": {
+    "warm_bright_share_of_flame_texels": 0.329
+   }
+  },
+  "liam_player_flames": {
+   "file": "liam_player_flames.png",
+   "cell": [
+    24,
+    32
+   ],
+   "frames": 8,
+   "rows": 1,
+   "times": [
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06
+   ],
+   "play": "loop 0.06",
+   "optional": false,
+   "pivot": [
+    12,
+    30
+   ],
+   "what": "liam_player_flames: 24x32, pivot (12, 30) = the player's feet, n-frame loop (0.06): flames licking\n    up his flanks and off his shoulders and head, flickering, tearing off into embers and smoke. His\n    middle stays clear: at most 60 % of his silhouette is ever covered.",
+   "checks": {
+    "player_silhouette_covered": [
+     0.262,
+     0.279,
+     0.273,
+     0.227,
+     0.238,
+     0.262,
+     0.297,
+     0.25
+    ],
+    "player_silhouette_covered_max": 0.297,
+    "warm_bright_share_of_flame_texels": 0.409
+   }
+  },
+  "liam_player_embers": {
+   "file": "liam_player_embers.png",
+   "cell": [
+    24,
+    32
+   ],
+   "frames": 8,
+   "rows": 1,
+   "times": [
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08
+   ],
+   "play": "loop 0.08",
+   "optional": false,
+   "pivot": [
+    12,
+    30
+   ],
+   "what": "liam_player_embers: 24x32, pivot (12, 30), n-frame loop (0.08): when the sky fire stops, what is\n    left on him - embers clinging to his edges pulsing and dimming, sparks lifting off and dying, and\n    thin smoke curling up off his shoulders and head.",
+   "checks": {
+    "warm_bright_share_of_flame_texels": 1.0
+   }
+  },
+  "liam_extinguish": {
+   "file": "liam_extinguish.png",
+   "cell": [
+    48,
+    48
+   ],
+   "frames": 8,
+   "rows": 1,
+   "times": [
+    0.0625,
+    0.0625,
+    0.0625,
+    0.0625,
+    0.0625,
+    0.0625,
+    0.0625,
+    0.0625
+   ],
+   "play": "once, 0.5",
+   "optional": false,
+   "pivot": [
+    24,
+    40
+   ],
+   "what": "liam_extinguish: 48x48, pivot (24, 40) = the player's feet, n frames once (0.5 s): the water hits\n    him - the flames flinch and shrink, a hiss of steam bursts out round him and billows up, the embers\n    are knocked off and die as they fall, the steam tears into wisps.",
+   "checks": {
+    "warm_bright_share_of_flame_texels": 0.408
+   }
+  },
+  "liam_water_jet": {
+   "file": "liam_water_jet.png",
+   "cell": [
+    16,
+    16
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "play": "loop 0.05, laid along x",
+   "optional": false,
+   "pivot": [
+    0,
+    8
+   ],
+   "what": "liam_water_jet: a 16x16 body tile, seamless along x, pivot (0, 8), n-frame loop (0.05), laid along\n    the jet from the staff tip to the player: a hard jet with a bright core, white streaks racing along\n    it, its skin bulging as pulses run down it, spray flicking off both edges.",
+   "checks": {}
+  },
+  "liam_water_trail": {
+   "file": "liam_water_trail.png",
+   "cell": [
+    24,
+    32
+   ],
+   "frames": 4,
+   "rows": 1,
+   "times": [
+    0.07,
+    0.07,
+    0.07,
+    0.07
+   ],
+   "play": "loop 0.07",
+   "optional": false,
+   "pivot": [
+    12,
+    31
+   ],
+   "what": "24x32, pivot (12, 31): streaks and droplets shed behind a player washed down the ring.",
+   "checks": {}
+  },
+  "liam_lunge_triangle": {
+   "file": "liam_lunge_triangle.png",
+   "cell": [
+    32,
+    32
+   ],
+   "frames": 6,
+   "rows": 8,
+   "times": [
+    0.04,
+    0.05,
+    0.08,
+    0.08,
+    0.08,
+    0.06
+   ],
+   "play": "once: 0 spark, 1 pop, 2-4 hold, 5 the lunge",
+   "optional": true,
+   "pivot": [
+    16,
+    16
+   ],
+   "row_meaning": "rows = 8 directions from right, clockwise (0, 45 ... 315 degrees)",
+   "what": "32x32, pivot (16, 16), pointing along angle_deg (0 = right, 90 = down), 6 frames: 0 a spark,\n    1 pops in (overshoot), 2 settled, 3 pulse ring, 4 settled, 5 the 'now' flash as he lunges.\n    The parry badge's reds, a white inner rim, the black keyline and a dark halo for the steam. Only if the user picks a drawn red triangle over the parry badge (K1).",
+   "checks": {}
+  },
+  "liam_water_splash": {
+   "file": "liam_water_splash.png",
+   "cell": [
+    40,
+    40
+   ],
+   "frames": 6,
+   "rows": 1,
+   "times": [
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "play": "loop 0.05 at the jet's player end",
+   "optional": true,
+   "pivot": [
+    10,
+    20
+   ],
+   "what": "40x40, pivot (10, 20) where the jet slams the player (the jet comes from the left): the water\n    bursts into a crown of spray fanning forward round him, sheets and streaks racing out and beading\n    into droplets that arc and fall (n-frame loop while he is carried).",
+   "checks": {}
+  },
+  "liam_water_burst": {
+   "file": "liam_water_burst.png",
+   "cell": [
+    40,
+    40
+   ],
+   "frames": 5,
+   "rows": 1,
+   "times": [
+    0.04,
+    0.04,
+    0.04,
+    0.04,
+    0.04
+   ],
+   "play": "once at the staff tip on the release frame",
+   "optional": true,
+   "pivot": [
+    20,
+    20
+   ],
+   "what": "40x40, pivot (20, 20) on the staff's water gem, once: the gem bursts - a white flash, spray streaks\n    fanning out all round and beading into droplets, the droplets falling away.",
+   "checks": {}
+  },
+  "liam_pull_swirl": {
+   "file": "liam_pull_swirl.png",
+   "cell": [
+    96,
+    40
+   ],
+   "frames": 8,
+   "rows": 2,
+   "times": [
+    0.07,
+    0.07,
+    0.07,
+    0.07,
+    0.07,
+    0.07,
+    0.07,
+    0.07
+   ],
+   "play": "loop 0.07 on the floor under each tornado",
+   "optional": true,
+   "pivot": [
+    48,
+    20
+   ],
+   "row_meaning": "row 0 water (fire stage), row 1 ice spray (spin stage)",
+   "what": "96x40, pivot (48, 20) = the tornado's foot, n-frame loop, drawn on the floor under a tornado: the\n    floor's water (or the spray on the ice, kind='ice') dragged round and in, in a flattened spiral\n    (the floor's 0.36) - streaks racing inward, so the pull reads before it is felt.",
+   "checks": {}
+  }
+ },
+ "files": [
+  "liam_blow.png",
+  "liam_blow.aseprite",
+  "liam_ignite.png",
+  "liam_ignite.aseprite",
+  "liam_channel.png",
+  "liam_channel.aseprite",
+  "liam_vanish.png",
+  "liam_vanish.aseprite",
+  "liam_lunge.png",
+  "liam_lunge.aseprite",
+  "liam_lunge_whiff.png",
+  "liam_lunge_whiff.aseprite",
+  "liam_parried.png",
+  "liam_parried.aseprite",
+  "liam_impale.png",
+  "liam_impale.aseprite",
+  "liam_impale_call.png",
+  "liam_impale_call.aseprite",
+  "liam_water_blast.png",
+  "liam_water_blast.aseprite",
+  "liam_teleport.png",
+  "liam_teleport.aseprite",
+  "liam_row_pillar_rise.png",
+  "liam_row_pillar_rise.aseprite",
+  "liam_row_pillar_stand.png",
+  "liam_row_pillar_stand.aseprite",
+  "liam_row_pillar_crumble.png",
+  "liam_row_pillar_crumble.aseprite",
+  "liam_blow_gust.png",
+  "liam_blow_gust.aseprite",
+  "liam_tornado_spin.png",
+  "liam_tornado_spin.aseprite",
+  "liam_tornado_ignite.png",
+  "liam_tornado_ignite.aseprite",
+  "liam_tornado_fire.png",
+  "liam_tornado_fire.aseprite",
+  "liam_tornado_out.png",
+  "liam_tornado_out.aseprite",
+  "liam_tornado_form.png",
+  "liam_tornado_form.aseprite",
+  "liam_tornado_spew.png",
+  "liam_tornado_spew.aseprite",
+  "liam_fire_streak.png",
+  "liam_fire_streak.aseprite",
+  "liam_wind_streak.png",
+  "liam_wind_streak.aseprite",
+  "liam_fire_quake_ring.png",
+  "liam_fire_quake_ring.aseprite",
+  "liam_melt_rim.png",
+  "liam_melt_rim.aseprite",
+  "liam_steam_tile.png",
+  "liam_steam_tile.aseprite",
+  "liam_steam_wisp.png",
+  "liam_steam_wisp.aseprite",
+  "liam_steam_puff.png",
+  "liam_steam_puff.aseprite",
+  "liam_lunge_wake.png",
+  "liam_lunge_wake.aseprite",
+  "liam_sky_fire.png",
+  "liam_sky_fire.aseprite",
+  "liam_sky_fire_splash.png",
+  "liam_sky_fire_splash.aseprite",
+  "liam_player_flames.png",
+  "liam_player_flames.aseprite",
+  "liam_player_embers.png",
+  "liam_player_embers.aseprite",
+  "liam_extinguish.png",
+  "liam_extinguish.aseprite",
+  "liam_water_jet.png",
+  "liam_water_jet.aseprite",
+  "liam_water_trail.png",
+  "liam_water_trail.aseprite",
+  "liam_lunge_triangle.png",
+  "liam_lunge_triangle.aseprite",
+  "liam_water_splash.png",
+  "liam_water_splash.aseprite",
+  "liam_water_burst.png",
+  "liam_water_burst.aseprite",
+  "liam_pull_swirl.png",
+  "liam_pull_swirl.aseprite",
+  "liam_mock_a3_firestorm_mid.png",
+  "liam_mock_a3_firestorm_full_steam.png",
+  "liam_mock_a4_badge.png",
+  "liam_mock_a4_impale.png",
+  "gif_tornado_life.gif",
+  "gif_firestorm_rings.gif",
+  "gif_steam.gif",
+  "gif_blow_ignite_channel.gif",
+  "gif_vanish.gif",
+  "gif_lunge_impale_water.gif",
+  "gif_parried.gif",
+  "gif_lunge_whiff.gif",
+  "gif_row.gif",
+  "gif_player_fire.gif",
+  "liam_a34_contact.png",
+  "contract.json"
+ ],
+ "fx_palette_new_keys": {
+  "α": "#fff2b0",
+  "β": "#ffc45a",
+  "γ": "#ff8c2e",
+  "δ": "#e0561a",
+  "ε": "#9a2a10",
+  "ζ": "#570c18",
+  "η": "#6a3c22",
+  "θ": "#2c1810",
+  "ι": "#8a5530",
+  "κ": "#4a2818",
+  "λ": "#ffffff a0.82",
+  "μ": "#ecf2f8 a0.69",
+  "ν": "#d0dce8 a0.59",
+  "ξ": "#b8c6d6 a0.47",
+  "π": "#e8eef4 a0.24",
+  "ρ": "#e8eef4 a0.37",
+  "σ": "#ecf1f6 a0.51",
+  "τ": "#f0f4f8 a0.65",
+  "υ": "#f4f7fa a0.75",
+  "φ": "#d95763",
+  "χ": "#ac3232",
+  "ψ": "#ffc4c8",
+  "ω": "#6e101c",
+  "ϑ": "#565a66 a0.88",
+  "ϒ": "#686e7a a0.73",
+  "ϖ": "#848a96 a0.55",
+  "ϡ": "#a0a6b0 a0.39",
+  "ϙ": "#9fdcf7 a0.78",
+  "ϛ": "#6fb3e8 a0.65",
+  "ϝ": "#4596e0 a0.51",
+  "Γ": "#f0f4f8 a0.35",
+  "Δ": "#f0f4f8 a0.50",
+  "Θ": "#f0f4f8 a0.65",
+  "Λ": "#f2f6fa a0.80",
+  "Ξ": "#f4f7fa a0.95"
+ }
+}

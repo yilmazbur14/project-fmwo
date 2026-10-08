@@ -13,13 +13,13 @@ extends Node
 
 const VsCard := preload("res://Scripts/VsCard.gd")
 const BixbyBeastArtLayout := preload("res://Scripts/BixbyBeastArtLayout.gd")
-const FIRE_PATCH_SCENE := preload("res://Scenes/Bosses/BixbyFirePatchScene.tscn")
-const FirePatch := preload("res://Scripts/BixbyFirePatchScript.gd")
 const QUAKE_RING_SCENE := preload("res://Scenes/Bosses/BixbyQuakeRingScene.tscn")
 const Ember := preload("res://Scripts/BixbyEmberScript.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
 const BixbyBeastBroken := preload("res://Scripts/States/BixbyBeast/BixbyBeastBroken.gd")
 const BixbyBeastJuggled := preload("res://Scripts/States/BixbyBeast/BixbyBeastJuggled.gd")
+const BixbyBeastFlyby := preload("res://Scripts/States/BixbyBeast/BixbyBeastFlyby.gd")
+const BixbyFlybyLayout := preload("res://Scripts/BixbyFlybyLayout.gd")
 
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/LiamPreFight.dialogue"
 const HAZARD_GROUP := "bixby_beast_hazard"
@@ -32,19 +32,21 @@ const PLAYER_FLOOR := Rect2(123, 145.5, 1674, 789)
 # The margin is a gap, not a proportion, so it stays where it is when his body grows.
 const PLAYER_HALF_BODY := Vector2(18, 40.5)
 const FIRE_PASSAGE_MARGIN := 6.0
-# The grid the floor is checked on for places the fire would wall off.
+# The steps the straight way to him is checked for fire at (_fire_in_the_way).
 const FLOOR_CELL := 16.0
 
 # The fight's loop: hover and strafe, run the cycle's attacks with a short hover between them, land for
-# the punishable recovery, take off, repeat. Cycles take turns through this list: fire breath, the combined
-# attack, a double breath, the combined attack again. A new attack is a state that calls attack_finished()
-# when it's done, listed here. The combined attack ends on a punish window of its own and takes off from
-# it, so it is always the last attack of its cycle and that cycle has no landing recovery.
-const ATTACK_CYCLES := [["FireBreath"], ["Combined"], ["FireBreath", "FireBreath"], ["Combined"]]
-# From the first cycle he starts at or under inferno_health_gate, he is enraged: the Inferno comes at once,
-# then these take turns from the top. It hands its own clearance and recharge to the landing straight after
-# it, so it always has a cycle to itself.
-const ENRAGED_CYCLES := [["Inferno"], ["FireBreath"], ["Combined"], ["FireBreath", "FireBreath"]]
+# the punishable recovery, take off, repeat. Cycles take turns through this list from the start of the
+# fight, whatever his health: the Flyby, the combined attack, the Flyby, the combined attack again, the Flyby,
+# the Inferno. It starts on the Flyby so the fight doesn't open on the Inferno, and a Flyby is two passes
+# already, so it has a cycle to itself. A new attack is a state that calls attack_finished() when it's done,
+# listed here. The combined attack ends on a punish window of its own and takes off from it, so it is always
+# the last attack of its cycle and that cycle has no landing recovery. The Inferno hands its own clearance
+# and recharge to the landing straight after it, so it always has a cycle to itself. Every attack is
+# followed by a window (the user's "more openings", 2026-10-04). The second combined attack came with the
+# denser move sets of 2026-10-06 (difficulty 7; [Flyby], [Combined], [Flyby], [Inferno] before): a clean kill
+# takes four windows, so it now meets the combined attack twice and the Inferno only once a window is missed.
+const ATTACK_CYCLES := [["Flyby"], ["Combined"], ["Flyby"], ["Combined"], ["Flyby"], ["Inferno"]]
 
 #TUNING (seconds, px and px/s)
 @export var hover_time := 1.8
@@ -53,34 +55,25 @@ const ENRAGED_CYCLES := [["Inferno"], ["FireBreath"], ["Combined"], ["FireBreath
 # While hovering he strafes between points this far to either side of the player, this far up the arena from them.
 @export var strafe_distance := 360.0
 @export var hover_lead := 260.0
-# The fire breath's telegraph: he flies over the player until he's this close to lined up, or for this long.
-@export var breath_approach_speed := 1100.0
-@export var breath_align_distance := 16.0
-@export var breath_approach_time := 1.6
-@export var breath_windup := 0.5
-# The stream, including the burst it starts and ends on.
-@export var breath_time := 1.4
-@export var breath_burst_time := 0.15
-# How fast the stream follows the player sideways while it's out.
-@export var breath_drift_speed := 90.0
-# How far below his feet he aims the player, in the wide lower half of the stream.
-@export var breath_aim_depth := 200.0
-# Against the back rope, the most the player can be above his feet and still be in the fire from his
-# mouths, and how far past the top of the screen his sprite may go to get there.
-@export var breath_mouth_reach := 195.0
-@export var breath_top_overshoot := 120.0
-# How far past a side of the screen his sprite may go to reach a player against a side rope.
-@export var breath_side_overshoot := 48.0
-@export var recover_time := 3.5
+# How fast he glides back to where he'll land, and drifts down the arena as he takes off.
+@export var glide_speed := 1100.0
+# 3.0: 3.5 before the tuning round of 2026-10-04, 2.5 in it, then 3.0 when the user asked for more openings.
+@export var recover_time := 3.0
 # How long he takes to rise to hover height, from the takeoff's rising frame.
 @export var takeoff_rise_time := 0.3
 # The combined attack: he lands and braces this long, then pounds this many times this far apart.
 @export var combined_windup := 0.5
 @export var combined_pounds := 3
 @export var combined_pound_interval := 0.35
+# The spin's warning: the bands his beams will come out along lie lit on the floor this long before they do,
+# with nothing hurting, so a player standing in one has time to see it and walk out.
+@export var combined_spin_tell := 0.6
 # The scream: at least this long, then on until his heads come round to a frame the wobble he stops on is
 # drawn to follow, which is at most one more loop (BixbyBeastArtLayout.SPIN_LOOP, a third of a turn). He
 # wobbles dizzy for this long afterwards.
+# The spin can't run longer than 6 s at a ring every 2.0 s without a player who circles and dashes every ring going
+# short of stamina (liam combined and spin_reach, 2026-10-04). The dizzy spell: 2.0 s (1.6 in the tuning round of
+# 2026-10-04, back to 2.0 when the user asked for more openings).
 @export var combined_spin_time := 6.0
 @export var combined_dizzy_time := 2.0
 # Every pound sends a quake ring rolling out from under him (BixbyQuakeRingScript), its radius growing this
@@ -89,23 +82,40 @@ const ENRAGED_CYCLES := [["Inferno"], ["FireBreath"], ["Combined"], ["FireBreath
 # come 0.35 s apart, too close to stand between, so this is also what keeps them one dash thick.
 @export var quake_ring_speed := 200.0
 @export var combined_spin_ring_interval := 2.0
-# The fire trail the full stream leaves on the floor: patches that block the player but don't hurt. How
-# long each burns between catching and burning out, whose timing is drawn.
-@export var fire_trail_time := 6.0
-@export var fire_trail_spacing := 96.0
-@export var max_fire_patches := 14
-@export var max_trail_patches := 6
-# When he lands, fire this close to where he'll be punched burns out.
+# When he lands, embers this close to where he'll be punched burn out.
 @export var fire_landing_clearance := 220.0
-# THE INFERNO (BixbyBeastInferno). The first cycle he starts at or under this share of his health runs it,
-# and his enraged rotation after that. 1.0 has it from the start.
-@export var inferno_health_gate := 0.6
-# He flies to the top rope this fast, perching when he gets there or after this long at most.
+# THE FLYBY (BixbyBeastFlyby; its geometry and fairness are BixbyFlybyLayout's). He rises off the screen over this long;
+# each pass's projection is up this long before its front sweeps, its last warn_time strong, and he flies in from off
+# the screen entry_lead before the sweep; the front sweeps at this speed, faster than a walk (each projection is long
+# enough to walk to its column first), to leave safe_width at the far edge, and the floor burns this long behind it,
+# under the i-frames; he takes exit_time to leave the screen after a pass, and return_time to swoop back in over his
+# landing point, landing_inset in from his start side's rope at landing_y. Which side pass 0 flies in from: &"away"
+# from the player, &"left", &"right", &"random" or &"alternate".
+# Faster at the user's word (2026-10-04, "feels slow"): 1900 px/s (1500), projections of 0.73 and 2.12 s (1.0 and 2.2),
+# the rise, burn, exit and return 0.35, 0.35, 0.3 and 0.5 s (0.6, 0.45, 0.5 and 1.0): 5.99 s a Flyby, 7.81 before.
+# The crossing can't go much shorter: it is a whole ring's walk, held to BixbyFlybyLayout.CROSS_SPARE.
+@export var flyby_rise_time := 0.35
+@export var flyby_telegraph_time := 0.73
+@export var flyby_return_telegraph_time := 2.12
+@export var flyby_warn_time := 0.5
+@export var flyby_entry_lead := 0.2
+@export var flyby_speed := 1900.0
+@export var flyby_safe_width := 204.0
+@export var flyby_burn_time := 0.35
+@export var flyby_exit_time := 0.3
+@export var flyby_return_time := 0.5
+@export var flyby_landing_inset := 560.0
+@export var flyby_landing_y := 720.0
+@export var flyby_start_side := &"away"
+# THE INFERNO (BixbyBeastInferno). He flies to the top rope this fast, perching when he gets there or after
+# this long at most.
 @export var inferno_perch_speed := 1300.0
 @export var inferno_perch_time := 1.8
 # The volley: this many fireballs spat up over this long, rising this fast, each up to this many degrees
 # off straight up. Then a beat with the sky empty.
-@export var inferno_fireballs := 24
+# 30, 24 until the tuning round of 2026-10-04 (difficulty 7), with the markers 0.12 s apart (0.14) and lit 0.85 s
+# (1.0).
+@export var inferno_fireballs := 30
 @export var inferno_volley_time := 1.2
 @export var inferno_rise_speed := 1600.0
 @export var inferno_rise_spread_degrees := 15.0
@@ -114,12 +124,13 @@ const ENRAGED_CYCLES := [["Inferno"], ["FireBreath"], ["Combined"], ["FireBreath
 # each on the player's feet as it appears, up to the scatter off them at random, and lit for the warning
 # before its fireball lands there. Markers may overlap: a player who stops can't sit in a gap between them.
 @export var inferno_first_marker := 0.3
-@export var inferno_marker_interval := 0.14
-@export var inferno_fireball_warning := 1.0
+@export var inferno_marker_interval := 0.12
+@export var inferno_fireball_warning := 0.85
 @export var inferno_track_scatter := 40.0
 # The pull, from the inhale until the last fireball lands: this many px/s toward the floor under him,
-# reached over the ramp, and fading out inside the dead zone so nobody jitters at rest.
-@export var inferno_pull_speed := 330.0
+# reached over the ramp, and fading out inside the dead zone so nobody jitters at rest. It stays under the
+# player's walking speed (600), so walking straight out of it still gains ground, if slowly.
+@export var inferno_pull_speed := 495.0
 @export var inferno_pull_ramp := 0.4
 @export var inferno_pull_dead_zone := 90.0
 # The breath is one cone straight down from his mouth, this many degrees either side of straight down: 65
@@ -141,11 +152,13 @@ const ENRAGED_CYCLES := [["Inferno"], ["FireBreath"], ["Combined"], ["FireBreath
 # Its landing only burns out fire this close to him or in the player's way, so most embers outlive it, and
 # his recharge is this long.
 @export var inferno_landing_clearance := 60.0
-@export var inferno_recover_time := 4.5
+# 4.0: 4.5 before the tuning round of 2026-10-04, 3.5 in it, then 4.0 when the user asked for more openings.
+@export var inferno_recover_time := 4.0
 
 var player_defeated := false
-var enraged := false
 var cycles_started := 0
+# The way his last Flyby's first pass flew, 0 before his first: what &"alternate" turns away from.
+var last_flyby_dir := 0.0
 var attacks: Array = []
 var attacks_done := 0
 # The Inferno puts him down in a window of its own: the next landing's clearance and the next recovery's
@@ -159,13 +172,27 @@ var pre_fight_over := false
 
 
 func _ready() -> void:
-	# His Break and his juggle are built here rather than in his scene.
+	# His Break, his juggle and his Flyby are built here rather than in his scene.
 	_add_state(BixbyBeastBroken.new(), "Broken")
 	_add_state(BixbyBeastJuggled.new(), "Juggled")
+	var flyby := BixbyBeastFlyby.new()
+	flyby.name = "Flyby"
+	flyby.body = BixbyBeastCharacterBody
+	add_child(flyby)
+	BixbyFlybyLayout.assert_invariants(self)
 	for child in get_children():
 		if child is State:
 			states[child.name] = child
 
+	# The main menu's LIAM row (GameProgress.start_at_liam), taken whether or not Liam follows him, so it can never
+	# carry over into a later load: the fight opens on Liam's takeover, with no entrance, lines or card of the beast's.
+	# The intro is never made current either - its Exit() tidies up what its Enter() built, and the defeat
+	# start_at_liam() puts him in would leave through it. Deferred until the body is ready, which moves and draws him.
+	var at_liam: bool = GameProgress.start_at_liam
+	GameProgress.start_at_liam = false
+	if at_liam and BixbyBeastCharacterBody.liam_follows:
+		BixbyBeastCharacterBody.start_at_liam.call_deferred()
+		return
 	if initial_state:
 		current_state = initial_state
 		# Deferred until the body is ready, since the intro moves and draws him.
@@ -243,11 +270,7 @@ func _on_post_dialogue_pre_fight_timer_timeout() -> void:
 
 
 func start_cycle() -> void:
-	if not enraged and BixbyBeastCharacterBody.get_health_ratio() <= inferno_health_gate:
-		enraged = true
-		cycles_started = 0
-	var cycles: Array = ENRAGED_CYCLES if enraged else ATTACK_CYCLES
-	attacks = cycles[cycles_started % cycles.size()].duplicate()
+	attacks = ATTACK_CYCLES[cycles_started % ATTACK_CYCLES.size()].duplicate()
 	attacks_done = 0
 	cycles_started += 1
 	on_child_transition(current_state, "Hover")
@@ -310,98 +333,17 @@ func get_player() -> Node2D:
 	return get_tree().current_scene.get_node_or_null("Arena/MainPlayer/CharacterBody2D")
 
 
-#FIRE TRAIL
+#FIRE ON THE FLOOR
 
-# Sets a patch of floor burning at `centre`, slot `trail_slot` of its trail, unless it's outside the ropes,
-# too much fire is already burning, or the patch would wall off part of the floor. Returns whether it was laid.
-func lay_fire_patch(centre: Vector2, trail_slot := 0) -> bool:
-	if not ROPES.has_point(centre):
-		return false
-	var active := fire_patches(false)
-	if active.size() >= max_fire_patches:
-		return false
-	var footprint := Rect2(centre.round() - FirePatch.SIZE / 2.0, FirePatch.SIZE)
-	var footprints: Array = active.map(func(patch: Node) -> Rect2: return patch.footprint())
-	footprints.append(footprint)
-	if not _floor_stays_connected(footprints):
-		return false
-
-	var patch := FIRE_PATCH_SCENE.instantiate()
-	patch.position = centre.round()
-	patch.burn_time = fire_trail_time
-	patch.trail_slot = trail_slot
-	patch.player = get_player()
-	patch.may_turn_solid = _fire_patch_may_turn_solid
-	get_tree().current_scene.add_child(patch)
-	return true
-
-
-# Patches that are burning or about to, or only those already solid.
-func fire_patches(solid_only: bool) -> Array:
-	return get_tree().get_nodes_in_group(HAZARD_GROUP).filter(func(hazard: Node) -> bool:
-		return hazard is FirePatch and (hazard.solid if solid_only else hazard.is_active()))
-
-
-# The last word before a patch turns solid, counting only the fire that's solid already. Patches still
-# waiting for the player to step off them are open floor here, so solid fire can never close in around
-# the player standing in one.
-func _fire_patch_may_turn_solid(patch: Node) -> bool:
-	var footprints: Array = fire_patches(true).map(func(other: Node) -> Rect2: return other.footprint())
-	footprints.append(patch.footprint())
-	return _floor_stays_connected(footprints)
-
-
-# Whether every spot on the floor the player could stand on can still reach every other one around these
-# fire footprints. Fire can close down space, but never wall any of it off.
-func _floor_stays_connected(footprints: Array) -> bool:
-	var columns := int(PLAYER_FLOOR.size.x / FLOOR_CELL) + 1
-	var rows := int(PLAYER_FLOOR.size.y / FLOOR_CELL) + 1
-	var cells := PackedByteArray()
-	cells.resize(columns * rows)
-	var reach := PLAYER_HALF_BODY + Vector2.ONE * FIRE_PASSAGE_MARGIN
-	for footprint in footprints:
-		var blocked: Rect2 = footprint.grow_individual(reach.x, reach.y, reach.x, reach.y)
-		var first := ((blocked.position - PLAYER_FLOOR.position) / FLOOR_CELL).ceil()
-		var last := ((blocked.end - PLAYER_FLOOR.position) / FLOOR_CELL).floor()
-		for row in range(maxi(int(first.y), 0), mini(int(last.y), rows - 1) + 1):
-			for column in range(maxi(int(first.x), 0), mini(int(last.x), columns - 1) + 1):
-				cells[row * columns + column] = 1
-
-	var start := cells.find(0)
-	if start < 0:
-		return false
-	var open_cells := cells.count(0)
-	var queue := PackedInt32Array([start])
-	cells[start] = 2
-	var head := 0
-	while head < queue.size():
-		var cell := queue[head]
-		head += 1
-		var column := cell % columns
-		if cell >= columns and cells[cell - columns] == 0:
-			cells[cell - columns] = 2
-			queue.append(cell - columns)
-		if cell + columns < cells.size() and cells[cell + columns] == 0:
-			cells[cell + columns] = 2
-			queue.append(cell + columns)
-		if column > 0 and cells[cell - 1] == 0:
-			cells[cell - 1] = 2
-			queue.append(cell - 1)
-		if column < columns - 1 and cells[cell + 1] == 0:
-			cells[cell + 1] = 2
-			queue.append(cell + 1)
-	return queue.size() == open_cells
-
-
-# The punish window has to be reachable: as he comes down, fire within `clearance` of where he'll land (below
-# 0, fire_landing_clearance), or in the way between the player and there, burns out. The Inferno's embers
-# don't block, but they hurt, so the straight way to him has to be clear of them too.
+# The punish window has to be reachable: as he comes down, an ember within `clearance` of where he'll land
+# (below 0, fire_landing_clearance), or in the way between the player and there, burns out. The Inferno's
+# embers don't block, but they hurt, so the straight way to him has to be clear of them.
 func clear_fire_for_landing(landing_point: Vector2, clearance := -1.0) -> void:
 	var body_box := BixbyBeastArtLayout.local_rect(BixbyBeastArtLayout.RECOVER_BODY_BOX)
 	var landed := Rect2(landing_point + body_box.position, body_box.size)
 	var near := landed.grow(clearance if clearance >= 0.0 else fire_landing_clearance)
 	var player := get_player()
-	for fire in fire_patches(false) + embers():
+	for fire in embers():
 		var footprint: Rect2 = fire.footprint()
 		if footprint.intersects(near) or (player and _fire_in_the_way(footprint, player.global_position, landed)):
 			fire.burn_out()
@@ -433,6 +375,7 @@ func send_quake_ring(feet: Vector2) -> void:
 	var ring := QUAKE_RING_SCENE.instantiate()
 	ring.position = feet.round()
 	ring.speed = quake_ring_speed
+	ring.hurts_inside_at_birth = true
 	ring.player = get_player()
 	get_tree().current_scene.add_child(ring)
 

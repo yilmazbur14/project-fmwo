@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://cater5llbtq6c"
+path="res://.godot/imported/LiamPhaseOutro.dialogue-4bda3a9a351c646ce7440fc93278dac0.tres"
+
+[deps]
+
+source_file="res://Dialogue/LiamPhaseOutro.dialogue"
+dest_files=["res://.godot/imported/LiamPhaseOutro.dialogue-4bda3a9a351c646ce7440fc93278dac0.tres"]
+
+[params]
+
+defaults=true

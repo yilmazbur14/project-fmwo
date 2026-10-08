@@ -4,14 +4,18 @@ extends RefCounted
 # a press only 0.03 real seconds after the last (MashInput), which --fixed-fps would starve. He is put in his nap
 # and knocked out by a punch at 1 HP, and the cut is watched through, its line read the way a player reads it,
 # or held past, into the tug.
-#   win    a bot at 7 presses a second: the tug won when the model wins it; him out through the top gate, the
-#          gates shut behind him, `defeated`, one player_won outro, Defeated.
+#   win    a bot at 7 presses a second, the target: the tug won when the model wins it, him skidding whenever the
+#          rope is the player's way outside his surges and leaning in with his end of the meter lit through every
+#          surge; him out through the top gate, the gates shut behind him, `defeated`, one player_won outro,
+#          Defeated.
 #   loss   no presses: the tug lost when the model loses it, and a pause mid-mash holds the rope; the player out
 #          through the bottom gate, their sprite hidden under the prop, one player_lost outro, Victory.
 #   skip   the clinch a watched cut lands on, then a hold in the stir, the leap, the line and the walk: each lands
 #          on the same clinch.
-#   table  the model's table, 0 to 11 presses a second, against the plan's rows, and bots at 5 and 9 presses a
-#          second matching it live.
+#   table  the model's table, 0 to 11 presses a second, against the user's asks (2026-09-27): 5 a second loses,
+#          7 wins in 8-11 s, no rate sprints it, the rope moves the same wherever it stands, every surge takes
+#          ground back from the target and from flat out, a stop that loses the lead is won back and so is a
+#          deep deficit; then bots at 5 a second and at 7 with a second's stop matching it live.
 # Every run that watches the cut also checks its beats against the plan's times.
 
 const BODY := "Arena/DannyBossScene/DannyBossCharacterBody"
@@ -26,6 +30,10 @@ const BEAT_SLACK := 3.0 / 60.0
 const PLAN_BEATS := {&"false_victory": 1.8, &"stir": 0.5, &"leap": 0.9, &"rise": 0.49, &"call": 0.8, &"clinch": 0.3}
 # Frames Escape is held for a skip: past BossEntrance.SKIP_HOLD, 0.4 real seconds.
 const ESCAPE_HOLD := 32
+# The tug's target rate, and the stop the slacking bot takes from it midway.
+const TARGET := 7.0
+const SLACK_AT := 4.0
+const SLACK_FOR := 1.0
 
 
 static func run(t) -> void:
@@ -57,22 +65,33 @@ static func test_win(t) -> void:
 		if sumo.phase == sumo.Phase.WON or sumo.phase == sumo.Phase.DONE:
 			lowest[0] = minf(lowest[0], t.boss.global_position.y)
 	t.physics_frame.connect(watch)
-	var looks := {"skid": 0, "not_skid": 0, "lit": []}
+	var looks := {"skid": 0, "not_skid": 0, "surges": 0, "surge_steps": 0, "surge_off": 0, "lit": []}
+	var was_surging := [false]
 	var look_watch := func():
 		if sumo.phase != sumo.Phase.MASH:
 			return
-		if sumo.rope > 0.0:
+		var surging: bool = sumo.tug.surging()
+		if surging:
+			looks.surge_steps += 1
+			if t.boss.current_anim != &"push_win" or not sumo.meter.surging:
+				looks.surge_off += 1
+			if not was_surging[0]:
+				looks.surges += 1
+		elif sumo.rope > 0.0:
 			looks["skid" if t.boss.current_anim == &"push_skid" else "not_skid"] += 1
+		was_surging[0] = surging
 		if is_instance_valid(sumo.meter) and not looks.lit.has(sumo.meter.lit_action):
 			looks.lit.append(sumo.meter.lit_action)
 	t.physics_frame.connect(look_watch)
-	var model: Dictionary = model_bout(sumo, 7.0)
-	var bout: Dictionary = await mash_at(t, sumo, 7.0)
+	var model: Dictionary = model_bout(sumo, TARGET)
+	var bout: Dictionary = await mash_at(t, sumo, TARGET)
 	t.physics_frame.disconnect(look_watch)
-	t.log_p("7 a second: live %s, model %s; his looks with the rope the player's way %s" % [bout, model, looks])
+	t.log_p("7 a second: live %s, model %s; his looks %s" % [bout, model, looks])
 	t.check(bout.result == &"win" and model.result == &"win" and absf(bout.time - model.time) <= TIME_SLACK,
 		"a bot at 7 a second wins, when the model does (%.2f s live, %.2f s model)" % [bout.time, model.time])
-	t.check(looks.skid > 0 and looks.not_skid == 0, "he skids on every step the rope is the player's way (%d skidding, %d not)" % [looks.skid, looks.not_skid])
+	t.check(looks.skid > 0 and looks.not_skid == 0, "outside his surges he skids on every step the rope is the player's way (%d skidding, %d not)" % [looks.skid, looks.not_skid])
+	t.check(looks.surges >= 2 and looks.surge_off == 0,
+		"he surges %d times, leaning in with his end of the meter lit on every step of each (%d of %d steps not)" % [looks.surges, looks.surge_off, looks.surge_steps])
 	t.check(looks.lit.has(sumo.pair[0]) and looks.lit.has(sumo.pair[1]), "the presses light the next key in turn (%s)" % [looks.lit])
 	await t.wait_until(func(): return t.sm.current_state == t.sm.states["Defeated"], 300)
 	t.physics_frame.disconnect(watch)
@@ -166,29 +185,67 @@ static func test_table(t) -> void:
 	var model = _model(sumo)
 	t.log_p(model.table())
 	var rows := {}
-	for rate in [0, 4, 5, 6, 7, 9, 11]:
+	for rate in [0, 4, 5, 6, 7, 8, 9, 11]:
 		rows[rate] = model.steady(rate)
 	var need: float = model.needed_rate()
-	t.check(rows[0].result == &"loss" and rows[0].time >= 2.5 and rows[0].time <= 3.5, "0 a second loses in 2.5-3.5 s (%.2f)" % rows[0].time)
-	t.check(rows[4].result == &"loss" and rows[4].time <= 10.0, "4 a second loses inside 10 s (%.2f)" % rows[4].time)
-	t.check(rows[5].result == &"loss" and rows[5].time <= 12.0, "5 a second loses inside 12 s (%.2f)" % rows[5].time)
-	t.check(absf(need - 6.0) <= 0.6, "it takes 6 a second, +-10%% (%.2f)" % need)
-	t.check(rows[7].result == &"win" and rows[7].time >= 3.0 and rows[7].time <= 4.5, "7 a second wins in 3.0-4.5 s (%.2f)" % rows[7].time)
-	t.check(rows[9].result == &"win" and rows[9].time <= 3.0, "9 a second wins inside 3.0 s (%.2f)" % rows[9].time)
-	t.check(rows[11].result == &"win" and rows[11].time <= 2.3, "11 a second wins inside 2.3 s (%.2f)" % rows[11].time)
-	for rate in [5.0, 9.0]:
-		if rate != 5.0:
+	var fastest: float = model.press_speed / model.press_gain
+	t.check(rows[0].result == &"loss" and rows[0].time >= 1.5 and rows[0].time <= 2.5, "0 a second loses in 1.5-2.5 s (%.2f)" % rows[0].time)
+	t.check(rows[4].result == &"loss" and rows[5].result == &"loss" and rows[5].time <= 12.0,
+		"4 and 5 a second lose, 5 inside 12 s (%.2f, %.2f)" % [rows[4].time, rows[5].time])
+	t.check(rows[6].result == &"loss", "6 a second is not enough (%s at %.2f s)" % [rows[6].result, rows[6].time])
+	t.check(need >= 6.0 and need <= 6.6, "the slowest steady rate that wins at all is 6.0-6.6 a second (%.2f)" % need)
+	t.check(rows[7].result == &"win" and rows[7].time >= 8.0 and rows[7].time <= 11.0, "7 a second, the target, wins in 8-11 s (%.2f)" % rows[7].time)
+	var even: bool = [8, 9, 11].all(func(rate): return rows[rate].result == &"win" and absf(rows[rate].time - rows[8].time) <= 0.02)
+	t.check(even and rows[8].time >= 5.5 and rows[8].time < rows[7].time,
+		"8, 9 and 11 a second all win in the same %.2f s: the rope takes no more than %.1f a second, so it can't be sprinted" % [rows[8].time, fastest])
+
+	check_flat(t, model)
+
+	var slack_schedule := func(clock: float) -> float: return 0.0 if clock >= SLACK_AT and clock < SLACK_AT + SLACK_FOR else TARGET
+	for rate in [TARGET, 11.0]:
+		var run: Dictionary = model_run(sumo, func(_clock: float) -> float: return rate)
+		var heaves: Array = surge_heaves(run.trace)
+		t.check(run.result == &"win" and heaves.size() >= 2 and heaves.all(func(h): return h >= 0.2),
+			"at %.0f a second every surge takes at least 0.2 of the rope back, and it is won all the same (%s)" % [rate, heaves])
+	var slacked: Dictionary = model_run(sumo, slack_schedule)
+	var lead: float = slacked.trace.filter(func(step): return step.t < SLACK_AT).map(func(step): return step.rope).max()
+	var dip: float = slacked.trace.filter(func(step): return step.t >= SLACK_AT).map(func(step): return step.rope).min()
+	t.check(slacked.result == &"win" and lead > 0.3 and dip < 0.0,
+		"7 a second with a second's stop at %.0f s: the lead lost (%.2f, down to %.2f) and won back at the same rate, a win at %.2f s" % [SLACK_AT, lead, dip, slacked.time])
+	var comeback: Dictionary = model_run(sumo, func(clock: float) -> float: return 0.0 if clock < 1.2 else 7.5)
+	var deepest: float = comeback.trace.map(func(step): return step.rope).min()
+	t.check(comeback.result == &"win" and deepest < -0.6,
+		"down to %.2f on his side with nothing pressed for 1.2 s, 7.5 a second still wins it back (at %.2f s): no spiral at his end" % [deepest, comeback.time])
+
+	var bots := [["5 a second", func(_clock: float) -> float: return 5.0], ["7 a second with a second's stop", slack_schedule]]
+	for i in bots.size():
+		if i > 0:
 			sumo = await into_sumo(t)
 			if sumo == null:
 				return
 		await through_cut(t, sumo, sumo.Phase.STIR)
-		var want: Dictionary = model_bout(sumo, rate)
-		var bout: Dictionary = await mash_at(t, sumo, rate)
-		t.log_p("%.0f a second: live %s, model %s" % [rate, bout, want])
+		var want: Dictionary = model_run(sumo, bots[i][1])
+		var bout: Dictionary = await mash_with(t, sumo, bots[i][1])
+		t.log_p("%s: live %s, model %s at %.2f s" % [bots[i][0], bout, want.result, want.time])
 		t.check(bout.result == want.result and absf(bout.time - want.time) <= TIME_SLACK,
-			"a bot at %.0f a second against the live tug: %s at %.2f s, the model's %s at %.2f s" % [rate, bout.result, bout.time, want.result, want.time])
+			"a bot at %s against the live tug: %s at %.2f s, the model's %s at %.2f s" % [bots[i][0], bout.result, bout.time, want.result, want.time])
 		await t.wait_until(func(): return t.sm.current_state != sumo, 300)
 		leave(t)
+
+
+# The same effort wherever the rope stands: from -0.5, the line and +0.5, a press and half a second of his push,
+# into a surge, move it exactly the same.
+static func check_flat(t, model) -> void:
+	var moved := []
+	for at in [-0.5, 0.0, 0.5]:
+		var bout = model.fresh()
+		bout.rope = at
+		bout.clock = model.surge_first
+		bout.press()
+		for i in 30:
+			bout.advance(1.0 / 60.0)
+		moved.append(snappedf(bout.rope - at, 0.0001))
+	t.check(moved[0] == moved[1] and moved[1] == moved[2], "a press and his push move the rope the same wherever it stands (%s)" % [moved])
 
 
 #GETTING THERE
@@ -241,6 +298,12 @@ static func through_cut(t, sumo: Node, skip_at := -1) -> bool:
 
 # A steady `rate` of alternating presses from the mash's start, on its own clock, until the tug has a result.
 static func mash_at(t, sumo: Node, rate: float) -> Dictionary:
+	return await mash_with(t, sumo, func(_clock: float) -> float: return rate)
+
+
+# Alternating presses at `schedule`'s rate for the tug's clock (0 for none), on its own clock, until the tug has
+# a result.
+static func mash_with(t, sumo: Node, schedule: Callable) -> Dictionary:
 	await t.wait_until(func(): return sumo.phase == sumo.Phase.MASH and sumo.tug != null, 200)
 	if sumo.tug == null:
 		return {"result": &"", "time": -1.0, "presses": 0}
@@ -248,7 +311,10 @@ static func mash_at(t, sumo: Node, rate: float) -> Dictionary:
 	var next := 0.0
 	var taps := 0
 	while t.sm.current_state == sumo and sumo.tug.result == &"":
-		if rate > 0.0 and sumo.tug.clock >= next - 0.0001:
+		var rate: float = schedule.call(sumo.tug.clock)
+		if rate <= 0.0:
+			next = sumo.tug.clock
+		elif sumo.tug.clock >= next - 0.0001:
 			t.tap(t.MASH_KEYS[pair[taps % 2]])
 			taps += 1
 			next += 1.0 / rate
@@ -266,6 +332,44 @@ static func _model(sumo: Node):
 
 static func model_bout(sumo: Node, rate: float) -> Dictionary:
 	return _model(sumo).steady(rate)
+
+
+# The model pressed the way mash_with() presses the live tug: {result, time, presses, trace}, with a
+# {t, rope, surging} for every step.
+static func model_run(sumo: Node, schedule: Callable) -> Dictionary:
+	var bout = _model(sumo)
+	var next := 0.0
+	var trace := []
+	while bout.result == &"":
+		var rate: float = schedule.call(bout.clock)
+		if rate <= 0.0:
+			next = bout.clock
+		else:
+			while bout.result == &"" and bout.clock >= next - 1e-9:
+				bout.press()
+				next += 1.0 / rate
+		bout.advance(1.0 / 60.0)
+		trace.append({"t": bout.clock, "rope": bout.rope, "surging": bout.surge() > 0.0})
+	return {"result": bout.result, "time": bout.clock, "presses": bout.presses, "trace": trace}
+
+
+# How much of the rope each surge took back: from where it stood as the surge began to the lowest it went in it.
+static func surge_heaves(trace: Array) -> Array:
+	var heaves := []
+	var from := 0.0
+	var low := 0.0
+	var in_surge := false
+	for step in trace:
+		if step.surging and not in_surge:
+			in_surge = true
+			from = step.rope
+			low = step.rope
+		elif in_surge:
+			low = minf(low, step.rope)
+			if not step.surging:
+				in_surge = false
+				heaves.append(snappedf(from - low, 0.01))
+	return heaves
 
 
 # Out of whatever the last run left: its outro, a hit-stop, a freeze and the view.

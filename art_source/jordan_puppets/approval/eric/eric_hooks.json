@@ -1,0 +1,684 @@
+{
+ "boss": "eric",
+ "sheet": "res://Assets/Characters/Eric/eric_entrance.png",
+ "frame": [
+  256,
+  192
+ ],
+ "feet": [
+  128,
+  191
+ ],
+ "idle_frames": [
+  3
+ ],
+ "note": "Texels on the frame, (0,0) its top-left; a ring hook is its hole, the texel the string ties to. \"back\" sits between the shoulder blades, behind the body on every front view: draw its string UNDER the sprite. \"_l\"/\"_r\" are screen left/right on the unflipped sheet (mirror x as frame_width - 1 - x when flipped). relative_to_feet = texel - feet. carry_frames: the same points tracked onto his fight sheets; null = not found there, to be filled by hand.",
+ "frames": {
+  "3": {
+   "head": [
+    131,
+    122
+   ],
+   "back": [
+    131,
+    160
+   ],
+   "wrist_l": [
+    98,
+    177
+   ],
+   "wrist_r": [
+    163,
+    176
+   ],
+   "knee_l": [
+    114,
+    185
+   ],
+   "knee_r": [
+    148,
+    185
+   ]
+  }
+ },
+ "relative_to_feet": {
+  "3": {
+   "head": [
+    3,
+    -69
+   ],
+   "back": [
+    3,
+    -31
+   ],
+   "wrist_l": [
+    -30,
+    -14
+   ],
+   "wrist_r": [
+    35,
+    -15
+   ],
+   "knee_l": [
+    -14,
+    -6
+   ],
+   "knee_r": [
+    20,
+    -6
+   ]
+  }
+ },
+ "carry_frames": {
+  "Eric/eric_sheet_v2.png": {
+   "0": {
+    "head": [
+     128,
+     120
+    ],
+    "back": [
+     128,
+     158
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "1": {
+    "head": [
+     128,
+     122
+    ],
+    "back": [
+     128,
+     159
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "2": {
+    "head": [
+     128,
+     115
+    ],
+    "back": [
+     128,
+     155
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "3": {
+    "head": [
+     128,
+     118
+    ],
+    "back": [
+     128,
+     156
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "4": {
+    "head": [
+     128,
+     118
+    ],
+    "back": [
+     128,
+     156
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "5": {
+    "head": [
+     128,
+     118
+    ],
+    "back": [
+     128,
+     156
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "6": {
+    "head": [
+     126,
+     122
+    ],
+    "back": [
+     126,
+     159
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "7": {
+    "head": [
+     127,
+     122
+    ],
+    "back": [
+     127,
+     159
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "8": {
+    "head": [
+     127,
+     123
+    ],
+    "back": [
+     127,
+     160
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "9": {
+    "head": [
+     127,
+     122
+    ],
+    "back": [
+     127,
+     159
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "10": {
+    "head": [
+     127,
+     121
+    ],
+    "back": [
+     127,
+     158
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "11": {
+    "head": [
+     127,
+     121
+    ],
+    "back": [
+     127,
+     158
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "12": {
+    "head": [
+     128,
+     120
+    ],
+    "back": [
+     128,
+     158
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "13": {
+    "head": null,
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "14": {
+    "head": null,
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "15": {
+    "head": null,
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "16": {
+    "head": null,
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "17": {
+    "head": null,
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "18": {
+    "head": null,
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "19": {
+    "head": null,
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "20": {
+    "head": [
+     128,
+     119
+    ],
+    "back": null,
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "21": {
+    "head": [
+     128,
+     119
+    ],
+    "back": [
+     128,
+     157
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "22": {
+    "head": [
+     128,
+     120
+    ],
+    "back": [
+     128,
+     158
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "23": {
+    "head": [
+     128,
+     121
+    ],
+    "back": [
+     128,
+     158
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "24": {
+    "head": [
+     128,
+     120
+    ],
+    "back": [
+     128,
+     158
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "25": {
+    "head": [
+     127,
+     120
+    ],
+    "back": [
+     127,
+     158
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "26": {
+    "head": [
+     129,
+     119
+    ],
+    "back": [
+     129,
+     157
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "27": {
+    "head": [
+     127,
+     125
+    ],
+    "back": [
+     127,
+     162
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "28": {
+    "head": [
+     127,
+     128
+    ],
+    "back": [
+     127,
+     163
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "29": {
+    "head": [
+     127,
+     130
+    ],
+    "back": [
+     127,
+     164
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "30": {
+    "head": [
+     127,
+     128
+    ],
+    "back": [
+     127,
+     163
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "31": {
+    "head": [
+     127,
+     125
+    ],
+    "back": [
+     127,
+     162
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": null
+   },
+   "32": {
+    "head": [
+     127,
+     119
+    ],
+    "back": [
+     127,
+     157
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "33": {
+    "head": [
+     126,
+     122
+    ],
+    "back": [
+     127,
+     159
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "34": {
+    "head": [
+     130,
+     115
+    ],
+    "back": [
+     129,
+     155
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "35": {
+    "head": [
+     131,
+     125
+    ],
+    "back": [
+     130,
+     160
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "36": {
+    "head": [
+     128,
+     121
+    ],
+    "back": [
+     128,
+     159
+    ],
+    "wrist_l": [
+     95,
+     175
+    ],
+    "wrist_r": [
+     160,
+     175
+    ],
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "37": {
+    "head": [
+     129,
+     122
+    ],
+    "back": [
+     129,
+     160
+    ],
+    "wrist_l": [
+     96,
+     177
+    ],
+    "wrist_r": [
+     161,
+     176
+    ],
+    "knee_l": null,
+    "knee_r": [
+     146,
+     185
+    ]
+   },
+   "38": {
+    "head": [
+     126,
+     117
+    ],
+    "back": [
+     127,
+     156
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   },
+   "39": {
+    "head": [
+     128,
+     121
+    ],
+    "back": [
+     128,
+     159
+    ],
+    "wrist_l": null,
+    "wrist_r": null,
+    "knee_l": null,
+    "knee_r": [
+     143,
+     185
+    ]
+   }
+  }
+ }
+}

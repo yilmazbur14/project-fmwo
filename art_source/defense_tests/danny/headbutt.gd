@@ -3,8 +3,9 @@ extends RefCounted
 # danny_headbutt (coder B): his Sumo Headbutt at a rooted player, and the dizzy spell a parried one leaves him
 # in (DannyBossHeadbutt, DannyBossStaggered; plan sections 6 and 13). --fixed-fps 60. tier=
 #   parry       (the default) a press 0.4 s before the wind-up, then one as he launches: PARRIED, +1 read,
-#               the root bursts, and the flip back lands him in Staggered for the parry's stagger - a cap of 3
-#               punches, so a clean chain of 3's damage (PunchAllowance), and no daze - then Idle.
+#               the root bursts, and the flip back lands him in Staggered for the parry's stagger and his walk_in - a cap of 3
+#               punches, so a clean chain of 3's damage (PunchAllowance), its POW dazing him (the user, 2026-10-06:
+#               3 hits always trigger the uppercut; pow_always_dazes plays the mash) - then Idle.
 #   hit         no answer: 2 damage, the root lets go, the player is knocked 160 px along his flight, and he
 #               flips back into Idle.
 #   guard       the guard held from before the wind-up to the impact: still a HIT.
@@ -224,8 +225,8 @@ static func tier_parry(t) -> void:
 	var window: float = t.defense.parry_stagger_time
 	t.check(Spit.state_is(t, "Staggered") and absf(hb.stagger_time - window) <= 0.0001, "Staggered, for the parry's %.2f s" % window)
 	await t.wait(2)
-	t.check(t.boss.hurtbox.monitoring and t.boss.window_hit_cap() == 3 and not t.boss.can_be_dazed() and t.sm.is_open(),
-		"open to punches, capped at 3, and no daze")
+	t.check(t.boss.hurtbox.monitoring and t.boss.window_hit_cap() == 3 and t.boss.can_be_dazed() and t.sm.is_open(),
+		"open to punches, capped at 3, and the daze on offer")
 	# The cap is a clean chain's damage (1 + 1 + 2), so plain punches land four times.
 	var allowance: int = PunchAllowance.clean_chain(3)
 	var dealt: Array = []
@@ -239,7 +240,9 @@ static func tier_parry(t) -> void:
 	var entered: float = run.steps.filter(func(s): return s.state == "Staggered")[0].clock
 	var idle: bool = await t.wait_until(func(): return Spit.state_is(t, "Idle"), 180)
 	var lasted: float = t.boss.fight_clock - entered
-	t.check(idle and absf(lasted - window) <= 2.0 * FRAME_TIME, "then Idle, %.2f s on (%.4f)" % [window, lasted])
+	# The parry's stagger and his walk_in, the time to walk back in over his flip (the 2026-10-06 tuning).
+	var dizzy: float = window + t.sm.states["Staggered"].walk_in
+	t.check(idle and absf(lasted - dizzy) <= 2.0 * FRAME_TIME, "then Idle, %.2f s on (%.4f)" % [dizzy, lasted])
 	t.check(t.boss.current_anim in [&"wake", &"idle"] and not t.boss.hurtbox.monitoring, "shaking himself awake, the window shut")
 	t.stop_boss_timers()
 	t.log_p("-- a parry that fills his gauge Breaks him as he starts his flip back, drawn behind the player")

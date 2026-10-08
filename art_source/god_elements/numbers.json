@@ -1,0 +1,3169 @@
+{
+ "Puppets/liam/liam_channel": {
+  "kind": "avatar body (float, staff-less)",
+  "anchor": [
+   48,
+   96
+  ],
+  "source": "Liam/Elements/liam_channel.png",
+  "source_numbers": {
+   "black_pct": 30.1,
+   "colours": 37,
+   "semi_alpha_px": 0,
+   "opaque_px": 16925
+  },
+  "times": [
+   0.12,
+   0.12,
+   0.12,
+   0.12,
+   0.12,
+   0.12
+  ],
+  "body_numbers": [
+   {
+    "black_pct": 28.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2690
+   },
+   {
+    "black_pct": 28.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2699
+   },
+   {
+    "black_pct": 28.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2669
+   },
+   {
+    "black_pct": 28.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2688
+   },
+   {
+    "black_pct": 28.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2680
+   },
+   {
+    "black_pct": 28.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2709
+   }
+  ],
+  "fx_px": [
+   3,
+   3,
+   3,
+   3,
+   3,
+   3
+  ],
+  "back": [
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    55
+   ],
+   [
+    47,
+    55
+   ],
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    56
+   ]
+  ],
+  "wrists_recorded": [
+   [
+    [
+     15,
+     63
+    ],
+    [
+     77,
+     63
+    ]
+   ],
+   [
+    [
+     15,
+     62
+    ],
+    [
+     77,
+     62
+    ]
+   ],
+   [
+    [
+     15,
+     60
+    ],
+    [
+     77,
+     60
+    ]
+   ],
+   [
+    [
+     15,
+     60
+    ],
+    [
+     77,
+     60
+    ]
+   ],
+   [
+    [
+     15,
+     62
+    ],
+    [
+     77,
+     62
+    ]
+   ],
+   [
+    [
+     15,
+     63
+    ],
+    [
+     77,
+     63
+    ]
+   ]
+  ],
+  "rings": [
+   "head",
+   "knee_l",
+   "knee_r"
+  ],
+  "frames": 6,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 28.5,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2692
+   },
+   {
+    "black_pct": 28.6,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2700
+   },
+   {
+    "black_pct": 28.6,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2671
+   },
+   {
+    "black_pct": 28.6,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2689
+   },
+   {
+    "black_pct": 28.6,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2682
+   },
+   {
+    "black_pct": 28.6,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2711
+   }
+  ]
+ },
+ "Puppets/liam/liam_channel_avatar": {
+  "kind": "ADDITIVE glow strip (eyes, arrow marks, open-mouth glow, 2-texel rim)",
+  "blend": "add",
+  "anchor": [
+   48,
+   96
+  ],
+  "frames": 6,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 729
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 732
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 726
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 735
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 723
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 738
+   }
+  ]
+ },
+ "Puppets/liam/liam_blow": {
+  "kind": "avatar body (float, staff-less)",
+  "anchor": [
+   48,
+   96
+  ],
+  "source": "Liam/Elements/liam_blow.png",
+  "source_numbers": {
+   "black_pct": 30.4,
+   "colours": 37,
+   "semi_alpha_px": 0,
+   "opaque_px": 16587
+  },
+  "times": [
+   0.15,
+   0.2,
+   0.12,
+   0.16,
+   0.14,
+   0.13
+  ],
+  "body_numbers": [
+   {
+    "black_pct": 27.9,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2648
+   },
+   {
+    "black_pct": 29.1,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2713
+   },
+   {
+    "black_pct": 28.8,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2611
+   },
+   {
+    "black_pct": 28.9,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2630
+   },
+   {
+    "black_pct": 28.4,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2696
+   },
+   {
+    "black_pct": 28.5,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2695
+   }
+  ],
+  "fx_px": [
+   52,
+   72,
+   45,
+   53,
+   30,
+   0
+  ],
+  "back": [
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    55
+   ],
+   [
+    47,
+    57
+   ],
+   [
+    47,
+    57
+   ],
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    56
+   ]
+  ],
+  "wrists_recorded": [
+   [
+    [
+     21,
+     65
+    ],
+    [
+     72,
+     65
+    ]
+   ],
+   [
+    [
+     16,
+     41
+    ],
+    [
+     76,
+     41
+    ]
+   ],
+   [
+    [
+     16,
+     60
+    ],
+    [
+     76,
+     60
+    ]
+   ],
+   [
+    [
+     16,
+     60
+    ],
+    [
+     76,
+     60
+    ]
+   ],
+   [
+    [
+     15,
+     63
+    ],
+    [
+     77,
+     63
+    ]
+   ],
+   [
+    [
+     15,
+     63
+    ],
+    [
+     77,
+     63
+    ]
+   ]
+  ],
+  "rings": [
+   "head",
+   "knee_l",
+   "knee_r"
+  ],
+  "frames": 6,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 27.3,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 2674
+   },
+   {
+    "black_pct": 28.1,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 2749
+   },
+   {
+    "black_pct": 28.4,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2615
+   },
+   {
+    "black_pct": 28.4,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2637
+   },
+   {
+    "black_pct": 28.2,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2698
+   },
+   {
+    "black_pct": 28.5,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2695
+   }
+  ]
+ },
+ "Puppets/liam/liam_blow_avatar": {
+  "kind": "ADDITIVE glow strip (eyes, arrow marks, open-mouth glow, 2-texel rim)",
+  "blend": "add",
+  "anchor": [
+   48,
+   96
+  ],
+  "frames": 6,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 663
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 741
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 714
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 723
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 735
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 693
+   }
+  ]
+ },
+ "Puppets/liam/liam_ignite": {
+  "kind": "avatar body (float, staff-less)",
+  "anchor": [
+   48,
+   96
+  ],
+  "source": "Liam/Elements/liam_ignite.png",
+  "source_numbers": {
+   "black_pct": 28.5,
+   "colours": 37,
+   "semi_alpha_px": 0,
+   "opaque_px": 13257
+  },
+  "times": [
+   0.06,
+   0.06,
+   0.06,
+   0.06,
+   0.06
+  ],
+  "body_numbers": [
+   {
+    "black_pct": 28.9,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2641
+   },
+   {
+    "black_pct": 28.4,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2676
+   },
+   {
+    "black_pct": 28.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2581
+   },
+   {
+    "black_pct": 28.9,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2567
+   },
+   {
+    "black_pct": 28.2,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2567
+   }
+  ],
+  "fx_px": [
+   101,
+   166,
+   164,
+   135,
+   105
+  ],
+  "back": [
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    56
+   ]
+  ],
+  "wrists_recorded": [
+   [
+    [
+     22,
+     36
+    ],
+    [
+     74,
+     41
+    ]
+   ],
+   [
+    [
+     22,
+     35
+    ],
+    [
+     74,
+     41
+    ]
+   ],
+   [
+    [
+     16,
+     60
+    ],
+    [
+     68,
+     61
+    ]
+   ],
+   [
+    [
+     16,
+     60
+    ],
+    [
+     68,
+     61
+    ]
+   ],
+   [
+    [
+     16,
+     60
+    ],
+    [
+     68,
+     61
+    ]
+   ]
+  ],
+  "rings": [
+   "head",
+   "knee_l",
+   "knee_r"
+  ],
+  "frames": 5,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 27.8,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2742
+   },
+   {
+    "black_pct": 26.6,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2836
+   },
+   {
+    "black_pct": 26.6,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2717
+   },
+   {
+    "black_pct": 27.2,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2674
+   },
+   {
+    "black_pct": 26.9,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 2649
+   }
+  ]
+ },
+ "Puppets/liam/liam_ignite_avatar": {
+  "kind": "ADDITIVE glow strip (eyes, arrow marks, open-mouth glow, 2-texel rim)",
+  "blend": "add",
+  "anchor": [
+   48,
+   96
+  ],
+  "frames": 5,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 700
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 22,
+    "semi_alpha_px": 0,
+    "opaque_px": 762
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 23,
+    "semi_alpha_px": 0,
+    "opaque_px": 683
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 660
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 660
+   }
+  ]
+ },
+ "Puppets/liam/liam_cast_left": {
+  "kind": "avatar body (float, staff-less)",
+  "anchor": [
+   48,
+   96
+  ],
+  "source": "Liam/Elements/liam_cast_left.png",
+  "source_numbers": {
+   "black_pct": 29.2,
+   "colours": 37,
+   "semi_alpha_px": 0,
+   "opaque_px": 8404
+  },
+  "times": [
+   0.15,
+   0.15,
+   0.15
+  ],
+  "body_numbers": [
+   {
+    "black_pct": 29.1,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2700
+   },
+   {
+    "black_pct": 29.2,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2677
+   },
+   {
+    "black_pct": 29.2,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2684
+   }
+  ],
+  "fx_px": [
+   103,
+   112,
+   75
+  ],
+  "back": [
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    56
+   ]
+  ],
+  "wrists_recorded": [
+   [
+    [
+     21,
+     36
+    ],
+    [
+     77,
+     63
+    ]
+   ],
+   [
+    [
+     15,
+     45
+    ],
+    [
+     77,
+     63
+    ]
+   ],
+   [
+    [
+     15,
+     56
+    ],
+    [
+     77,
+     63
+    ]
+   ]
+  ],
+  "rings": [
+   "head",
+   "knee_l",
+   "knee_r"
+  ],
+  "frames": 3,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 27.9,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 2763
+   },
+   {
+    "black_pct": 27.9,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 2742
+   },
+   {
+    "black_pct": 28.3,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 2727
+   }
+  ]
+ },
+ "Puppets/liam/liam_cast_left_avatar": {
+  "kind": "ADDITIVE glow strip (eyes, arrow marks, open-mouth glow, 2-texel rim)",
+  "blend": "add",
+  "anchor": [
+   48,
+   96
+  ],
+  "frames": 3,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 0.0,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 760
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 732
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 742
+   }
+  ]
+ },
+ "Puppets/liam/liam_cast_right": {
+  "kind": "avatar body (float, staff-less)",
+  "anchor": [
+   48,
+   96
+  ],
+  "source": "Liam/Elements/liam_cast_right.png",
+  "source_numbers": {
+   "black_pct": 30.5,
+   "colours": 37,
+   "semi_alpha_px": 0,
+   "opaque_px": 8316
+  },
+  "times": [
+   0.15,
+   0.15,
+   0.15
+  ],
+  "body_numbers": [
+   {
+    "black_pct": 29.1,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2694
+   },
+   {
+    "black_pct": 29.3,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2669
+   },
+   {
+    "black_pct": 29.3,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2658
+   }
+  ],
+  "fx_px": [
+   63,
+   119,
+   85
+  ],
+  "back": [
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    56
+   ],
+   [
+    47,
+    56
+   ]
+  ],
+  "wrists_recorded": [
+   [
+    [
+     17,
+     37
+    ],
+    [
+     74,
+     37
+    ]
+   ],
+   [
+    [
+     17,
+     37
+    ],
+    [
+     76,
+     46
+    ]
+   ],
+   [
+    [
+     17,
+     37
+    ],
+    [
+     75,
+     51
+    ]
+   ]
+  ],
+  "rings": [
+   "head",
+   "knee_l",
+   "knee_r"
+  ],
+  "frames": 3,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 28.4,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 2716
+   },
+   {
+    "black_pct": 27.8,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 2738
+   },
+   {
+    "black_pct": 28.3,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 2705
+   }
+  ]
+ },
+ "Puppets/liam/liam_cast_right_avatar": {
+  "kind": "ADDITIVE glow strip (eyes, arrow marks, open-mouth glow, 2-texel rim)",
+  "blend": "add",
+  "anchor": [
+   48,
+   96
+  ],
+  "frames": 3,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 715
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 740
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 728
+   }
+  ]
+ },
+ "Puppets/liam/liam_slam_rise": {
+  "kind": "avatar body (float, staff-less)",
+  "anchor": [
+   48,
+   96
+  ],
+  "source": "Liam/Elements/liam_slam_rise.png",
+  "source_numbers": {
+   "black_pct": 30.6,
+   "colours": 38,
+   "semi_alpha_px": 0,
+   "opaque_px": 8357
+  },
+  "times": [
+   0.15,
+   0.1,
+   0.75
+  ],
+  "body_numbers": [
+   {
+    "black_pct": 28.2,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2600
+   },
+   {
+    "black_pct": 28.2,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2554
+   },
+   {
+    "black_pct": 28.7,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2644
+   }
+  ],
+  "fx_px": [
+   0,
+   30,
+   6
+  ],
+  "back": [
+   [
+    47,
+    57
+   ],
+   [
+    47,
+    59
+   ],
+   [
+    47,
+    57
+   ]
+  ],
+  "wrists_recorded": [
+   [
+    [
+     20,
+     41
+    ],
+    [
+     72,
+     41
+    ]
+   ],
+   [
+    [
+     26,
+     68
+    ],
+    [
+     66,
+     68
+    ]
+   ],
+   [
+    [
+     15,
+     50
+    ],
+    [
+     77,
+     50
+    ]
+   ]
+  ],
+  "rings": [
+   "head",
+   "knee_l",
+   "knee_r"
+  ],
+  "frames": 3,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 28.2,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2600
+   },
+   {
+    "black_pct": 27.7,
+    "colours": 17,
+    "semi_alpha_px": 0,
+    "opaque_px": 2571
+   },
+   {
+    "black_pct": 28.7,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 2650
+   }
+  ]
+ },
+ "Puppets/liam/liam_slam_rise_avatar": {
+  "kind": "ADDITIVE glow strip (eyes, arrow marks, open-mouth glow, 2-texel rim)",
+  "blend": "add",
+  "anchor": [
+   48,
+   96
+  ],
+  "frames": 3,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 0.0,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 651
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 21,
+    "semi_alpha_px": 0,
+    "opaque_px": 601
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 712
+   }
+  ]
+ },
+ "Puppets/liam/liam_wobble": {
+  "kind": "twin of the live pose, staff removed",
+  "anchor": [
+   48,
+   96
+  ],
+  "source": "Liam/Elements/liam_wobble.png",
+  "source_numbers": {
+   "black_pct": 30.7,
+   "colours": 38,
+   "semi_alpha_px": 0,
+   "opaque_px": 11106
+  },
+  "times": [
+   0.12,
+   0.12,
+   0.12,
+   0.12
+  ],
+  "back": [
+   [
+    45,
+    68
+   ],
+   [
+    47,
+    68
+   ],
+   [
+    49,
+    68
+   ],
+   [
+    47,
+    68
+   ]
+  ],
+  "rings": [
+   "head"
+  ],
+  "frames": 4,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 32.7,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2530
+   },
+   {
+    "black_pct": 30.1,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2512
+   },
+   {
+    "black_pct": 31.1,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2452
+   },
+   {
+    "black_pct": 29.7,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2465
+   }
+  ]
+ },
+ "Puppets/liam/liam_fall": {
+  "kind": "twin of the live pose, staff removed",
+  "anchor": [
+   48,
+   96
+  ],
+  "source": "Liam/Elements/liam_fall.png",
+  "source_numbers": {
+   "black_pct": 29.9,
+   "colours": 40,
+   "semi_alpha_px": 0,
+   "opaque_px": 9973
+  },
+  "times": [
+   0.15,
+   0.15,
+   0.15,
+   0.15
+  ],
+  "back": [
+   [
+    56,
+    71
+   ],
+   [
+    42,
+    55
+   ],
+   [
+    43,
+    77
+   ],
+   [
+    48,
+    78
+   ]
+  ],
+  "rings": [],
+  "frames": 4,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 32.9,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 2488
+   },
+   {
+    "black_pct": 31.9,
+    "colours": 15,
+    "semi_alpha_px": 0,
+    "opaque_px": 2604
+   },
+   {
+    "black_pct": 28.0,
+    "colours": 15,
+    "semi_alpha_px": 0,
+    "opaque_px": 2409
+   },
+   {
+    "black_pct": 30.7,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2268
+   }
+  ]
+ },
+ "Puppets/liam/liam_downed": {
+  "kind": "twin of the live pose, staff removed",
+  "anchor": [
+   48,
+   96
+  ],
+  "source": "Liam/Elements/liam_downed.png",
+  "source_numbers": {
+   "black_pct": 30.9,
+   "colours": 38,
+   "semi_alpha_px": 0,
+   "opaque_px": 7399
+  },
+  "times": [
+   0.3,
+   0.3,
+   0.3
+  ],
+  "back": [
+   [
+    48,
+    78
+   ],
+   [
+    49,
+    78
+   ],
+   [
+    48,
+    78
+   ]
+  ],
+  "rings": [
+   "head"
+  ],
+  "frames": 3,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 30.8,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2262
+   },
+   {
+    "black_pct": 30.8,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2263
+   },
+   {
+    "black_pct": 30.8,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2262
+   }
+  ]
+ },
+ "Puppets/liam/liam_defeat": {
+  "kind": "twin of the live pose, staff removed",
+  "anchor": [
+   48,
+   96
+  ],
+  "source": "Liam/Elements/liam_defeat.png",
+  "source_numbers": {
+   "black_pct": 30.4,
+   "colours": 40,
+   "semi_alpha_px": 0,
+   "opaque_px": 12381
+  },
+  "times": [
+   0.12,
+   0.12,
+   0.14,
+   0.2,
+   1.0
+  ],
+  "back": [
+   [
+    47,
+    68
+   ],
+   [
+    47,
+    72
+   ],
+   [
+    48,
+    78
+   ],
+   [
+    48,
+    74
+   ],
+   [
+    43,
+    77
+   ]
+  ],
+  "rings": [],
+  "frames": 5,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 29.7,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2648
+   },
+   {
+    "black_pct": 32.0,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2378
+   },
+   {
+    "black_pct": 30.7,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2268
+   },
+   {
+    "black_pct": 32.2,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2273
+   },
+   {
+    "black_pct": 29.4,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2326
+   }
+  ]
+ },
+ "Puppets/liam/liam_juggle": {
+  "kind": "twin of the live pose, staff removed",
+  "anchor": [
+   64,
+   95
+  ],
+  "source": "Liam/Elements/liam_juggle.png",
+  "source_numbers": {
+   "black_pct": 29.3,
+   "colours": 38,
+   "semi_alpha_px": 0,
+   "opaque_px": 30797
+  },
+  "times": [
+   0.06,
+   0.08,
+   0.14,
+   0.08,
+   0.08,
+   0.08,
+   0.08,
+   0.07,
+   0.09,
+   0.14,
+   0.4,
+   0.4
+  ],
+  "back": [
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "rings": [],
+  "frames": 12,
+  "frame": [
+   128,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 29.4,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 2609
+   },
+   {
+    "black_pct": 31.1,
+    "colours": 15,
+    "semi_alpha_px": 0,
+    "opaque_px": 2680
+   },
+   {
+    "black_pct": 30.9,
+    "colours": 15,
+    "semi_alpha_px": 0,
+    "opaque_px": 2733
+   },
+   {
+    "black_pct": 31.1,
+    "colours": 15,
+    "semi_alpha_px": 0,
+    "opaque_px": 2729
+   },
+   {
+    "black_pct": 30.9,
+    "colours": 15,
+    "semi_alpha_px": 0,
+    "opaque_px": 2749
+   },
+   {
+    "black_pct": 30.9,
+    "colours": 15,
+    "semi_alpha_px": 0,
+    "opaque_px": 2716
+   },
+   {
+    "black_pct": 31.6,
+    "colours": 15,
+    "semi_alpha_px": 0,
+    "opaque_px": 2725
+   },
+   {
+    "black_pct": 26.4,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 2457
+   },
+   {
+    "black_pct": 29.3,
+    "colours": 15,
+    "semi_alpha_px": 0,
+    "opaque_px": 2452
+   },
+   {
+    "black_pct": 28.6,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 2297
+   },
+   {
+    "black_pct": 29.4,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2316
+   },
+   {
+    "black_pct": 29.2,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 2334
+   }
+  ]
+ },
+ "Puppets/liam/liam_avatar_aura_back": {
+  "kind": "the orbit, far half (behind him), 6-frame loop",
+  "cell": [
+   128,
+   128
+  ],
+  "centre_corner_on_float_pivot": [
+   64,
+   64
+  ],
+  "body_cell_top_left_in_aura": [
+   16,
+   8
+  ],
+  "frames": 6,
+  "frame": [
+   128,
+   128
+  ],
+  "numbers": [
+   {
+    "black_pct": 18.8,
+    "colours": 11,
+    "semi_alpha_px": 0,
+    "opaque_px": 256
+   },
+   {
+    "black_pct": 18.8,
+    "colours": 11,
+    "semi_alpha_px": 0,
+    "opaque_px": 256
+   },
+   {
+    "black_pct": 19.0,
+    "colours": 11,
+    "semi_alpha_px": 0,
+    "opaque_px": 253
+   },
+   {
+    "black_pct": 18.5,
+    "colours": 11,
+    "semi_alpha_px": 0,
+    "opaque_px": 259
+   },
+   {
+    "black_pct": 18.7,
+    "colours": 11,
+    "semi_alpha_px": 0,
+    "opaque_px": 257
+   },
+   {
+    "black_pct": 18.9,
+    "colours": 17,
+    "semi_alpha_px": 0,
+    "opaque_px": 265
+   }
+  ]
+ },
+ "Puppets/liam/liam_avatar_aura_front": {
+  "kind": "the orbit, near half (in front of him), 6-frame loop",
+  "cell": [
+   128,
+   128
+  ],
+  "frames": 6,
+  "frame": [
+   128,
+   128
+  ],
+  "numbers": [
+   {
+    "black_pct": 19.2,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 250
+   },
+   {
+    "black_pct": 18.8,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 256
+   },
+   {
+    "black_pct": 18.3,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 262
+   },
+   {
+    "black_pct": 19.2,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 250
+   },
+   {
+    "black_pct": 18.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 258
+   },
+   {
+    "black_pct": 18.2,
+    "colours": 11,
+    "semi_alpha_px": 0,
+    "opaque_px": 253
+   }
+  ]
+ },
+ "Puppets/liam/liam_avatar_on": {
+  "kind": "ADDITIVE, on channel frame 0: the glow flares in, the eyes snap white",
+  "blend": "add",
+  "frames": 5,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 0.0,
+    "colours": 1,
+    "semi_alpha_px": 0,
+    "opaque_px": 337
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 5,
+    "semi_alpha_px": 0,
+    "opaque_px": 373
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 1173
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 729
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 729
+   }
+  ]
+ },
+ "Puppets/liam/liam_avatar_off": {
+  "kind": "ADDITIVE, on channel frame 0: the glow bursts and gutters out",
+  "blend": "add",
+  "frames": 4,
+  "frame": [
+   96,
+   96
+  ],
+  "numbers": [
+   {
+    "black_pct": 0.0,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 1173
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 18,
+    "semi_alpha_px": 0,
+    "opaque_px": 729
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 5,
+    "semi_alpha_px": 0,
+    "opaque_px": 373
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 1,
+    "semi_alpha_px": 0,
+    "opaque_px": 167
+   }
+  ]
+ },
+ "Puppets/bixby/bixby_beast": {
+  "kind": "ash-fur twin",
+  "anchor": [
+   96,
+   151
+  ],
+  "source": "Bixby/bixby_beast.png",
+  "source_numbers": {
+   "black_pct": 25.0,
+   "colours": 38,
+   "semi_alpha_px": 0,
+   "opaque_px": 76478
+  },
+  "back": [
+   [
+    95,
+    71
+   ],
+   [
+    95,
+    70
+   ],
+   [
+    95,
+    69
+   ],
+   [
+    95,
+    70
+   ]
+  ],
+  "rings": [
+   "head",
+   "head_l"
+  ],
+  "fire_kept_px": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "ember_eye_frames": [],
+  "frames": 4,
+  "frame": [
+   192,
+   160
+  ],
+  "numbers": [
+   {
+    "black_pct": 24.7,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 20866
+   },
+   {
+    "black_pct": 25.8,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 18170
+   },
+   {
+    "black_pct": 24.8,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 19189
+   },
+   {
+    "black_pct": 25.5,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 18253
+   }
+  ]
+ },
+ "Puppets/bixby/bixby_beast_fly": {
+  "kind": "ash-fur twin",
+  "anchor": [
+   96,
+   151
+  ],
+  "source": "Bixby/bixby_beast_fly.png",
+  "source_numbers": {
+   "black_pct": 24.6,
+   "colours": 39,
+   "semi_alpha_px": 0,
+   "opaque_px": 57211
+  },
+  "back": [
+   [
+    104,
+    71
+   ],
+   [
+    104,
+    69
+   ],
+   [
+    104,
+    70
+   ]
+  ],
+  "rings": [
+   "head",
+   "head_l",
+   "head_r",
+   "knee_l",
+   "knee_r",
+   "wrist_l",
+   "wrist_r"
+  ],
+  "fire_kept_px": [
+   0,
+   0,
+   0
+  ],
+  "ember_eye_frames": [],
+  "frames": 3,
+  "frame": [
+   192,
+   160
+  ],
+  "numbers": [
+   {
+    "black_pct": 25.0,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 20196
+   },
+   {
+    "black_pct": 25.1,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 19091
+   },
+   {
+    "black_pct": 25.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 17924
+   }
+  ]
+ },
+ "Puppets/bixby/bixby_beast_flyby": {
+  "kind": "ash-fur twin",
+  "anchor": [
+   96,
+   151
+  ],
+  "source": "Bixby/bixby_beast_flyby.png",
+  "source_numbers": {
+   "black_pct": 21.8,
+   "colours": 41,
+   "semi_alpha_px": 0,
+   "opaque_px": 85686
+  },
+  "back": [
+   [
+    82,
+    60
+   ],
+   [
+    82,
+    60
+   ],
+   [
+    82,
+    60
+   ],
+   [
+    82,
+    60
+   ],
+   [
+    82,
+    60
+   ],
+   [
+    82,
+    60
+   ],
+   [
+    82,
+    60
+   ],
+   [
+    82,
+    60
+   ]
+  ],
+  "rings": [],
+  "fire_kept_px": [
+   0,
+   0,
+   0,
+   0,
+   2647,
+   2674,
+   2710,
+   2678
+  ],
+  "ember_eye_frames": [
+   4,
+   5,
+   6,
+   7
+  ],
+  "frames": 8,
+  "frame": [
+   192,
+   160
+  ],
+  "numbers": [
+   {
+    "black_pct": 23.3,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 10604
+   },
+   {
+    "black_pct": 24.9,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 9284
+   },
+   {
+    "black_pct": 25.5,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 8796
+   },
+   {
+    "black_pct": 24.9,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 9393
+   },
+   {
+    "black_pct": 19.0,
+    "colours": 22,
+    "semi_alpha_px": 0,
+    "opaque_px": 12955
+   },
+   {
+    "black_pct": 19.8,
+    "colours": 22,
+    "semi_alpha_px": 0,
+    "opaque_px": 11667
+   },
+   {
+    "black_pct": 19.9,
+    "colours": 22,
+    "semi_alpha_px": 0,
+    "opaque_px": 11211
+   },
+   {
+    "black_pct": 19.8,
+    "colours": 22,
+    "semi_alpha_px": 0,
+    "opaque_px": 11776
+   }
+  ]
+ },
+ "Puppets/bixby/bixby_perch": {
+  "kind": "ash-fur twin",
+  "anchor": [
+   96,
+   151
+  ],
+  "source": "Bixby/bixby_perch.png",
+  "source_numbers": {
+   "black_pct": 24.3,
+   "colours": 40,
+   "semi_alpha_px": 0,
+   "opaque_px": 303436
+  },
+  "back": [
+   [
+    95,
+    101
+   ],
+   [
+    95,
+    111
+   ],
+   [
+    95,
+    108
+   ],
+   [
+    95,
+    109
+   ],
+   [
+    95,
+    75
+   ],
+   [
+    95,
+    75
+   ],
+   [
+    95,
+    75
+   ],
+   [
+    95,
+    108
+   ],
+   [
+    95,
+    106
+   ],
+   [
+    95,
+    107
+   ],
+   [
+    95,
+    71
+   ],
+   [
+    95,
+    71
+   ],
+   [
+    95,
+    71
+   ],
+   [
+    95,
+    111
+   ],
+   [
+    95,
+    89
+   ],
+   [
+    95,
+    71
+   ]
+  ],
+  "rings": [
+   "head",
+   "head_l"
+  ],
+  "fire_kept_px": [
+   0,
+   0,
+   0,
+   0,
+   491,
+   472,
+   481,
+   840,
+   793,
+   842,
+   472,
+   3577,
+   3869,
+   0,
+   0,
+   0
+  ],
+  "ember_eye_frames": [
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12
+  ],
+  "frames": 16,
+  "frame": [
+   192,
+   160
+  ],
+  "numbers": [
+   {
+    "black_pct": 25.3,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 18822
+   },
+   {
+    "black_pct": 25.3,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 18716
+   },
+   {
+    "black_pct": 25.0,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 19186
+   },
+   {
+    "black_pct": 24.9,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 19208
+   },
+   {
+    "black_pct": 25.1,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 17946
+   },
+   {
+    "black_pct": 25.2,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 17946
+   },
+   {
+    "black_pct": 25.2,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 17946
+   },
+   {
+    "black_pct": 24.5,
+    "colours": 21,
+    "semi_alpha_px": 0,
+    "opaque_px": 19617
+   },
+   {
+    "black_pct": 24.3,
+    "colours": 20,
+    "semi_alpha_px": 0,
+    "opaque_px": 19734
+   },
+   {
+    "black_pct": 24.5,
+    "colours": 21,
+    "semi_alpha_px": 0,
+    "opaque_px": 19697
+   },
+   {
+    "black_pct": 24.9,
+    "colours": 23,
+    "semi_alpha_px": 0,
+    "opaque_px": 18212
+   },
+   {
+    "black_pct": 21.2,
+    "colours": 26,
+    "semi_alpha_px": 0,
+    "opaque_px": 18932
+   },
+   {
+    "black_pct": 20.9,
+    "colours": 26,
+    "semi_alpha_px": 0,
+    "opaque_px": 19032
+   },
+   {
+    "black_pct": 24.3,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 18372
+   },
+   {
+    "black_pct": 25.6,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 19229
+   },
+   {
+    "black_pct": 24.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 20841
+   }
+  ]
+ },
+ "Puppets/bixby/bixby_pound": {
+  "kind": "ash-fur twin",
+  "anchor": [
+   96,
+   151
+  ],
+  "source": "Bixby/bixby_pound.png",
+  "source_numbers": {
+   "black_pct": 25.2,
+   "colours": 39,
+   "semi_alpha_px": 0,
+   "opaque_px": 113766
+  },
+  "back": [
+   [
+    95,
+    70
+   ],
+   [
+    95,
+    71
+   ],
+   [
+    95,
+    77
+   ],
+   [
+    95,
+    90
+   ],
+   [
+    95,
+    84
+   ],
+   [
+    95,
+    74
+   ]
+  ],
+  "rings": [
+   "head",
+   "head_l"
+  ],
+  "fire_kept_px": [
+   0,
+   339,
+   0,
+   221,
+   0,
+   0
+  ],
+  "ember_eye_frames": [],
+  "frames": 6,
+  "frame": [
+   192,
+   160
+  ],
+  "numbers": [
+   {
+    "black_pct": 25.3,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 19478
+   },
+   {
+    "black_pct": 25.6,
+    "colours": 21,
+    "semi_alpha_px": 0,
+    "opaque_px": 19282
+   },
+   {
+    "black_pct": 24.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 20499
+   },
+   {
+    "black_pct": 24.7,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 18189
+   },
+   {
+    "black_pct": 25.5,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 18249
+   },
+   {
+    "black_pct": 25.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 18069
+   }
+  ]
+ },
+ "Puppets/bixby/bixby_beast_land": {
+  "kind": "ash-fur twin",
+  "anchor": [
+   96,
+   151
+  ],
+  "source": "Bixby/bixby_beast_land.png",
+  "source_numbers": {
+   "black_pct": 25.2,
+   "colours": 38,
+   "semi_alpha_px": 0,
+   "opaque_px": 56238
+  },
+  "back": [
+   [
+    95,
+    69
+   ],
+   [
+    95,
+    92
+   ],
+   [
+    95,
+    88
+   ]
+  ],
+  "rings": [],
+  "fire_kept_px": [
+   0,
+   0,
+   0
+  ],
+  "ember_eye_frames": [],
+  "frames": 3,
+  "frame": [
+   192,
+   160
+  ],
+  "numbers": [
+   {
+    "black_pct": 24.7,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 20672
+   },
+   {
+    "black_pct": 25.7,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 17365
+   },
+   {
+    "black_pct": 25.2,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 18201
+   }
+  ]
+ },
+ "Puppets/bixby/bixby_beast_recover": {
+  "kind": "ash-fur twin",
+  "anchor": [
+   96,
+   151
+  ],
+  "source": "Bixby/bixby_beast_recover.png",
+  "source_numbers": {
+   "black_pct": 25.4,
+   "colours": 37,
+   "semi_alpha_px": 0,
+   "opaque_px": 58978
+  },
+  "back": [
+   [
+    96,
+    115
+   ],
+   [
+    95,
+    116
+   ],
+   [
+    95,
+    117
+   ],
+   [
+    104,
+    116
+   ]
+  ],
+  "rings": [],
+  "fire_kept_px": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "ember_eye_frames": [],
+  "frames": 4,
+  "frame": [
+   192,
+   160
+  ],
+  "numbers": [
+   {
+    "black_pct": 25.4,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 14881
+   },
+   {
+    "black_pct": 25.4,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 14743
+   },
+   {
+    "black_pct": 25.4,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 14641
+   },
+   {
+    "black_pct": 25.3,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 14713
+   }
+  ]
+ },
+ "Puppets/bixby/bixby_beast_hit": {
+  "kind": "ash-fur twin",
+  "anchor": [
+   96,
+   151
+  ],
+  "source": "Bixby/bixby_beast_hit.png",
+  "source_numbers": {
+   "black_pct": 25.3,
+   "colours": 36,
+   "semi_alpha_px": 0,
+   "opaque_px": 30525
+  },
+  "back": [
+   [
+    95,
+    107
+   ],
+   [
+    95,
+    118
+   ]
+  ],
+  "rings": [],
+  "fire_kept_px": [
+   93,
+   26
+  ],
+  "ember_eye_frames": [],
+  "frames": 2,
+  "frame": [
+   192,
+   160
+  ],
+  "numbers": [
+   {
+    "black_pct": 25.7,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 15961
+   },
+   {
+    "black_pct": 25.0,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 14564
+   }
+  ]
+ },
+ "Puppets/bixby/bixby_juggle": {
+  "kind": "ash-fur twin",
+  "anchor": [
+   128,
+   200
+  ],
+  "source": "Bixby/bixby_juggle.png",
+  "source_numbers": {
+   "black_pct": 24.6,
+   "colours": 39,
+   "semi_alpha_px": 0,
+   "opaque_px": 236605
+  },
+  "back": [
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "rings": [],
+  "fire_kept_px": [
+   573,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   514,
+   0,
+   0,
+   0,
+   0
+  ],
+  "ember_eye_frames": [],
+  "frames": 12,
+  "frame": [
+   256,
+   256
+  ],
+  "numbers": [
+   {
+    "black_pct": 24.0,
+    "colours": 15,
+    "semi_alpha_px": 0,
+    "opaque_px": 22155
+   },
+   {
+    "black_pct": 23.7,
+    "colours": 12,
+    "semi_alpha_px": 0,
+    "opaque_px": 21892
+   },
+   {
+    "black_pct": 25.4,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 17796
+   },
+   {
+    "black_pct": 24.2,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 20047
+   },
+   {
+    "black_pct": 23.9,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 21098
+   },
+   {
+    "black_pct": 25.0,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 19262
+   },
+   {
+    "black_pct": 24.6,
+    "colours": 14,
+    "semi_alpha_px": 0,
+    "opaque_px": 20015
+   },
+   {
+    "black_pct": 26.3,
+    "colours": 19,
+    "semi_alpha_px": 0,
+    "opaque_px": 18593
+   },
+   {
+    "black_pct": 25.1,
+    "colours": 13,
+    "semi_alpha_px": 0,
+    "opaque_px": 20312
+   },
+   {
+    "black_pct": 25.4,
+    "colours": 13,
+    "semi_alpha_px": 0,
+    "opaque_px": 18299
+   },
+   {
+    "black_pct": 24.6,
+    "colours": 13,
+    "semi_alpha_px": 0,
+    "opaque_px": 18508
+   },
+   {
+    "black_pct": 24.4,
+    "colours": 13,
+    "semi_alpha_px": 0,
+    "opaque_px": 18628
+   }
+  ]
+ },
+ "Puppets/bixby/bixby_bite": {
+  "kind": "NEW: rear, lunge start, lunge (jaws wide), SNAP (contact), recoil",
+  "anchor": [
+   96,
+   151
+  ],
+  "source": "built on Bixby/bixby_beast.png frame 0",
+  "source_numbers": {
+   "black_pct": 24.6,
+   "colours": 38,
+   "semi_alpha_px": 0,
+   "opaque_px": 20866
+  },
+  "times": [
+   0.15,
+   0.1,
+   0.15,
+   0.06,
+   0.2
+  ],
+  "back": [
+   [
+    95,
+    67
+   ],
+   [
+    95,
+    74
+   ],
+   [
+    95,
+    79
+   ],
+   [
+    95,
+    81
+   ],
+   [
+    95,
+    69
+   ]
+  ],
+  "jaws": [
+   [
+    96,
+    61
+   ],
+   [
+    96,
+    68
+   ],
+   [
+    96,
+    73
+   ],
+   [
+    96,
+    73
+   ],
+   [
+    96,
+    63
+   ]
+  ],
+  "snap_frame": 3,
+  "rings": [
+   "head"
+  ],
+  "frames": 5,
+  "frame": [
+   192,
+   160
+  ],
+  "numbers": [
+   {
+    "black_pct": 24.5,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 21416
+   },
+   {
+    "black_pct": 24.8,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 20461
+   },
+   {
+    "black_pct": 25.1,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 19860
+   },
+   {
+    "black_pct": 24.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 19604
+   },
+   {
+    "black_pct": 24.6,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 21144
+   }
+  ]
+ },
+ "Wheel/element_wheel": {
+  "kind": "the disc turned 11.25 deg x frame CLOCKWISE; the code adds 90-degree turns",
+  "pivot_corner": [
+   96,
+   96
+  ],
+  "angles_deg": [
+   0.0,
+   11.25,
+   22.5,
+   33.75,
+   45.0,
+   56.25,
+   67.5,
+   78.75
+  ],
+  "frames": 8,
+  "frame": [
+   192,
+   192
+  ],
+  "numbers": [
+   {
+    "black_pct": 9.3,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 9.2,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 9.2,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 9.0,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 8.7,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 9.0,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 9.2,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 9.2,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   }
+  ]
+ },
+ "Wheel/element_wheel_lit": {
+  "kind": "stop states at REST orientation",
+  "order": [
+   "water",
+   "earth",
+   "fire",
+   "air",
+   "fire_air",
+   "air_water",
+   "water_earth",
+   "earth_fire"
+  ],
+  "pivot_corner": [
+   96,
+   96
+  ],
+  "frames": 8,
+  "frame": [
+   192,
+   192
+  ],
+  "numbers": [
+   {
+    "black_pct": 9.2,
+    "colours": 31,
+    "semi_alpha_px": 0,
+    "opaque_px": 26153
+   },
+   {
+    "black_pct": 9.2,
+    "colours": 31,
+    "semi_alpha_px": 0,
+    "opaque_px": 26158
+   },
+   {
+    "black_pct": 9.2,
+    "colours": 29,
+    "semi_alpha_px": 0,
+    "opaque_px": 26153
+   },
+   {
+    "black_pct": 9.2,
+    "colours": 31,
+    "semi_alpha_px": 0,
+    "opaque_px": 26158
+   },
+   {
+    "black_pct": 9.0,
+    "colours": 29,
+    "semi_alpha_px": 0,
+    "opaque_px": 26631
+   },
+   {
+    "black_pct": 9.0,
+    "colours": 31,
+    "semi_alpha_px": 0,
+    "opaque_px": 26631
+   },
+   {
+    "black_pct": 9.0,
+    "colours": 32,
+    "semi_alpha_px": 0,
+    "opaque_px": 26631
+   },
+   {
+    "black_pct": 9.0,
+    "colours": 30,
+    "semi_alpha_px": 0,
+    "opaque_px": 26631
+   }
+  ]
+ },
+ "Wheel/element_wheel_pointer": {
+  "kind": "the TOP-RIGHT pointer, aimed at the hub",
+  "frame_top_left_in_wheel": [
+   150,
+   2
+  ],
+  "pivot": [
+   -54.0,
+   94.0
+  ],
+  "tip": [
+   [
+    8,
+    30
+   ],
+   [
+    9,
+    29
+   ],
+   [
+    8,
+    30
+   ]
+  ],
+  "frames": 3,
+  "frame": [
+   40,
+   40
+  ],
+  "numbers": [
+   {
+    "black_pct": 26.1,
+    "colours": 9,
+    "semi_alpha_px": 0,
+    "opaque_px": 207
+   },
+   {
+    "black_pct": 26.3,
+    "colours": 9,
+    "semi_alpha_px": 0,
+    "opaque_px": 209
+   },
+   {
+    "black_pct": 20.1,
+    "colours": 9,
+    "semi_alpha_px": 0,
+    "opaque_px": 269
+   }
+  ]
+ },
+ "Wheel/element_icons": {
+  "kind": "upright badges",
+  "pivot": [
+   16,
+   16
+  ],
+  "order": [
+   "fire_pop",
+   "fire",
+   "air_pop",
+   "air",
+   "water_pop",
+   "water",
+   "earth_pop",
+   "earth"
+  ],
+  "frames": 8,
+  "frame": [
+   32,
+   32
+  ],
+  "numbers": [
+   {
+    "black_pct": 15.0,
+    "colours": 4,
+    "semi_alpha_px": 0,
+    "opaque_px": 494
+   },
+   {
+    "black_pct": 16.1,
+    "colours": 5,
+    "semi_alpha_px": 0,
+    "opaque_px": 460
+   },
+   {
+    "black_pct": 27.2,
+    "colours": 3,
+    "semi_alpha_px": 0,
+    "opaque_px": 364
+   },
+   {
+    "black_pct": 30.7,
+    "colours": 4,
+    "semi_alpha_px": 0,
+    "opaque_px": 322
+   },
+   {
+    "black_pct": 14.6,
+    "colours": 6,
+    "semi_alpha_px": 0,
+    "opaque_px": 384
+   },
+   {
+    "black_pct": 15.9,
+    "colours": 7,
+    "semi_alpha_px": 0,
+    "opaque_px": 352
+   },
+   {
+    "black_pct": 15.8,
+    "colours": 7,
+    "semi_alpha_px": 0,
+    "opaque_px": 505
+   },
+   {
+    "black_pct": 17.3,
+    "colours": 9,
+    "semi_alpha_px": 0,
+    "opaque_px": 462
+   }
+  ]
+ },
+ "Wheel/element_wheel_blur": {
+  "kind": "soft: the disc at speed, 22.5-degree phases (with the code's quarter turns: 16 positions)",
+  "pivot_corner": [
+   96,
+   96
+  ],
+  "frames": 4,
+  "frame": [
+   192,
+   192
+  ],
+  "numbers": [
+   {
+    "black_pct": 4.6,
+    "colours": 28,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 4.7,
+    "colours": 28,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 4.6,
+    "colours": 28,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 4.6,
+    "colours": 28,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   }
+  ]
+ },
+ "Wheel/element_wheel_form": {
+  "kind": "soft: the wheel drawing itself (backward: the dissolve)",
+  "pivot_corner": [
+   96,
+   96
+  ],
+  "frames": 6,
+  "frame": [
+   192,
+   192
+  ],
+  "numbers": [
+   {
+    "black_pct": 0.0,
+    "colours": 2,
+    "semi_alpha_px": 0,
+    "opaque_px": 215
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 3,
+    "semi_alpha_px": 0,
+    "opaque_px": 1150
+   },
+   {
+    "black_pct": 2.0,
+    "colours": 8,
+    "semi_alpha_px": 0,
+    "opaque_px": 7896
+   },
+   {
+    "black_pct": 6.4,
+    "colours": 16,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 9.3,
+    "colours": 29,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 9.3,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   }
+  ]
+ },
+ "Wheel/element_wheel_shatter": {
+  "kind": "soft: the crash",
+  "frame": [
+   208,
+   208
+  ],
+  "pivot_corner": [
+   104,
+   104
+  ],
+  "frames": 6,
+  "numbers": [
+   {
+    "black_pct": 9.3,
+    "colours": 34,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 13.8,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 9.0,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 9.0,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 25680
+   },
+   {
+    "black_pct": 9.2,
+    "colours": 33,
+    "semi_alpha_px": 0,
+    "opaque_px": 14091
+   },
+   {
+    "black_pct": 0.0,
+    "colours": 6,
+    "semi_alpha_px": 0,
+    "opaque_px": 26
+   }
+  ]
+ }
+}

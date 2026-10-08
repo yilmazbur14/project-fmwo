@@ -3,7 +3,7 @@ extends RefCounted
 # Danny's gauge spec for verify_defense.gd's gauge modes (break_gauge, break_entry, juggle, juggle_kill and
 # gauge_extra with fight=danny). The keys and the optional statics are listed over GAUGE_FIGHTS_DIR there.
 # His gauge is on the rollout's rule, 8 clean reads from empty (DannyBossScript.BREAK): a parry or a perfect
-# dodge of a slam or a headbutt is a read, his quake rings drain it but never fill it.
+# dodge of a hop, the big slam, a headbutt or a belly bump is a read, his quake rings drain it but never fill it.
 # At 0 HP his fight isn't over: he gets up for the sumo (DannyBossStateMachine.enter_sumo), which is the
 # state a juggle kill lands him in, and only the sumo's result ends the fight. before_kill() asks it for a
 # win at once, so juggle_kill sees the one outro.
@@ -17,10 +17,10 @@ const SPEC := {
 	"home": Vector2(960, 760),
 	"light": &"danny_butt_slam",
 	"strong": &"",
-	"foreign": &"josh_card_throw",
+	"foreign": &"eric_quake_wave_v2",
 	"punish_state": "Sleep",
 	"broken_state": "Broken",
-	"cycle_states": ["Spit", "Slams"],
+	"cycle_states": ["Spit", "BellyBump", "Slams"],
 	"defeated_state": "Sumo",
 	"reads_to_break": 8,
 	"art": "res://Scripts/DannyBossArtLayout.gd",
@@ -28,7 +28,8 @@ const SPEC := {
 	"drives_player": true,
 }
 
-const ENTRY_KEYS := ["idle", "gulp", "glob", "hovering", "drop", "asleep", "headbutt", "staggered"]
+const ENTRY_KEYS := ["idle", "gulp", "glob", "bump_windup", "bump_charge", "hovering", "drop", "hop_latch", "asleep", "on_back",
+	"headbutt", "staggered"]
 const EXTRA_KEYS := ["numbers", "parry", "ring", "string", "sleep"]
 
 
@@ -46,8 +47,9 @@ static func before_kill(t) -> void:
 	t.sm.states["Sumo"].auto_result = &"win"
 
 
-# Every moment a read can Break him in play: between two attacks, each beat of his spit and his string, his nap,
-# the headbutt winding up at a rooted player, and the dizzy spell after a parried one.
+# Every moment a read can Break him in play: between two attacks, each beat of his spit, his belly bump winding up
+# and charging, each beat of his string (a hop's latch with its splash zone down among them), his nap and his time
+# on his back, the headbutt winding up at a rooted player, and the dizzy spell after a parried one.
 static func entry_cases(t) -> Array:
 	var sm = t.sm
 	var boss = t.boss
@@ -61,11 +63,22 @@ static func entry_cases(t) -> Array:
 			return sm.current_state.name == "Spit" and boss.current_anim == &"spit_windup"],
 		["glob", "a glob in the air", func(): sm.on_child_transition(sm.current_state, "Spit"), func():
 			return not t.hazards_of("DannyBossGlobScript.gd").is_empty()],
+		["bump_windup", "the belly bump's wind-up", func(): sm.on_child_transition(sm.current_state, "BellyBump"), func():
+			var bump = sm.states["BellyBump"]
+			return sm.current_state == bump and bump.beat == bump.Beat.WINDUP],
+		["bump_charge", "the belly bump's charge", func(): sm.on_child_transition(sm.current_state, "BellyBump"), func():
+			var bump = sm.states["BellyBump"]
+			return sm.current_state == bump and bump.beat == bump.Beat.RUN],
 		["hovering", "hovering over the player in the string", func(): sm.on_child_transition(sm.current_state, "Slams"), func():
 			return sm.current_state.name == "Slams" and boss.current_anim == &"air" and boss.lift_px >= 300.0],
 		["drop", "the string's drop", func(): sm.on_child_transition(sm.current_state, "Slams"), func():
 			return sm.current_state.name == "Slams" and boss.current_anim == &"slam_drop"],
+		["hop_latch", "a hop's latch, its splash zone down", func(): sm.on_child_transition(sm.current_state, "Slams"), func():
+			var slams = sm.states["Slams"]
+			return sm.current_state == slams and slams.beat == slams.Beat.LATCH and slams.slam < slams.slams 				and not t.hazards_of("DannyBossSplash.gd").is_empty()],
 		["asleep", "his nap", func(): sm.on_child_transition(sm.current_state, "Sleep"), func(): return sm.is_sleeping()],
+		["on_back", "on his back after a parried slam", func(): sm.enter_on_back(3.0, 6, true, &"slam"), func():
+			return sm.is_on_back() and sm.current_state.is_window()],
 		["headbutt", "the headbutt's wind-up at a rooted player", rooted, func():
 			return sm.current_state.name == "Headbutt" and boss.current_anim == &"headbutt_windup" and t.player.is_action_locked],
 		["staggered", "dizzy after a parried headbutt", func(): sm.on_child_transition(sm.current_state, "Staggered"), func():
@@ -102,30 +115,34 @@ static func extra(t) -> void:
 		t.check(result == 3 and is_equal_approx(gauge.value, gauge.parry_gain), "PARRIED, and the gauge %.3f: one read, not two (%.3f)" % [gauge.parry_gain, gauge.value])
 
 	if wanted.has("ring"):
-		t.log_p("-- a perfect dodge of a quake ring earns nothing; of a slam, a read")
+		t.log_p("-- a perfect dodge of a quake ring earns nothing; of the big slam, a read; of a hop, a read")
 		await t.reset_gauged(SPEC.home)
 		await t.settle_player(Vector2(500, 700))
 		var ring_dodged: bool = await perfect_dodge(t, &"danny_quake_ring")
 		var after_ring: float = gauge.value
 		var slam_dodged: bool = await perfect_dodge(t, &"danny_butt_slam")
+		var after_slam: float = gauge.value
+		var hop_dodged: bool = await perfect_dodge(t, &"danny_hop_slam")
 		t.check(ring_dodged and after_ring == 0.0, "a ring dashed through for a perfect dodge: the gauge stays at %.1f" % after_ring)
-		t.check(slam_dodged and is_equal_approx(gauge.value, gauge.perfect_dodge_gain), "a slam the same way: one read (%.3f)" % gauge.value)
+		t.check(slam_dodged and is_equal_approx(after_slam, gauge.perfect_dodge_gain), "the big slam the same way: one read (%.3f)" % after_slam)
+		t.check(hop_dodged and is_equal_approx(gauge.value - after_slam, gauge.perfect_dodge_gain), "a hop the same way: one read (%.3f)" % (gauge.value - after_slam))
 
 	if wanted.has("string"):
-		t.log_p("-- a Break mid-string takes every ring and puddle with it")
+		t.log_p("-- a Break mid-string takes every puddle, splash and ring with it")
 		await t.reset_gauged(SPEC.home)
 		await t.settle_player(t.OUT_OF_REACH)
 		sm.on_child_transition(sm.current_state, "Spit")
-		var spat: bool = await t.wait_until(func(): return sm.live_puddles().size() == 2, 300)
+		var spat: bool = await t.wait_until(func(): return sm.live_puddles().size() == 4, 300)
 		sm.on_child_transition(sm.current_state, "Slams")
-		var rolling: bool = await t.wait_until(func(): return not t.hazards_of("DannyBossQuakeRingScript.gd").is_empty(), 400)
+		var slams = sm.states["Slams"]
+		var landed: bool = await t.wait_until(func(): return sm.current_state == slams and not slams.puddles_left.is_empty(), 400)
 		var puddles_in: int = sm.live_puddles().size()
-		var rings_in: int = t.hazards_of("DannyBossQuakeRingScript.gd").size()
+		var splashes_in: int = t.hazards_of("DannyBossSplash.gd").size()
 		await t.force_break()
 		await t.wait(2)
-		t.log_p("before the Break: %d puddles, %d rings; after: %s, hazards %d, puddles %d" % [puddles_in, rings_in, sm.current_state.name, t.live_hazards().size(), sm.live_puddles().size()])
-		t.check(spat and rolling and rings_in > 0, "two puddles down, then a ring rolling mid-string")
-		t.check(sm.current_state.name == "Broken" and t.live_hazards().is_empty() and sm.live_puddles().is_empty(), "the Break mid-string leaves no ring or puddle")
+		t.log_p("before the Break: %d puddles, %d splashes; after: %s, hazards %d, puddles %d" % [puddles_in, splashes_in, sm.current_state.name, t.live_hazards().size(), sm.live_puddles().size()])
+		t.check(spat and landed and puddles_in >= 4, "four puddles down, then a hop's own puddle mid-string (%d live)" % puddles_in)
+		t.check(sm.current_state.name == "Broken" and t.live_hazards().is_empty() and sm.live_puddles().is_empty(), "the Break mid-string leaves no puddle, splash or ring")
 
 	if wanted.has("sleep"):
 		t.log_p("-- a Break from his nap stops the regen")

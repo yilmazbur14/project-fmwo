@@ -13,7 +13,7 @@ const SPEC := {
 	# plain parry, and nothing of his is blockable, so there is no second, strong one to name.
 	"light": &"computah_chase",
 	"strong": &"",
-	"foreign": &"josh_card_throw",
+	"foreign": &"eric_quake_wave_v2",
 	"punish_state": "Punish",
 	"broken_state": "Broken",
 	# The beam alone since 2026-09-24 (ComputahStateMachine.live_attacks). The entry cases below still break him out

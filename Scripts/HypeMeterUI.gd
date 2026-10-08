@@ -5,6 +5,9 @@ extends Control
 # that corner.
 
 const DefenseHypeArtLayout := preload("res://Scripts/DefenseHypeArtLayout.gd")
+const HudPlayerFade := preload("res://Scripts/HudPlayerFade.gd")
+# This HUD's own player, from its CanvasLayer under MainPlayer.
+const PLAYER_SPRITE := ^"../../CharacterBody2D/Sprite2D"
 
 const BALLOON_SCENE := "res://Scenes/balloon.tscn"
 
@@ -28,6 +31,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	modulate.a = 0.0
 	_build(spec)
+	HudPlayerFade.wrap(self, get_node_or_null.bind(PLAYER_SPRITE))
 	bar.max_value = hype.max_hype
 	_show(hype.hype)
 	hype.hype_changed.connect(_on_hype_changed)

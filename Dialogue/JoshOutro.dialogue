@@ -2,11 +2,9 @@
 # player_won: the player beat Josh. player_lost: Josh beat the player.
 
 ~ player_won
-Josh: You counted them. Nobody counts them.
-Josh: Keep the deck, kid. Don't let it go to your head.
+Josh: Still not gonna play street fighter pal but you can move to the next boss.
 => END
 
 ~ player_lost
-Josh: House rules. The house shuffles.
-Josh: Come back when you can tell a bomb from a bluff.
+Josh: Should've played sun and moon....
 => END

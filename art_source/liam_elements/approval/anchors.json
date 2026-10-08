@@ -1,0 +1,573 @@
+{
+ "note": "APPROVAL PASS numbers (texels, scale 3). Hard numbers follow PLAN.md section 8.",
+ "scale": 3,
+ "liam_cells": {
+  "size": [
+   96,
+   96
+  ],
+  "liam_png_at": [
+   16,
+   32
+  ],
+  "anchor_point": [
+   48,
+   96
+  ],
+  "feet_texel_row": 95,
+  "sprite_offset_texels": [
+   0,
+   -48
+  ],
+  "perch_box": {
+   "top_row": 30,
+   "x": [
+    12,
+    83
+   ],
+   "why": "on the pillar his feet are at screen (960,198): row 30 = screen y 0; x 12..83 = the rope doorway 852..1068"
+  }
+ },
+ "liam_png_numbers": {
+  "black_ratio": 0.2819,
+  "colours": 35,
+  "keyline": "#000000"
+ },
+ "keyposes": [
+  {
+   "frame": 0,
+   "name": "a_idle",
+   "where": "perch",
+   "drawn_box": [
+    12,
+    32,
+    77,
+    95
+   ],
+   "drawn_width": 66,
+   "black_ratio": 0.2975,
+   "colours": 38,
+   "staff_tip_orb": [
+    21.0,
+    41.0
+   ]
+  },
+  {
+   "frame": 1,
+   "name": "b_cast_tsunami",
+   "where": "perch",
+   "drawn_box": [
+    12,
+    32,
+    77,
+    95
+   ],
+   "drawn_width": 66,
+   "black_ratio": 0.2973,
+   "colours": 37,
+   "staff_tip_orb": [
+    22.5,
+    41.0
+   ]
+  },
+  {
+   "frame": 2,
+   "name": "c_wobble",
+   "where": "perch",
+   "drawn_box": [
+    13,
+    32,
+    81,
+    95
+   ],
+   "drawn_width": 69,
+   "black_ratio": 0.3111,
+   "colours": 38
+  },
+  {
+   "frame": 3,
+   "name": "d_air_blast",
+   "where": "perch",
+   "drawn_box": [
+    20,
+    32,
+    82,
+    95
+   ],
+   "drawn_width": 63,
+   "black_ratio": 0.318,
+   "colours": 38,
+   "staff_tip_orb": [
+    74.0,
+    70.0
+   ]
+  },
+  {
+   "frame": 4,
+   "name": "e_laugh",
+   "where": "ground",
+   "drawn_box": [
+    18,
+    27,
+    77,
+    95
+   ],
+   "drawn_width": 60,
+   "black_ratio": 0.2894,
+   "colours": 34
+  },
+  {
+   "frame": 5,
+   "name": "f_staff_from_mouth",
+   "where": "ground",
+   "drawn_box": [
+    18,
+    4,
+    80,
+    95
+   ],
+   "drawn_width": 63,
+   "black_ratio": 0.2933,
+   "colours": 38
+  },
+  {
+   "frame": 6,
+   "name": "g_summon_slam",
+   "where": "ground",
+   "drawn_box": [
+    4,
+    32,
+    77,
+    95
+   ],
+   "drawn_width": 74,
+   "black_ratio": 0.3102,
+   "colours": 37,
+   "staff_butt": [
+    18.5,
+    95.0
+   ]
+  },
+  {
+   "frame": 7,
+   "name": "h_dazed",
+   "where": "ground",
+   "drawn_box": [
+    8,
+    33,
+    95,
+    94
+   ],
+   "drawn_width": 88,
+   "black_ratio": 0.3083,
+   "colours": 38,
+   "daze_point": [
+    47.0,
+    36.0
+   ],
+   "head_top": [
+    48,
+    44
+   ]
+  },
+  {
+   "frame": 8,
+   "name": "i_cold_air",
+   "where": "perch",
+   "drawn_box": [
+    12,
+    32,
+    77,
+    95
+   ],
+   "drawn_width": 66,
+   "black_ratio": 0.281,
+   "colours": 38,
+   "mouth": [
+    43.5,
+    55.0
+   ]
+  },
+  {
+   "frame": 9,
+   "name": "j_tremor_slam",
+   "where": "perch",
+   "drawn_box": [
+    18,
+    34,
+    76,
+    95
+   ],
+   "drawn_width": 59,
+   "black_ratio": 0.2986,
+   "colours": 38,
+   "staff_butt": [
+    67.5,
+    95.0
+   ]
+  }
+ ],
+ "hand_over": {
+  "DEFEAT_LIAM_FEET": [
+   157,
+   153
+  ],
+  "DEFEAT_BIXBY_FEET": [
+   88,
+   152
+  ],
+  "convention": "bixby_beast_defeat.png frame 9 texels (192x160 frame); y is the lowest texel row under the figure, as Bixby ANCHOR (96,151) sits on his lowest row",
+  "slimed_sit_offset": [
+   109,
+   58
+  ],
+  "slimed_sit_rule": "defeat frame 9 texel = slimed_sit texel + offset; frame 9 (157,153) = cell (48,95), i.e. the cell anchor point (48,96) is defeat point (157,154)"
+ },
+ "staff": {
+  "cell": [
+   24,
+   68
+  ],
+  "orb_centre": [
+   11.5,
+   9.5
+  ],
+  "butt": [
+   11.5,
+   63.5
+  ],
+  "length_butt_to_orb": 54,
+  "frames": [
+   "neutral",
+   "water",
+   "earth",
+   "air",
+   "fire"
+  ],
+  "gems": "AIR crown, WATER left, FIRE right, EARTH throat; the orb shows the element being bent"
+ },
+ "pillar": {
+  "cell": [
+   64,
+   80
+  ],
+  "anchor_floor_line_centre": [
+   32,
+   72
+  ],
+  "stand_point": [
+   32,
+   22
+  ],
+  "stand_height_texels": 50,
+  "column_x": [
+   14,
+   49
+  ],
+  "top_slab_rows": [
+   14,
+   30
+  ],
+  "footprint_texels": {
+   "x": [
+    -18,
+    18
+   ],
+   "y": [
+    -16,
+    0
+   ]
+  },
+  "drawn_x": [
+   8,
+   55
+  ],
+  "drawn_width": 48,
+  "frames": {
+   "rise": [
+    0,
+    4
+   ],
+   "stand": [
+    5,
+    10
+   ],
+   "crumble": [
+    11,
+    16
+   ]
+  },
+  "rise_last_equals_stand0": true,
+  "runes": "6 notches, frame 5+h has 6-h lit (top goes dark first)",
+  "rune_rows": [
+   35,
+   41,
+   47,
+   53,
+   59,
+   65
+  ]
+ },
+ "pillar_shield": {
+  "cell": [
+   64,
+   80
+  ],
+  "anchor": [
+   32,
+   72
+  ],
+  "frames": 4,
+  "loop": true
+ },
+ "pillar_dust": {
+  "cell": [
+   64,
+   80
+  ],
+  "anchor": [
+   32,
+   72
+  ],
+  "frames": 3
+ },
+ "wave": {
+  "size": [
+   282,
+   120
+  ],
+  "hit_band_px": [
+   846,
+   360
+  ],
+  "front_edge_row": 119,
+  "frames": 3,
+  "built_from": {
+   "body_tile": [
+    94,
+    80
+   ],
+   "crest_strip": [
+    94,
+    40
+   ],
+   "tiles_across": 3,
+   "crest_rows": [
+    80,
+    119
+   ]
+  },
+  "mirror": "allowed",
+  "keyline": false
+ },
+ "wave_edge": {
+  "size": [
+   10,
+   120
+  ],
+  "wave_edge_column": 6,
+  "optional": true,
+  "use": "at the left wave right end; mirrored for the right wave"
+ },
+ "wave_tell": {
+  "size": [
+   282,
+   24
+  ],
+  "frames": 3,
+  "anchor": "bottom edge sits on the rope line"
+ },
+ "wave_collapse": {
+  "size": [
+   282,
+   120
+  ],
+  "frames": 3
+ },
+ "wave_splash": {
+  "size": [
+   32,
+   32
+  ],
+  "pivot": [
+   16,
+   20
+  ],
+  "frames": 4
+ },
+ "gust_burst": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot_staff_tip": [
+   24,
+   24
+  ],
+  "frames": 4,
+  "opens": "+y (at the player)"
+ },
+ "gust_trail": {
+  "size": [
+   24,
+   32
+  ],
+  "pivot": [
+   12,
+   31
+  ],
+  "frames": 3,
+  "use": "on the launched player feet"
+ },
+ "cold_breath": {
+  "size": [
+   40,
+   100
+  ],
+  "pivot_mouth": [
+   20,
+   2
+  ],
+  "frames": 4,
+  "plume_length": 97,
+  "max_width": 40,
+  "tags": {
+   "start": 0,
+   "loop": [
+    1,
+    2
+   ],
+   "end": 3
+  }
+ },
+ "flood": {
+  "tile": [
+   64,
+   64
+  ],
+  "frames": 6,
+  "nested": true,
+  "semi_transparent": true,
+  "flip": false
+ },
+ "ice": {
+  "tile": [
+   64,
+   64
+  ],
+  "frames": 2,
+  "notes": "frame 1 = glint"
+ },
+ "ice_melt": {
+  "tile": [
+   64,
+   64
+  ],
+  "frames": 3,
+  "last_equals": "flood frame 5"
+ },
+ "ice_shatter": {
+  "tile": [
+   64,
+   64
+  ],
+  "frames": 4
+ },
+ "freeze_front": {
+  "size": [
+   16,
+   16
+  ],
+  "pivot": [
+   8,
+   8
+  ],
+  "frames": 3
+ },
+ "tremor_block": {
+  "size": [
+   96,
+   32
+  ],
+  "footprint_rows": [
+   8,
+   31
+  ],
+  "frames": 17,
+  "phases": {
+   "tell": [
+    0,
+    3
+   ],
+   "heave": [
+    4,
+    6
+   ],
+   "active": [
+    7,
+    10
+   ],
+   "pulse": [
+    11,
+    12
+   ],
+   "crumble": [
+    13,
+    16
+   ]
+  },
+  "tell_colour": "earth green 7fd35a with white core (not red, not yellow)",
+  "ends_overlap_texels": 16
+ },
+ "tremor_crack": {
+  "size": [
+   16,
+   8
+  ],
+  "pivot": [
+   0,
+   4
+  ],
+  "frames": 3
+ },
+ "slam_burst": {
+  "size": [
+   32,
+   16
+  ],
+  "pivot_staff_butt": [
+   16,
+   15
+  ],
+  "frames": 3
+ },
+ "files": [
+  "liam_staff.png",
+  "liam_elements_keyposes.png",
+  "liam_slimed_sit.png",
+  "liam_pillar.png",
+  "liam_pillar_shield.png",
+  "liam_pillar_dust.png",
+  "liam_wave.png",
+  "liam_wave_crest.png",
+  "liam_wave_body.png",
+  "liam_wave_edge.png",
+  "liam_wave_tell.png",
+  "liam_wave_collapse.png",
+  "liam_wave_splash.png",
+  "liam_gust_burst.png",
+  "liam_gust_trail.png",
+  "liam_cold_breath.png",
+  "liam_flood.png",
+  "liam_ice.png",
+  "liam_ice_melt.png",
+  "liam_ice_shatter.png",
+  "liam_freeze_front.png",
+  "liam_tremor_block.png",
+  "liam_tremor_crack.png",
+  "liam_slam_burst.png",
+  "liam_elements_mock_attack1.png",
+  "liam_elements_mock_attack2.png",
+  "liam_elements_contact.png"
+ ]
+}

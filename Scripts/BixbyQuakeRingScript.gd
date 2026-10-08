@@ -14,6 +14,26 @@ const HitInfo := preload("res://Scripts/HitInfo.gd")
 # the ring is added, on his feet.
 var speed := 240.0
 var player: CharacterBody2D
+# The rest is Bixby's ring unless whoever adds it sets its own (Liam's fire rings): the id its hits carry, its sheet
+# (frames across, rows by tangent, each frame frame_size), where its art is shown and where its band hurts.
+var attack_id := &"bixby_quake_ring"
+var sheet_path := CombinedLayout.RING_SHEET
+var frames := CombinedLayout.RING_FRAMES
+var rows := CombinedLayout.RING_ROWS
+var frame_size := Vector2(40, 32)
+var shown_rect := CombinedLayout.RING_ROPE_ART
+var hurt_rect := CombinedLayout.RING_HURT_AREA
+# At max_radius it stops hurting and dies over die_time: through its dying rows (rows..2 rows - 1) if its sheet has
+# them, faded out if not. INF grows on to the ropes, as Bixby's always has.
+var max_radius := INF
+var die_time := 0.0
+var dying := false
+var die_clock := 0.0
+# Beast Bixby's own rings (his send_quake_ring): born under his claws, so on the frame it is born the band reaches all
+# the way in, and a player standing between his claws is caught by the pound itself. Without it they were left inside
+# every ring for good: the playtest of 2026-10-04 found his feet a spot no ring of his ever reached.
+var hurts_inside_at_birth := false
+var born := false
 
 var radius := CombinedLayout.RING_START_RADIUS
 var elapsed := 0.0
@@ -29,11 +49,32 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	elapsed += delta
+	if dying:
+		die_clock += delta
+		_draw()
+		if die_clock >= die_time:
+			queue_free()
+		return
 	radius += speed * delta
+	if radius >= max_radius:
+		radius = max_radius
+		extinguish(die_time)
+		return
 	_draw()
 	_damage_player()
+	born = true
 	if _has_passed_the_floor():
 		queue_free()
+
+
+# Put out where it is: it stops hurting at once and dies over `time`.
+func extinguish(time := 0.2) -> void:
+	if dying:
+		return
+	dying = true
+	die_time = maxf(time, 0.0)
+	die_clock = 0.0
+	_draw()
 
 
 func _draw() -> void:
@@ -50,17 +91,22 @@ func _place_segments() -> void:
 	if count != segments.size():
 		segments = CombinedLayout.ring_segments(count)
 	if tiles.size() < count:
-		var sheet: Texture2D = load(CombinedLayout.RING_SHEET)
+		var sheet: Texture2D = load(sheet_path)
 		while tiles.size() < count:
 			var tile := Sprite2D.new()
 			tile.texture = sheet
-			tile.hframes = CombinedLayout.RING_FRAMES
-			tile.vframes = CombinedLayout.RING_ROWS
+			tile.hframes = frames
+			tile.vframes = maxi(roundi(sheet.get_height() / frame_size.y), rows)
 			tile.scale = Vector2(CombinedLayout.SCALE, CombinedLayout.SCALE)
 			tiles.append(tile)
 			add_child(tile)
 	var beat := int(elapsed / CombinedLayout.RING_FRAME_TIME)
 	var snap := CombinedLayout.RING_SNAP
+	# Dying: through its dying rows once if the sheet has them, the living ones faded out if not.
+	var dying_rows := dying and not tiles.is_empty() and tiles[0].vframes >= 2 * rows
+	var dying_frame := mini(int(die_clock / maxf(die_time, 0.001) * frames), frames - 1)
+	if dying and not dying_rows:
+		modulate.a = clampf(1.0 - die_clock / maxf(die_time, 0.001), 0.0, 1.0)
 	for i in count:
 		var tile := tiles[i]
 		var theta: float = segments[i][0]
@@ -68,9 +114,12 @@ func _place_segments() -> void:
 		var at := global_position + Vector2(cos(theta), sin(theta) * CombinedLayout.FLOOR_FLATTEN) * radius
 		at = (at / snap).round() * snap
 		tile.position = at - global_position
-		tile.frame = row * CombinedLayout.RING_FRAMES + (beat + i) % CombinedLayout.RING_FRAMES
+		if dying_rows:
+			tile.frame = (row + rows) * frames + dying_frame
+		else:
+			tile.frame = row * frames + (beat + i) % frames
 		tile.flip_h = segments[i][2]
-		tile.visible = CombinedLayout.ring_segment_shown(at, row)
+		tile.visible = CombinedLayout.ring_segment_shown(at, row, shown_rect)
 
 
 # The crest tiles round the ellipse, each standing on its ground point so it sorts with whoever stands in
@@ -109,13 +158,14 @@ func _damage_player() -> void:
 	for corner in _corners(on_floor):
 		farthest = maxf(farthest, corner.length())
 	var half_width := CombinedLayout.RING_HURT_HALF_WIDTH
-	if nearest > radius + half_width or farthest < radius - half_width:
+	var inner := -INF if hurts_inside_at_birth and not born else radius - half_width
+	if nearest > radius + half_width or farthest < inner:
 		return
-	player.receive_hit(HitInfo.make(&"bixby_quake_ring", self, global_position))
+	player.receive_hit(HitInfo.make(attack_id, self, global_position))
 
 
 func _has_passed_the_floor() -> bool:
-	var area := Rect2(CombinedLayout.RING_HURT_AREA.position - global_position, CombinedLayout.RING_HURT_AREA.size)
+	var area := Rect2(hurt_rect.position - global_position, hurt_rect.size)
 	for corner in _corners(area):
 		if Vector2(corner.x, corner.y / CombinedLayout.FLOOR_FLATTEN).length() > radius - CombinedLayout.RING_HURT_HALF_WIDTH:
 			return false

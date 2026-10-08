@@ -64,7 +64,8 @@ func _main() -> void:
 
 	# Full, a half, both frames of the warning heartbeat, the last half, and the frames a break and a
 	# gain actually play.
-	for health in [6, 5]:
+	var full := PlayerHealthArtLayout.CONTAINERS * 2
+	for health in [full, full - 1]:
 		hearts.update_health(health)
 		await _shot(6)
 	# A whole heart left, then both beat frames at the last half: the run has to follow what the
@@ -74,12 +75,12 @@ func _main() -> void:
 	hearts.update_health(1)
 	for i in 2:
 		await _shot(int(PlayerHealthArtLayout.LOW_FRAME_TIME * 60.0) + 1)
-	hearts.update_health(6)
+	hearts.update_health(full)
 	await wait(2)
-	hearts.update_health(4)
+	hearts.update_health(full - 2)
 	for i in 5:
 		await _shot(3)
-	hearts.update_health(6)
+	hearts.update_health(full)
 	for i in 4:
 		await _shot(3)
 

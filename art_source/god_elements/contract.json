@@ -1,0 +1,1254 @@
+{
+ "pass": "Elemental Wheel FULL SET, 2026-10-06 (approved: 'approve all, ash fur, keep liam's size'). Staged in scratchpad/god_elements/full/; nothing shipped.",
+ "scale": "3x world (2 screen px a texel under the god fight's 2/3 view). Texels from each frame's top-left; a 'corner' is a texel's top-left corner.",
+ "staging": {
+  "finding": "At the plan's WHEEL_HUB (960, 820) the 192x192 wheel (radius 90.5 texels + 4 of lit glow = 284 world px) overlaps Jordan's lower body by ~30 screen px (stills/still_3_double_fire_air_plan.png); the plan sized the hub for a 144 wheel.",
+  "recommended": {
+   "WHEEL_HUB": [
+    960,
+    924
+   ],
+   "liam_anchor_world": [
+    960,
+    1044
+   ],
+   "icon_point_world": [
+    960,
+    780
+   ],
+   "why": "clears his lowest texel by >= 12 screen px, and Liam's float pivot (body corner 48, 56) lands on the hub: e.g. LIAM_FEET (960, 1194) with LIAM_LIFT 150, or keep LIAM_FEET and lift 28"
+  },
+  "stills": [
+   "stills/still_1_cast_water_stop_fixed.png",
+   "stills/still_2_bite_snap_fixed.png",
+   "stills/still_3_double_fire_air_fixed.png",
+   "stills/still_3_double_fire_air_plan.png (the overlap)"
+  ]
+ },
+ "liam": {
+  "dir": "Assets/Characters/Jordan/Puppets/liam/",
+  "cell": [
+   96,
+   96
+  ],
+  "anchor": [
+   48,
+   96
+  ],
+  "juggle": {
+   "cell": [
+    128,
+    96
+   ],
+   "feet": [
+    64,
+    95
+   ]
+  },
+  "no_staff": "every sheet is staff-less (the approved Avatar look); his fists stay where they gripped it",
+  "avatar_sheets": {
+   "channel": {
+    "frames": 6,
+    "times": [
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "back": [
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      55
+     ],
+     [
+      47,
+      55
+     ],
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      56
+     ]
+    ],
+    "wrists_recorded_no_ring": [
+     [
+      [
+       15,
+       63
+      ],
+      [
+       77,
+       63
+      ]
+     ],
+     [
+      [
+       15,
+       62
+      ],
+      [
+       77,
+       62
+      ]
+     ],
+     [
+      [
+       15,
+       60
+      ],
+      [
+       77,
+       60
+      ]
+     ],
+     [
+      [
+       15,
+       60
+      ],
+      [
+       77,
+       60
+      ]
+     ],
+     [
+      [
+       15,
+       62
+      ],
+      [
+       77,
+       62
+      ]
+     ],
+     [
+      [
+       15,
+       63
+      ],
+      [
+       77,
+       63
+      ]
+     ]
+    ],
+    "glow_strip": "liam_channel_avatar.png"
+   },
+   "blow": {
+    "frames": 6,
+    "times": [
+     0.15,
+     0.2,
+     0.12,
+     0.16,
+     0.14,
+     0.13
+    ],
+    "back": [
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      55
+     ],
+     [
+      47,
+      57
+     ],
+     [
+      47,
+      57
+     ],
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      56
+     ]
+    ],
+    "wrists_recorded_no_ring": [
+     [
+      [
+       21,
+       65
+      ],
+      [
+       72,
+       65
+      ]
+     ],
+     [
+      [
+       16,
+       41
+      ],
+      [
+       76,
+       41
+      ]
+     ],
+     [
+      [
+       16,
+       60
+      ],
+      [
+       76,
+       60
+      ]
+     ],
+     [
+      [
+       16,
+       60
+      ],
+      [
+       76,
+       60
+      ]
+     ],
+     [
+      [
+       15,
+       63
+      ],
+      [
+       77,
+       63
+      ]
+     ],
+     [
+      [
+       15,
+       63
+      ],
+      [
+       77,
+       63
+      ]
+     ]
+    ],
+    "glow_strip": "liam_blow_avatar.png"
+   },
+   "ignite": {
+    "frames": 5,
+    "times": [
+     0.06,
+     0.06,
+     0.06,
+     0.06,
+     0.06
+    ],
+    "back": [
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      56
+     ]
+    ],
+    "wrists_recorded_no_ring": [
+     [
+      [
+       22,
+       36
+      ],
+      [
+       74,
+       41
+      ]
+     ],
+     [
+      [
+       22,
+       35
+      ],
+      [
+       74,
+       41
+      ]
+     ],
+     [
+      [
+       16,
+       60
+      ],
+      [
+       68,
+       61
+      ]
+     ],
+     [
+      [
+       16,
+       60
+      ],
+      [
+       68,
+       61
+      ]
+     ],
+     [
+      [
+       16,
+       60
+      ],
+      [
+       68,
+       61
+      ]
+     ]
+    ],
+    "glow_strip": "liam_ignite_avatar.png"
+   },
+   "cast_left": {
+    "frames": 3,
+    "times": [
+     0.15,
+     0.15,
+     0.15
+    ],
+    "back": [
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      56
+     ]
+    ],
+    "wrists_recorded_no_ring": [
+     [
+      [
+       21,
+       36
+      ],
+      [
+       77,
+       63
+      ]
+     ],
+     [
+      [
+       15,
+       45
+      ],
+      [
+       77,
+       63
+      ]
+     ],
+     [
+      [
+       15,
+       56
+      ],
+      [
+       77,
+       63
+      ]
+     ]
+    ],
+    "glow_strip": "liam_cast_left_avatar.png"
+   },
+   "cast_right": {
+    "frames": 3,
+    "times": [
+     0.15,
+     0.15,
+     0.15
+    ],
+    "back": [
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      56
+     ],
+     [
+      47,
+      56
+     ]
+    ],
+    "wrists_recorded_no_ring": [
+     [
+      [
+       17,
+       37
+      ],
+      [
+       74,
+       37
+      ]
+     ],
+     [
+      [
+       17,
+       37
+      ],
+      [
+       76,
+       46
+      ]
+     ],
+     [
+      [
+       17,
+       37
+      ],
+      [
+       75,
+       51
+      ]
+     ]
+    ],
+    "glow_strip": "liam_cast_right_avatar.png"
+   },
+   "slam_rise": {
+    "frames": 3,
+    "times": [
+     0.15,
+     0.1,
+     0.75
+    ],
+    "back": [
+     [
+      47,
+      57
+     ],
+     [
+      47,
+      59
+     ],
+     [
+      47,
+      57
+     ]
+    ],
+    "wrists_recorded_no_ring": [
+     [
+      [
+       20,
+       41
+      ],
+      [
+       72,
+       41
+      ]
+     ],
+     [
+      [
+       26,
+       68
+      ],
+      [
+       66,
+       68
+      ]
+     ],
+     [
+      [
+       15,
+       50
+      ],
+      [
+       77,
+       50
+      ]
+     ]
+    ],
+    "glow_strip": "liam_slam_rise_avatar.png"
+   }
+  },
+  "avatar_body": "the float: his figure drawn 12 texels HIGHER in the cell than his standing rig (body (16, 20), not (16, 32)), legs hanging, toes down to row ~93. Float pivot corner (48, 56); head ring (46, 24) (+ the frame's bob); back (47, 56) (+ bob); drawn box at channel f0 Rect2(6, 21, 79, 73); his body without the arms about Rect2(28, 21, 40, 73); top 21.",
+  "pop_note": "switching from a standing sheet (wobble) to a float sheet (channel) moves his drawing up 36 world px: it hides inside the AVATAR lift; if it shows, lift 36 px less on the float sheets.",
+  "plain_sheets": {
+   "wobble": {
+    "frames": 4,
+    "times": [
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "back": [
+     [
+      45,
+      68
+     ],
+     [
+      47,
+      68
+     ],
+     [
+      49,
+      68
+     ],
+     [
+      47,
+      68
+     ]
+    ],
+    "anchor": [
+     48,
+     96
+    ]
+   },
+   "fall": {
+    "frames": 4,
+    "times": [
+     0.15,
+     0.15,
+     0.15,
+     0.15
+    ],
+    "back": [
+     [
+      56,
+      71
+     ],
+     [
+      42,
+      55
+     ],
+     [
+      43,
+      77
+     ],
+     [
+      48,
+      78
+     ]
+    ],
+    "anchor": [
+     48,
+     96
+    ]
+   },
+   "downed": {
+    "frames": 3,
+    "times": [
+     0.3,
+     0.3,
+     0.3
+    ],
+    "back": [
+     [
+      48,
+      78
+     ],
+     [
+      49,
+      78
+     ],
+     [
+      48,
+      78
+     ]
+    ],
+    "anchor": [
+     48,
+     96
+    ]
+   },
+   "defeat": {
+    "frames": 5,
+    "times": [
+     0.12,
+     0.12,
+     0.14,
+     0.2,
+     1.0
+    ],
+    "back": [
+     [
+      47,
+      68
+     ],
+     [
+      47,
+      72
+     ],
+     [
+      48,
+      78
+     ],
+     [
+      48,
+      74
+     ],
+     [
+      43,
+      77
+     ]
+    ],
+    "anchor": [
+     48,
+     96
+    ]
+   },
+   "juggle": {
+    "frames": 12,
+    "times": [
+     0.06,
+     0.08,
+     0.14,
+     0.08,
+     0.08,
+     0.08,
+     0.08,
+     0.07,
+     0.09,
+     0.14,
+     0.4,
+     0.4
+    ],
+    "back": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "anchor": [
+     64,
+     95
+    ]
+   }
+  },
+  "glow_strips": "liam_<sheet>_avatar.png: ADDITIVE (BLEND_MODE_ADD; transparent adds nothing), the same grid and frame count, frame-synced: blazing lenses (white-hot core, rune-blue rim), the arrow down his crown onto the plate and brow, a burning line down each forearm wrap to the hand, the open mouth glowing (shout / big / blow frames), and a 2-texel rim of light outside his silhouette (G1 then G2). At full strength body + strip = the approved Avatar look; fade the strip for the State's on/off.",
+  "aura": {
+   "files": [
+    "liam_avatar_aura_back.png (behind him)",
+    "liam_avatar_aura_front.png (in front of him)"
+   ],
+   "cell": [
+    128,
+    128
+   ],
+   "frames": 6,
+   "times": [
+    0.12
+   ],
+   "place": "aura texel corner (64, 104) on his anchor (= aura (16, 8) on the body cell's top-left); the orbit's centre (64, 64) is his float pivot",
+   "pose_free": "the orbit (the wind band and the 4 element motes) loops on its own over any Avatar sheet"
+  },
+  "extras": {
+   "liam_avatar_on.png": {
+    "frames": 5,
+    "times": [
+     0.06,
+     0.06,
+     0.08,
+     0.08,
+     0.12
+    ],
+    "blend": "add",
+    "over": "channel frame 0"
+   },
+   "liam_avatar_off.png": {
+    "frames": 4,
+    "times": [
+     0.08,
+     0.1,
+     0.12,
+     0.14
+    ],
+    "blend": "add",
+    "over": "channel frame 0"
+   }
+  }
+ },
+ "bixby": {
+  "dir": "Assets/Characters/Jordan/Puppets/bixby/",
+  "cell": [
+   192,
+   160
+  ],
+  "anchor": [
+   96,
+   151
+  ],
+  "juggle": {
+   "cell": [
+    256,
+    256
+   ],
+   "feet": [
+    128,
+    200
+   ],
+   "offset": [
+    0,
+    -72
+   ]
+  },
+  "fur": "ash (approved)",
+  "fire": "fire in or from his mouths keeps its own ember colours and no keyline; on the frames where he breathes or holds fire his eyes burn ember (#FFD55C / #FF7A2E, the roster's take-A glow); elsewhere rune blue",
+  "sheets": {
+   "bixby_beast": {
+    "frames": 4,
+    "back": [
+     [
+      95,
+      71
+     ],
+     [
+      95,
+      70
+     ],
+     [
+      95,
+      69
+     ],
+     [
+      95,
+      70
+     ]
+    ],
+    "rings": [
+     "head",
+     "head_l"
+    ],
+    "ember_eye_frames": []
+   },
+   "bixby_beast_fly": {
+    "frames": 3,
+    "back": [
+     [
+      104,
+      71
+     ],
+     [
+      104,
+      69
+     ],
+     [
+      104,
+      70
+     ]
+    ],
+    "rings": [
+     "head",
+     "head_l",
+     "head_r",
+     "knee_l",
+     "knee_r",
+     "wrist_l",
+     "wrist_r"
+    ],
+    "ember_eye_frames": []
+   },
+   "bixby_beast_flyby": {
+    "frames": 8,
+    "back": [
+     [
+      82,
+      60
+     ],
+     [
+      82,
+      60
+     ],
+     [
+      82,
+      60
+     ],
+     [
+      82,
+      60
+     ],
+     [
+      82,
+      60
+     ],
+     [
+      82,
+      60
+     ],
+     [
+      82,
+      60
+     ],
+     [
+      82,
+      60
+     ]
+    ],
+    "rings": [],
+    "ember_eye_frames": [
+     4,
+     5,
+     6,
+     7
+    ]
+   },
+   "bixby_perch": {
+    "frames": 16,
+    "back": [
+     [
+      95,
+      101
+     ],
+     [
+      95,
+      111
+     ],
+     [
+      95,
+      108
+     ],
+     [
+      95,
+      109
+     ],
+     [
+      95,
+      75
+     ],
+     [
+      95,
+      75
+     ],
+     [
+      95,
+      75
+     ],
+     [
+      95,
+      108
+     ],
+     [
+      95,
+      106
+     ],
+     [
+      95,
+      107
+     ],
+     [
+      95,
+      71
+     ],
+     [
+      95,
+      71
+     ],
+     [
+      95,
+      71
+     ],
+     [
+      95,
+      111
+     ],
+     [
+      95,
+      89
+     ],
+     [
+      95,
+      71
+     ]
+    ],
+    "rings": [
+     "head",
+     "head_l"
+    ],
+    "ember_eye_frames": [
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12
+    ]
+   },
+   "bixby_pound": {
+    "frames": 6,
+    "back": [
+     [
+      95,
+      70
+     ],
+     [
+      95,
+      71
+     ],
+     [
+      95,
+      77
+     ],
+     [
+      95,
+      90
+     ],
+     [
+      95,
+      84
+     ],
+     [
+      95,
+      74
+     ]
+    ],
+    "rings": [
+     "head",
+     "head_l"
+    ],
+    "ember_eye_frames": []
+   },
+   "bixby_beast_land": {
+    "frames": 3,
+    "back": [
+     [
+      95,
+      69
+     ],
+     [
+      95,
+      92
+     ],
+     [
+      95,
+      88
+     ]
+    ],
+    "rings": [],
+    "ember_eye_frames": []
+   },
+   "bixby_beast_recover": {
+    "frames": 4,
+    "back": [
+     [
+      96,
+      115
+     ],
+     [
+      95,
+      116
+     ],
+     [
+      95,
+      117
+     ],
+     [
+      104,
+      116
+     ]
+    ],
+    "rings": [],
+    "ember_eye_frames": []
+   },
+   "bixby_beast_hit": {
+    "frames": 2,
+    "back": [
+     [
+      95,
+      107
+     ],
+     [
+      95,
+      118
+     ]
+    ],
+    "rings": [],
+    "ember_eye_frames": []
+   },
+   "bixby_juggle": {
+    "frames": 12,
+    "back": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "rings": [],
+    "ember_eye_frames": []
+   },
+   "bixby_bite": {
+    "frames": 5,
+    "back": [
+     [
+      95,
+      67
+     ],
+     [
+      95,
+      74
+     ],
+     [
+      95,
+      79
+     ],
+     [
+      95,
+      81
+     ],
+     [
+      95,
+      69
+     ]
+    ],
+    "rings": [
+     "head"
+    ],
+    "ember_eye_frames": []
+   }
+  },
+  "back_rule": "between the wing roots on his middle head's axis: 59 rows under his headband plate's top edge (hover (95, 71)); the side-view flyby (82, 60) by hand; the juggle null",
+  "bite": {
+   "file": "bixby_bite.png",
+   "frames": 5,
+   "times": [
+    0.15,
+    0.1,
+    0.15,
+    0.06,
+    0.2
+   ],
+   "order": [
+    "rear",
+    "lunge start",
+    "lunge (jaws wide)",
+    "SNAP (contact)",
+    "recoil"
+   ],
+   "jaws": [
+    [
+     96,
+     61
+    ],
+    [
+     96,
+     68
+    ],
+    [
+     96,
+     73
+    ],
+    [
+     96,
+     73
+    ],
+    [
+     96,
+     63
+    ]
+   ],
+   "snap_frame": 3,
+   "back": [
+    [
+     95,
+     67
+    ],
+    [
+     95,
+     74
+    ],
+    [
+     95,
+     79
+    ],
+    [
+     95,
+     81
+    ],
+    [
+     95,
+     69
+    ]
+   ],
+   "note": "facing down the screen; his upper body moves as one ([-4, +3, +8, +10, -2] rows) over planted legs; frame 3 clamps the middle head's jaws shut; JAWS = the middle head's jaw centre"
+  },
+  "swim": "not drawn (optional): the fallback (hover clipped at row 100) stands"
+ },
+ "wheel": {
+  "dir": "Assets/Characters/Jordan/Wheel/",
+  "layout_at_rest": {
+   "TL": "water",
+   "TR": "earth",
+   "BR": "fire",
+   "BL": "air"
+  },
+  "element_wheel.png": {
+   "frames": 8,
+   "cell": [
+    192,
+    192
+   ],
+   "angles_cw_deg": [
+    0.0,
+    11.25,
+    22.5,
+    33.75,
+    45.0,
+    56.25,
+    67.5,
+    78.75
+   ],
+   "pivot_corner": [
+    96,
+    96
+   ],
+   "use": "angle t (clockwise deg): quarters = floor(t / 90) mod 4 as a code rotation (pixel-exact), frame = round((t mod 90) / 11.25); a frame 8 carries into the next quarter"
+  },
+  "stop": {
+   "pointer": "TOP-RIGHT; the element under it after k clockwise quarter turns from rest: k0 earth, k1 water, k2 air, k3 fire",
+   "quarters_for": {
+    "earth": 0,
+    "water": 1,
+    "air": 2,
+    "fire": 3
+   },
+   "second_pointer": "BOTTOM-RIGHT = the first turned 90 deg clockwise about the hub; it then sits on the primary's clockwise neighbour (k3 fire+air, k2 air+water, k1 water+earth, k0 earth+fire)"
+  },
+  "element_wheel_lit.png": {
+   "frames": 8,
+   "order": [
+    "water",
+    "earth",
+    "fire",
+    "air",
+    "fire_air",
+    "air_water",
+    "water_earth",
+    "earth_fire"
+   ],
+   "single_frame": {
+    "water": 0,
+    "earth": 1,
+    "fire": 2,
+    "air": 3
+   },
+   "double_frame_by_primary": {
+    "fire": 4,
+    "air": 5,
+    "water": 6,
+    "earth": 7
+   },
+   "drawn": "at REST orientation: turn it by the same quarters as the stop"
+  },
+  "element_wheel_pointer.png": {
+   "frames": 3,
+   "order": [
+    "rest",
+    "bump (a peg passing, 0.04 s)",
+    "lit"
+   ],
+   "cell": [
+    40,
+    40
+   ],
+   "frame_top_left_in_wheel_texels": [
+    150,
+    2
+   ],
+   "pivot": [
+    -54,
+    94
+   ],
+   "pivot_meaning": "the wheel's centre corner in pointer texels: turn the pointer about it (90 deg clockwise) for the second pointer",
+   "tip": [
+    [
+     8,
+     30
+    ],
+    [
+     9,
+     29
+    ],
+    [
+     8,
+     30
+    ]
+   ]
+  },
+  "pegs": "the four bone studs where the spokes meet the rim (on the axes at rest): one passes a pointer every 90 deg",
+  "element_icons.png": {
+   "frames": 8,
+   "cell": [
+    32,
+    32
+   ],
+   "pivot": [
+    16,
+    16
+   ],
+   "order": [
+    "fire_pop",
+    "fire",
+    "air_pop",
+    "air",
+    "water_pop",
+    "water",
+    "earth_pop",
+    "earth"
+   ]
+  },
+  "soft": {
+   "element_wheel_blur.png": "4 x 192, the disc at speed in 22.5-deg phases (with the quarter turns: 16 positions), drawn OVER the disc",
+   "element_wheel_form.png": "6 x 192, the wheel drawing itself in runes; backward = the dissolve",
+   "element_wheel_shatter.png": "6 x 208x208, pivot corner (104, 104)"
+  },
+  "light": "everything that turns with the disc and has volume (rim, studs, spokes, hub) is lit symmetrically, so neither the 11.25-deg frames nor the code's quarter turns make the light jump; the icons are painted RADIALLY (each one's top points out along its diagonal), so whichever element stops under the top-right pointer reads the same, tilted 45 deg toward it; the pointer (which does not turn with the disc) is lit from the upper left"
+ },
+ "hooks": "Scripts/JordanPuppetHooks.gd: an additive regeneration (liam and bixby BACK lines added inside const BACK; no live line changed) - see hooks.diff",
+ "ship": "manifest.json (stage path -> exact project path, sha256); ship_check.py --check (read-only)"
+}

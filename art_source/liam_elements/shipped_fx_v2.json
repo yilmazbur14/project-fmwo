@@ -1,0 +1,144 @@
+{
+ "approved": "2026-09-29, the user: \"approved but wheres the fire?\" (Liam FX v2 for attacks 1-2; picks: pillar dust 0.455 s, wave body shimmer + flood ripple hooks, crest/tell 0.06)",
+ "source": "art_source/liam_elements/fx_v2/ (contract.json there is canonical)",
+ "shipped_by": "coordinator; replaced files backed up to art_source/liam_elements/shipped_v1_backup/ first (exclusive-create); new names exclusive-create; sha256 verified",
+ "held_back": {
+  "liam_downdraft.png/.aseprite": "LiamArtLayout's DOWNDRAFT_FRAME/PIVOT/TIME are still provisional (8x32); ship after the coder copies the contract's 20x80 / (10,0) / 0.04"
+ },
+ "replaced": {
+  "Assets/Characters/Liam/Elements/liam_wave_crest.png": {
+   "old": "cb5599762d54f1882b0f2202c678292ae77396e39967a8f8621fb0b54f570b90",
+   "new": "691a940e11084b8e73e36cc882749e17e4ad8f7655d3b3f43a9a2867af144b20"
+  },
+  "Assets/Characters/Liam/Elements/liam_wave_crest.aseprite": {
+   "old": "97bd477ad33130c864133a5db59922f06f36783fb0c14e08931233262aa03b14",
+   "new": "83b311c1dfad429815acb21710f9ec7ed90bf7ac2a7f6a64fdd2c00a544b2ae4"
+  },
+  "Assets/Characters/Liam/Elements/liam_wave_body.png": {
+   "old": "52f9e0def3bee355459e532093ba80a9936f5fa6acd7124f762594c5755bb400",
+   "new": "56c0ca712c171b87b98c7f25e12d6003a405b6e9089ac59d8bf3950895c20a1e"
+  },
+  "Assets/Characters/Liam/Elements/liam_wave_body.aseprite": {
+   "old": "9afaf09c5f862feab859d8062f0c30c3523d853bf2ed9b12033eb757cabde4e0",
+   "new": "113442d6b07abcff79e59e0933b6c494987adf164cf4bc073c743ef9554a81d7"
+  },
+  "Assets/Characters/Liam/Elements/liam_wave_tell.png": {
+   "old": "3ae8628a38a3bcef9f1bae55063d10c01d6676420a4e4cf8a58db4cfaefd06f1",
+   "new": "6caca8b1e235b0c570b38aa239e35c248551b676d252cc8007bdf02cc37a2dce"
+  },
+  "Assets/Characters/Liam/Elements/liam_wave_tell.aseprite": {
+   "old": "8a42afcd752d408dbbcfb4529cf55ea9a059ce33eacc902b9ccb0434cbf951e3",
+   "new": "97462059b350ef0b53e99e49b854f31de35e9a523b0121aa2f2451461f7ed838"
+  },
+  "Assets/Characters/Liam/Elements/liam_wave_collapse.png": {
+   "old": "1a1d27a4c1a5baf08b433d2079f38fd172208644a28fd5926d8a76268417dad0",
+   "new": "6fb721265794e2c7f9f9ddd18a6eeca316f7b9b893149b4b0ee7ee0fd4ca6399"
+  },
+  "Assets/Characters/Liam/Elements/liam_wave_collapse.aseprite": {
+   "old": "e1a2ae6b256eaba7b078dc2f194766e2af558d7bfec020ccbca0507056cc5800",
+   "new": "b7da0447b583d7781f15e911ae0f7fcfde6c80a580c32e7c837fa5574f4ff680"
+  },
+  "Assets/Characters/Liam/Elements/liam_wave_splash.png": {
+   "old": "a4a7a2025836317fa5102412e53c301b194482f07260edcb97b5432a39f7ac7e",
+   "new": "06ba9e86310a282c2fd4b6df2b0ce5f4068113bb50c40ab360a1b8a02fa7d208"
+  },
+  "Assets/Characters/Liam/Elements/liam_wave_splash.aseprite": {
+   "old": "53ab4a42a22ec9314d5785c604acc19a3d3bf0b6673e8e40db4c76656a5740b9",
+   "new": "5d1785bf6ba5ed48458c601f4378c25aeca034ba2e8a22645d59dc672af4873c"
+  },
+  "Assets/Characters/Liam/Elements/liam_gust_burst.png": {
+   "old": "470d3004cf9e44157088603087065f0e8d70aa233929393ba6a525199f9704bc",
+   "new": "86725b6c700410865759da6c974442160cdb103fbd9d26d1366b496f21a46835"
+  },
+  "Assets/Characters/Liam/Elements/liam_gust_burst.aseprite": {
+   "old": "9c77977501f74a856336286903f284457506aa989a725d837beaa681956158cd",
+   "new": "791d63ca5428d72e42eb4fe6fdf2740102fd1d649e5a6a9a02503b42bfd1d142"
+  },
+  "Assets/Characters/Liam/Elements/liam_gust_trail.png": {
+   "old": "722f688a6566f5934f76dde76f6be911bd030aa2f50c87451ee0e2ed0401611a",
+   "new": "4766821bf7568c7084058b3d4895c8caf9625f760f30b7f53f06bfecfc37e7a5"
+  },
+  "Assets/Characters/Liam/Elements/liam_gust_trail.aseprite": {
+   "old": "1b308e53c4c5213a81fcc65a8a7132773fb51e7ca8f04be342b5207b9c512b1f",
+   "new": "b785b296cf8c1af80986396daea2529bef4f536791dc413ff293d8dc010c7f81"
+  },
+  "Assets/Characters/Liam/Elements/liam_cold_breath.png": {
+   "old": "eae18be336b5dc5dd923db6625c546661c73a348ced6a31d4b5560d16eb94cb0",
+   "new": "c29a9498d2266a8b9d66c5740304a262ec8ffe482cb878b484e68ec6121410bd"
+  },
+  "Assets/Characters/Liam/Elements/liam_cold_breath.aseprite": {
+   "old": "b460d1b821604d450b60bf608df20211c1733d169cf11371348c3de0f94fa800",
+   "new": "71b61c24f60807d83ac6548f4f7497d1e1019f2d791c5fe336b60c7f52b57afb"
+  },
+  "Assets/Characters/Liam/Elements/liam_freeze_front.png": {
+   "old": "96ec03037c857cebe1adf71827f9d75897c679abb4145155f87ab7ab4e2d51c4",
+   "new": "2899181b866e12f2a7b57cefd34adadbc7be0f8acaae7910bea820af6c547a88"
+  },
+  "Assets/Characters/Liam/Elements/liam_freeze_front.aseprite": {
+   "old": "9790494656fc4418810335a4cb525b18ceaa3e4f1acf4711db60eb660be7e2e0",
+   "new": "07d95571917d0108cacc92a055ca5aafe11b65ef2c1ca52972f569c491648f12"
+  },
+  "Assets/Characters/Liam/Elements/liam_ice_melt.png": {
+   "old": "050d44274884af107fe25abbf7934ababab3a35a1e3b6325912111e3b96e819b",
+   "new": "8144802567ebd4eeec928b30adb7699ed9bbb025d14386dbc4515b1baaf2215a"
+  },
+  "Assets/Characters/Liam/Elements/liam_ice_melt.aseprite": {
+   "old": "5f395aec68e54df399dc53715c405be843cc1c67c95e782fe9042a86cb82bdce",
+   "new": "f63a1a470c78f86c9be6c2236ee99bd17142addbb0d3674e1b1d5f55e68a79f0"
+  },
+  "Assets/Characters/Liam/Elements/liam_ice_shatter.png": {
+   "old": "fda8433e1d3fbe5c82bcbcb5a744d5bdc8017372626431d3207dff07f2a57056",
+   "new": "58409a4414d156c3fae4438296817b97a0c3e55b70eb2c2d9219f0b84746a2e2"
+  },
+  "Assets/Characters/Liam/Elements/liam_ice_shatter.aseprite": {
+   "old": "e0cbf8e5b0b31275e996940d129e6a1cbc2b1e8f8408a34176957455fc8cadd7",
+   "new": "3bb58f24dd1533ea631a097a87eb3dd2470fdc20683b1def01b5660f967bff9b"
+  },
+  "Assets/Characters/Liam/Elements/liam_tremor_block.png": {
+   "old": "ab93113e62e4eee8b094564e1ce89c5f17126346168bdb066abf1ca3530f3776",
+   "new": "2dc58ce4c76974a24cc6076f7491b8ec88dfb757d014a957203841dbef0a4079"
+  },
+  "Assets/Characters/Liam/Elements/liam_tremor_block.aseprite": {
+   "old": "2f0113aa187fe8e4f315c733b920808b8cb5a049b09a3263f507d69ce8c18dcf",
+   "new": "9bf16e9f1ca9abb9ac8a7d690bb7f659ffd51ad9b1b2730751ee7e294be1f755"
+  },
+  "Assets/Characters/Liam/Elements/liam_tremor_crack.png": {
+   "old": "e10d2dc6fea339d15813eb2c63077db91219eed369e90726de8c41cd12adb700",
+   "new": "659403e0156b62bee10c9bdffc47a2e23a368a79856c0b83f3cf789aa383a677"
+  },
+  "Assets/Characters/Liam/Elements/liam_tremor_crack.aseprite": {
+   "old": "5f3ed44094c5724ce2f550303c1d446b5485b2793fa4def09fd5991aa58edc9a",
+   "new": "a8f4a4b34f30dd8f94d391c35d79c24797adc2d1014eabe8e4cd713c9a0b8949"
+  },
+  "Assets/Characters/Liam/Elements/liam_slam_burst.png": {
+   "old": "227a7d80e6fd10e096113cfe4076949984d7de1edb79574c4301d4cf159b8531",
+   "new": "7966a67b24930dee648dceb1d3b54f7f7c9b380a03d9c3885f6e6cd27c137471"
+  },
+  "Assets/Characters/Liam/Elements/liam_slam_burst.aseprite": {
+   "old": "a4bb30c563793a785e1c699af3f4f02931abebb5891c5f7004dcadfe5cb034bf",
+   "new": "150e1804ad053bcae47868484d8926122f9ab2bb58efa51d28e6f40546a39531"
+  },
+  "Assets/Characters/Liam/Elements/liam_pillar_dust.png": {
+   "old": "bd0f566f69d5c50e432f0caaf680efa3f0ced805ce020c059b67609062b0b7b4",
+   "new": "811474acd8a3383b4a7d616a4996d76e6055b6d31e2e4df29f142536e70720f5"
+  },
+  "Assets/Characters/Liam/Elements/liam_pillar_dust.aseprite": {
+   "old": "49c1d7b7fd91f1bb4dac2dbc5b53037ea5910d8741590dbd7af75639bc734e12",
+   "new": "1f02f1da564fe9a57dc235bad210c19e353ff37bd1c6504d08cbd16ae109029a"
+  }
+ },
+ "new": {
+  "Assets/Characters/Liam/Elements/liam_flood_ripple.png": "3d75d0b7b7d451e6ac01d3f420381aa44964ebbbf98fc37ab5a4593ae9edf182",
+  "Assets/Characters/Liam/Elements/liam_flood_ripple.aseprite": "126dd7f52de50233a224bfc6bf0b78c307ee489b6ecc141b4a9261fe7d8b6d1d",
+  "Assets/Characters/Liam/Elements/liam_tremor_block_tell.png": "ce2bed232cb4aa10a687ff6415263bdd659450ad034c7c54c03215eb66da6ca5",
+  "Assets/Characters/Liam/Elements/liam_tremor_block_tell.aseprite": "9d92e3b674c4156f4e051560a4c12fca4b9f6eb6220995cf5357549896265773",
+  "Assets/Characters/Liam/Elements/liam_tremor_block_heave.png": "88da69c2f3e67a4e13f45880584828467e1fc6dbd19608e0aecc1022dad2356d",
+  "Assets/Characters/Liam/Elements/liam_tremor_block_heave.aseprite": "89a02a7985f0cf4da8e4f7f0d263b9f5b9e9d4bfaac08f7a5c1779416079fdd0",
+  "Assets/Characters/Liam/Elements/liam_tremor_block_active.png": "0bd65ffccec598947f3d3c050f1ca09ee30e4994674a7519b1574a14dc85ecae",
+  "Assets/Characters/Liam/Elements/liam_tremor_block_active.aseprite": "016bc05bf529c8390b5b69a2dfda012ee46b9cef7ad4f96aa654b9cf5a7b2614",
+  "Assets/Characters/Liam/Elements/liam_tremor_block_pulse.png": "a775f3cfd0f0057e7ff07f8794d00d8085d467fd7094f12c6cb0b92e478a9350",
+  "Assets/Characters/Liam/Elements/liam_tremor_block_pulse.aseprite": "b3f8be8856301ed2d23b431e85b5f8eb3ddd9073a9b127db279b7831f820090b",
+  "Assets/Characters/Liam/Elements/liam_tremor_block_crumble.png": "f95689b1b887687ce1e6cfe3738cc55b2ed496bb33b3e5e7fda2b645c270d215",
+  "Assets/Characters/Liam/Elements/liam_tremor_block_crumble.aseprite": "97b0a5428d8874cc4eb893c801d027988962921daca371a67cc693f287b802f7"
+ }
+}

@@ -35,6 +35,7 @@ var bypass_invincibility := false
 var hype_loss := true
 var no_perfect_dodge := false
 var parry_pass_through := false
+var dash_immunity := 0.0
 
 static var warned_areas := {}
 

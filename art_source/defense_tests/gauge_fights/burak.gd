@@ -13,7 +13,7 @@ const SPEC := {
 	"home": Vector2(960, 560),
 	"light": &"burak_shot",
 	"strong": &"",
-	"foreign": &"josh_card_throw",
+	"foreign": &"eric_quake_wave_v2",
 	"punish_state": "Taunt",
 	"broken_state": "Broken",
 	"cycle_states": ["Shots", "Barrels", "Cutlass"],
@@ -87,6 +87,8 @@ static func extra(t) -> void:
 	t.player.playerHealth = 1000
 	await t.wait(40)
 	await t.parry_once(&"burak_shot")
+	# Past the parry's window, or the press still parries the hit meant to land (a tap keeps its whole window now).
+	await t.past_window()
 	t.clear_iframes()
 	t.omni_hit(&"burak_shot", t.dummy_source())
 	var between: float = gauge.value
@@ -108,9 +110,9 @@ static func extra(t) -> void:
 	t.defense.clear_guard_break()
 	t.clear_iframes()
 	await t.wait(40)
-	await t.parry_once(&"josh_card_throw")
+	await t.parry_once(&"eric_quake_wave_v2")
 	t.clear_iframes()
-	t.omni_hit(&"josh_card_throw", t.dummy_source())
+	t.omni_hit(&"eric_quake_wave_v2", t.dummy_source())
 	t.check(gauge.value == 10.0, "someone else's attack, parried or landed: still %.0f" % gauge.value)
 
 	await t.reset_gauged(SPEC.home)

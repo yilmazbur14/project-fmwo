@@ -1,29 +1,37 @@
 extends Node
 
 # Matt's fight, boss 4. Intro once, then a repeating cycle: Idle (a breath), then the next attack in
-# attack_rotation, ending in Recover, which is the only punish window. After a finisher he staggers and
-# starts the next cycle; after a landed yell he idles a second and starts it.
-#   Attack 1, the Ezreal set: MysticVolley -> TrueshotBarrage -> Spent -> Recover at HOME.
-#   Attack 2, the Glass Row: GlassRow -> Recover where he stands, over the player (recover_spot).
-#   Attack 3, the Deafening Yell, is a Glass Row with cycle_deafen on: from phase_two_ratio of his
-#   health down, once a plain Glass Row has been seen, the next cycle is forced to be one with the yell,
-#   and every Glass Row after it has the yell too. Phase two only ever starts at a cycle boundary.
-# A full Break gauge (MattScript's BossBreakGauge) stops any of it dead: Broken, the window that pays out
+# attack_rotation, ending in Recover, his punish window: three landed hits daze him into the finisher. After a landed
+# yell he idles a second and starts the next cycle.
+#   The Ezreal set: MysticVolley -> TrueshotBarrage -> Spent -> EchoRoars -> Recover at HOME (echo_after_ezreal;
+#   with it off, Spent -> Recover).
+#   The Glass Row: GlassRow -> Recover where he stands, over the player (recover_spot).
+#   The Echo Roars (the user's pick, 2026-10-04): strings of roars on his theme's beat, every ring a parry, each
+#   string ended by BOOMBURSTs to dash through (echo_boombursts, two since 2026-10-06); phase two plays more strings.
+#   No silent X in either phase since 2026-10-06 (echo_feints_phase_one, echo_feints_phase_two). MattEchoRoars, built
+#   here rather than in his scene.
+#   The Deafening Yell is a Glass Row with cycle_deafen on. Phase two starts from phase_two_ratio of his health down
+#   (or at his first Break with phase_two_at_break on), only ever at a cycle boundary: once a plain Glass Row has
+#   been seen, the next cycle is forced to be one with the yell - unless the last was a Glass Row, so two never come
+#   together - and every Glass Row after it has the yell too. So the fight runs Ezreal set -> Glass Row and round
+#   again, every Glass Row in phase two after the first plain one Deafening.
+# EVERY WINDOW PAYS A FINISHER (MattScript.can_be_dazed, daze_in_recover, since 2026-10-05): three landed hits in
+# Recover daze him into the plain finisher. A full Break gauge stops any of it dead - Broken, the window that pays out
 # the tiered finisher, then Juggled if it does. Both are built here, not in his scene.
 #
 # THE DIFFICULTY DIAL IS tier(): his health's third, read by the Mystic casts and the booms, and locked
 # at the top of each cycle with the plan (plan_next) so a hit landing mid-attack can't change what the
-# rest of it does.
+# rest of it does. The glass has a dial of its own on his health's share (G12), locked with it.
 #
 # THE GLASS ROW'S RULES (MattGlassRow):
 #   G1  the root costs nothing and lands on the slam's step, never earlier.
 #   G2  one boom at a time; the arrow shows from its birth; the window is at least 0.40 s at row F
-#       (0.51 s dizzy) and grows each row down.
+#       (0.51 s dizzy), phase_two_charge_extra more in phase two, and grows each row down.
 #   G3  the first press decides; a wrong one fails only that boom; presses between booms do nothing.
 #   G4  the timing is the same whatever the answer.
 #   G5  a fail knocks the player a row toward the glass; the knock that reaches it is the glass: 2 damage
-#       once, the barrage ends and the player bounces back to the row in front of it. Three fails are
-#       free from row F, until phase two's stomps grow the glass (G11).
+#       once, the barrage ends and the player bounces back to the row in front of it. From row F three
+#       fails are free over two rows of glass, two over three and one over four (G12).
 #   G6  the glass can't be reached any other way: the player can't move, and it is gone before they are
 #       free.
 #   G7  the lock, pose, facing, prompt, wobble and FX all go back through one release().
@@ -31,9 +39,12 @@ extends Node
 #       pause or lines; the input always takes the true direction, whatever the view shows.
 #   G9  no yell in the fight's first Glass Row, and a mash passed means no wobble.
 #   G10 the window opens where he stands, straight over the player, with the usual yell rules.
-#   G11 phase two's booms come in phase_two_boom_sets sets with a stomp between each two, each laying one
-#       more row of glass toward the player, its shards' shadows first. Glass never forms under the player:
-#       one standing on that row is shoved a row forward, unhurt. The pattern is locked at the cycle's top.
+#   G11 phase two's booms come in phase_two_boom_sets sets with a stomp between each two, which brings
+#       shards down onto the glass's front row, their shadows first. It lays no glass, so the glass never
+#       moves under the player. The pattern is locked at the cycle's top.
+#   G12 the fury lays glass_rows_by_share rows of glass by his health's share, locked at the cycle's top:
+#       two above three quarters of it, three above half, four from half down. Glass past the drawn bed's
+#       two rows grows on in front of it a row at a time.
 #
 # FAIRNESS, AND WHERE EACH RULE LIVES:
 #   R1  a parry answers from any facing and one press parries everything in its window: the hit's
@@ -50,6 +61,24 @@ extends Node
 #   R8  the yell's throw happens only in Recover and lands inside the ropes, and his next bolt is at
 #       least 1.75 s behind it: post_yell_beat plus a cast's teleport and wind-up.
 #   R9  standing on a station still gets shot, answerable by a parry at the release or a dash.
+#
+# THE ECHO ROARS' RULES (MattEchoRoars and MattEchoRingScript), each held by its mode:
+#   E1  two first touches in a row on the player are at least parry_window and a step apart however they walk -
+#       a beat times v / (v + the walk's diagonal) - and a red ring and a BOOMBURST three beats (matt_echo_gaps).
+#   E2  a ring's whole disc touches for echo_birth_disc_time: no pocket on or under him (matt_echo_disc).
+#   E3  echo_ring_end_radius reaches every point of the player's floor from HOME, and the band can't be stepped
+#       over (matt_echo_disc).
+#   E4  one answer a ring, inside the i-frames; the parry re-armed echo_rearm_delay after every touch but a ghost's,
+#       so a whiffed or late press never locks the next ring out, while mashing still loses (matt_echo_parry).
+#   E5  the stamina bar held at echo_stamina_floor from the lead-in to the end of the outro (matt_echo_stamina).
+#   E6  no X in either phase since 2026-10-06: with both feint knobs off no ghost, X or punish ever spawns
+#       (matt_echo_feint). With a knob on: one X a string, never the instance's first roar, locked at the cycle's
+#       top (plan_echo); a press from echo_bite_grace past the ring before it to echo_bite_grace past its own bites,
+#       and its echo is a punish.
+#   E7  badge leads: a roar's echo_red_lead_beats, a string's first roar's echo_first_lead_beats, the BOOMBURST's
+#       echo_yellow_lead_beats in yellow; an X's the same as the red it stands in for (matt_echo).
+#   E8  nothing else of his alive under the rings: Spent and the Glass Row's release() see to it (matt_echo).
+#   E9  his badges and Xs over his crown at HOME, whole in the view and clear of the boss bar (matt_badge).
 #
 # Every wait in this fight is a Timer, a Physics_Update accumulator or a node-bound tween, so a pause
 # and a finisher's freeze hold all of it. Nothing may use get_tree().create_timer() or a tree-level
@@ -71,8 +100,10 @@ const VsCard := preload("res://Scripts/VsCard.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
 const BOLT_SCRIPT := preload("res://Scripts/MattMysticBoltScript.gd")
 const WAVE_SCRIPT := preload("res://Scripts/MattTrueshotScript.gd")
+const ECHO_RING_SCRIPT := preload("res://Scripts/MattEchoRingScript.gd")
 const MattBroken := preload("res://Scripts/States/Matt/MattBroken.gd")
 const MattJuggled := preload("res://Scripts/States/Matt/MattJuggled.gd")
+const MattEchoRoars := preload("res://Scripts/States/Matt/MattEchoRoars.gd")
 const PRE_FIGHT_DIALOGUE := "res://Dialogue/MattPreFight.dialogue"
 const HAZARD_GROUP := "matt_hazard"
 
@@ -96,7 +127,8 @@ const HUD_FADE_RECT := Rect2(680, -1080, 560, 1280)
 # The 12 lattice headings a bolt flies on: 22.5, 45 and 67.5 degrees off each axis, never along one.
 const LATTICE_STEP := 22.5
 # The Glass Row's floor plan, from the user's sketch (2026-09-23): six rows across the ring under him,
-# F at the top to A at the bottom. The player starts in F; the glass lies in B and A, rope to rope.
+# F at the top to A at the bottom. The player starts in F; the glass lies in the last rows, rope to rope,
+# as many as his health gives it (glass_rows_by_share): B and A while he has over three quarters of it.
 # Every px here is a y line or an x span; nothing else in the fight may hardcode a row.
 const GLASS_ROW := {
 	"station": Vector2(960, 350),      # his feet: top centre, above row F
@@ -106,19 +138,20 @@ const GLASS_ROW := {
 	"row_height": 90.0,                # about one player body length
 	"row_names": ["F", "E", "D", "C", "B", "A"],
 	"start_row": 0,                    # F
-	"glass_rows": [4, 5],              # B, A; must be the last rows
+	"bed_rows": 2,                     # the drawn glass tile's height; more grows on in front a row at a time
 	"glass_span": Vector2(113, 1805),  # rope to rope
 }
 # The player's origin stands this far over their soles.
 const BODY_OVER_FEET := 36.0
 
 #MYSTIC VOLLEY (seconds and px)
-# Lighter than the plan's [3, 4, 5] at 850, for the circle walker's density bound (matt_bots): the
-# Trueshots already land on a walker about once a cycle.
-@export var mystic_casts_by_tier: Array[int] = [3, 4, 4]
+# His 8/10 (2026-10-06) came from here, up from [3, 4, 4] and five bounces: a bolt pays one read however many
+# passes it makes, so more of them, living longer, is risk that never feeds his Break. Seven bounces at 750 still
+# burst within 11.2 s, inside the bolt's SAFETY_LIFE.
+@export var mystic_casts_by_tier: Array[int] = [5, 5, 5]
 @export var mystic_max_alive := 5
 @export var mystic_speed := 750.0
-@export var mystic_bounces := 5
+@export var mystic_bounces := 7
 @export var mystic_hit_radius := 12.0
 @export var mystic_windup := 0.45
 @export var mystic_after := 0.15
@@ -173,16 +206,18 @@ const BODY_OVER_FEET := 36.0
 @export var glass_hit_stop := 0.10
 @export var glass_bounce_time := 0.13
 @export var glass_edge_overshoot := 10.0
+# How many rows of glass a Glass Row lays by his health share (the user, 2026-09-27): two above
+# glass_row_shares.x of it, three above glass_row_shares.y, four from there down, all of them by the fury.
+@export var glass_rows_by_share: Array[int] = [2, 3, 4]
+@export var glass_row_shares := Vector2(0.75, 0.5)
 # Phase two's Glass Row (the user, 2026-09-24): its booms in this many even sets, and between each two a
-# short stomp - the knee up, the slam, then the stamping while the new row's shards fall - that lays one
-# more row of glass toward the player.
+# short stomp - the knee up, the slam, then the stamping while shards fall onto the glass's front row. Its
+# stomps laid a row of glass each until the user's 2026-09-27 playtest; now the fury lays all four.
 @export var phase_two_boom_sets := 3
 @export var glass_spread_tell := 0.20
 @export var glass_spread_slam := 0.15
 @export var glass_spread_time := 0.65
 @export var glass_spread_shards_per_segment := 1
-# A player on the row turning to glass is shoved a row forward over this long.
-@export var glass_shove_time := 0.14
 @export var stomp_shake := 14.0
 @export var fury_shake := 5.0
 @export var glass_shake := 18.0
@@ -192,10 +227,13 @@ const BODY_OVER_FEET := 36.0
 # (0.48 s) from one boom's birth to the next's. The window (the charge plus the flight to row F, 0.43 s as
 # the steps fall) stays at the 0.40 s floor a person needs to read the arrow, so the gap is what gave; the
 # wobble's longer charge pays for reading it through the phase-two wobble. The knock and the bounce are
-# scaled with it.
+# scaled with it. Phase two's charges, plain and dizzy, are phase_two_charge_extra longer on top.
 @export var boom_counts_by_tier: Array[int] = [15, 15, 15]
 @export var boom_charge := 0.32
 @export var boom_charge_wobble := 0.43
+# Phase two's booms charge this much longer, dizzy or not, and every window with them (the user, 2026-09-27):
+# its four rows of glass leave one miss free from row F.
+@export var phase_two_charge_extra := 0.05
 @export var boom_speed := 1800.0
 @export var boom_spawn_drop := 20.0
 @export var boom_charge_drift := 50.0
@@ -207,16 +245,70 @@ const BODY_OVER_FEET := 36.0
 
 #THE DEAFENING YELL
 @export var phase_two_ratio := 0.5
+# Phase two also starts at his first Break. It was on with the Break-only rule, where an unhyped first Break left him
+# at about 52%; off since that rule went (2026-10-05), so his health alone starts it again.
+@export var phase_two_at_break := false
 @export var deafen_tell := 0.50
 @export var deafen_time := 3.0
 @export var deafen_after := 0.40
-# RESIST!'s mash, bent by MashCurve: the drain is fitted so about 5.7 alternating presses a second
-# mashes through the yell, 8 comfortably, and 4 never.
-@export var deafen_gain := 0.107
-@export var deafen_drain := 0.14
+# RESIST!'s mash, bent by MashCurve. The user asked for it harder twice: on 2026-09-27 the drain went from 0.14
+# to 0.20, taking the steady alternating presses a second that mash through the yell from 5.7 to 7.3; on
+# 2026-09-28 the gain came down from 0.107 as the drain went up again, to 8.9 a second, 9 winning in 2.7 s and
+# 10 in 2.0 s. The gain came down with it so the bar sits over 95% no longer than it did at 7.3. On 2026-10-04 the
+# game's mashes were reset round about 6, 8 and 10 a second for the finisher's three bars, and RESIST! came down to
+# the second: the drain from 0.215 to 0.175, so a steady 7.64 a second wins, 8 wins in 2.5 s (2.75 s from a
+# reaction 0.25 s late), 9 in 2.0 s, and 7 never does.
+@export var deafen_gain := 0.095
+@export var deafen_drain := 0.175
 @export var deafen_rumble := 4.0
 @export var deafen_rumble_step := 0.12
 @export var deafen_ring_every := 0.30
+
+#THE ECHO ROARS (beats of his theme, seconds and px)
+# His theme's tempo (art_source/music/matt_theme.rb, use_bpm 152): one beat is 60 / echo_bpm, 0.3947 s. The grid
+# runs on game time, not the music's clock: a parry's hit-stop slows Engine.time_scale, and a grid locked to the
+# music would drift off it after the first parry.
+@export var echo_bpm := 152.0
+# At least 1800, for E1: never a fairness lever.
+@export var echo_ring_speed := 1800.0
+@export var echo_ring_start_radius := 40.0
+@export var echo_ring_end_radius := 1050.0
+@export var echo_band := 14.0
+@export var echo_birth_disc_time := 0.05
+@export var echo_strings := 3
+@export var echo_strings_phase_two := 4
+# A string's beats from its first roar: roars on 0, 2 and 4, their echoes a beat behind, the BOOMBURSTs from
+# echo_boomburst_beat, and the next string's first roar on echo_string_beats.
+@export var echo_string_beats := 14.0
+@export var echo_boomburst_beat := 8.0
+# How many BOOMBURSTs end a string, echo_boomburst_spacing_beats apart from echo_boomburst_beat on. Past one, the
+# string needs echo_string_beats at least three beats past the last (E1, a ring three beats from a BOOMBURST).
+# Two since 2026-10-06 (one, in 11 beats, before): his 8/10 back once the X went, the gold dash being the read in his
+# kit that costs most when missed.
+@export var echo_boombursts := 2
+@export var echo_boomburst_spacing_beats := 3.0
+# How long each badge leads its ring, in beats: a roar's, a string's first roar's, the BOOMBURST's.
+@export var echo_red_lead_beats := 1.0
+@export var echo_first_lead_beats := 2.0
+@export var echo_yellow_lead_beats := 1.5
+# A press this soon after the ring before an X touches is a late press for that ring, not a bite; and one up to this
+# long after the X's own touch still bites.
+@export var echo_bite_grace := 0.10
+# The parry is re-armed this long after every touch but a ghost's (Carter's messatsu_rearm_delay): a press up to here
+# is a late one for the ring that touched, and never locks out the next. Kept short enough that mashing at 10 a
+# second still has no credited press whose window reaches the next ring a beat later.
+@export var echo_rearm_delay := 0.05
+@export var echo_stamina_floor := 34.0
+# The silent fake under the pale X (E6), by phase: one a string, never the instance's first roar. Both off since
+# 2026-10-06, the user: "the parrying vs dodging is difficult enough". Phase one's was on from 2026-10-05.
+@export var echo_feints_phase_one := false
+@export var echo_feints_phase_two := false
+# The Ezreal set runs straight on into the Echo Roars: Spent, with nothing of his left alive, hands over to them
+# instead of to the window, so the set and the roars share the one window after them (MattSpent). On since
+# 2026-10-05: two attacks to the window, his 7/10 by his own kit once every window paid a finisher again.
+@export var echo_after_ezreal := true
+@export var echo_gasp := 0.30
+@export var echo_outro_cap := 1.5
 
 #THE WOBBLE
 @export var wobble_in := 0.6
@@ -225,15 +317,26 @@ const BODY_OVER_FEET := 36.0
 #PACING (seconds)
 @export var spent_min := 0.3
 @export var spent_max := 3.0
+# Back to 4.5 with the finisher in every window (2026-10-05); 3.0 while the Break-only rule had it pay three punches.
 @export var recover_time := 4.5
 @export var idle_beat := 0.9
 @export var post_yell_beat := 1.0
 
 #THE YELL (seconds and px)
+# Off by the user's call (2026-10-04, "lets remove matts push away potentially when the player is hitting matt"):
+# the yell's ring threw a player punching him across the ring. On, it plays as it did; off, no window plans one, and
+# its draws off his rng still happen so every other seeded roll stays where it was (MattRecover._plan_yell).
+@export var yell_counter_enabled := false
 @export var yell_chance := 0.5
 # The punish window it may first come in: never the fight's first.
 @export var yell_from_window := 2
-@export var yell_tell := 0.40
+# The badge goes up the step after the punch that sets it off, 7 steps before that swing's arm is back, and a
+# swing locks the player for 24 steps, dropping any dash pressed in it. At 0.40 a second punch chained as the arm
+# came back - pressed before anyone could react to the badge - held them past the blast, and 93% of first-time
+# yells landed (the 2026-10-04 playtest). 0.58 lets that chained punch end and a dash pressed after it still clear
+# the ring from every punch spot (matt_yell_chain); a punch pressed once the badge has been seen, or a third
+# chained swing, still gets the player hit.
+@export var yell_tell := 0.58
 @export var yell_start_radius := 60.0
 @export var yell_radius := 270.0
 @export var yell_band := 15.0
@@ -250,6 +353,15 @@ const BODY_OVER_FEET := 36.0
 @export var launch_follow := 0.5
 @export var launch_y_range := Vector2(178, 903)
 
+#THE SCREAM
+# A punch short of the POW landed in his window, then a swing that whiffs or is refused, and he screams the
+# player back at once (the user, 2026-09-27; MattRecover): no damage, no daze, no uppercut, and the combo's
+# count gone with it. Off, he never screams, and a miss in his window is a miss like anywhere else. Off in the
+# live game by the user's call (2026-10-05, "remove matts whiff screm shove"); the knob brings it back.
+@export var scream_on_miss := false
+# Where it leaves them: this many px from his mouth, just past the reach of his yell's ring.
+@export var scream_clear := 320.0
+
 #HUD
 @export var hud_fade_alpha := 0.3
 
@@ -259,6 +371,7 @@ var rng := RandomNumberGenerator.new()
 var player_defeated := false
 var cycles_started := 0
 # His attacks in the order the cycles take them, the Ezreal set first. A var, so a test can pin it.
+# The Echo Roars come chained after the Ezreal set (echo_after_ezreal), so they aren't a cycle of their own.
 var attack_rotation: Array[String] = ["MysticVolley", "GlassRow"]
 var last_attack := ""
 var glass_rows_done := 0
@@ -272,7 +385,18 @@ var cycle_booms := 5
 var cycle_deafen := false
 # How many sets the cycle's Glass Row splits its booms into: phase two's stomps come between them.
 var cycle_sets := 1
+# The rows of glass the cycle's Glass Row comes to (glass_rows_for).
+var cycle_glass_rows := 2
+# The cycle's Echo Roars: how many strings, and each string's X - the slot of its silent roar, 0 to 2, or -1.
+var cycle_echo_strings := 3
+var cycle_echo_feints: Array[int] = []
+# The fight's first BOOMBURST puts up the dash hint, and no other.
+var echo_hint_shown := false
+# What the cycle adds to every boom's charge: phase_two_charge_extra in phase two, else nothing.
+var cycle_boom_charge_extra := 0.0
 var windows_opened := 0
+# His Breaks this fight (enter_broken): the first starts phase two (phase_two_at_break).
+var breaks_taken := 0
 # Where the next window opens and what extra time it gets: an attack that ends somewhere other than HOME
 # sets them, and Recover takes them, which puts them back.
 var recover_spot := HOME
@@ -289,6 +413,7 @@ func _ready() -> void:
 	_check_glass_row()
 	_add_down_state(MattBroken.new(), "Broken")
 	_add_down_state(MattJuggled.new(), "Juggled")
+	_add_echo_state()
 	for child in get_children():
 		if child is State:
 			states[child.name] = child
@@ -307,6 +432,14 @@ func _add_down_state(state: Node, state_name: String) -> void:
 	state.hurtbox = MattCharacterBody.get_node("Hurtbox")
 	state.state_machine = self
 	add_child(state)
+
+
+# Attack 3 is built here rather than in his scene, as his Broken and Juggled are.
+func _add_echo_state() -> void:
+	var echo: Node = MattEchoRoars.new()
+	echo.name = "EchoRoars"
+	echo.body = MattCharacterBody
+	add_child(echo)
 
 
 func _process(delta: float) -> void:
@@ -381,17 +514,22 @@ func start_cycle() -> void:
 	cycle_booms = boom_counts_by_tier[tier()]
 	cycle_deafen = plan.deafen
 	cycle_sets = phase_two_boom_sets if in_phase_two() else 1
+	cycle_glass_rows = glass_rows_for(MattCharacterBody.get_health_ratio())
+	cycle_boom_charge_extra = phase_two_charge_extra if in_phase_two() else 0.0
 	if plan.deafen:
 		deafen_opened = true
+	if plan.attack == "EchoRoars":
+		plan_echo(in_phase_two())
 	last_attack = plan.attack
 	on_child_transition(current_state, plan.attack)
 
 
 # What the next cycle is, asked only by start_cycle: phase two's forced opener - a Glass Row with the
-# yell, once a plain one has been seen - or the attack after the last one in the rotation.
+# yell, once a plain one has been seen and the last cycle wasn't one - or the attack after the last one in
+# the rotation.
 func plan_next() -> Dictionary:
 	var two := in_phase_two()
-	if two and glass_rows_done > 0 and not deafen_opened:
+	if two and glass_rows_done > 0 and not deafen_opened and last_attack != "GlassRow":
 		return {"attack": "GlassRow", "deafen": true}
 	var attack: String = attack_rotation[0]
 	var at := attack_rotation.find(last_attack)
@@ -404,8 +542,24 @@ func next_attack() -> String:
 	return plan_next().attack
 
 
+# The Echo Roars' cycle lock: how many strings, and with the phase's feint knob on each string's X (E6) - one a
+# string, never the instance's first roar - drawn off his rng. Drawn only for a cycle that plays it, so the other
+# attacks' draws are the ones they always were.
+func plan_echo(two: bool) -> void:
+	cycle_echo_strings = echo_strings_phase_two if two else echo_strings
+	cycle_echo_feints.clear()
+	var feints_on: bool = echo_feints_phase_two if two else echo_feints_phase_one
+	for s in cycle_echo_strings:
+		if not feints_on:
+			cycle_echo_feints.append(-1)
+		elif s == 0:
+			cycle_echo_feints.append(rng.randi_range(1, 2))
+		else:
+			cycle_echo_feints.append(rng.randi_range(0, 2))
+
+
 func in_phase_two() -> bool:
-	return MattCharacterBody.get_health_ratio() <= phase_two_ratio
+	return (phase_two_at_break and breaks_taken >= 1) or MattCharacterBody.get_health_ratio() <= phase_two_ratio
 
 
 # The difficulty dial: 0 above two thirds of his health, 1 above a third, 2 below.
@@ -420,6 +574,15 @@ func tier() -> int:
 
 func mystic_casts() -> int:
 	return mystic_casts_by_tier[tier()]
+
+
+# The rows of glass a Glass Row comes to at `ratio` of his health.
+func glass_rows_for(ratio: float) -> int:
+	if ratio > glass_row_shares.x:
+		return glass_rows_by_share[0]
+	if ratio > glass_row_shares.y:
+		return glass_rows_by_share[1]
+	return glass_rows_by_share[2]
 
 
 # The window opens where the attack before it left him, with whatever extra time it earned; both go
@@ -445,15 +608,31 @@ func row_body_point(k: int) -> Vector2:
 	return Vector2(GLASS_ROW.lane_x, feet - BODY_OVER_FEET)
 
 
-# The glass: rope to rope across the glass rows.
+# The glass's first row: the fury lays all of the cycle's rows, the last ones.
+func glass_top_row() -> int:
+	return GLASS_ROW.row_names.size() - cycle_glass_rows
+
+
+# The first row of its bed: the drawn tile's rows at the bottom, or all of the glass if it is less. The fury
+# grows any row past the bed on in front of it at once.
+func bed_top_row() -> int:
+	return maxi(glass_top_row(), GLASS_ROW.row_names.size() - int(GLASS_ROW.bed_rows))
+
+
+# The glass, rope to rope.
 func glass_band() -> Rect2:
-	var rows: Array = GLASS_ROW.glass_rows
-	var top: float = GLASS_ROW.rows_top + GLASS_ROW.row_height * rows[0]
+	return rows_band(glass_top_row())
+
+
+# Rows k to the last, rope to rope.
+func rows_band(k: int) -> Rect2:
 	var span: Vector2 = GLASS_ROW.glass_span
-	return Rect2(span.x, top, span.y - span.x, GLASS_ROW.row_height * rows.size())
+	var rows: int = GLASS_ROW.row_names.size() - k
+	return Rect2(span.x, GLASS_ROW.rows_top + GLASS_ROW.row_height * k, span.y - span.x, GLASS_ROW.row_height * rows)
 
 
-# Row k rope to rope, where phase two's stomps lay each new row of glass.
+# Row k rope to rope: each row of glass the fury grows on past the bed, and the front row a stomp's shards
+# fall on.
 func row_band(k: int) -> Rect2:
 	var span: Vector2 = GLASS_ROW.glass_span
 	return Rect2(span.x, GLASS_ROW.rows_top + GLASS_ROW.row_height * k, span.y - span.x, GLASS_ROW.row_height)
@@ -462,7 +641,7 @@ func row_band(k: int) -> Rect2:
 # The fail that reaches the glass as the row starts: one row a fail from the start row, the last row
 # before the glass and then the glass itself.
 func fails_to_glass() -> int:
-	return int(GLASS_ROW.glass_rows[0]) - int(GLASS_ROW.start_row)
+	return glass_top_row() - int(GLASS_ROW.start_row)
 
 
 # A floor plan that doesn't hold together is a warning, not a crash: the fight still plays.
@@ -473,16 +652,9 @@ func _check_glass_row() -> void:
 		push_warning("Matt: the Glass Row's rows end at %.0f, not on the bottom rope (%.0f)" % [bottom, ROPES.end.y])
 	if GLASS_ROW.rows_top - GLASS_ROW.station.y < 60.0:
 		push_warning("Matt: the Glass Row's station is under 60 px above row F")
-	var glass: Array = GLASS_ROW.glass_rows
-	for i in glass.size():
-		if int(glass[i]) != rows.size() - glass.size() + i:
-			push_warning("Matt: the Glass Row's glass rows must be the last rows, together")
-			break
-	if int(GLASS_ROW.start_row) >= int(glass[0]):
-		push_warning("Matt: the Glass Row's start row is in the glass")
-	# The shove needs a row in front of the last row phase two's stomps turn to glass.
-	if int(glass[0]) - (phase_two_boom_sets - 1) <= int(GLASS_ROW.start_row):
-		push_warning("Matt: phase two's stomps would grow the glass over the start row")
+	# The most glass must leave the start row clear.
+	if rows.size() - glass_rows_by_share.max() <= int(GLASS_ROW.start_row):
+		push_warning("Matt: the Glass Row's glass would reach its start row")
 
 
 # The 12 lattice headings, in order round the circle.
@@ -632,8 +804,87 @@ func live_waves() -> Array[Node]:
 	return _live(WAVE_SCRIPT)
 
 
+func live_echo_rings() -> Array[Node]:
+	var out: Array[Node] = []
+	for hazard in get_tree().get_nodes_in_group(HAZARD_GROUP):
+		if hazard.get_script() == ECHO_RING_SCRIPT and hazard.is_live():
+			out.append(hazard)
+	return out
+
+
 func live_projectiles() -> Array[Node]:
-	return live_bolts() + live_waves()
+	return live_bolts() + live_waves() + live_echo_rings()
+
+
+# One beat of his theme, in seconds.
+func echo_beat() -> float:
+	return 60.0 / echo_bpm
+
+
+#THE PLAYER'S DEFENCE (the Echo Roars' parry rules, CarterStateMachine's and JoshCardsStateMachine's way)
+
+# Called a beat's rearm delay after every ring's touch but a ghost's: a whiffed or late press never locks the next
+# ring out (PlayerDefense.parry_mash_lockout outlasts a beat).
+func rearm_parry() -> void:
+	var defense := _defense()
+	if defense and defense.has_method("rearm_parry"):
+		defense.rearm_parry()
+	else:
+		_warn_once("rearm", "Matt: PlayerDefense has no rearm_parry(); a whiffed ring can lock out the next")
+
+
+func end_parry_streak() -> void:
+	var defense := _defense()
+	if defense and defense.has_method("end_parry_streak"):
+		defense.end_parry_streak()
+	else:
+		_warn_once("streak", "Matt: PlayerDefense has no end_parry_streak(); a bitten X keeps the streak")
+
+
+# Returns whether the signal was there.
+func connect_block_presses(handler: Callable) -> bool:
+	var defense := _defense()
+	if defense and defense.has_signal("block_pressed"):
+		if not defense.block_pressed.is_connected(handler):
+			defense.block_pressed.connect(handler)
+		return true
+	_warn_once("presses", "Matt: PlayerDefense has no block_pressed signal; an X can't be bitten")
+	return false
+
+
+func disconnect_block_presses(handler: Callable) -> void:
+	var defense := _defense()
+	if defense and defense.has_signal("block_pressed") and defense.block_pressed.is_connected(handler):
+		defense.block_pressed.disconnect(handler)
+
+
+# Tops the stamina bar up to `amount` (E5): a parry press or the BOOMBURST's dash is never refused mid-string.
+func hold_stamina_floor(amount: float) -> void:
+	var defense := _defense()
+	if defense == null or not defense.has_method("refund"):
+		_warn_once("floor", "Matt: PlayerDefense has no refund(); the Echo Roars' stamina floor is off")
+		return
+	if defense.stamina < amount:
+		defense.refund(amount - defense.stamina)
+
+
+# The floor again on every change of the bar, not just each step: a whiff or the dash paid in the player's own step
+# after his would otherwise leave the bar under it until the next one.
+func watch_stamina(handler: Callable) -> void:
+	var defense := _defense()
+	if defense and defense.has_signal("stamina_changed") and not defense.stamina_changed.is_connected(handler):
+		defense.stamina_changed.connect(handler)
+
+
+func unwatch_stamina(handler: Callable) -> void:
+	var defense := _defense()
+	if defense and defense.has_signal("stamina_changed") and defense.stamina_changed.is_connected(handler):
+		defense.stamina_changed.disconnect(handler)
+
+
+func _defense() -> Node:
+	var player := get_player()
+	return player.get("defense") if player else null
 
 
 func _live(script: Script) -> Array[Node]:
@@ -654,6 +905,7 @@ func enter_broken() -> void:
 	var unbreakable := [states.get("Intro"), states.get("Defeated"), states.get("Victory"), states.get("Broken"), states.get("Juggled")]
 	if current_state in unbreakable:
 		return
+	breaks_taken += 1
 	_stop_everything()
 	# Insurance: a Glass Row cut short must not leave its station and bonus to the next window.
 	recover_spot = HOME
@@ -731,7 +983,7 @@ func _end_fight(final_state_name: String) -> void:
 # the wobble and its sounds, and everything he sent out.
 func _stop_everything() -> void:
 	MattCharacterBody.cancel_launch()
-	for state_name in ["MysticVolley", "TrueshotBarrage", "Spent", "Recover", "GlassRow"]:
+	for state_name in ["MysticVolley", "TrueshotBarrage", "Spent", "Recover", "GlassRow", "EchoRoars"]:
 		var state: State = states.get(state_name)
 		if state:
 			state.release()

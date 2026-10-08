@@ -98,6 +98,9 @@ const KNOCKBACK_FACING_SPREAD := 60.0
 const AIM_ASSIST_DEGREES := 25.0
 # A tumbling figure that reaches Jordan's hurtbox goes off right there.
 const DETONATE_ON_BOSS_CONTACT := true
+# The kaiju fight's badge, up this long before the blast's first hit frame: thrown figures (JordanFunkoThrow) set
+# tell_lead to it, where the fuse warning's 0.8 s badge stood over a whole swarm's worth of blasts at once.
+const TELL_LEAD := 0.40
 
 const FACING_DIRECTIONS := {
 	PlayerScript.Facing.DOWN: Vector2.DOWN,
@@ -131,6 +134,12 @@ var fuse := FUSE_TIME
 # Set by the first punch and kept until the figure goes off: only a punched figure's blast hurts Jordan.
 var redirected := false
 var told := false
+# Set by whoever spawns it: the throw it came in (JordanFunkoThrow), which the Break gauge pays one parry for, its
+# badge's lead (TELL_LEAD) and its blast's attack (the kaiju's hit harder). Unset, the badge comes with the fuse
+# warning, as it always has.
+var throw_id := -1
+var tell_lead := 0.0
+var attack_id: StringName = &"funko_blast"
 var knockback := Vector2.ZERO
 var blast_hit_jordan := false
 
@@ -190,9 +199,9 @@ func _physics_process(delta: float) -> void:
 
 	if phase == Phase.EXPLODING:
 		return
-	if not told and _fuse_warning():
+	if not told and _tell_due():
 		told = true
-		ParryTell.telegraph(self, &"funko_blast", fuse - age, _tell_anchor)
+		ParryTell.telegraph(self, attack_id, fuse - age, _tell_anchor)
 	if age >= fuse:
 		_detonate()
 		return
@@ -210,6 +219,26 @@ func _body_rect() -> Rect2:
 
 func _fuse_warning() -> bool:
 	return age >= fuse - FUSE_WARNING_TIME
+
+
+func _tell_due() -> bool:
+	if tell_lead <= 0.0:
+		return _fuse_warning()
+	return age >= fuse + _first_hit_time() - tell_lead
+
+
+# Seconds from going off to the first explosion frame that hurts.
+static func _first_hit_time() -> float:
+	var time := 0.0
+	for i in EXPLOSION_HIT_FRAMES.x:
+		time += EXPLOSION_FRAME_TIMES[i]
+	return time
+
+
+# Where its tumble and its blast find Jordan: what he says can be hit (the kaiju's legs while he rides it, nothing
+# while it is in the air), or his hurtbox.
+func _jordan_rect() -> Rect2:
+	return jordan.redirect_rect() if jordan.has_method("redirect_rect") else jordan.hurtbox_rect()
 
 
 func _chase(delta: float) -> void:
@@ -261,7 +290,9 @@ func _knockback_direction(puncher: Node2D) -> Vector2:
 
 
 func _aim_assist(direction: Vector2) -> Vector2:
-	var box: Rect2 = jordan.hurtbox_rect()
+	var box: Rect2 = _jordan_rect()
+	if not box.has_area():
+		return direction
 	var to_jordan := box.get_center() - global_position
 	if absf(direction.angle_to(to_jordan)) <= deg_to_rad(AIM_ASSIST_DEGREES):
 		return to_jordan.normalized()
@@ -277,8 +308,8 @@ func _tumble() -> void:
 		return
 	velocity = knockback * left
 	move_and_slide()
-	var box: Rect2 = jordan.hurtbox_rect()
-	if DETONATE_ON_BOSS_CONTACT and _body_rect().intersects(box):
+	var box: Rect2 = _jordan_rect()
+	if DETONATE_ON_BOSS_CONTACT and box.has_area() and _body_rect().intersects(box):
 		_detonate()
 	elif get_slide_collision_count() > 0:
 		velocity = Vector2.ZERO
@@ -329,14 +360,14 @@ static func _frame_at(frame_times: Array, time: float) -> int:
 
 func _blast() -> void:
 	if global_position.distance_to(player.global_position) <= EXPLOSION_RADIUS:
-		player.receive_hit(HitInfo.make(&"funko_blast", self, global_position))
+		player.receive_hit(HitInfo.make(attack_id, self, global_position))
 	# Only where the player isn't: a blast reaching the spot a dash left is a perfect dodge.
 	elif global_position.distance_to(player.dodge_ghost_position()) <= EXPLOSION_RADIUS:
-		player.receive_near_miss(HitInfo.make(&"funko_blast", self, global_position))
+		player.receive_near_miss(HitInfo.make(attack_id, self, global_position))
 	if not redirected or blast_hit_jordan:
 		return
-	var box: Rect2 = jordan.hurtbox_rect()
-	if global_position.distance_to(global_position.clamp(box.position, box.end)) <= EXPLOSION_RADIUS:
+	var box: Rect2 = _jordan_rect()
+	if box.has_area() and global_position.distance_to(global_position.clamp(box.position, box.end)) <= EXPLOSION_RADIUS:
 		blast_hit_jordan = true
 		jordan.take_explosion_hit(EXPLOSION_BOSS_DAMAGE)
 

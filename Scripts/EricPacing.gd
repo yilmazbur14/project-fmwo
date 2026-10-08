@@ -10,11 +10,20 @@ extends RefCounted
 static var version := 2
 
 const TABLE := {
-	"max_health": [24, 56],
+	# V2's was 56 until the user doubled every boss's health (2026-09-25), and 112 until they raised it 25%
+	# (2026-09-30); V1 keeps its own.
+	"max_health": [24, 140],
 
 	#CHAIN
-	"attacks_per_chain": [3, 3],
-	"rage_attacks_per_chain": [4, 4],
+	# The 2026-10-05 tuning round gave V2 more of his own kit, so his difficulty holds with a POW's mash back
+	# in every punish window (EricScript.daze_in_windows): a chain of all four attacks before he is winded,
+	# whirlwinds of one more lunge, earthquakes of one more slam, and slam waves that hit for a heart. With
+	# the bear hug's windows taking the mash too (2026-10-06), whirlwinds of four lunges and more of his
+	# hugs yellow; with his sword's stagger and the whirlwind throw's opening taking it as well, chains of
+	# five (his four, then one of them again: EricStateMachine.start_chain) and a shoulder charge that hits
+	# for a heart (AttackCatalog). Not five lunges: five dashes in a row are more than the stamina bar holds.
+	"attacks_per_chain": [3, 5],
+	"rage_attacks_per_chain": [4, 5],
 	# At or below this health ratio every chain gets its rage attack count.
 	"rage_chain_health_ratio": [0.34, 0.40],
 	# Idle between attacks in a chain. V2's decisions sit on the tells, so its short gaps only punish
@@ -31,8 +40,8 @@ const TABLE := {
 	"rage_window_time": [6.0, 1.6],
 
 	#EARTHQUAKE
-	"slams": [2, 2],
-	"rage_slams": [3, 3],
+	"slams": [2, 3],
+	"rage_slams": [3, 4],
 	"slam_animation_speed": [1.6, 1.6],
 	# Capped so the raised sword is up long enough to be read: his waves radiate from where he stands,
 	# so anyone in the slam is hit with no travel at all. `earthquake` calls enable_hitbox 0.667 s in,
@@ -64,8 +73,8 @@ const TABLE := {
 	# single-answer read, at or above the 0.40 s floor.
 	"whirl_windup": [null, 0.45],
 	"rage_whirl_windup": [null, 0.40],
-	"whirl_lunges": [null, 2],
-	"rage_whirl_lunges": [null, 3],
+	"whirl_lunges": [null, 4],
+	"rage_whirl_lunges": [null, 4],
 	"whirl_lunge_time": [null, 0.5],
 	"whirl_lunge_speed": [null, 1000.0],
 	"rage_whirl_lunge_speed": [null, 1150.0],
@@ -93,6 +102,11 @@ const TABLE := {
 	# Added to the parry's own stagger window. He is struck at throwing range, not standing over the
 	# player, so there is further to run before the punish.
 	"reflect_stagger_bonus": [0.5, 0.5],
+	# Whether his sword flung back into him fires the uppercut on its own (EricSwordThrow). V2's is off since
+	# the 2026-10-04 mash: that uppercut became a tier-1 juggle worth 25% of his health, so parried swords
+	# alone killed him in about 30 s and the Break never mattered. The reflect still chips him, staggers him
+	# open to punches and fills his gauge by EricScript.BREAK's reflect_gain.
+	"reflect_auto_uppercut": [true, false],
 
 	#BEAR HUG
 	# The charge is the grab's telegraph. V2's has to leave a colour decision time: at least 0.40 s and
@@ -117,13 +131,16 @@ const TABLE := {
 	"hug_rush_hot": [null, 0.05],
 	"hug_return_speed": [900.0, 900.0],
 	"hug_squeezes": [3, 3],
+	# The fight's first hug, which is always red and often his opener, so it is usually met unread: one
+	# squeeze fewer (tuning round 2026-10-04).
+	"hug_first_squeezes": [3, 2],
 	# The whiff's stumble, open to punches.
 	"hug_stumble_time": [0.9, 0.7],
 	"hug_grab_id": [&"eric_bear_hug_grab", &"eric_bear_hug_grab_v2"],
 	# V2's charge is red, the grab only a parry answers, or yellow, a shoulder charge only a dash
 	# answers, on the same art and timing. The fight's first hug is red, and never three of one colour
-	# in a row.
-	"hug_yellow_chance": [0.0, 0.5],
+	# in a row. Yellow is the likelier since 2026-10-06, when a parried red hug began paying a POW's mash.
+	"hug_yellow_chance": [0.0, 0.65],
 
 	#STAGGER AND BREAK
 	# How fast a parry-staggered Eric glides back to where his attack started. V1 borrowed the

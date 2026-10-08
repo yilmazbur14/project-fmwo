@@ -5,23 +5,33 @@ extends RefCounted
 # so turning the flag off brings the old row back. HUD art uses the _3x copies at scale 1 on whole
 # screen px, like the stamina and break frames.
 #
-# The placeholder is the row exactly as the HBoxContainer laid it out: three 92x92 stretched copies of
-# hearttest.png, 4 px apart, standing on the bottom-left corner. It is here rather than in the scene
-# so the two looks share one code path.
+# The placeholder is the row as the HBoxContainer laid it out: 92x92 stretched copies of hearttest.png,
+# 4 px apart, standing on the bottom-left corner. It is here rather than in the scene so the two looks
+# share one code path.
 
 const DefenseHypeArtLayout := preload("res://Scripts/DefenseHypeArtLayout.gd")
 
 const USE_FINAL_PLAYER_HP := true
 
 #GEOMETRY
-# The tray is as wide as the stamina frame and shares its left edge, so the left column reads as one
-# object and cannot drift when either moves.
-const TRAY_SIZE := Vector2(264, 66)
+# The drawn tray has DRAWN_CONTAINERS cells, CONTAINER_PITCH apart like the hearts in them. Any other count
+# is cut from its own pixels at runtime (tray_texture) rather than redrawn: its left cap and first cell,
+# then the divider and cell starting at TRAY_UNIT_X once per container after the first, then the trail
+# after the last cell and the right cap.
+const DRAWN_TRAY_SIZE := Vector2(264, 66)
+const DRAWN_CONTAINERS := 3
+const CONTAINER_PITCH := 78
+const TRAY_UNIT_X := 84
+# Four containers, eight half-hearts: the player's full health (PlayerScript.playerHealth). Three and six
+# until the user raised it (2026-09-30).
+const CONTAINERS := 4
+# The tray shares the stamina frame's left edge, so the left column reads as one object and cannot drift
+# when either moves. At three containers it was exactly as wide as the frame; each one more runs a
+# CONTAINER_PITCH past its right end.
+const TRAY_SIZE := Vector2(DRAWN_TRAY_SIZE.x + CONTAINER_PITCH * (CONTAINERS - DRAWN_CONTAINERS), DRAWN_TRAY_SIZE.y)
 const TRAY_GAP := 6.0
 const TRAY_POSITION := Vector2(DefenseHypeArtLayout.STAMINA_BAR_POSITION.x,
 	DefenseHypeArtLayout.STAMINA_BAR_POSITION.y - TRAY_SIZE.y - TRAY_GAP)
-# Three containers, six half-hearts.
-const CONTAINERS := 3
 
 #TIMING
 # Real seconds and screen px.
@@ -40,12 +50,12 @@ const WARN_FRAME_TIME := 0.22
 const WARN_AT := 1
 
 # Today's row: an HBoxContainer's three stretched 32x32 placeholders, measured on screen rather than
-# assumed, because the container sized them and not the texture.
+# assumed, because the container sized them and not the texture. The fourth follows at the same pitch.
 const PLACEHOLDER_PLAYER_HP := {
 	"position": Vector2(0, 952),
-	"size": Vector2(284, 92),
+	"size": Vector2(380, 92),
 	"heart_size": Vector2(92, 92),
-	"heart_offsets": [Vector2(0, 0), Vector2(96, 0), Vector2(192, 0)],
+	"heart_offsets": [Vector2(0, 0), Vector2(96, 0), Vector2(192, 0), Vector2(288, 0)],
 	"full": "res://Assets/UI/hearttest.png",
 	"half": "res://Assets/UI/hearthalftest.png",
 	"empty": "res://Assets/UI/emptyhearttest.png",
@@ -56,7 +66,7 @@ const FINAL_PLAYER_HP := {
 	"position": TRAY_POSITION,
 	"size": TRAY_SIZE,
 	"heart_size": Vector2(54, 48),
-	"heart_offsets": [Vector2(24, 9), Vector2(102, 9), Vector2(180, 9)],
+	"heart_offsets": [Vector2(24, 9), Vector2(102, 9), Vector2(180, 9), Vector2(258, 9)],
 	"tray": "res://Assets/UI/player_hp_tray_3x.png",
 	"tray_warn": "res://Assets/UI/player_hp_tray_warn_3x.png",
 	"tray_warn_hframes": 2,
@@ -81,6 +91,27 @@ const FINAL_PLAYER_HP := {
 
 static func hearts() -> Dictionary:
 	return FINAL_PLAYER_HP if USE_FINAL_PLAYER_HP else PLACEHOLDER_PLAYER_HP
+
+
+# The drawn tray sheet at `path`, `hframes` frames side by side, cut to CONTAINERS cells a frame: every
+# cell, divider and border texel for texel the drawn one's. At DRAWN_CONTAINERS it is the drawn sheet.
+static func tray_texture(path: String, hframes: int) -> Texture2D:
+	var drawn: Image = (load(path) as Texture2D).get_image()
+	var drawn_width := int(DRAWN_TRAY_SIZE.x)
+	var width := int(TRAY_SIZE.x)
+	var height := drawn.get_height()
+	var tail_x := TRAY_UNIT_X + CONTAINER_PITCH * (DRAWN_CONTAINERS - 1)
+	var tail_width := drawn_width - tail_x
+	var built := Image.create_empty(width * hframes, height, false, drawn.get_format())
+	for f in hframes:
+		var from := f * drawn_width
+		var to := f * width
+		built.blit_rect(drawn, Rect2i(from, 0, TRAY_UNIT_X, height), Vector2i(to, 0))
+		for i in CONTAINERS - 1:
+			built.blit_rect(drawn, Rect2i(from + TRAY_UNIT_X, 0, CONTAINER_PITCH, height),
+				Vector2i(to + TRAY_UNIT_X + CONTAINER_PITCH * i, 0))
+		built.blit_rect(drawn, Rect2i(from + tail_x, 0, tail_width, height), Vector2i(to + width - tail_width, 0))
+	return ImageTexture.create_from_image(built)
 
 
 # Where the row's right edge falls. The dialogue box is placed off this rather than off the live

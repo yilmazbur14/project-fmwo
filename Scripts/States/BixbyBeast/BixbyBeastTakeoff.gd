@@ -33,6 +33,6 @@ func Physics_Update(delta: float) -> void:
 		return
 	var weight := clampf(rising / state_machine.takeoff_rise_time, 0.0, 1.0)
 	body.height = lerpf(start_height, body.HOVER_HEIGHT_PX, 1.0 - (1.0 - weight) * (1.0 - weight))
-	body.fly_toward(liftoff_point, state_machine.breath_approach_speed, delta)
+	body.fly_toward(liftoff_point, state_machine.glide_speed, delta)
 	if weight >= 1.0:
 		state_machine.start_cycle()

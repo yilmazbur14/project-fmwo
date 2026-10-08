@@ -2,10 +2,11 @@ extends Node2D
 
 # One landing of Danny's Sumo Smash (DannyBossSlams): its own hit source, so the guard and the dodge judge
 # every landing afresh (PlayerDefense keeps its records per source). Added on the landing's contact point, it
-# tests his seated footprint, an ellipse RADII round that point, once against the player's feet, the foot of
-# their hurtbox. Inside, the slam reaches them through receive_hit(); only the dodge ghost's feet inside, it
-# came down on the spot a dash just left, and that is a near miss. It stays in the hazard group for
-# FREE_AFTER, so whatever the hit set off still finds its source, then frees itself.
+# tests his seated footprint, an ellipse `radii` round that point, once against the player's feet, the foot of
+# their hurtbox, and hits them with `attack_id`: a hop or the big fifth (Addendum 1). Inside, the slam reaches
+# them through receive_hit(); only the dodge ghost's feet inside, it came down on the spot a dash just left, and
+# that is a near miss. It stays in the hazard group for FREE_AFTER, so whatever the hit set off still finds its
+# source, then frees itself.
 # The attack reads what happened off it as soon as it is added: `result`, and `feet_inside`, which spares the
 # player from this landing's quake ring.
 
@@ -18,6 +19,8 @@ const FREE_AFTER := 0.2
 # Set before it is added.
 var player: CharacterBody2D
 var boss: Node
+var attack_id: StringName = SLAM_ID
+var radii: Vector2 = RADII
 
 var feet_inside := false
 var ghost_inside := false
@@ -37,7 +40,7 @@ func _physics_process(delta: float) -> void:
 
 
 func covers(point: Vector2) -> bool:
-	return ((point - global_position) / RADII).length_squared() <= 1.0
+	return ((point - global_position) / radii).length_squared() <= 1.0
 
 
 func _resolve() -> void:
@@ -57,7 +60,7 @@ func _resolve() -> void:
 # From the player's own hurtbox centre, so any facing answers it: it comes from above.
 func _hit() -> RefCounted:
 	var centre: Vector2 = player.hurtBox.get_node("CollisionShape2D").global_position
-	return HitInfo.make(SLAM_ID, self, centre, boss)
+	return HitInfo.make(attack_id, self, centre, boss)
 
 
 static func _feet_of(shape: CollisionShape2D) -> Vector2:

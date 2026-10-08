@@ -165,10 +165,11 @@ func reveal_all() -> void:
 
 
 # The lane and the rows, faded in over `time`: `layout` is MattStateMachine.GLASS_ROW, `lane_top` the y
-# the lane starts at and `ropes` the ring's inside edges.
+# the lane starts at and `ropes` the ring's inside edges. The rows' lines stop at the glass as it lies when
+# they go up.
 func show_guides(on: bool, time: float, layout: Dictionary, lane_top: float, ropes: Rect2) -> void:
 	if on and guides == null:
-		guide_spec = {layout = layout, lane_top = lane_top, ropes = ropes}
+		guide_spec = {layout = layout, lane_top = lane_top, ropes = ropes, glass_top = band.position.y}
 		guides = Node2D.new()
 		guides.name = "Guides"
 		guides.modulate.a = 0.0
@@ -194,9 +195,11 @@ func _draw_guides() -> void:
 	for x in [lane.x, lane.y]:
 		guides.draw_dashed_line(Vector2(x, top) - origin, Vector2(x, ropes.end.y) - origin, style.edge, style.edge_width, style.dash)
 	# Between every two rows down to the glass's top edge.
-	var glass_top: int = layout.glass_rows[0]
-	for k in range(1, glass_top + 1):
+	var glass_top: float = guide_spec.glass_top
+	for k in range(1, layout.row_names.size()):
 		var y: float = layout.rows_top + layout.row_height * k
+		if y > glass_top + 0.5:
+			break
 		guides.draw_line(Vector2(ropes.position.x, y) - origin, Vector2(ropes.end.x, y) - origin, style.row_line, style.row_width)
 
 

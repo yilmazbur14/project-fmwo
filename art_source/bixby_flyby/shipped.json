@@ -1,0 +1,11 @@
+{
+ "approved": "2026-09-29, the user: \"approve both\" (picks: true side view, keep the y 300 crop, ship the drawn curtain)",
+ "source": "art_source/bixby_flyby/approval/ (contract.json there is canonical)",
+ "shipped_by": "coordinator, exclusive-create copy, sha256 verified against the source",
+ "files": {
+  "Assets/Characters/Bixby/bixby_beast_flyby.png": "567bd59769039868c70836b491b16196b81bcc84c7fb7ead39c6f3a7a5c6322a",
+  "Assets/Characters/Bixby/bixby_beast_flyby.aseprite": "563b9473e00c896339161eeb80b36977798ded629850e0190c9310e2bc37e8b1",
+  "Assets/Characters/Bixby/bixby_flyby_curtain.png": "84a281e2406d8c5fa80c6fc370a2e81ff7136e59a91dc7937c35a10bc3117925",
+  "Assets/Characters/Bixby/bixby_flyby_curtain.aseprite": "79c84cfa029f8ce4f54561634faf7c9251ad7ec5cc86cdbf2ec9826b906018e2"
+ }
+}

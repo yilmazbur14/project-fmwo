@@ -1,0 +1,3138 @@
+{
+ "take": "B",
+ "bosses": {
+  "eric": {
+   "poses": [
+    {
+     "key": "idle",
+     "title": "Idle (approved, take B)",
+     "sheet": "res://Assets/Characters/Eric/eric_entrance.png",
+     "frame": 3,
+     "anim": "idle",
+     "anim_frames": [
+      3
+     ],
+     "frame_size": [
+      256,
+      192
+     ],
+     "feet": [
+      128,
+      191
+     ],
+     "back": [
+      131,
+      160
+     ],
+     "back_how": "approved",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head",
+      "knee_l",
+      "knee_r",
+      "wrist_l",
+      "wrist_r"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "rings: head, knee_l, knee_r, wrist_l, wrist_r; back [131, 160] (approved hooks)"
+      ],
+      [
+       "LOOK",
+       "The approved look, exactly: the finale idle frame from the approval pass."
+      ]
+     ]
+    },
+    {
+     "key": "quake",
+     "title": "Quake stomp: the wind-up",
+     "sheet": "res://Assets/Characters/Eric/eric_sheet_v2.png",
+     "frame": 4,
+     "anim": "earthquake",
+     "anim_frames": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+     ],
+     "frame_size": [
+      256,
+      192
+     ],
+     "feet": [
+      128,
+      191
+     ],
+     "back": [
+      128,
+      156
+     ],
+     "back_how": "tracked",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head"
+     ],
+     "rings_left_off": {
+      "knee_r": "10/11 frames"
+     },
+     "rings_not_found": [
+      "wrist_l",
+      "wrist_r",
+      "knee_l"
+     ],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: sockets, jaw; rings: head"
+      ],
+      [
+       "AUTO",
+       "back [128, 156]: tracked (behind the body, strings under the sprite)"
+      ],
+      [
+       "SHIP",
+       "rings left off (not on every frame of earthquake): knee_r 10/11 frames; not found: wrist_l, wrist_r, knee_l: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "The held overhead of the earthquake, the frame the player reads. Greatsword iron, the plate bleached bone, beard and cape blood: all table work."
+      ]
+     ]
+    },
+    {
+     "key": "whirlwind",
+     "title": "Whirlwind: his back to us",
+     "sheet": "res://Assets/Characters/Eric/eric_sheet_v2.png",
+     "frame": 16,
+     "anim": "whirlwind",
+     "anim_frames": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20
+     ],
+     "frame_size": [
+      256,
+      192
+     ],
+     "feet": [
+      128,
+      191
+     ],
+     "back": [
+      127,
+      154
+     ],
+     "back_how": "by hand",
+     "back_ring_drawn": true,
+     "rings_drawn": [
+      "back"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [
+      "head",
+      "wrist_l",
+      "wrist_r",
+      "knee_l",
+      "knee_r"
+     ],
+     "overlays_skipped": [
+      "sockets",
+      "jaw"
+     ],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 15,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: overlays sit out (face not the idle face); rings: none"
+      ],
+      [
+       "HAND",
+       "back [127, 154]: set by hand (ring drawn on his back, strings over the sprite)"
+      ],
+      [
+       "SHIP",
+       "rings not found: head, wrist_l, wrist_r, knee_l, knee_r: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "A back view: the tracker has no front-view part to hold on to, so every ring is off and the back ring is drawn by hand on the cape between the pauldrons. The slash arc goes bone."
+      ]
+     ]
+    },
+    {
+     "key": "throw",
+     "title": "Sword throw: the release",
+     "sheet": "res://Assets/Characters/Eric/eric_sheet_v2.png",
+     "frame": 34,
+     "anim": "throw_release",
+     "anim_frames": [
+      34,
+      35
+     ],
+     "frame_size": [
+      256,
+      192
+     ],
+     "feet": [
+      128,
+      191
+     ],
+     "back": [
+      129,
+      155
+     ],
+     "back_how": "tracked",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head",
+      "knee_r"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [
+      "wrist_l",
+      "wrist_r",
+      "knee_l"
+     ],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: sockets, jaw; rings: head, knee_r"
+      ],
+      [
+       "AUTO",
+       "back [129, 155]: tracked (behind the body, strings under the sprite)"
+      ],
+      [
+       "SHIP",
+       "rings not found: wrist_l, wrist_r, knee_l: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "The sword leaving his hand. The flying sword is its own sprite (eric_thrown_sword_v2): every one of its colours is already in his table, so it carries as iron by itself."
+      ]
+     ]
+    },
+    {
+     "key": "bearhug",
+     "title": "Bear hug: the lunge",
+     "sheet": "res://Assets/Characters/Eric/eric_bearhug_v2.png",
+     "frame": 4,
+     "anim": "hug_lunge",
+     "anim_frames": [
+      3,
+      4
+     ],
+     "frame_size": [
+      256,
+      192
+     ],
+     "feet": [
+      128,
+      191
+     ],
+     "back": [
+      128,
+      162
+     ],
+     "back_how": "tracked",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [
+      "wrist_l",
+      "wrist_r",
+      "knee_l",
+      "knee_r"
+     ],
+     "overlays_skipped": [],
+     "table_added": {
+      "B83246": [
+       "cloth",
+       "R4"
+      ]
+     },
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: sockets, jaw; rings: head"
+      ],
+      [
+       "AUTO",
+       "back [128, 162]: tracked (behind the body, strings under the sprite)"
+      ],
+      [
+       "HAND",
+       "table: +B83246 -> cloth R4"
+      ],
+      [
+       "SHIP",
+       "rings not found: wrist_l, wrist_r, knee_l, knee_r: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "The cape flung open. Its lit flap (B83246) is the one colour of this sheet his table lacked: added here as bright blood (R4). The motion lines go bone."
+      ]
+     ]
+    }
+   ],
+   "ship_later": {
+    "sheets": {
+     "Eric/eric_sheet_v2.png": {
+      "frame_width": 256,
+      "frames": 40,
+      "anims": {
+       "earthquake": {
+        "frames": [
+         0,
+         1,
+         2,
+         3,
+         4,
+         5,
+         6,
+         7,
+         8,
+         9,
+         10
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {
+         "knee_r": "10/11"
+        },
+        "back": {
+         "tracked": 11
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "recover": {
+        "frames": [
+         11,
+         12
+        ],
+        "rings_kept": [
+         "head",
+         "knee_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "whirlwind": {
+        "frames": [
+         13,
+         14,
+         15,
+         16,
+         17,
+         18,
+         19,
+         20
+        ],
+        "rings_kept": [],
+        "rings_partial": {
+         "head": "1/8",
+         "knee_r": "1/8"
+        },
+        "back": {
+         "none": 7,
+         "via crown": 1
+        },
+        "face_overlays_out_on": 7,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "idle": {
+        "frames": [
+         21,
+         22,
+         23,
+         24,
+         25,
+         26
+        ],
+        "rings_kept": [
+         "head",
+         "knee_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 6
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "downed": {
+        "frames": [
+         27,
+         28,
+         29,
+         30,
+         31
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 5
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "throw_windup": {
+        "frames": [
+         32,
+         33
+        ],
+        "rings_kept": [
+         "head",
+         "knee_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "throw_release": {
+        "frames": [
+         34,
+         35
+        ],
+        "rings_kept": [
+         "head",
+         "knee_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "empty_wait": {
+        "frames": [
+         36,
+         37
+        ],
+        "rings_kept": [
+         "head",
+         "knee_r",
+         "wrist_l",
+         "wrist_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "recall_reach": {
+        "frames": [
+         38
+        ],
+        "rings_kept": [
+         "head",
+         "knee_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 1
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "recall_catch": {
+        "frames": [
+         39
+        ],
+        "rings_kept": [
+         "head",
+         "knee_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 1
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Eric/eric_bearhug_v2.png": {
+      "frame_width": 256,
+      "frames": 15,
+      "anims": {
+       "hug_plant": {
+        "frames": [
+         0
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 1
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {
+         "FFF7D6": 70
+        },
+        "audit_issues": 0
+       },
+       "hug_charge": {
+        "frames": [
+         1,
+         2
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {
+         "FFF7D6": 952
+        },
+        "audit_issues": 0
+       },
+       "hug_lunge": {
+        "frames": [
+         3,
+         4
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {
+         "B83246": 319
+        },
+        "audit_issues": 0
+       },
+       "hug_whiff": {
+        "frames": [
+         5
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 1
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "hug_stumble": {
+        "frames": [
+         6
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 1
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "hug_grab": {
+        "frames": [
+         7
+        ],
+        "rings_kept": [
+         "head",
+         "knee_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "via crown": 1
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {
+         "5FABEC": 4,
+         "2F78D0": 16,
+         "1F58A8": 17,
+         "112C5E": 5,
+         "7A7486": 1,
+         "5A5466": 3,
+         "26232B": 11,
+         "3A3544": 7,
+         "17151B": 2,
+         "EFB582": 13,
+         "D79864": 37,
+         "0F0E12": 4,
+         "AC714F": 21,
+         "87553C": 10,
+         "6A3F2E": 4,
+         "B0DCFF": 3,
+         "4A4854": 3,
+         "0C0B0F": 4,
+         "33313B": 3,
+         "5A3A12": 1,
+         "221F28": 2
+        },
+        "audit_issues": 0
+       },
+       "hug_squeeze": {
+        "frames": [
+         8,
+         9,
+         10
+        ],
+        "rings_kept": [
+         "head",
+         "knee_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "via crown": 3
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {
+         "FFF7D6": 11,
+         "5FABEC": 9,
+         "2F78D0": 30,
+         "1F58A8": 34,
+         "112C5E": 12,
+         "173E80": 3,
+         "EFB582": 26,
+         "D79864": 67,
+         "3A3544": 11,
+         "5A5466": 7,
+         "26232B": 29,
+         "0F0E12": 10,
+         "17151B": 11,
+         "AC714F": 56,
+         "87553C": 22,
+         "6A3F2E": 12,
+         "B0DCFF": 8,
+         "33313B": 6,
+         "141218": 2,
+         "221F28": 9,
+         "0C0B0F": 8,
+         "5A3A12": 3,
+         "7A7486": 1
+        },
+        "audit_issues": 0
+       },
+       "hug_toss": {
+        "frames": [
+         11
+        ],
+        "rings_kept": [
+         "head",
+         "knee_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 1
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {
+         "2F78D0": 20,
+         "1F58A8": 16,
+         "112C5E": 6,
+         "173E80": 3,
+         "D79864": 40,
+         "3A3544": 7,
+         "5A5466": 3,
+         "7A7486": 1,
+         "26232B": 10,
+         "EFB582": 10,
+         "0F0E12": 4,
+         "17151B": 2,
+         "AC714F": 19,
+         "87553C": 13,
+         "5FABEC": 6,
+         "6A3F2E": 4,
+         "B0DCFF": 1,
+         "33313B": 5,
+         "0C0B0F": 3,
+         "221F28": 4,
+         "141218": 1
+        },
+        "audit_issues": 0
+       },
+       "hug_toss_end": {
+        "frames": [
+         12
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 1
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "hug_retrieve": {
+        "frames": [
+         13,
+         14
+        ],
+        "rings_kept": [
+         "head",
+         "knee_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Eric/eric_winded.png": {
+      "frame_width": 256,
+      "frames": 4,
+      "anims": {
+       "eric_winded": {
+        "frames": [
+         0,
+         1,
+         2,
+         3
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "none": 4
+        },
+        "face_overlays_out_on": 4,
+        "unmapped": {
+         "E05A64": 8,
+         "5A3A12": 8
+        },
+        "audit_issues": 0
+       }
+      }
+     },
+     "Eric/eric_broken.png": {
+      "frame_width": 256,
+      "frames": 8,
+      "anims": {
+       "broken_final": {
+        "frames": [
+         0,
+         1,
+         2,
+         3,
+         4
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "tracked": 1,
+         "none": 4
+        },
+        "face_overlays_out_on": 5,
+        "unmapped": {
+         "5A3A12": 9,
+         "E05A64": 2,
+         "B83246": 7
+        },
+        "audit_issues": 0
+       },
+       "broken_final_loop": {
+        "frames": [
+         5,
+         6,
+         7
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "none": 3
+        },
+        "face_overlays_out_on": 3,
+        "unmapped": {
+         "E05A64": 15,
+         "5A3A12": 2
+        },
+        "audit_issues": 0
+       }
+      }
+     },
+     "Eric/eric_juggle.png": {
+      "frame_width": 256,
+      "frames": 10,
+      "anims": {
+       "juggle_hit_final": {
+        "frames": [
+         0,
+         1
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "tracked": 1,
+         "none": 1
+        },
+        "face_overlays_out_on": 2,
+        "unmapped": {
+         "B83246": 73
+        },
+        "audit_issues": 0
+       },
+       "juggle_tumble_final": {
+        "frames": [
+         2,
+         3,
+         4,
+         5
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "none": 4
+        },
+        "face_overlays_out_on": 4,
+        "unmapped": {
+         "B83246": 910,
+         "E05A64": 22,
+         "5A3A12": 3
+        },
+        "audit_issues": 0
+       },
+       "juggle_crash_final": {
+        "frames": [
+         6,
+         7,
+         8,
+         9
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "none": 4
+        },
+        "face_overlays_out_on": 4,
+        "unmapped": {
+         "B83246": 401,
+         "E05A64": 10
+        },
+        "audit_issues": 0
+       }
+      }
+     }
+    },
+    "props": {
+     "Eric/eric_thrown_sword_v2.png": {
+      "colours": 13,
+      "unmapped": {},
+      "semi_alpha_px": 0
+     },
+     "Eric/eric_sword_planted_v2.png": {
+      "colours": 19,
+      "unmapped": {
+       "663931": 122,
+       "B8926E": 120,
+       "C5CDD1": 115,
+       "3C2420": 96,
+       "966A50": 40,
+       "754C45": 16
+      },
+      "semi_alpha_px": 0
+     },
+     "Eric/eric_broken_sword.png": {
+      "colours": 16,
+      "unmapped": {},
+      "semi_alpha_px": 0
+     }
+    }
+   },
+   "strip": {
+    "file": "eric_poses_1x.png",
+    "cell": [
+     256,
+     192
+    ],
+    "feet_in_cell": [
+     128,
+     191
+    ],
+    "cells": [
+     {
+      "cell": 0,
+      "pose": "idle",
+      "sheet": "Eric/eric_entrance.png",
+      "frame": 3,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 1,
+      "pose": "quake",
+      "sheet": "Eric/eric_sheet_v2.png",
+      "frame": 4,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 2,
+      "pose": "whirlwind",
+      "sheet": "Eric/eric_sheet_v2.png",
+      "frame": 16,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 3,
+      "pose": "throw",
+      "sheet": "Eric/eric_sheet_v2.png",
+      "frame": 34,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 4,
+      "pose": "bearhug",
+      "sheet": "Eric/eric_bearhug_v2.png",
+      "frame": 4,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     }
+    ]
+   }
+  },
+  "mason": {
+   "poses": [
+    {
+     "key": "idle",
+     "title": "Idle (approved, take B)",
+     "sheet": "res://Assets/Characters/Mason/mason_sheet.png",
+     "frame": 0,
+     "anim": "idle",
+     "anim_frames": [
+      0,
+      1
+     ],
+     "frame_size": [
+      64,
+      64
+     ],
+     "feet": [
+      32,
+      63
+     ],
+     "back": [
+      32,
+      40
+     ],
+     "back_how": "approved",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head",
+      "knee_l",
+      "knee_r",
+      "wrist_l",
+      "wrist_r"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 15,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "rings: head, knee_l, knee_r, wrist_l, wrist_r; back [32, 40] (approved hooks)"
+      ],
+      [
+       "LOOK",
+       "The approved look, exactly: the finale idle frame from the approval pass."
+      ]
+     ]
+    },
+    {
+     "key": "poop",
+     "title": "Poo bomb: the squat",
+     "sheet": "res://Assets/Characters/Mason/mason_sheet.png",
+     "frame": 6,
+     "anim": "poop",
+     "anim_frames": [
+      6,
+      7
+     ],
+     "frame_size": [
+      64,
+      64
+     ],
+     "feet": [
+      32,
+      63
+     ],
+     "back": [
+      31,
+      44
+     ],
+     "back_how": "tracked",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head",
+      "wrist_l",
+      "wrist_r"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [
+      "knee_l",
+      "knee_r"
+     ],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 14,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: sockets (then repainted by hand); rings: head, wrist_l, wrist_r"
+      ],
+      [
+       "AUTO",
+       "back [31, 44]: tracked (behind the body, strings under the sprite)"
+      ],
+      [
+       "HAND",
+       "drawn by hand: squint"
+      ],
+      [
+       "SHIP",
+       "rings not found: knee_l, knee_r: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "The squat, sweat flying (the drops go rune-blue). His eyes are screwed shut (< >): the sockets overlay would light two round pupils over them, so the squint is kept and lit by hand instead (f7 has his eyes open and keeps the overlay)."
+      ]
+     ]
+    },
+    {
+     "key": "phone",
+     "title": "Phone call: the Uber",
+     "sheet": "res://Assets/Characters/Mason/mason_sheet.png",
+     "frame": 10,
+     "anim": "phone",
+     "anim_frames": [
+      10,
+      11
+     ],
+     "frame_size": [
+      64,
+      64
+     ],
+     "feet": [
+      32,
+      63
+     ],
+     "back": [
+      32,
+      40
+     ],
+     "back_how": "tracked",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head",
+      "knee_l",
+      "knee_r",
+      "wrist_l"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [
+      "wrist_r"
+     ],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 15,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: sockets; rings: head, knee_l, knee_r, wrist_l"
+      ],
+      [
+       "AUTO",
+       "back [32, 40]: tracked (behind the body, strings under the sprite)"
+      ],
+      [
+       "SHIP",
+       "rings not found: wrist_r: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "The phone goes pitch black. His raised arm is not the idle arm, so its wrist ring is off (and so the whole anim keeps only the rings found on both its frames)."
+      ]
+     ]
+    },
+    {
+     "key": "nuggets",
+     "title": "Nugget toss: the heave",
+     "sheet": "res://Assets/Characters/Mason/mason_sheet.png",
+     "frame": 17,
+     "anim": "nugget_toss",
+     "anim_frames": [
+      15,
+      16,
+      17
+     ],
+     "frame_size": [
+      64,
+      64
+     ],
+     "feet": [
+      32,
+      63
+     ],
+     "back": [
+      32,
+      42
+     ],
+     "back_how": "tracked",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head"
+     ],
+     "rings_left_off": {
+      "knee_l": "1/3 frames",
+      "knee_r": "1/3 frames"
+     },
+     "rings_not_found": [
+      "wrist_l",
+      "wrist_r"
+     ],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: sockets; rings: head"
+      ],
+      [
+       "AUTO",
+       "back [32, 42]: tracked (behind the body, strings under the sprite)"
+      ],
+      [
+       "SHIP",
+       "rings left off (not on every frame of nugget_toss): knee_l 1/3 frames, knee_r 1/3 frames; not found: wrist_l, wrist_r: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "The bucket goes blood and bone stripes; the fried nuggets map to blood, so he now hurls raw red chunks (a question: bone like his costume instead?)."
+      ]
+     ]
+    }
+   ],
+   "ship_later": {
+    "sheets": {
+     "Mason/mason_sheet.png": {
+      "frame_width": 64,
+      "frames": 19,
+      "anims": {
+       "idle": {
+        "frames": [
+         0,
+         1
+        ],
+        "rings_kept": [
+         "head",
+         "knee_l",
+         "knee_r",
+         "wrist_l",
+         "wrist_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "waddle": {
+        "frames": [
+         2,
+         3,
+         4,
+         5
+        ],
+        "rings_kept": [
+         "head",
+         "wrist_l",
+         "wrist_r"
+        ],
+        "rings_partial": {
+         "knee_l": "3/4",
+         "knee_r": "3/4"
+        },
+        "back": {
+         "tracked": 4
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "poop": {
+        "frames": [
+         6,
+         7
+        ],
+        "rings_kept": [
+         "head",
+         "wrist_l",
+         "wrist_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "eat": {
+        "frames": [
+         8,
+         9
+        ],
+        "rings_kept": [
+         "head",
+         "knee_l",
+         "knee_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "phone": {
+        "frames": [
+         10,
+         11
+        ],
+        "rings_kept": [
+         "head",
+         "knee_l",
+         "knee_r",
+         "wrist_l"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "hit": {
+        "frames": [
+         12
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 1
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "defeated": {
+        "frames": [
+         13,
+         14
+        ],
+        "rings_kept": [],
+        "rings_partial": {
+         "head": "1/2"
+        },
+        "back": {
+         "tracked": 1,
+         "none": 1
+        },
+        "face_overlays_out_on": 1,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "nugget_toss": {
+        "frames": [
+         15,
+         16,
+         17
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {
+         "knee_l": "1/3",
+         "knee_r": "1/3"
+        },
+        "back": {
+         "via crown": 1,
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "nugget_hold": {
+        "frames": [
+         18
+        ],
+        "rings_kept": [
+         "head",
+         "knee_l",
+         "knee_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 1
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Mason/mason_juggle.png": {
+      "frame_width": 128,
+      "frames": 12,
+      "anims": {
+       "juggle_hit_final": {
+        "frames": [
+         0,
+         1
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "none": 2
+        },
+        "face_overlays_out_on": 2,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "juggle_tumble_final": {
+        "frames": [
+         2,
+         3,
+         4,
+         5,
+         6
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "none": 5
+        },
+        "face_overlays_out_on": 5,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "juggle_crash_final": {
+        "frames": [
+         7,
+         8,
+         9
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "none": 3
+        },
+        "face_overlays_out_on": 3,
+        "unmapped": {},
+        "audit_issues": 0
+       },
+       "juggle_down_final": {
+        "frames": [
+         10,
+         11
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "none": 2
+        },
+        "face_overlays_out_on": 2,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     }
+    },
+    "props": {
+     "Mason/poo_bomb.png": {
+      "colours": 13,
+      "unmapped": {
+       "7E4A2E": 214,
+       "A0633A": 212,
+       "C98A4E": 74,
+       "3B1F1E": 58,
+       "5C3326": 38,
+       "F0CC98": 13,
+       "DF7126": 10,
+       "F4EEDC": 8,
+       "B5AA92": 8
+      },
+      "semi_alpha_px": 0
+     },
+     "Mason/poo_explosion.png": {
+      "colours": 13,
+      "unmapped": {
+       "7E4A2E": 911,
+       "CFE36A": 500,
+       "A3BF34": 432,
+       "6F8A24": 328,
+       "EDF7B5": 278,
+       "4A5A1C": 126,
+       "A0633A": 125,
+       "5C3326": 122,
+       "C98A4E": 116,
+       "3B1F1E": 112,
+       "F0CC98": 12
+      },
+      "semi_alpha_px": 0
+     },
+     "Mason/nugget_meteor.png": {
+      "colours": 12,
+      "unmapped": {
+       "DF7126": 557,
+       "6E1E0A": 340,
+       "C27C3E": 145
+      },
+      "semi_alpha_px": 0
+     },
+     "Mason/nugget_target.png": {
+      "colours": 12,
+      "unmapped": {
+       "485F34": 814,
+       "5D7B44": 660,
+       "DF7126": 300,
+       "334325": 245,
+       "663931": 71,
+       "C27C3E": 40
+      },
+      "semi_alpha_px": 0
+     },
+     "Mason/nugget_impact.png": {
+      "colours": 15,
+      "unmapped": {
+       "DF7126": 310,
+       "E6DCC2": 304,
+       "6E1E0A": 210,
+       "5A4A3A": 208,
+       "978769": 169,
+       "FBF6E8": 151,
+       "C4B494": 113,
+       "C27C3E": 38
+      },
+      "semi_alpha_px": 0
+     },
+     "Mason/fry_trail.png": {
+      "colours": 6,
+      "unmapped": {},
+      "semi_alpha_px": 0
+     },
+     "Mason/uber_driver.png": {
+      "colours": 28,
+      "unmapped": {
+       "383B48": 379,
+       "2AA85E": 374,
+       "272933": 317,
+       "1A8050": 234,
+       "125C44": 184,
+       "2E1F1A": 174,
+       "B07A3C": 150,
+       "4ECC74": 139,
+       "8A5A2B": 138,
+       "4E5263": 116,
+       "5C5850": 116,
+       "4A332B": 96,
+       "7EE693": 96,
+       "1B1C23": 96,
+       "CBC8C0": 84,
+       "CC9650": 78,
+       "9B968C": 67,
+       "613E1F": 66,
+       "6A6F82": 33,
+       "E6B872": 26,
+       "C9CFD6": 12,
+       "E8E6E0": 12
+      },
+      "semi_alpha_px": 0
+     }
+    }
+   },
+   "strip": {
+    "file": "mason_poses_1x.png",
+    "cell": [
+     64,
+     64
+    ],
+    "feet_in_cell": [
+     32,
+     63
+    ],
+    "cells": [
+     {
+      "cell": 0,
+      "pose": "idle",
+      "sheet": "Mason/mason_sheet.png",
+      "frame": 0,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 1,
+      "pose": "poop",
+      "sheet": "Mason/mason_sheet.png",
+      "frame": 6,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 2,
+      "pose": "phone",
+      "sheet": "Mason/mason_sheet.png",
+      "frame": 10,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 3,
+      "pose": "nuggets",
+      "sheet": "Mason/mason_sheet.png",
+      "frame": 17,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     }
+    ]
+   }
+  },
+  "josh": {
+   "poses": [
+    {
+     "key": "idle",
+     "title": "Idle (approved, take B)",
+     "sheet": "res://Assets/Characters/Josh/josh_idle.png",
+     "frame": 0,
+     "anim": "idle",
+     "anim_frames": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "frame_size": [
+      80,
+      80
+     ],
+     "feet": [
+      40,
+      79
+     ],
+     "back": [
+      42,
+      45
+     ],
+     "back_how": "approved",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head",
+      "knee_l",
+      "knee_r",
+      "wrist_l",
+      "wrist_r"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "rings: head, knee_l, knee_r, wrist_l, wrist_r; back [42, 45] (approved hooks)"
+      ],
+      [
+       "LOOK",
+       "The approved look, exactly: the finale idle frame from the approval pass."
+      ]
+     ]
+    },
+    {
+     "key": "wild_hold",
+     "title": "Wild Cards: the wind-up he holds",
+     "sheet": "res://Assets/Characters/Josh/josh_throw.png",
+     "frame": 0,
+     "anim": "throw",
+     "anim_frames": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "frame_size": [
+      80,
+      80
+     ],
+     "feet": [
+      40,
+      79
+     ],
+     "back": [
+      40,
+      45
+     ],
+     "back_how": "tracked",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head",
+      "knee_l",
+      "knee_r",
+      "wrist_l"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [
+      "wrist_r"
+     ],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: sockets, jaw; rings: head, knee_l, knee_r, wrist_l"
+      ],
+      [
+       "AUTO",
+       "back [40, 45]: tracked (behind the body, strings under the sprite)"
+      ],
+      [
+       "SHIP",
+       "rings not found: wrist_r: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "wild_hold: the card cocked by his head. The card's gold flare shares his button gold, so it goes bone with them: it no longer glows (a region could make it rune-blue)."
+      ]
+     ]
+    },
+    {
+     "key": "throw",
+     "title": "Wild Cards: the throw",
+     "sheet": "res://Assets/Characters/Josh/josh_throw.png",
+     "frame": 1,
+     "anim": "throw",
+     "anim_frames": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "frame_size": [
+      80,
+      80
+     ],
+     "feet": [
+      40,
+      79
+     ],
+     "back": [
+      47,
+      46
+     ],
+     "back_how": "via head",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head",
+      "knee_l",
+      "knee_r",
+      "wrist_l",
+      "head"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [
+      "wrist_r"
+     ],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: sockets, jaw; rings: knee_l, knee_r, wrist_l"
+      ],
+      [
+       "AUTO",
+       "back [47, 46]: via head (behind the body, strings under the sprite)"
+      ],
+      [
+       "HAND",
+       "ring set by hand on this frame: head"
+      ],
+      [
+       "SHIP",
+       "rings not found: wrist_r: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "The release; the gold arc goes bone. The hat tips on this frame and the tracker loses the crown: its head ring is set by hand here, and that one frame keeps the ring on the whole throw (without it the all-or-nothing rule drops it from all four)."
+      ]
+     ]
+    },
+    {
+     "key": "glide",
+     "title": "Glide (the finale cameo)",
+     "sheet": "res://Assets/Characters/Josh/josh_glide.png",
+     "frame": 1,
+     "anim": "glide",
+     "anim_frames": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "frame_size": [
+      80,
+      80
+     ],
+     "feet": [
+      40,
+      79
+     ],
+     "back": [
+      49,
+      49
+     ],
+     "back_how": "tracked",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [
+      "wrist_l",
+      "wrist_r",
+      "knee_l",
+      "knee_r"
+     ],
+     "overlays_skipped": [
+      "seam"
+     ],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: sockets, jaw; not placed: seam; rings: head"
+      ],
+      [
+       "AUTO",
+       "back [49, 49]: tracked (behind the body, strings under the sprite)"
+      ],
+      [
+       "SHIP",
+       "rings not found: wrist_l, wrist_r, knee_l, knee_r: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "Riding pose; the card under him is its own sprite (Cards/josh_glider.png) in a gold palette his table does not cover, so it is not drawn here. Only the head ring survives."
+      ]
+     ]
+    },
+    {
+     "key": "clone",
+     "title": "A Wild Cards clone (the game's tint)",
+     "sheet": "res://Assets/Characters/Josh/josh_throw.png",
+     "frame": 0,
+     "anim": "throw",
+     "anim_frames": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "frame_size": [
+      80,
+      80
+     ],
+     "feet": [
+      40,
+      79
+     ],
+     "back": [
+      40,
+      45
+     ],
+     "back_how": "tracked",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head",
+      "knee_l",
+      "knee_r",
+      "wrist_l"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [
+      "wrist_r"
+     ],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": [
+      0.55,
+      0.72,
+      1.0,
+      0.78
+     ],
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: sockets, jaw; rings: head, knee_l, knee_r, wrist_l"
+      ],
+      [
+       "AUTO",
+       "back [40, 45]: tracked (behind the body, strings under the sprite)"
+      ],
+      [
+       "SHIP",
+       "rings not found: wrist_r: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "The clones are his own sheets tinted see-through blue in code: over the puppet the same tint reads as a ghost of the puppet. No new art. Strings on a clone: a question."
+      ]
+     ]
+    }
+   ],
+   "ship_later": {
+    "sheets": {
+     "Josh/josh_throw.png": {
+      "frame_width": 80,
+      "frames": 4,
+      "anims": {
+       "josh_throw": {
+        "frames": [
+         0,
+         1,
+         2,
+         3
+        ],
+        "rings_kept": [
+         "knee_l",
+         "knee_r",
+         "wrist_l"
+        ],
+        "rings_partial": {
+         "head": "3/4"
+        },
+        "back": {
+         "tracked": 2,
+         "via head": 1,
+         "via crown": 1
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Josh/josh_glide.png": {
+      "frame_width": 80,
+      "frames": 4,
+      "anims": {
+       "josh_glide": {
+        "frames": [
+         0,
+         1,
+         2,
+         3
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 4
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Josh/josh_intro.png": {
+      "frame_width": 80,
+      "frames": 6,
+      "anims": {
+       "josh_intro": {
+        "frames": [
+         0,
+         1,
+         2,
+         3,
+         4,
+         5
+        ],
+        "rings_kept": [
+         "knee_l",
+         "knee_r"
+        ],
+        "rings_partial": {
+         "head": "5/6",
+         "wrist_l": "4/6"
+        },
+        "back": {
+         "tracked": 6
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Josh/josh_mount.png": {
+      "frame_width": 80,
+      "frames": 3,
+      "anims": {
+       "josh_mount": {
+        "frames": [
+         0,
+         1,
+         2
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {
+         "knee_l": "1/3",
+         "knee_r": "1/3",
+         "wrist_l": "1/3"
+        },
+        "back": {
+         "tracked": 2,
+         "via crown": 1
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Josh/josh_dismount.png": {
+      "frame_width": 80,
+      "frames": 3,
+      "anims": {
+       "josh_dismount": {
+        "frames": [
+         0,
+         1,
+         2
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {
+         "knee_l": "1/3",
+         "knee_r": "1/3",
+         "wrist_l": "1/3",
+         "wrist_r": "1/3"
+        },
+        "back": {
+         "tracked": 3
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Josh/josh_recovery.png": {
+      "frame_width": 80,
+      "frames": 4,
+      "anims": {
+       "josh_recovery": {
+        "frames": [
+         0,
+         1,
+         2,
+         3
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "none": 4
+        },
+        "face_overlays_out_on": 3,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Josh/josh_hit.png": {
+      "frame_width": 80,
+      "frames": 2,
+      "anims": {
+       "josh_hit": {
+        "frames": [
+         0,
+         1
+        ],
+        "rings_kept": [
+         "knee_l",
+         "knee_r",
+         "wrist_l"
+        ],
+        "rings_partial": {},
+        "back": {
+         "none": 2
+        },
+        "face_overlays_out_on": 2,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Josh/josh_defeat.png": {
+      "frame_width": 80,
+      "frames": 6,
+      "anims": {
+       "josh_defeat": {
+        "frames": [
+         0,
+         1,
+         2,
+         3,
+         4,
+         5
+        ],
+        "rings_kept": [],
+        "rings_partial": {
+         "knee_l": "1/6",
+         "knee_r": "1/6"
+        },
+        "back": {
+         "none": 6
+        },
+        "face_overlays_out_on": 6,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Josh/josh_juggle.png": {
+      "frame_width": 160,
+      "frames": 12,
+      "anims": {
+       "josh_juggle": {
+        "frames": [
+         0,
+         1,
+         2,
+         3,
+         4,
+         5,
+         6,
+         7,
+         8,
+         9,
+         10,
+         11
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "none": 12
+        },
+        "face_overlays_out_on": 12,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     }
+    },
+    "props": {
+     "Josh/Cards/card_burst.png": {
+      "colours": 8,
+      "unmapped": {
+       "FBF7EE": 1817,
+       "C48A2C": 1315,
+       "EDE4D6": 1116,
+       "F2C457": 930,
+       "FBF236": 62,
+       "FFF7A0": 21,
+       "D95763": 12
+      },
+      "semi_alpha_px": 0
+     },
+     "Josh/Cards/card_burst_rain.png": {
+      "colours": 7,
+      "unmapped": {
+       "C48A2C": 1290,
+       "FBF7EE": 1046,
+       "F2C457": 712,
+       "EDE4D6": 666,
+       "948779": 143,
+       "FBF236": 7
+      },
+      "semi_alpha_px": 0
+     },
+     "Josh/Cards/card_projectile.png": {
+      "colours": 9,
+      "unmapped": {
+       "C48A2C": 269,
+       "F2C457": 149,
+       "FBF7EE": 87,
+       "EDE4D6": 55,
+       "FBF236": 26,
+       "D95763": 15,
+       "FFF7A0": 11
+      },
+      "semi_alpha_px": 0
+     },
+     "Josh/Cards/josh_glider.png": {
+      "colours": 15,
+      "unmapped": {
+       "C48A2C": 653,
+       "8A5A1C": 496,
+       "F2C457": 299,
+       "C7BBAB": 173,
+       "EDE4D6": 169,
+       "948779": 162,
+       "6B6157": 162,
+       "3E3830": 162,
+       "FBF7EE": 119,
+       "AC3232": 84,
+       "111117": 61,
+       "D95763": 36,
+       "FBF236": 28,
+       "FFF7A0": 22
+      },
+      "semi_alpha_px": 0
+     }
+    }
+   },
+   "strip": {
+    "file": "josh_poses_1x.png",
+    "cell": [
+     80,
+     80
+    ],
+    "feet_in_cell": [
+     40,
+     79
+    ],
+    "cells": [
+     {
+      "cell": 0,
+      "pose": "idle",
+      "sheet": "Josh/josh_idle.png",
+      "frame": 0,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 1,
+      "pose": "wild_hold",
+      "sheet": "Josh/josh_throw.png",
+      "frame": 0,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 2,
+      "pose": "throw",
+      "sheet": "Josh/josh_throw.png",
+      "frame": 1,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 3,
+      "pose": "glide",
+      "sheet": "Josh/josh_glide.png",
+      "frame": 1,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     }
+    ]
+   }
+  },
+  "carter": {
+   "poses": [
+    {
+     "key": "idle",
+     "title": "Idle (approved, take B)",
+     "sheet": "res://Assets/Characters/Carter/carter_idle.png",
+     "frame": 0,
+     "anim": "idle",
+     "anim_frames": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "frame_size": [
+      96,
+      96
+     ],
+     "feet": [
+      48,
+      95
+     ],
+     "back": [
+      48,
+      58
+     ],
+     "back_how": "approved",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head",
+      "knee_l",
+      "knee_r",
+      "wrist_l",
+      "wrist_r"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "rings: head, knee_l, knee_r, wrist_l, wrist_r; back [48, 58] (approved hooks)"
+      ],
+      [
+       "LOOK",
+       "The approved look, exactly: the finale idle frame from the approval pass."
+      ]
+     ]
+    },
+    {
+     "key": "raging_demon",
+     "title": "Raging Demon: the glare",
+     "sheet": "res://Assets/Characters/Carter/carter_eye_flash.png",
+     "frame": 3,
+     "anim": "carter_eye_flash",
+     "anim_frames": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "frame_size": [
+      96,
+      96
+     ],
+     "feet": [
+      48,
+      95
+     ],
+     "back": [
+      48,
+      58
+     ],
+     "back_how": "tracked",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head",
+      "knee_l",
+      "knee_r",
+      "wrist_l",
+      "wrist_r"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [],
+     "overlays_skipped": [
+      "sockets",
+      "jaw"
+     ],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: overlays sit out (face not the idle face); rings: head, knee_l, knee_r, wrist_l, wrist_r"
+      ],
+      [
+       "AUTO",
+       "back [48, 58]: tracked (behind the body, strings under the sprite)"
+      ],
+      [
+       "LOOK",
+       "The control-loss frame the yank holds. Every ring tracks. The eye beams and the aura's hot core turn rune-blue inside blood spikes; the face is not the idle face, so the jaw and socket overlays sit out (his eyes glow by the table anyway)."
+      ]
+     ]
+    },
+    {
+     "key": "beam_rush",
+     "title": "Beam Rush: committed",
+     "sheet": "res://Assets/Characters/Carter/carter_rush.png",
+     "frame": 3,
+     "anim": "carter_rush",
+     "anim_frames": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "frame_size": [
+      96,
+      96
+     ],
+     "feet": [
+      48,
+      95
+     ],
+     "back": [
+      58,
+      59
+     ],
+     "back_how": "via crown",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [
+      "wrist_l",
+      "wrist_r",
+      "knee_l",
+      "knee_r"
+     ],
+     "overlays_skipped": [],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: sockets, jaw; rings: head"
+      ],
+      [
+       "AUTO",
+       "back [58, 59]: via crown (behind the body, strings under the sprite)"
+      ],
+      [
+       "SHIP",
+       "rings not found: wrist_l, wrist_r, knee_l, knee_r: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "The frame the player reads before the strike. Head ring and face carry; the torso is turned, so the back point rides the head (via crown) and the limb rings are off."
+      ]
+     ]
+    },
+    {
+     "key": "messatsu",
+     "title": "Messatsu: the charge",
+     "sheet": "res://Assets/Characters/Carter/carter_messatsu_charge.png",
+     "frame": 0,
+     "anim": "carter_messatsu_charge",
+     "anim_frames": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "frame_size": [
+      96,
+      96
+     ],
+     "feet": [
+      48,
+      95
+     ],
+     "back": [
+      60,
+      63
+     ],
+     "back_how": "via crown",
+     "back_ring_drawn": false,
+     "rings_drawn": [
+      "head"
+     ],
+     "rings_left_off": {},
+     "rings_not_found": [
+      "wrist_l",
+      "wrist_r",
+      "knee_l",
+      "knee_r"
+     ],
+     "overlays_skipped": [
+      "sockets",
+      "jaw"
+     ],
+     "table_added": {},
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 16,
+     "semi_alpha_px": 0,
+     "notes": [
+      [
+       "AUTO",
+       "palette + keyline + tatter; face: overlays sit out (face not the idle face); rings: head"
+      ],
+      [
+       "AUTO",
+       "back [60, 63]: via crown (behind the body, strings under the sprite)"
+      ],
+      [
+       "SHIP",
+       "rings not found: wrist_l, wrist_r, knee_l, knee_r: by hand, or left off"
+      ],
+      [
+       "LOOK",
+       "Palms cupped at the hip. The head is lower and turned: the face overlays sit out, the eyes still glow by the table. Head ring only."
+      ]
+     ]
+    },
+    {
+     "key": "clone",
+     "title": "A Raging Demon clone (FX sprite)",
+     "sheet": "res://Assets/Characters/Carter/Demon/demon_clone.png",
+     "frame": 5,
+     "anim": "demon_clone",
+     "anim_frames": [
+      5
+     ],
+     "frame_size": [
+      48,
+      48
+     ],
+     "feet": [
+      24,
+      47
+     ],
+     "back": null,
+     "back_how": "none (an effect, not a puppet)",
+     "back_ring_drawn": false,
+     "rings_drawn": [],
+     "rings_left_off": {},
+     "rings_not_found": [],
+     "overlays_skipped": [],
+     "table_added": {
+      "FF4A3C": [
+       "eye",
+       "G1"
+      ],
+      "C01830": [
+       "eye",
+       "G2"
+      ]
+     },
+     "unmapped": {},
+     "tint_in_code": null,
+     "colours": 5,
+     "semi_alpha_px": 645,
+     "notes": [
+      [
+       "AUTO",
+       "recoloured by his table; alpha as authored (212, 242, 255)"
+      ],
+      [
+       "HAND",
+       "table: the clone's red eyes FF4A3C, C01830 -> glow G1, G2 (his aura table has them as flare)"
+      ],
+      [
+       "LOOK",
+       "An effect sheet, recoloured by table only: purple goes blood, the red eyes go the family glow. Its authored fade (alpha 212) is kept. The red/yellow parry tell is the light over it (demon_light, demon_feint), untouched."
+      ]
+     ]
+    }
+   ],
+   "ship_later": {
+    "sheets": {
+     "Carter/carter_eye_flash.png": {
+      "frame_width": 96,
+      "frames": 4,
+      "anims": {
+       "carter_eye_flash": {
+        "frames": [
+         0,
+         1,
+         2,
+         3
+        ],
+        "rings_kept": [
+         "head",
+         "knee_l",
+         "knee_r",
+         "wrist_l",
+         "wrist_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 4
+        },
+        "face_overlays_out_on": 2,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Carter/carter_rush.png": {
+      "frame_width": 96,
+      "frames": 4,
+      "anims": {
+       "carter_rush": {
+        "frames": [
+         0,
+         1,
+         2,
+         3
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {},
+        "back": {
+         "via crown": 4
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Carter/carter_rush_pass.png": {
+      "frame_width": 96,
+      "frames": 3,
+      "anims": {
+       "carter_rush_pass": {
+        "frames": [
+         0,
+         1,
+         2
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {},
+        "back": {
+         "via crown": 3
+        },
+        "face_overlays_out_on": 3,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Carter/carter_messatsu_charge.png": {
+      "frame_width": 96,
+      "frames": 4,
+      "anims": {
+       "carter_messatsu_charge": {
+        "frames": [
+         0,
+         1,
+         2,
+         3
+        ],
+        "rings_kept": [
+         "head"
+        ],
+        "rings_partial": {},
+        "back": {
+         "via crown": 4
+        },
+        "face_overlays_out_on": 4,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Carter/carter_messatsu_fire.png": {
+      "frame_width": 96,
+      "frames": 3,
+      "anims": {
+       "carter_messatsu_fire": {
+        "frames": [
+         0,
+         1,
+         2
+        ],
+        "rings_kept": [],
+        "rings_partial": {
+         "head": "2/3"
+        },
+        "back": {
+         "via crown": 2,
+         "none": 1
+        },
+        "face_overlays_out_on": 2,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Carter/carter_intro.png": {
+      "frame_width": 96,
+      "frames": 17,
+      "anims": {
+       "carter_intro": {
+        "frames": [
+         0,
+         1,
+         2,
+         3,
+         4,
+         5,
+         6,
+         7,
+         8,
+         9,
+         10,
+         11,
+         12,
+         13,
+         14,
+         15,
+         16
+        ],
+        "rings_kept": [],
+        "rings_partial": {
+         "head": "12/17",
+         "knee_l": "10/17",
+         "knee_r": "11/17",
+         "wrist_l": "6/17",
+         "wrist_r": "6/17"
+        },
+        "back": {
+         "none": 5,
+         "via crown": 8,
+         "tracked": 4
+        },
+        "face_overlays_out_on": 12,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Carter/carter_spent.png": {
+      "frame_width": 96,
+      "frames": 4,
+      "anims": {
+       "carter_spent": {
+        "frames": [
+         0,
+         1,
+         2,
+         3
+        ],
+        "rings_kept": [],
+        "rings_partial": {
+         "head": "2/4"
+        },
+        "back": {
+         "none": 2,
+         "via crown": 2
+        },
+        "face_overlays_out_on": 2,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Carter/carter_hit.png": {
+      "frame_width": 96,
+      "frames": 2,
+      "anims": {
+       "carter_hit": {
+        "frames": [
+         0,
+         1
+        ],
+        "rings_kept": [
+         "head",
+         "knee_l",
+         "knee_r",
+         "wrist_l",
+         "wrist_r"
+        ],
+        "rings_partial": {},
+        "back": {
+         "tracked": 2
+        },
+        "face_overlays_out_on": 0,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Carter/carter_defeat.png": {
+      "frame_width": 96,
+      "frames": 6,
+      "anims": {
+       "carter_defeat": {
+        "frames": [
+         0,
+         1,
+         2,
+         3,
+         4,
+         5
+        ],
+        "rings_kept": [],
+        "rings_partial": {
+         "head": "3/6",
+         "knee_l": "1/6",
+         "knee_r": "1/6",
+         "wrist_l": "1/6",
+         "wrist_r": "1/6"
+        },
+        "back": {
+         "tracked": 1,
+         "via crown": 2,
+         "none": 3
+        },
+        "face_overlays_out_on": 3,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     },
+     "Carter/carter_juggle.png": {
+      "frame_width": 192,
+      "frames": 12,
+      "anims": {
+       "carter_juggle": {
+        "frames": [
+         0,
+         1,
+         2,
+         3,
+         4,
+         5,
+         6,
+         7,
+         8,
+         9,
+         10,
+         11
+        ],
+        "rings_kept": [],
+        "rings_partial": {},
+        "back": {
+         "none": 12
+        },
+        "face_overlays_out_on": 12,
+        "unmapped": {},
+        "audit_issues": 0
+       }
+      }
+     }
+    },
+    "props": {
+     "Carter/Demon/demon_clone.png": {
+      "colours": 6,
+      "unmapped": {},
+      "semi_alpha_px": 4771
+     },
+     "Carter/Demon/demon_clone_ghost.png": {
+      "colours": 4,
+      "unmapped": {},
+      "semi_alpha_px": 2248
+     }
+    }
+   },
+   "strip": {
+    "file": "carter_poses_1x.png",
+    "cell": [
+     96,
+     96
+    ],
+    "feet_in_cell": [
+     48,
+     95
+    ],
+    "cells": [
+     {
+      "cell": 0,
+      "pose": "idle",
+      "sheet": "Carter/carter_idle.png",
+      "frame": 0,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 1,
+      "pose": "raging_demon",
+      "sheet": "Carter/carter_eye_flash.png",
+      "frame": 3,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 2,
+      "pose": "beam_rush",
+      "sheet": "Carter/carter_rush.png",
+      "frame": 3,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 3,
+      "pose": "messatsu",
+      "sheet": "Carter/carter_messatsu_charge.png",
+      "frame": 0,
+      "offset_in_cell": [
+       0,
+       0
+      ]
+     },
+     {
+      "cell": 4,
+      "pose": "clone",
+      "sheet": "Carter/Demon/demon_clone.png",
+      "frame": 5,
+      "offset_in_cell": [
+       24,
+       48
+      ]
+     }
+    ]
+   }
+  }
+ },
+ "mocks": {
+  "concept_mock_eric_josh": {
+   "eric": {
+    "pose": "quake",
+    "sheet": "Eric/eric_sheet_v2.png",
+    "frame": 4,
+    "mirrored": false,
+    "feet_screen": [
+     600,
+     690
+    ],
+    "feet_world": [
+     420.0,
+     1029.0
+    ],
+    "back_hook_screen": [
+     601.0,
+     619.0
+    ],
+    "back_hook_world": [
+     421.5,
+     922.5
+    ],
+    "hand": "left",
+    "fingertips": [
+     [
+      839.0,
+      71.0
+     ],
+     [
+      833.0,
+      83.0
+     ]
+    ],
+    "string_px": [
+     598,
+     583
+    ],
+    "box_screen": [
+     490,
+     506,
+     788,
+     690
+    ],
+    "overlaps_jordan": false,
+    "under_hud": []
+   },
+   "josh": {
+    "pose": "wild_hold",
+    "sheet": "Josh/josh_throw.png",
+    "frame": 0,
+    "mirrored": true,
+    "feet_screen": [
+     1330,
+     690
+    ],
+    "feet_world": [
+     1515.0,
+     1029.0
+    ],
+    "back_hook_screen": [
+     1331.0,
+     621.0
+    ],
+    "back_hook_world": [
+     1516.5,
+     925.5
+    ],
+    "hand": "right",
+    "fingertips": [
+     [
+      1087.0,
+      73.0
+     ],
+     [
+      1089.0,
+      89.0
+     ]
+    ],
+    "string_px": [
+     599,
+     585
+    ],
+    "box_screen": [
+     1280,
+     540,
+     1406,
+     690
+    ],
+    "overlaps_jordan": false,
+    "under_hud": []
+   },
+   "player_feet_screen": [
+    960,
+    870
+   ]
+  },
+  "concept_mock_mason_carter": {
+   "mason": {
+    "pose": "nuggets",
+    "sheet": "Mason/mason_sheet.png",
+    "frame": 17,
+    "mirrored": false,
+    "feet_screen": [
+     640,
+     690
+    ],
+    "feet_world": [
+     480.0,
+     1029.0
+    ],
+    "back_hook_screen": [
+     641.0,
+     647.0
+    ],
+    "back_hook_world": [
+     481.5,
+     964.5
+    ],
+    "hand": "left",
+    "fingertips": [
+     [
+      839.0,
+      71.0
+     ],
+     [
+      833.0,
+      83.0
+     ]
+    ],
+    "string_px": [
+     610,
+     595
+    ],
+    "box_screen": [
+     578,
+     564,
+     702,
+     690
+    ],
+    "overlaps_jordan": false,
+    "under_hud": []
+   },
+   "carter": {
+    "pose": "beam_rush",
+    "sheet": "Carter/carter_rush.png",
+    "frame": 3,
+    "mirrored": true,
+    "feet_screen": [
+     1300,
+     690
+    ],
+    "feet_world": [
+     1470.0,
+     1029.0
+    ],
+    "back_hook_screen": [
+     1281.0,
+     617.0
+    ],
+    "back_hook_world": [
+     1441.5,
+     919.5
+    ],
+    "hand": "right",
+    "fingertips": [
+     [
+      1087.0,
+      73.0
+     ],
+     [
+      1089.0,
+      89.0
+     ]
+    ],
+    "string_px": [
+     577,
+     563
+    ],
+    "box_screen": [
+     1226,
+     544,
+     1394,
+     690
+    ],
+    "overlaps_jordan": false,
+    "under_hud": []
+   },
+   "player_feet_screen": [
+    960,
+    870
+   ]
+  }
+ }
+}

@@ -1,0 +1,91 @@
+{
+  "date": "2026-10-06",
+  "what": "Main-menu tower rebuilt so the members stand in the new ladder order (Burak, Mason, Josh, Eric, Danny, Computah, Liam & Bixby, Carter, Matt, Jordan). Approved by the user ('new tower'). Dialogue deliberately left unchanged.",
+  "rig": "art_source/main_menu/tower_ladder_1006.py (guarded wrapper over bg.py/fx.py; 'build' writes only under its own folder's tower/; its 'check' mode compared against the pre-10-06 PNGs, so it no longer matches)",
+  "placement": [
+    [
+      "burak",
+      1,
+      "CX-40",
+      14
+    ],
+    [
+      "mason",
+      2,
+      "CX+44",
+      14
+    ],
+    [
+      "josh",
+      3,
+      "CX-44",
+      14
+    ],
+    [
+      "eric",
+      4,
+      "CX",
+      23
+    ],
+    [
+      "danny",
+      5,
+      "CX-44",
+      15
+    ],
+    [
+      "computah",
+      6,
+      "CX",
+      13
+    ],
+    [
+      "liam",
+      7,
+      "CX-38",
+      14
+    ],
+    [
+      "bixby",
+      7,
+      "CX+38",
+      14
+    ],
+    [
+      "carter",
+      8,
+      "CX",
+      12
+    ],
+    [
+      "matt",
+      9,
+      "CX+38",
+      13
+    ],
+    [
+      "jordan",
+      10,
+      "CX",
+      10
+    ]
+  ],
+  "aseprite": {
+    "main_menu_bg.aseprite": "8 layers sky,lanterns,crowd,floor,tower,members,invite,player; 1 frame 100 ms; flattened export identical to main_menu_bg.png",
+    "main_menu_bg_fx.aseprite": "1 layer fx; 12 frames 175 ms; tag loop 0-11 forward; horizontal sheet identical to main_menu_bg_fx.png"
+  },
+  "shipped": {
+    "main_menu_bg.png": "85927b32325253d13112f4769c0e3c116017f0702587a7db42a8fcbd57f48a6c",
+    "main_menu_bg_fx.png": "93b5efb5bb50f95fe1f8b2b0fb7d6424bbeac9b7f533183fde70cb1ad88e6f58",
+    "main_menu_bg.aseprite": "538194dd4d817653e2588f281dcc873d6286ede95aac7c308497a221dd626721",
+    "main_menu_bg_fx.aseprite": "05606f4353bed40c72d9cdd57b85035d47e03bcc40bd007be850a0d530723d12"
+  },
+  "replaced": {
+    "main_menu_bg.png": "f03d9c945b708c3b14cdb517d863734299369f059c32371c92d643c4c119e16e",
+    "main_menu_bg_fx.png": "df542d77ca84ca092589c2e5daa13ddbdbc41d8536d0ac0df73cab0875f2494d",
+    "main_menu_bg.aseprite": "82a2dba0bd1096854e9a401ec5c26fb6151d5ea4001d95e64fa69ed42986fd87",
+    "main_menu_bg_fx.aseprite": "c26eb6aa840d587e361d5cf99d5a3caae4ef88abeb5e15087f4c19f6f5662c2a"
+  },
+  "backup_dir": "C:/Users/theyi/AppData/Local/Temp/claude/C--Users-theyi-OneDrive-Documents-new-game-project/a7fc2846-afef-472d-979b-e17143793a0f/scratchpad/ladder_order/ship/backup",
+  "note": "The previous files are also in git (HEAD) if the scratch backup is gone."
+}

@@ -1,0 +1,31 @@
+{
+ "approved": "2026-09-30, the user: \"approve all for now\" (Portal Monte art; picks: pale X for fakes, fakes identical until contact, the drawn emerge)",
+ "source": "art_source/josh_hands/approval_monte/ (contract.json there is canonical)",
+ "shipped_by": "coordinator, exclusive-create copy, sha256 verified",
+ "files": {
+  "Assets/Characters/Josh/Portals/josh_small_portal_open_back.png": "494bae4b4e9ecd9d557a1f6a7e5998551f829d20bf3dda807a173b78f5c8d6a9",
+  "Assets/Characters/Josh/Portals/josh_small_portal_open_back.aseprite": "96bd99510d63ac3b81ec718e3ba200e538dd3612184226c01d25d60be5734fde",
+  "Assets/Characters/Josh/Portals/josh_small_portal_open_glow.png": "f7978d7dc43dd477bfad1e354527c2045cf4282ad01297a47fc395aebfc5bbe7",
+  "Assets/Characters/Josh/Portals/josh_small_portal_open_glow.aseprite": "ecd0fd2f97620c0619f357be5c1e0a30ed80977ed5a4820239d7fb933ce84e93",
+  "Assets/Characters/Josh/Portals/josh_small_portal_loop_back.png": "5947d9b1cbbab260e04a4ade940966fc547ea449435204eac2f12eb307832a1e",
+  "Assets/Characters/Josh/Portals/josh_small_portal_loop_back.aseprite": "b6058145c158c3674737759e94a0bb8ce2724177f9d8148292d02fc98947746c",
+  "Assets/Characters/Josh/Portals/josh_small_portal_loop_glow.png": "8ee7d1053dd58905b8f2c0927bb9e95b725ac37a14d093e7f49946ff5c2ef415",
+  "Assets/Characters/Josh/Portals/josh_small_portal_loop_glow.aseprite": "f05e858240204b74717744807f159a7035bfb5b59e9026056e4d7493abe4554b",
+  "Assets/Characters/Josh/Portals/josh_small_portal_burst_back.png": "65c18f09dd4017e848a926b894ee00fc5b5fa7d46f874b54f388c0fc50b565b9",
+  "Assets/Characters/Josh/Portals/josh_small_portal_burst_back.aseprite": "eadffad8e0aa993c5d5e1f97edd97ba9d507bb00a5eab72f803c1bb9deca24b0",
+  "Assets/Characters/Josh/Portals/josh_small_portal_burst_glow.png": "b199cfbfee7a81b37bd5b28d54ad90b31f439f43c430b6645574a991418e546c",
+  "Assets/Characters/Josh/Portals/josh_small_portal_burst_glow.aseprite": "53ac9461b686d0ec0b0bc1fb02aad7506ef48887c600abcca02d8f5e28d09bd8",
+  "Assets/Characters/Josh/Portals/josh_small_portal_close_back.png": "534ad8bb54306fa2958092bbc9d573a6734f9a39481f599c4330e66577cd60a7",
+  "Assets/Characters/Josh/Portals/josh_small_portal_close_back.aseprite": "691d92274fb13e23723ebcf162d84d9cb7d2ce443492527fbd2d5c929845317f",
+  "Assets/Characters/Josh/Portals/josh_small_portal_close_glow.png": "15d61ec9b1f7537dbe8fb2114f1a55d8a778bb072865b464da31999ef1cf5bab",
+  "Assets/Characters/Josh/Portals/josh_small_portal_close_glow.aseprite": "a1e9e33eaa6f0f1c9e3454fa3402c41b6d54ee0c0660e4e8936149faa66b0c68",
+  "Assets/Characters/Josh/josh_dive.png": "9b9ec846d70b5f148fe310b9363091904773ac7a5f59461b5246591f9d1e4d95",
+  "Assets/Characters/Josh/josh_dive.aseprite": "ea70d4aaa9eb056b73ec37fe218a5716616ce122be4e10cdf97a50a0e6612970",
+  "Assets/Characters/Josh/josh_emerge.png": "6fa2760724d6dd695a58c1ee2d900212482a64f9cd7d81bbfc43dad4722b90a0",
+  "Assets/Characters/Josh/josh_emerge.aseprite": "64568832724aaa885b0ef4d36f20a7f0b65f8034d8e9f03af16c512e055aac2c",
+  "Assets/Characters/Josh/josh_monte_slash.png": "eb70e5c7ea6872acb289209dce0941aa2b0bc32af51425a318bab550ee629b54",
+  "Assets/Characters/Josh/josh_monte_slash.aseprite": "5c3e275e231a710611ba608ef9e7e109498708db9630dc510ca9e75586379a04",
+  "Assets/Characters/Josh/Cards/josh_monte_scatter.png": "bc33e89bf8599d5aff5ca0d445c7b5fe838cf28eaca45f80b5dc486f9ba88d3b",
+  "Assets/Characters/Josh/Cards/josh_monte_scatter.aseprite": "0afbf8392466cb0ce74cfbc1217e1a34e7b4f92487cfcc43ee4f74cb6e22e352"
+ }
+}

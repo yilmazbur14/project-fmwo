@@ -111,7 +111,6 @@ func _on_prompt_shown() -> void:
 		bank_flash_clock = -1.0
 		bank_flash.visible = false
 		tier_full.visible = false
-		# A full hype meter banks bar 1 before the first press.
 		_show_stamp(finisher.tier_meter.banked)
 	_refresh()
 
@@ -412,6 +411,8 @@ func _build_knight_breaker() -> void:
 		knight_breaker = label
 	knight_breaker.position = spec.position
 	knight_breaker.visible = false
+	# It goes up at the top middle, under the boss bar: the bar fades while it shows (HudPlayerFade.UNDER_GROUP).
+	knight_breaker.add_to_group(&"hud_fade_under")
 	get_parent().add_child.call_deferred(knight_breaker)
 
 

@@ -1,7 +1,7 @@
 extends Control
 
-# The player's health containers: three hearts, six halves. PlayerScript calls update_health() every
-# time the number changes, and nothing else talks to this.
+# The player's health containers: PlayerHealthArtLayout.CONTAINERS hearts of two halves each.
+# PlayerScript calls update_health() every time the number changes, and nothing else talks to this.
 #
 # PlayerHealthArtLayout owns every number, and both looks run through the same code here, so turning
 # USE_FINAL_PLAYER_HP off brings the old row back. The row is built in code rather than laid out in
@@ -13,6 +13,9 @@ extends Control
 # doesn't stretch a heart breaking.
 
 const PlayerHealthArtLayout := preload("res://Scripts/PlayerHealthArtLayout.gd")
+const HudPlayerFade := preload("res://Scripts/HudPlayerFade.gd")
+# This HUD's own player, from its CanvasLayer under MainPlayer.
+const PLAYER_SPRITE := ^"../../CharacterBody2D/Sprite2D"
 
 ## While a node in this group is visible, the dialogue box moves to its right (Scripts/balloon.gd).
 const HUD_GROUP: StringName = &"player_health_hud"
@@ -37,6 +40,7 @@ var low_run := 0
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build()
+	HudPlayerFade.wrap(self, get_node_or_null.bind(PLAYER_SPRITE))
 	_refresh()
 
 
@@ -59,7 +63,7 @@ func _step_loops() -> void:
 	tray_warn.frame = int(clock / PlayerHealthArtLayout.WARN_FRAME_TIME) % int(spec.tray_warn_hframes)
 
 
-# Half-hearts, 0 to 6. The containers fill left to right: whole ones first, then the odd half.
+# Half-hearts, 0 to CONTAINERS * 2. The containers fill left to right: whole ones first, then the odd half.
 func update_health(current_health: int) -> void:
 	var before := health
 	health = clampi(current_health, 0, PlayerHealthArtLayout.CONTAINERS * 2)
@@ -150,8 +154,9 @@ func _build() -> void:
 	frame.add_child(row)
 
 	if spec.has("tray"):
-		tray = _sheet(spec.tray, 1, Vector2.ZERO)
-		tray_warn = _sheet(spec.tray_warn, spec.tray_warn_hframes, Vector2.ZERO)
+		tray = _sheet(PlayerHealthArtLayout.tray_texture(spec.tray, 1), 1, Vector2.ZERO)
+		tray_warn = _sheet(PlayerHealthArtLayout.tray_texture(spec.tray_warn, spec.tray_warn_hframes),
+			spec.tray_warn_hframes, Vector2.ZERO)
 		tray_warn.hide()
 		row.add_child(tray)
 		row.add_child(tray_warn)
@@ -169,12 +174,12 @@ func _build() -> void:
 
 		if not spec.has("break"):
 			continue
-		var low := _sheet(spec.low, spec.low_hframes, at)
+		var low := _sheet(load(spec.low), spec.low_hframes, at)
 		low.hide()
-		var gain := _sheet(spec.gain, spec.gain_hframes, at)
+		var gain := _sheet(load(spec.gain), spec.gain_hframes, at)
 		gain.hide()
 		# Oversized on purpose, so the shatter spills past the container it came out of.
-		var shatter := _sheet(spec["break"], spec.break_hframes, at + spec.break_offset)
+		var shatter := _sheet(load(spec["break"]), spec.break_hframes, at + spec.break_offset)
 		shatter.hide()
 		for sheet in [low, gain, shatter]:
 			row.add_child(sheet)
@@ -183,9 +188,9 @@ func _build() -> void:
 		breaks.append(shatter)
 
 
-func _sheet(path: String, hframes: int, at: Vector2) -> Sprite2D:
+func _sheet(texture: Texture2D, hframes: int, at: Vector2) -> Sprite2D:
 	var sheet := Sprite2D.new()
-	sheet.texture = load(path)
+	sheet.texture = texture
 	sheet.hframes = hframes
 	sheet.centered = false
 	sheet.position = at

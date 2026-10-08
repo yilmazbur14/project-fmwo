@@ -30,7 +30,10 @@ for name in "${NAMES[@]}"; do
 		echo "!! no cut for $name at $src"
 		continue
 	fi
-	cp "$src" "$MUSIC/${name}_theme.wav"
+	dest="$MUSIC/${name}_theme.wav"
+	# A theme the user swapped for a track of their own (Jordan's, 2026-09-28) lives in OriginalThemes/ now.
+	[ -f "$MUSIC/OriginalThemes/${name}_theme.wav" ] && dest="$MUSIC/OriginalThemes/${name}_theme.wav"
+	cp "$src" "$dest"
 	echo "   $name <- $(basename "$src") ($(du -h "$src" | cut -f1))"
 	copied=$((copied + 1))
 done

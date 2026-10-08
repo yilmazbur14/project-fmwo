@@ -93,6 +93,8 @@ func _ready() -> void:
 		frame_times = [aura.frame_time]
 		return
 	z_index = DefenseHypeArtLayout.PARRY_TELL_Z_INDEX
+	# The HUD blocks fade while it is under them (HudPlayerFade.UNDER_GROUP).
+	add_to_group(&"hud_fade_under")
 	if dodge:
 		var ring := DefenseHypeArtLayout.dodge_tell()
 		if ring.has("texture"):

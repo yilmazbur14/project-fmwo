@@ -11,10 +11,16 @@ extends State
 #               frame the camera cuts in, the player is locked in their 2x guard and he is in his (_cut_in). A skip
 #               lands on that same frame.
 #   SQUARE_UP   square_up, then the first combo.
-#   BOXING      combos of L (his left hook, a gold LEFT arrow: slip LEFT), R (his right hook: slip RIGHT) and S (the
-#               straight under the red badge: the guard, which parries it through PlayerDefense's posed guard). The
-#               first answer after a tell decides and resolves resolve_delay later, or at the lead. A slip or a
-#               parry is a read and a hit takes one back; daze_reads reads daze him. Nothing shows the count.
+#   BOXING      combos of L (his left hook, a gold LEFT arrow: slip LEFT), R (his right hook: slip RIGHT), S (the
+#               straight under the red badge: the guard, which parries it through PlayerDefense's posed guard) and F,
+#               the FEINT: the straight's wind-up, cocked but never charged - no glow in the muzzle, no badge, no
+#               sting - held for the lead and dropped. Its answer is none: a slip is wasted, and the guard is bitten,
+#               a whiffed parry (PlayerDefense's cost for one) and his counter-jab feint_counter after it for a
+#               heart and a half (AttackCatalog). A hook that lands is half a heart and the straight a whole one.
+#               The first answer after a tell decides and resolves resolve_delay later, or at the lead.
+#               A slip or a parry is a read, a feint let go changes nothing, and a hit takes one back; daze_reads
+#               reads daze him. Nothing shows the count. The pace is the tier's, the tier being the cycle: tells,
+#               gaps and breaths shorten, and the combos lengthen and feint more, as the brawl goes on.
 #   ROCKED      the dazing read's rocked_delay, then rocked_time of his rocked frames, then the finisher.
 #   FINISHER    the house tiered finisher on the brawl's uppercut sheet (PlayerFinisher.begin). Its whole boss
 #   UPPERCUTS   contract is answered here, and each uppercut is one of uppercuts_to_kill.
@@ -44,33 +50,64 @@ enum Phase { KO_WAIT, KO_HOLD, CUT, SQUARE_UP, BOXING, ROCKED, FINISHER, UPPERCU
 const HOOK_L := &"L"
 const HOOK_R := &"R"
 const STRAIGHT := &"S"
-# Combos 1 and 2, then picks off the tier's list: never the same combo twice running, never two straights in a row.
+const FEINT := &"F"
+# Combos 1 and 2, then picks off the tier's list: never the same combo twice running, never two straights or two
+# feints in a row. A feint never ends a combo - it always sets up the punch after it - and none comes before combo 3,
+# so the openers show the straight's real wind-up first.
 const OPENERS := [[&"L", &"R"], [&"S", &"L"]]
+# The tables feint in about one punch in six in the first tier and one in four or five after, and feint_drought keeps
+# them from going missing: often enough that guarding every straight-shaped wind-up loses the brawl, and not so often
+# that the real straight stops being the usual one.
 const PATTERNS := [
-	[[&"L", &"R"], [&"R", &"L"], [&"L", &"S"], [&"R", &"S"], [&"S", &"L"], [&"S", &"R"]],
-	[[&"L", &"R", &"S"], [&"R", &"L", &"S"], [&"L", &"L", &"R"], [&"R", &"R", &"L"], [&"S", &"L", &"R"],
-		[&"L", &"S", &"R"], [&"R", &"S", &"L"]],
-	[[&"L", &"R", &"L", &"S"], [&"R", &"L", &"R", &"S"], [&"L", &"L", &"S", &"R"], [&"R", &"R", &"S", &"L"],
-		[&"S", &"L", &"R", &"S"], [&"L", &"S", &"L", &"R"], [&"R", &"S", &"R", &"L"], [&"S", &"R", &"L"], [&"S", &"L", &"S"]],
+	[[&"L", &"R"], [&"R", &"L"], [&"L", &"S"], [&"R", &"S"], [&"S", &"L"], [&"S", &"R"], [&"F", &"S"], [&"F", &"L"],
+		[&"F", &"R"]],
+	[[&"L", &"R", &"S"], [&"R", &"L", &"S"], [&"S", &"L", &"R"], [&"L", &"F", &"S"], [&"R", &"F", &"S"],
+		[&"F", &"S", &"L"], [&"F", &"S", &"R"], [&"F", &"L", &"S"], [&"F", &"R", &"S"], [&"L", &"F", &"R"],
+		[&"R", &"F", &"L"]],
+	[[&"L", &"R", &"L", &"S"], [&"R", &"L", &"R", &"S"], [&"L", &"R", &"F", &"S"], [&"R", &"L", &"F", &"S"],
+		[&"F", &"S", &"L", &"R"], [&"F", &"S", &"R", &"L"], [&"L", &"F", &"S", &"R"], [&"R", &"F", &"S", &"L"],
+		[&"F", &"L", &"R", &"S"], [&"F", &"R", &"L", &"S"], [&"S", &"L", &"F", &"S"], [&"S", &"R", &"F", &"S"],
+		[&"L", &"F", &"R", &"S"], [&"R", &"F", &"L", &"S"]],
+	[[&"L", &"R", &"F", &"S", &"L"], [&"R", &"L", &"F", &"S", &"R"], [&"F", &"S", &"L", &"F", &"S"],
+		[&"F", &"S", &"R", &"F", &"S"], [&"L", &"F", &"S", &"R", &"S"], [&"R", &"F", &"S", &"L", &"S"],
+		[&"L", &"R", &"L", &"F", &"S"], [&"R", &"L", &"R", &"F", &"S"], [&"F", &"L", &"R", &"F", &"S"],
+		[&"F", &"R", &"L", &"F", &"S"], [&"S", &"L", &"F", &"R", &"S"], [&"S", &"R", &"F", &"L", &"S"],
+		[&"L", &"S", &"R", &"F", &"S"], [&"R", &"S", &"L", &"F", &"S"]],
 ]
+# A feint has no right answer: nothing is.
 const ANSWERS := {&"L": &"left", &"R": &"right", &"S": &"guard"}
-const CLIPS := {&"L": "hook_l", &"R": "hook_r", &"S": "straight"}
+const CLIPS := {&"L": "hook_l", &"R": "hook_r", &"S": "straight", &"F": "feint"}
 # What lands when the answer was wrong: the straight's twin can't be parried, so a guard press after another
-# answer can't rescue it.
-const HIT_IDS := {&"L": &"greyson_brawl_hook_l", &"R": &"greyson_brawl_hook_r", &"S": &"greyson_brawl_straight_unguarded"}
+# answer can't rescue it; and a feint's counter-jab.
+const HIT_IDS := {&"L": &"greyson_brawl_hook_l", &"R": &"greyson_brawl_hook_r", &"S": &"greyson_brawl_straight_unguarded",
+	&"F": &"greyson_brawl_counter"}
 const PARRY_ID := &"greyson_brawl_straight"
 const SHAKE_STEPS := 6
 const SHAKE_STEP := 0.03
 
 @export var body : CharacterBody2D
 
-#THE BOXING (seconds; each array a value a tier, the tier being min(cycle, 3); the lead never under 0.40)
-@export var lead_times: Array[float] = [0.46, 0.43, 0.40]
-@export var gap_times: Array[float] = [0.30, 0.24, 0.18]
-@export var neutral_times: Array[float] = [0.90, 0.75, 0.60]
+#THE BOXING (seconds; each array a value a tier, the tier being the cycle, capped at the arrays' length; the lead never
+# under 0.36, the house's floor for a read). With three dazes the brawl is over by its third tier, so the tiers close
+# in on the fourth's pace sooner than they did when it took seven (tuning, 2026-10-04).
+@export var lead_times: Array[float] = [0.41, 0.39, 0.37, 0.36]
+@export var gap_times: Array[float] = [0.21, 0.18, 0.16, 0.14]
+@export var neutral_times: Array[float] = [0.65, 0.56, 0.49, 0.44]
 @export var resolve_delay := 0.06
-@export var daze_reads := 6
-@export var uppercuts_to_kill := 4
+# The new mash pays two or three uppercuts a daze where it paid one, so a daze asks for more boxing: about the reads
+# the seven-daze brawl asked for in all (7 x 6), over three dazes and three finishers instead of seven.
+@export var daze_reads := 13
+# A daze pays its bars and one more on a full hype meter (PlayerFinisher.uppercut_count), and 13 reads fill the meter
+# again, so a three-bar mash takes two dazes (4 + 4), a two-bar one three (3 + 3 + 2) and a one-bar one four
+# (2 x 4): at least two dazes' boxing whatever the mash banks, and no daze left owing a single uppercut. Nine would
+# keep three dazes for the three-bar mash only by making the one-bar one box a fifth daze for its last uppercut.
+@export var uppercuts_to_kill := 8
+# A bitten feint: from the guard press to his counter-jab's contact. Past PlayerDefense.parry_window (0.24), so the
+# press has whiffed before it lands.
+@export var feint_counter := 0.25
+# After this many punches without a feint, the next combo picked has one. Drawn freely, a run of combos could leave
+# them out long enough for a player who guards every straight-shaped wind-up to get through the brawl.
+@export var feint_drought := 4
 @export var slip_hype := 10.0
 # How long the player's answer pose holds after the resolve before their guard comes back.
 @export var player_recover := 0.16
@@ -159,6 +196,7 @@ var combo_step := 0
 var combos_thrown := 0
 var last_combo: Array = []
 var last_kind := &""
+var since_feint := 0
 # The punch from its tell to the next one: kind, tier, lead, its clock, the answer and when, when it resolves, what
 # it came to, its source (its own, so a parry's absorbed_until can't swallow the next), and its later beats.
 var punch := {}
@@ -193,6 +231,7 @@ func Enter() -> void:
 	combos_thrown = 0
 	last_combo = []
 	last_kind = &""
+	since_feint = 0
 	punch = {}
 	offering = false
 	cut_skipped = false
@@ -254,9 +293,7 @@ func release() -> void:
 			player.unlock_actions()
 		_restore_player_z(player)
 	if framed:
-		framed = false
-		if is_inside_tree():
-			ScreenView.reset(get_tree())
+		_unframe()
 	_disconnect_player()
 
 
@@ -554,15 +591,17 @@ func _pick_combo() -> Array:
 	elif combos_thrown <= OPENERS.size():
 		picked = OPENERS[combos_thrown - 1]
 	else:
-		var pool: Array = PATTERNS[_tier() - 1].filter(func(c: Array) -> bool:
-			return c != last_combo and not (last_kind == STRAIGHT and c[0] == STRAIGHT))
+		var pool: Array = PATTERNS[mini(_tier(), PATTERNS.size()) - 1].filter(func(c: Array) -> bool:
+			return c != last_combo and not (last_kind in [STRAIGHT, FEINT] and c[0] == last_kind))
+		if since_feint >= feint_drought:
+			pool = pool.filter(func(c: Array) -> bool: return c.has(FEINT))
 		picked = pool[state_machine.rng.randi_range(0, pool.size() - 1)]
 	last_combo = picked
 	return picked
 
 
 func _tier() -> int:
-	return clampi(cycle, 1, 3)
+	return clampi(cycle, 1, lead_times.size())
 
 
 func _tell() -> void:
@@ -575,14 +614,19 @@ func _tell() -> void:
 		source = RefCounted.new(), guard_at = INF, rocked_at = INF, next_at = INF,
 	}
 	last_kind = kind
+	since_feint = 0 if kind == FEINT else since_feint + 1
 	state_machine.rearm_parry()
 	_play_clip(StringName(CLIPS[kind] + "_windup"))
-	if kind == STRAIGHT:
-		ParryTell.telegraph(body, PARRY_ID, lead, _tell_point)
-		body.play_sfx(&"brawl_tell_parry")
-	else:
-		fx.show_arrow(kind == HOOK_R, _tell_point())
-		body.play_sfx(&"brawl_tell")
+	match kind:
+		STRAIGHT:
+			ParryTell.telegraph(body, PARRY_ID, lead, _tell_point)
+			body.play_sfx(&"brawl_tell_parry")
+		FEINT:
+			# Its tell is everything the straight's has and it lacks: the glow, the red badge and the sting.
+			pass
+		_:
+			fx.show_arrow(kind == HOOK_R, _tell_point())
+			body.play_sfx(&"brawl_tell")
 
 
 func _tell_point() -> Vector2:
@@ -596,7 +640,7 @@ func _box(delta: float, flick: StringName) -> void:
 	if not punch.resolved:
 		if flick == &"left" or flick == &"right":
 			_answer_direction(flick)
-		if not punch.wound and punch.clock >= punch.resolve_at - Layout.STRIP_LEAD:
+		if not punch.wound and punch.clock >= punch.resolve_at - Layout.STRIP_LEAD and _throws(punch):
 			punch.wound = true
 			fx.wind(_strip_hook(punch.kind), _strike_point(punch.kind))
 		if punch.clock >= punch.resolve_at:
@@ -639,13 +683,18 @@ func _on_block_pressed(_credited: bool) -> void:
 
 # The first answer to the punch that is up (&"left", &"right" or &"guard"): the player's pose at once, and the
 # resolve resolve_delay from now or at the lead, whichever is first. Any later answer, and any before the tell,
-# counts for nothing.
+# counts for nothing. A feint still drops at the end of its hold whatever was answered, bar the guard, which his
+# counter-jab answers feint_counter later.
 func answer(kind: StringName) -> void:
 	if released or phase != Phase.BOXING or punch.is_empty() or punch.resolved or punch.answer != &"":
 		return
 	punch.answer = kind
 	punch.answer_at = punch.clock
-	punch.resolve_at = minf(punch.clock + resolve_delay, punch.lead)
+	if punch.kind != FEINT:
+		punch.resolve_at = minf(punch.clock + resolve_delay, punch.lead)
+	elif kind == &"guard":
+		# Bitten: he saw the guard come up for nothing, and counters once the parry has whiffed.
+		punch.resolve_at = punch.clock + feint_counter
 	match kind:
 		&"left":
 			_pose_player(&"slip_left")
@@ -660,14 +709,18 @@ func _resolve() -> void:
 	p.resolved = true
 	var kind: StringName = p.kind
 	var resolved_at: float = p.clock
+	var straight_like: bool = kind == STRAIGHT or kind == FEINT
 	if kind == STRAIGHT:
 		ParryTell.clear(body)
-	fx.strike(_strip_hook(kind), _strike_point(kind))
-	body.play_sfx(&"brawl_straight" if kind == STRAIGHT else &"brawl_hook")
+	if _throws(p):
+		fx.strike(_strip_hook(kind), _strike_point(kind))
+		body.play_sfx(&"brawl_straight" if straight_like else &"brawl_hook")
 	var player := _player()
 	var health_before: int = player.playerHealth if player != null else 0
 	var result := &"ignored"
-	if player != null and kind != STRAIGHT and p.answer == ANSWERS[kind]:
+	if kind == FEINT and not _throws(p):
+		result = &"slipped" if p.answer != &"" else &"held"
+	elif player != null and not straight_like and p.answer == ANSWERS[kind]:
 		result = &"dodged"
 	elif player != null:
 		var id: StringName = PARRY_ID if kind == STRAIGHT and p.answer == &"guard" else HIT_IDS[kind]
@@ -675,7 +728,7 @@ func _resolve() -> void:
 		if outcome == HitInfo.Result.PARRIED:
 			result = &"parried"
 		elif outcome == HitInfo.Result.HIT:
-			result = &"hit"
+			result = &"countered" if kind == FEINT else &"hit"
 	p.result = result
 	punch_log.append({kind = kind, tier = p.tier, lead = p.lead, told_at = p.told_at, answer = p.answer,
 		answer_at = p.answer_at, resolve = resolved_at, result = result,
@@ -692,10 +745,10 @@ func _resolve() -> void:
 		&"parried":
 			_play_clip(StringName(clip_key + "_parried"))
 			_read(1)
-		&"hit":
+		&"hit", &"countered":
 			_play_clip(StringName(clip_key + "_landed"))
 			fx.answer_arrow(false)
-			fx.impact(Layout.his_point(Layout.STRAIGHT_LANDED if kind == STRAIGHT else Layout.HOOK_CONTACT, body.global_position))
+			fx.impact(Layout.his_point(Layout.STRAIGHT_LANDED if straight_like else Layout.HOOK_CONTACT, body.global_position))
 			body.play_sfx(&"brawl_hit")
 			ScreenView.shake(get_tree(), hit_shake, SHAKE_STEPS, SHAKE_STEP)
 			_read(-1)
@@ -704,6 +757,9 @@ func _resolve() -> void:
 				return
 			if player.is_posed():
 				_pose_player(&"hit")
+		&"held", &"slipped":
+			# Dropped: the arm comes down into his guard, and nothing changes.
+			_play_clip(&"guard")
 		_:
 			_play_clip(StringName(clip_key + "_landed"))
 			fx.answer_arrow(false)
@@ -733,7 +789,12 @@ func _strip_hook(kind: StringName) -> int:
 
 
 func _strike_point(kind: StringName) -> Vector2:
-	return Layout.his_point(Layout.STRAIGHT_CONTACT if kind == STRAIGHT else Layout.HOOK_CONTACT, body.global_position)
+	return Layout.his_point(Layout.STRAIGHT_CONTACT if kind in [STRAIGHT, FEINT] else Layout.HOOK_CONTACT, body.global_position)
+
+
+# Whether the punch up is thrown at all: every real one, and a feint only once its bait was taken.
+func _throws(p: Dictionary) -> bool:
+	return p.kind != FEINT or p.answer == &"guard"
 
 
 #THE DAZE AND THE FINISHER
@@ -836,10 +897,11 @@ func juggle_pose(pose: StringName, _crater := false) -> void:
 				_play_clip(&"uppercut_settle")
 
 
+# One of uppercuts_to_kill, and one more for the uppercut a full hype meter boosts (PlayerFinisher.uppercut_count).
 func take_juggle_hit(amount: int, pitch: float) -> int:
 	if phase != Phase.UPPERCUTS:
 		return 0
-	uppercuts_left = maxi(uppercuts_left - 1, 0)
+	uppercuts_left = maxi(uppercuts_left - _player().finisher.uppercut_count(), 0)
 	_play_hit(pitch)
 	return amount
 
@@ -848,7 +910,7 @@ func take_juggle_hit(amount: int, pitch: float) -> int:
 func take_finisher(amount: int) -> int:
 	if phase != Phase.FINISHER:
 		return 0
-	uppercuts_left = maxi(uppercuts_left - 1, 0)
+	uppercuts_left = maxi(uppercuts_left - _player().finisher.uppercut_count(), 0)
 	_play_hit(1.0)
 	if uppercuts_left <= 0:
 		_ko_snap()
@@ -964,8 +1026,7 @@ func _thud() -> void:
 # On one frame: the view level, the player out of their lock and back on their own sheet in front of his boots,
 # and him beaten, lying on the KO's last frame.
 func _hand_off() -> void:
-	ScreenView.reset(get_tree())
-	framed = false
+	_unframe()
 	var player := _player()
 	if player != null:
 		player.unlock_actions()
@@ -985,8 +1046,7 @@ func _lose() -> void:
 	combo = []
 	ParryTell.clear(body)
 	fx.clear()
-	ScreenView.reset(get_tree())
-	framed = false
+	_unframe()
 	var player := _player()
 	if player != null:
 		player.global_position = Layout.PLAYER_HANDOFF
@@ -1044,8 +1104,12 @@ func _disconnect_player() -> void:
 	player_ref = null
 
 
+# The brawl's framing, and under it a floor (ScreenView.set_floor): the finisher's zooms and the parry's punch-in
+# still play over it, but the zooms back to 1 that they end on stop at the framing instead of pulling the view out to
+# the whole arena (the user, 2026-10-04: "after some time, the camera will zoom out").
 func _frame_view(duration: float) -> void:
 	framed = true
+	ScreenView.set_floor(get_tree(), Layout.ZOOM, Layout.FOCUS)
 	if duration > 0.0:
 		ScreenView.zoom_to(get_tree(), Layout.ZOOM, Layout.FOCUS, duration)
 		return
@@ -1054,6 +1118,18 @@ func _frame_view(duration: float) -> void:
 	ScreenView.zoom = Layout.ZOOM
 	ScreenView.focus = Layout.FOCUS
 	ScreenView.apply(get_tree())
+
+
+# The view level again, and the floor gone with it: it is static, so it would outlive the brawl into whatever loads
+# next.
+func _unframe() -> void:
+	framed = false
+	if is_inside_tree():
+		ScreenView.clear_base(get_tree())
+		return
+	ScreenView.base_zoom = 1.0
+	ScreenView.base_focus = ScreenView.VIEW_SIZE / 2.0
+	ScreenView.base_is_floor = false
 
 
 #HIS SPRITE

@@ -1,0 +1,51 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/JordanGodScript.gd" id="1_god"]
+[ext_resource type="Script" path="res://Scripts/States/JordanGod/JordanGodStateMachine.gd" id="2_machine"]
+[ext_resource type="Script" path="res://Scripts/States/JordanGod/JordanGodOpen.gd" id="3_open"]
+[ext_resource type="Script" path="res://Scripts/States/JordanGod/JordanGodIdle.gd" id="4_idle"]
+[ext_resource type="Script" path="res://Scripts/States/JordanGod/JordanGodDefeated.gd" id="5_defeated"]
+[ext_resource type="Script" path="res://Scripts/JordanStrings.gd" id="6_strings"]
+
+[node name="JordanGodScene" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Void" type="Node2D" parent="."]
+z_index = -10
+
+[node name="God" type="Node2D" parent="."]
+z_index = -5
+position = Vector2(960, 600)
+script = ExtResource("1_god")
+
+[node name="StateManager" type="Node" parent="God"]
+script = ExtResource("2_machine")
+
+[node name="Open" type="Node" parent="God/StateManager"]
+script = ExtResource("3_open")
+
+[node name="Idle" type="Node" parent="God/StateManager"]
+script = ExtResource("4_idle")
+
+[node name="Defeated" type="Node" parent="God/StateManager"]
+script = ExtResource("5_defeated")
+
+[node name="Sounds" type="Node" parent="God"]
+
+[node name="Music" type="AudioStreamPlayer" parent="God"]
+
+[node name="Floor" type="Node2D" parent="."]
+z_index = -3
+
+[node name="Strings" type="Node2D" parent="."]
+z_index = -2
+script = ExtResource("6_strings")
+
+[node name="Stage" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Dark" type="Node2D" parent="."]
+z_index = 5
+
+[node name="Fx" type="Node2D" parent="."]
+z_index = 20

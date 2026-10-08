@@ -1,0 +1,18 @@
+{
+  "shipped": "2026-10-04T15:27:07",
+  "by": "coordinator",
+  "approval": "user 2026-10-04: 'approve all' (Matt Echo Roars art, feet fix = inhale/psych at roar stance 33/63)",
+  "layout": "6 x 96x96 strip; f0 echo_inhale, f1-2 echo_psych, f3 boomburst_windup, f4-5 boomburst_blast; soles row 95; anchors in matt_echo_numbers.json",
+  "files": [
+    {
+      "file": "Assets/Characters/Matt/matt_echo.png",
+      "sha256": "9abd1c1cd84a8eb9f1ee5907b37973160ee45fd7e5a45eaa97799700d4f8187f",
+      "bytes": 12011
+    },
+    {
+      "file": "Assets/Characters/Matt/matt_echo.aseprite",
+      "sha256": "e85bc5088cf893743b3bf07b25a77e7aaf54fa8a69a321223ba0c1d7007abb2b",
+      "bytes": 9422
+    }
+  ]
+}

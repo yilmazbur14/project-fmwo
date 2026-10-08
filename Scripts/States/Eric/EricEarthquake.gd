@@ -14,12 +14,17 @@ var EarthquakeAreas = preload("res://Scenes/Bosses/EarthquakeAreasScene.tscn")
 const EricArtLayout := preload("res://Scripts/EricArtLayout.gd")
 const EricPacing := preload("res://Scripts/EricPacing.gd")
 const ParryTell := preload("res://Scripts/ParryTell.gd")
+const HitInfo := preload("res://Scripts/HitInfo.gd")
 
 # Over his head on the raise: above the sword he holds across it on frames 3-5, under the arc of
 # frame 6.
 const TELL_HEAD_PIXEL := Vector2(136, 100)
 # Summed frame deltas land a hair short of a hold's length, which would run it a frame long.
 const STEP_TOLERANCE := 0.0001
+# Further than any wave travels before it despawns, so a lane drawn this long is all of its path.
+const LANE_LENGTH := 4000.0
+
+@onready var player = get_tree().current_scene.get_node("Arena/MainPlayer/CharacterBody2D")
 
 var slams_left := 0
 var projectile_speed_now := 0.0
@@ -146,12 +151,56 @@ func enable_hitbox():
 	spawned_earthquake_areas.move_speed = projectile_speed_now / character_body.scale.x
 	eric_state_machine.add_hazard(spawned_earthquake_areas, character_body.frame_point(EricArtLayout.SLAM_PIXEL))
 	spawned_earthquake_areas.enable_earthquake_areas()
+	_strike_inside(spawned_earthquake_areas)
 
 	var sfx = character_body.get_node_or_null("EarthquakeSfxPlayer")
 	if sfx:
 		if not sfx.stream:
 			sfx.stream = load("res://Assets/Audio/SFX/earthquake_slam.ogg")
 		sfx.play()
+
+
+# The waves set off spawn_radius out from the blade and take a physics step before anyone is checked
+# against them, so the ground right round its tip lies between all eight lanes and no wave ever crosses
+# it: a player standing there was safe from every slam (playtest 2026-10-04). The blade coming down is the
+# hit there instead, once, as the waves go out, and answered as they are. Only where no lane reaches, so
+# nobody is struck or credited twice by one slam.
+func _strike_inside(waves: Node2D) -> void:
+	if not is_instance_valid(player):
+		return
+	var shape: CollisionShape2D = player.hurtBox.get_node("CollisionShape2D")
+	var box: Rect2 = shape.global_transform * shape.shape.get_rect()
+	var at: Vector2 = waves.global_position
+	if at.clamp(box.position, box.end).distance_to(at) > _first_reach(waves):
+		return
+	var toward: Vector2 = box.get_center() - at
+	var nearest: int = waves.collision_map.keys()[0]
+	for numpad in waves.collision_map:
+		if _lane_reaches(waves, numpad, box):
+			return
+		if absf(waves.directions[numpad].angle_to(toward)) < absf(waves.directions[nearest].angle_to(toward)):
+			nearest = numpad
+	# The source is the wave setting off toward them: a new one every slam, so a parry of one slam can't
+	# cover the next, and it is the art a parry flashes, as on any wave's.
+	player.receive_hit(HitInfo.make(EricPacing.value("wave_id"), waves.collision_map[nearest], at, character_body))
+
+
+# How far from the blade a wave's middle is the first time it can meet anyone, in px.
+func _first_reach(waves: Node2D) -> float:
+	return (waves.spawn_radius + waves.move_speed / Engine.physics_ticks_per_second) * absf(waves.global_scale.x)
+
+
+# Whether wave `numpad`'s path, from its first check to the end of the ring, crosses `box`.
+func _lane_reaches(waves: Node2D, numpad: int, box: Rect2) -> bool:
+	var area: Area2D = waves.collision_map[numpad]
+	var size: Vector2 = (area.get_node("CollisionShape2D").shape as RectangleShape2D).size * absf(waves.global_scale.x)
+	var direction: Vector2 = waves.directions[numpad]
+	var across: Vector2 = direction.orthogonal() * size.x / 2.0
+	var near: Vector2 = waves.global_position + direction * (_first_reach(waves) - size.y / 2.0)
+	var far: Vector2 = near + direction * LANE_LENGTH
+	var lane := PackedVector2Array([near - across, near + across, far + across, far - across])
+	var body := PackedVector2Array([box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)])
+	return not Geometry2D.intersect_polygons(lane, body).is_empty()
 
 func _on_animation_player_animation_finished(anim_name: StringName) -> void:
 	if eric_state_machine.current_state != self:

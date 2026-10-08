@@ -53,9 +53,10 @@ extends State
 # the string becomes a mash-fest.
 # A parry pays hype the usual way and staggers nothing, a hit costs a half-heart, a block costs HEAVY
 # stamina - a turtle guard-breaks on the third - and walking or dashing out of the band caps the bill.
-# Each parry is also a read of his fight-long Break gauge and each hit costs one back; a Break here is
-# banked and cashed as the string hands over (CarterStateMachine.on_break). The Beam Rush's clones fire
-# beams drawn on these sheets, without the surges, as an attack of their own that can't be parried.
+# Each parry is also a read of his fight-long Break gauge and each hit costs one back; a Break here ends
+# the string on the spot and opens his Break's window where he stands (on_broke). The Beam Rush's
+# clones fire beams drawn on these sheets, without the surges, as an attack of their own that can't be
+# parried.
 #
 # FREEZE SAFETY: every wait here is a Physics_Update accumulator and every ramp a node-bound tween, both
 # of which a pause and a finisher's FightFreeze stop with the rest of the fight. Nothing here may use
@@ -95,6 +96,10 @@ var aim_angle := 0.0
 var parried := 0
 var missed := 0
 var blocked := 0
+# Whether his gauge broke in the middle of it, which is what ended it.
+var broke := false
+# Whether the music has been sent back up, on its own tween, which release() then leaves be.
+var music_back := false
 # Starts spent, so a release() from a path that never entered this state does nothing.
 var released := true
 # Where he reappears, for a test or a still that has to know; Vector2.INF picks a spot.
@@ -146,6 +151,8 @@ func Enter() -> void:
 	rearm_index = 1
 	surge_index = 1
 	faded = false
+	broke = false
+	music_back = false
 	player_stage_z = state_machine.player_stage_z()
 	body.velocity = Vector2.ZERO
 	body.show_body(true)
@@ -173,7 +180,8 @@ func release(keep_dark := false) -> void:
 		ParryTell.clear(body)
 		if not keep_dark:
 			body.snap_dark_clear()
-			body.snap_music_level()
+			if not music_back:
+				body.snap_music_level()
 		body.charge_sfx_player.stop()
 		body.sprite.flip_h = false
 		if body_fade:
@@ -297,7 +305,7 @@ func _pick_spot() -> Vector2:
 	var area := CarterArtLayout.MESSATSU_SPOT_AREA
 	for i in SPOT_TRIES:
 		var spot := Vector2(randf_range(area.position.x, area.end.x), randf_range(area.position.y, area.end.y)).round()
-		if not _tell_clear_at(spot):
+		if not _tell_clear_at(spot) or not _body_clear_at(spot):
 			continue
 		var offset := spot - at
 		if offset.length() < state_machine.messatsu_min_range:
@@ -306,6 +314,7 @@ func _pick_spot() -> Vector2:
 			continue
 		return spot
 	var corners := [area.position, Vector2(area.end.x, area.position.y), area.end, Vector2(area.position.x, area.end.y)]
+	corners = corners.filter(func(corner: Vector2) -> bool: return _tell_clear_at(corner) and _body_clear_at(corner))
 	var farthest: Vector2 = corners[0]
 	for corner: Vector2 in corners:
 		if corner.distance_to(at) > farthest.distance_to(at):
@@ -322,6 +331,15 @@ func _tell_clear_at(spot: Vector2) -> bool:
 		if not CarterArtLayout.clear_of_hud(Rect2(spot + offset + badge.position, badge.size)):
 			return false
 	return true
+
+
+# His body from `spot` clear of the HUD as well: he fires from there and his punish window kneels him there,
+# a recoil either way off it (_hand_over). The spot area's bottom-left corner is under the player's hearts and
+# stamina, where about one Messatsu in 25 used to kneel him with his legs behind them.
+func _body_clear_at(spot: Vector2) -> bool:
+	var recoil := CarterArtLayout.MESSATSU_RECOIL * CarterArtLayout.SCALE
+	var box := CarterArtLayout.local_rect(CarterArtLayout.RECOVER_BODY_BOX).grow_individual(recoil, 0.0, recoil, 0.0)
+	return CarterArtLayout.clear_of_hud(Rect2(spot + box.position, box.size))
 
 
 #THE CHARGE
@@ -632,24 +650,46 @@ func _advance_end() -> void:
 			if is_instance_valid(node):
 				var out: Tween = node.create_tween()
 				out.tween_property(node, "modulate:a", 0.0, state_machine.messatsu_fade)
-		body.restore_music(CarterArtLayout.MESSATSU_MUSIC_BACK)
-		get_tree().call_group("arena_crowd", "cheer", CarterArtLayout.MESSATSU_CHEER)
-		body.finish_sfx_player.play()
+		_music_back()
 	if _due(beat_clock, state_machine.messatsu_end_hold + state_machine.messatsu_fade):
 		_hand_over()
+
+
+func _music_back() -> void:
+	music_back = true
+	body.restore_music(CarterArtLayout.MESSATSU_MUSIC_BACK)
+	get_tree().call_group("arena_crowd", "cheer", CarterArtLayout.MESSATSU_CHEER)
+	body.finish_sfx_player.play()
+
+
+# His Break, deferred here from CarterAkumaScript._on_break through the state machine: only a parried
+# hit fills it, so it lands in the string, inside the physics flush that hit resolves in. The string
+# ends on the spot - no hit after it, the beam and its surges gone with release() - and he is handed to
+# his Break's window where he stands, the user's call (2026-09-27).
+func on_broke() -> void:
+	if released:
+		return
+	broke = true
+	if not music_back:
+		_music_back()
+	_hand_over()
 
 
 # The spent pose stands over his feet where the fire's hold has him slid back, so his feet go back by
 # the difference - away from where he fired - and he doesn't pop forward into it. Inside the ropes.
 func _hand_over() -> void:
-	var back := CarterArtLayout.MESSATSU_RECOIL * CarterArtLayout.SCALE
-	var ropes: Rect2 = state_machine.ROPES
-	body.global_position.x = clampf(body.global_position.x + (back if body.sprite.flip_h else -back),
-		ropes.position.x, ropes.end.x)
+	if latched:
+		var back := CarterArtLayout.MESSATSU_RECOIL * CarterArtLayout.SCALE
+		var ropes: Rect2 = state_machine.ROPES
+		body.global_position.x = clampf(body.global_position.x + (back if body.sprite.flip_h else -back),
+			ropes.position.x, ropes.end.x)
 	body.sprite.flip_h = false
+	var owed: bool = state_machine.take_break_owed()
 	var recover: State = state_machine.states.get("Recover")
 	if recover:
-		recover.prepare(parried, missed, 0, state_machine.messatsu_hits, -1.0, state_machine.take_break_owed())
+		# A Break cuts the string short, so it is judged perfect on the hits that came.
+		var total: int = tick_index if broke else state_machine.messatsu_hits
+		recover.prepare(parried, missed, 0, total, -1.0, broke or owed)
 	state_machine.on_child_transition(self, "Recover")
 
 

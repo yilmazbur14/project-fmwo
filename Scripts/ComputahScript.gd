@@ -33,18 +33,22 @@ const OUTRO_DIALOGUE := "res://Dialogue/ComputahOutro.dialogue"
 # This fight's place in the order; GameProgress decides what follows it.
 const FIGHT_SCENE := "res://Scenes/Bosses/ComputahBossFightScene.tscn"
 # The fight's second half: beaten, he hands the ring to Greyson, who tears off his cannon arm and fights on as
-# the real boss of FIGHT 03 (GreysonTakeover). With greyson_follows off, his fight ends where it always has.
+# the real boss of FIGHT 06 (GreysonTakeover). With greyson_follows off, his fight ends where it always has.
 const GREYSON_SCENE := "res://Scenes/Bosses/GreysonScene.tscn"
 @export var greyson_follows := true
 var greyson_scene: PackedScene
 # Greyson has torn his cannon arm off.
 var armless := false
 
-# TWO CLEAN BEAM OPENINGS (the user, 2026-09-24): FIGHT 03's first half is meant to be easy, the beam alone
-# (ComputahStateMachine.live_attacks), so that Greyson's half lands as the surprise.
-@export var max_health := 8
+# FIGHT 06's first half is meant to be easy, the beam alone (ComputahStateMachine.live_attacks), so that Greyson's
+# half lands as the surprise (the user, 2026-09-24, at 8: two clean beam openings). The user doubled every boss's
+# health on 2026-09-25 (16) and raised it 25% on 2026-09-30, so it is 20: an opening's clean chain takes 4 and the
+# finisher its POW earns takes 5 more, so two clean openings with both finishers leave him on 2 and A THIRD ENDS
+# IT, and without the finishers it takes FIVE clean chains exactly.
+@export var max_health := 20
 # What the whole rotation was sized for, which comes back with the mine field and the overload: the overload is a
-# DPS check whose threshold has to sit at or under 15% of his health.
+# DPS check whose threshold has to sit at or under 15% of his health. It predates the doubling (2026-09-25) and
+# was left as it was.
 const FULL_ROTATION_HEALTH := 48
 var boss_health := max_health
 const MAX_HITS_PER_WINDOW := 3
@@ -827,9 +831,10 @@ func _hand_to_greyson() -> void:
 	var scene := greyson_scene.instantiate()
 	scene.get_node("GreysonCharacterBody").computah = self
 	get_parent().add_sibling(scene)
+	GameProgress.reach_phase(GameProgress.PHASE_GREYSON)
 
 
-# FIGHT 03's second half on its own, with no fight of his first: already down where his entrance would have stood
+# FIGHT 06's second half on its own, with no fight of his first: already down where his entrance would have stood
 # him, on his defeat's last frame, his bar empty, and Greyson's takeover from its first line. The main menu's
 # GREYSON row starts here, in place of his entrance (ComputahStateMachine._ready); only with greyson_follows on.
 func start_at_greyson() -> void:

@@ -39,7 +39,8 @@ const STEP_TOLERANCE := 0.0001
 # How finely a re-aim looks ahead for when the next lunge would reach the player.
 const ETA_STEP := 1.0 / 240.0
 
-enum Phase { WINDUP, LUNGE, REAIM, RELEASE }
+# HOLD: before the wind-up, until the player's bar can pay for the first lunge's dash (_dash_affordable).
+enum Phase { WINDUP, LUNGE, REAIM, RELEASE, HOLD }
 
 var eric_original_position : Vector2
 var back_to_original_position = false
@@ -59,7 +60,7 @@ func Enter() -> void:
 	rage = eric_state_machine.rage
 	animation_player.speed_scale = EricPacing.raged("spin_animation_speed", rage)
 	if EricPacing.is_v2():
-		_wind_up()
+		_wind_up_when_affordable()
 		return
 	move_speed = EricPacing.raged("chase_speed", rage)
 
@@ -126,6 +127,10 @@ func _lunges(delta: float) -> void:
 	phase_left -= delta
 	var phase_over := phase_left <= STEP_TOLERANCE
 	match phase:
+		Phase.HOLD:
+			if _dash_affordable():
+				animation_player.speed_scale = EricPacing.raged("spin_animation_speed", rage)
+				_wind_up()
 		Phase.WINDUP:
 			if phase_over:
 				_start_spin()
@@ -140,7 +145,7 @@ func _lunges(delta: float) -> void:
 				else:
 					_start_release()
 		Phase.REAIM:
-			if phase_over and _next_lunge_dodgeable():
+			if phase_over and _next_lunge_dodgeable() and _dash_affordable():
 				_start_lunge()
 
 
@@ -163,6 +168,26 @@ func _start_lunge() -> void:
 	phase_left = EricPacing.value("whirl_lunge_time")
 	met_at = -1.0
 	_play_whoosh()
+
+
+# Every lunge asks for a dash, and a dash costs a third of the stamina bar: four in a row only fit a full bar
+# with a perfect dodge's refund, and not at all for a player who came in having spent some. So neither the
+# wind-up nor a re-aim lets the next lunge go until the player's bar can pay for its dash (fairness,
+# 2026-10-06). The bar refills after a short pause (PlayerDefense.stamina_regen_delay), so a hold is short.
+func _dash_affordable() -> bool:
+	var defense: Node = player.get_node_or_null("Defense")
+	return defense == null or defense.can_afford(defense.dash_stamina_cost)
+
+
+# Winds up now if the player's bar can pay for the first lunge's dash; otherwise stands, harmless and with
+# no tell, until it can.
+func _wind_up_when_affordable() -> void:
+	if _dash_affordable():
+		_wind_up()
+		return
+	phase = Phase.HOLD
+	animation_player.speed_scale = 1.0
+	animation_player.play("idle")
 
 
 # A dash is only immune AttackCatalog.DASH_IMMUNITY_COOLDOWN after the last one, so a lunge that

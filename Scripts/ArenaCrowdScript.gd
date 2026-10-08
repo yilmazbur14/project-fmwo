@@ -5,8 +5,12 @@ extends Sprite2D
 # loop - and both run this, so one call sets them both off:
 #     get_tree().call_group("arena_crowd", "cheer", seconds)
 #     get_tree().call_group("arena_crowd", "boo", seconds)
-# The latest mood wins, and hush() clears it. It plays no sound: both nodes run it, so a sound here
-# would play twice per call, and every fight's cheers would pick it up. A fight plays its own.
+# The latest mood wins, and hush() clears it. The first of the two also carries the crowd's voice
+# (ArenaMurmur): the murmur under the fight, lifted by each cheer and cut short by hush() or a boo.
+# Nothing else here plays a sound: both nodes run it, so a sound here would play twice per call. A
+# fight plays its own.
+
+const ArenaMurmur := preload("res://Scripts/ArenaMurmur.gd")
 
 const IDLE_FRAMES := [0, 1, 2]
 const CHEER_FRAMES := [3, 4]
@@ -20,14 +24,22 @@ var _boo_time_left := 0.0
 var _frame_clock := 0.0
 var _step := 0
 var _hyped := false
+# The crowd's voice, on the first of the arena's two crowds only; null on the other.
+var murmur: Node
 
 
 func _ready() -> void:
 	add_to_group("arena_crowd")
 	frame = IDLE_FRAMES[0]
+	if not get_parent().get_children().any(func(other: Node) -> bool: return other.get("murmur") != null):
+		murmur = ArenaMurmur.new()
+		murmur.name = "Murmur"
+		add_child(murmur)
 
 
 func cheer(duration: float = 1.5) -> void:
+	if murmur != null:
+		murmur.cheer(duration)
 	_boo_time_left = 0.0
 	if _cheer_time_left <= 0.0:
 		_restart_loop()
@@ -36,6 +48,8 @@ func cheer(duration: float = 1.5) -> void:
 
 
 func boo(duration: float = 1.5) -> void:
+	if murmur != null:
+		murmur.hush()
 	_cheer_time_left = 0.0
 	if _boo_time_left <= 0.0:
 		_restart_loop()
@@ -45,6 +59,8 @@ func boo(duration: float = 1.5) -> void:
 # Cuts a cheer or a boo short, for a moment that needs the crowd quiet:
 #     get_tree().call_group("arena_crowd", "hush")
 func hush() -> void:
+	if murmur != null:
+		murmur.hush()
 	if _cheer_time_left <= 0.0 and _boo_time_left <= 0.0:
 		return
 	_cheer_time_left = 0.0

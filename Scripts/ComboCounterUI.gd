@@ -4,6 +4,9 @@ extends Label
 # the finisher's zoom doesn't scale it: every frame it is placed bottom-centre over their head, or under
 # their feet where there's no room above, the way the word popups are (CombatPopupUI, which stack their
 # words over it), pixel-snapped and kept whole on the screen.
+# Each landed hit pops its count up in full - 1 HIT, 2 HITS, and the charged one 3 POW! - and holds it
+# for as long as the count lives (PlayerCombo.COMBO_RESET_TIME without a hit landing), fading out as it
+# starts again. The POW's count starts again as it lands, so its 3 POW! holds CHARGED_HOLD and fades.
 # It is only up while the player is in their own hands: never through lines, a fight's lock (every pose
 # is inside one), the finisher's mash prompt or the fight's end.
 
@@ -23,10 +26,8 @@ const CHARGED_OUTLINE := 6
 const FIRST_HIT_COLOR := Color(1, 1, 1)
 const BUILDING_COLOR := Color(1.0, 0.9, 0.5)
 const CHARGED_COLOR := Color(1.0, 0.72, 0.1)
-# A landed hit shows dimmed; the counter lights up and pops the moment the next press is on the beat.
-const WAITING_DIM := 0.45
 
-const WINDOW_POP := 6.0
+const HIT_POP := 6.0
 const CHARGED_POP := 12.0
 const POP_TIME := 0.12
 const CHARGED_FLASH_TIME := 0.2
@@ -34,7 +35,6 @@ const CHARGED_HOLD := 0.6
 const FADE_TIME := 0.25
 
 var tween: Tween
-var hit_color := FIRST_HIT_COLOR
 # How far a pop has it over its place, in whole px.
 var lift := 0.0
 var player: CharacterBody2D
@@ -51,7 +51,6 @@ func _ready() -> void:
 	player = combo.get_parent()
 	finisher = player.get_node("Finisher")
 	combo.combo_changed.connect(_on_combo_changed)
-	combo.beat_window_changed.connect(_on_beat_window_changed)
 
 
 func _process(_delta: float) -> void:
@@ -60,7 +59,8 @@ func _process(_delta: float) -> void:
 		_place()
 
 
-# The room it takes over the player's head right now, which CombatPopupUI stacks its words above.
+# The room it takes over the player's head right now, which CombatPopupUI stacks its words above. Up
+# until its fade is all the way out.
 func overhead_room() -> float:
 	if not visible or modulate.a <= 0.0 or text.is_empty():
 		return 0.0
@@ -108,19 +108,8 @@ func _on_combo_changed(count: int, charged: bool) -> void:
 		text = "%d HIT" % count if count == 1 else "%d HITS" % count
 		add_theme_font_size_override("font_size", HIT_FONT_SIZE)
 		add_theme_constant_override("outline_size", HIT_OUTLINE)
-		hit_color = FIRST_HIT_COLOR if count == 1 else BUILDING_COLOR
-		_set_font_color(hit_color.darkened(WAITING_DIM))
-
-
-func _on_beat_window_changed(open: bool) -> void:
-	if combo.count == 0:
-		return
-	_stop_tween()
-	if open:
-		_set_font_color(hit_color)
-		_new_tween().tween_method(_set_lift, WINDOW_POP, 0.0, POP_TIME).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	else:
-		_set_font_color(hit_color.darkened(WAITING_DIM))
+		_set_font_color(FIRST_HIT_COLOR if count == 1 else BUILDING_COLOR)
+		_new_tween().tween_method(_set_lift, HIT_POP, 0.0, POP_TIME).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 
 func _stop_tween() -> void:

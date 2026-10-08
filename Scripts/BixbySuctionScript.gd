@@ -7,17 +7,22 @@ extends Node2D
 const InfernoLayout := preload("res://Scripts/BixbyInfernoArtLayout.gd")
 
 # A streak this often, this share of them within NEAR_RADIUS of the player, flying at SPEED_RATIO times the
-# pull and fading out over FADE_TIME.
-const INTERVAL := 0.04
+# pull, fading out over FADE_TIME and drawn STREAK_SCALE times the art's own scale.
+const INTERVAL := 0.02
 const NEAR_SHARE := 0.6
-const NEAR_RADIUS := 300.0
+const NEAR_RADIUS := 450.0
 const SPEED_RATIO := 2.5
 const FADE_TIME := 0.5
+const STREAK_SCALE := 1.5
 
 # Set by the attack before it enters the tree.
 var player: Node2D
 var mouths: Array[Vector2] = []
-var pull_speed := 330.0
+var pull_speed := 495.0
+# Where streaks start and what they are drawn as: the Inferno's unless whoever adds it sets its own (Liam's tornados).
+var area := InfernoLayout.INFERNO_AREA
+var spec: Dictionary = InfernoLayout.FINAL_SUCTION
+var use_final := InfernoLayout.USE_FINAL_SUCTION
 
 var clock := 0.0
 var spawned := 0
@@ -50,14 +55,13 @@ func _physics_process(delta: float) -> void:
 		node.modulate.a = 1.0 - streak[2] / FADE_TIME
 		var sprite := node as Sprite2D
 		if sprite:
-			var column := int(streak[2] / InfernoLayout.FINAL_SUCTION.frame_time) % sprite.hframes
+			var column := int(streak[2] / spec.frame_time) % sprite.hframes
 			sprite.frame_coords = Vector2i(column, sprite.frame_coords.y)
 	if stopping and streaks.is_empty():
 		queue_free()
 
 
 func _spawn() -> void:
-	var area := InfernoLayout.INFERNO_AREA
 	var from := Vector2(randf_range(area.position.x, area.end.x), randf_range(area.position.y, area.end.y))
 	if is_instance_valid(player) and randf() < NEAR_SHARE:
 		var offset := Vector2.from_angle(randf() * TAU) * NEAR_RADIUS * sqrt(randf())
@@ -66,7 +70,7 @@ func _spawn() -> void:
 	if from.distance_to(mouth) < 1.0:
 		return
 	var direction := (mouth - from).normalized()
-	var node := _final_streak(direction) if InfernoLayout.USE_FINAL_SUCTION else _placeholder_streak(direction)
+	var node := _final_streak(direction) if use_final else _placeholder_streak(direction)
 	node.position = from
 	add_child(node)
 	streaks.append([node, direction * pull_speed * SPEED_RATIO, 0.0, mouth])
@@ -83,20 +87,19 @@ func _nearest_mouth(from: Vector2) -> Vector2:
 func _placeholder_streak(direction: Vector2) -> Node2D:
 	var look := InfernoLayout.PLACEHOLDER_SUCTION
 	var line := Line2D.new()
-	line.points = PackedVector2Array([Vector2.ZERO, -direction * look.length])
-	line.width = look.width
+	line.points = PackedVector2Array([Vector2.ZERO, -direction * look.length * STREAK_SCALE])
+	line.width = look.width * STREAK_SCALE
 	line.default_color = look.colour
 	return line
 
 
 # Rows at 0, 45 and 90 degrees on screen (right, down-right, down); the other five directions are flips.
 func _final_streak(direction: Vector2) -> Node2D:
-	var spec := InfernoLayout.FINAL_SUCTION
 	var sprite := Sprite2D.new()
 	sprite.texture = load(spec.sheet)
 	sprite.hframes = spec.frames
 	sprite.vframes = 3
-	sprite.scale = Vector2.ONE * InfernoLayout.SCALE
+	sprite.scale = Vector2.ONE * InfernoLayout.SCALE * STREAK_SCALE
 	var octant := posmod(roundi(direction.angle() / (PI / 4.0)), 8)
 	var rows := [0, 1, 2, 1, 0, 1, 2, 1]
 	sprite.flip_h = octant >= 3 and octant <= 5
